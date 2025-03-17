@@ -1,4 +1,3 @@
-// src/app/navigation/AppNavigation.tsx
 import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -6,7 +5,9 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 // Import screens
 import ChallengesScreen from '../screens/ChallengeScreen.tsx';
 import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen.tsx';
+import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen.tsx';
 import CreateChallengeScreen from '../screens/CreateChallengeScreen.tsx';
+//
 import UserProfileScreen from '../screens/UserProfileScreen.tsx';
 // import EditProfileScreen from '../screens/EditProfileScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
@@ -18,6 +19,18 @@ import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
+console.log('Module CreateChallengeScreen:', CreateChallengeScreen);
+
+console.log('Module ChallengeVerificationScreen:', ChallengeVerificationScreen);
+
+console.log('Module ChallengeDetailsScreen:', ChallengeDetailsScreen);
+
+console.log('Module ChallengesScreen:', ChallengesScreen);
+
+console.log('Module UserProfileScreen:', UserProfileScreen);
+
+console.log('Module HomeScreen:', HomeScreen);
+
 // Define the types for the navigation parameters
 export type RootStackParamList = {
     Main: { screen?: keyof MainTabParamList };
@@ -25,6 +38,7 @@ export type RootStackParamList = {
     Login: undefined;
     Signup: undefined;
     ChallengeDetails: { challengeId: string };
+    ChallengeVerification: { challengeId: string }; // Add the new route
     CreateChallenge: undefined;
     UserProfile: { userId: string };
     // EditProfile: { userId: string };
@@ -44,10 +58,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Bottom tab navigator
-
-// src/app/navigation/AppNavigation.tsx
-
-// Update MainTabNavigator to accept route prop
 const MainTabNavigator = ({
                               route
                           }: {
@@ -55,48 +65,32 @@ const MainTabNavigator = ({
 }) => {
     const { screen } = route.params || {};
 
-//     return (
-//         <Tab.Navigator
-//             initialRouteName={screen || 'Home'} // Set initial tab based on params
-//             screenOptions={({ route }) => ({
-//                 // ... existing screenOptions
-//             })}
-//         >
-//             {/* Existing Tab.Screen components */}
-//             <Tab.Screen name="Home" component={HomeScreen} />
-//             <Tab.Screen name="Challenges" component={ChallengesScreen} />
-//             {/* ... other tabs */}
-//         </Tab.Navigator>
-//     );
-// };
-// const MainTabNavigator = () => {
     return (
+        <Tab.Navigator
+            initialRouteName={screen || 'Home'} // Set initial tab based on params
+            screenOptions={({ route }) => ({
+                tabBarIcon: ({ focused, color, size }) => {
+                    let iconName = 'help-circle-outline';
 
-    <Tab.Navigator
-        initialRouteName={screen || 'Home'} // Set initial tab based on params
-        screenOptions={({ route }) => ({
-            tabBarIcon: ({ focused, color, size }) => {
-                let iconName = 'help-circle-outline';
+                    const icons = {
+                        Home: focused ? 'home' : 'home-outline',
+                        Challenges: focused ? 'trophy' : 'trophy-outline',
+                        Search: focused ? 'magnify' : 'magnify',
+                        Groups: focused ? 'account-group' : 'account-group-outline',
+                        Profile: focused ? 'account' : 'account-outline',
+                    };
 
-                const icons = {
-                    Home: focused ? 'home' : 'home-outline',
-                    Challenges: focused ? 'trophy' : 'trophy-outline',
-                    Search: focused ? 'magnify' : 'magnify',
-                    Groups: focused ? 'account-group' : 'account-group-outline',
-                    Profile: focused ? 'account' : 'account-outline',
-                };
-
-                return <MaterialCommunityIcons
-                    name={icons[route.name] || iconName}
-                    size={size}
-                    color={color}
-                />;
-            },
-            tabBarActiveTintColor: '#4CAF50',
-            tabBarInactiveTintColor: 'gray',
-            headerShown: false,
-        })}
-    >
+                    return <MaterialCommunityIcons
+                        name={icons[route.name] || iconName}
+                        size={size}
+                        color={color}
+                    />;
+                },
+                tabBarActiveTintColor: '#4CAF50',
+                tabBarInactiveTintColor: 'gray',
+                headerShown: false,
+            })}
+        >
             <Tab.Screen name="Home" component={HomeScreen} />
             <Tab.Screen name="Challenges" component={ChallengesScreen} />
             {/*<Tab.Screen name="Search" component={SearchScreen} />*/}
@@ -137,6 +131,11 @@ const AppNavigation = () => {
                             options={{ title: 'Challenge Details' }}
                         />
                         <Stack.Screen
+                            name="ChallengeVerification"
+                            component={ChallengeVerificationScreen}
+                            options={{ title: 'Verify Challenge' }}
+                        />
+                        <Stack.Screen
                             name="CreateChallenge"
                             component={CreateChallengeScreen}
                             options={{ title: 'Create Challenge' }}
@@ -169,11 +168,11 @@ const AppNavigation = () => {
                             component={LoginScreen}
                             options={{ headerShown: false }}
                         />
-                        {/*<Stack.Screen*/}
-                        {/*    name="Home"*/}
-                        {/*    component={HomeScreen}*/}
-                        {/*    options={{ headerShown: false }}*/}
-                        {/*/>*/}
+                        <Stack.Screen
+                            name="Home"
+                            component={HomeScreen}
+                            options={{ headerShown: false }}
+                        />
                         <Stack.Screen
                             name="Signup"
                             component={SignupScreen}

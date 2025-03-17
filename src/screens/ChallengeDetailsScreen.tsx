@@ -16,12 +16,14 @@ import {
     useSubmitChallengeCompletionMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
 import {NativeStackNavigationProp} from "react-native-screens/native-stack";
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
     Home: undefined;
     Challenges: undefined;
     ChallengeDetails: { challengeId: string };
+    ChallengeVerification: { challengeId: string };
     CreateChallenge: undefined;
     UserProfile: { userId: string };
 };
@@ -54,6 +56,11 @@ const ChallengeDetailsScreen: React.FC = () => {
         }
     };
 
+    // Navigate to verification screen
+    const navigateToVerification = () => {
+        navigation.navigate('ChallengeVerification', { challengeId });
+    };
+
     // Handle submit challenge completion
     const handleSubmitCompletion = async () => {
         try {
@@ -83,6 +90,29 @@ const ChallengeDetailsScreen: React.FC = () => {
             month: 'short',
             day: 'numeric',
         });
+    };
+
+    // Parse verification methods from the challenge
+    const getVerificationMethods = () => {
+        if (!challenge?.verificationMethod) return [];
+
+        try {
+            return JSON.parse(challenge.verificationMethod);
+        } catch (e) {
+            console.error('Error parsing verification methods:', e);
+            return [];
+        }
+    };
+
+    // Check if the challenge has verification methods
+    const hasVerificationMethods = () => {
+        const methods = getVerificationMethods();
+        return methods.length > 0;
+    };
+
+    // Check if this is a daily challenge that requires regular verification
+    const isDailyChallenge = () => {
+        return challenge?.type === 'HABIT_BUILDING' || challenge?.frequency === 'DAILY';
     };
 
     // Render loading state
@@ -156,12 +186,23 @@ const ChallengeDetailsScreen: React.FC = () => {
                                 <Text style={styles.infoValue}>{challenge.penalty}</Text>
                             </View>
                         )}
-                        {challenge.verificationMethod && (
+
+                        {/* Show verification methods if available */}
+                        {hasVerificationMethods() && (
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Verification</Text>
-                                <Text style={styles.infoValue}>{challenge.verificationMethod}</Text>
+                                <View style={styles.verificationMethods}>
+                                    {getVerificationMethods().map((method: any, index: number) => (
+                                        <View key={index} style={styles.verificationBadge}>
+                                            <Text style={styles.verificationText}>
+                                                {method.type.charAt(0) + method.type.slice(1).toLowerCase()}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
                             </View>
                         )}
+
                         {challenge.targetGroup && (
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Group</Text>
@@ -197,22 +238,33 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     <Text style={styles.buttonText}>Join Challenge</Text>
                                 )}
                             </TouchableOpacity>
-                        ) : proofSubmitted ? (
-                            <View style={styles.successMessage}>
-                                <Text style={styles.successText}>Completion Submitted</Text>
-                            </View>
                         ) : (
-                            <TouchableOpacity
-                                style={styles.secondaryButton}
-                                onPress={handleSubmitCompletion}
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? (
-                                    <ActivityIndicator size="small" color="white" />
-                                ) : (
-                                    <Text style={styles.buttonText}>Submit Completion</Text>
-                                )}
-                            </TouchableOpacity>
+                            // For daily challenges, show the verification button
+                            isDailyChallenge() ? (
+                                <TouchableOpacity
+                                    style={styles.verifyButton}
+                                    onPress={navigateToVerification}
+                                >
+                                    <MaterialIcons name="verified" size={20} color="white" />
+                                    <Text style={styles.buttonText}>Daily Check-In</Text>
+                                </TouchableOpacity>
+                            ) : proofSubmitted ? (
+                                <View style={styles.successMessage}>
+                                    <Text style={styles.successText}>Completion Submitted</Text>
+                                </View>
+                            ) : (
+                                <TouchableOpacity
+                                    style={styles.secondaryButton}
+                                    onPress={handleSubmitCompletion}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? (
+                                        <ActivityIndicator size="small" color="white" />
+                                    ) : (
+                                        <Text style={styles.buttonText}>Submit Completion</Text>
+                                    )}
+                                </TouchableOpacity>
+                            )
                         )}
                     </View>
                 </View>
@@ -309,6 +361,7 @@ const styles = StyleSheet.create({
     infoRow: {
         flexDirection: 'row',
         marginBottom: 8,
+        alignItems: 'center',
     },
     infoLabel: {
         width: 100,
@@ -320,6 +373,24 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 14,
         color: '#333',
+    },
+    verificationMethods: {
+        flex: 1,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    verificationBadge: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginRight: 8,
+        marginBottom: 4,
+    },
+    verificationText: {
+        color: '#1976D2',
+        fontSize: 12,
+        fontWeight: '600',
     },
     creatorSection: {
         backgroundColor: 'white',
@@ -362,17 +433,30 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
     },
     secondaryButton: {
         backgroundColor: '#2196F3',
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    verifyButton: {
+        backgroundColor: '#FF9800',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
     },
     buttonText: {
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+        marginLeft: 8,
     },
     successMessage: {
         backgroundColor: '#4CAD50',

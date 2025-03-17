@@ -38,7 +38,7 @@ export interface AuthResponse {
 export const userApi = createApi({
     reducerPath: 'userApi',
     baseQuery: fetchBaseQuery({
-        baseUrl: 'YOUR_API_BASE_URL',
+        baseUrl: 'http://10.0.2.2:8082/challenger/api',
         prepareHeaders: (headers, { getState }) => {
             // Get the token from the state
             const token = (getState() as any).auth.token;
