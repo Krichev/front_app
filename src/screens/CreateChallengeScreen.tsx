@@ -18,7 +18,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {Picker} from '@react-native-picker/picker';
 import {ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationMethod} from '../app/types';
-import Geolocation from 'react-native-geolocation-service';
+import Geolocation from '@react-native-community/geolocation';
 
 interface CreateChallengeFormData {
     title: string;
@@ -44,7 +44,7 @@ const CreateChallengeScreen: React.FC = () => {
     const [formData, setFormData] = useState<CreateChallengeFormData>({
         title: '',
         description: '',
-        type: 'CHALLENGE',
+        type: 'QUEST',
         visibility: 'PUBLIC',
         reward: '',
         penalty: '',
@@ -150,7 +150,7 @@ const CreateChallengeScreen: React.FC = () => {
 
             Geolocation.getCurrentPosition(
                 (position) => {
-                    const { latitude, longitude } = position.coords;
+                    const {latitude, longitude} = position.coords;
 
                     // Since we don't have direct reverse geocoding from react-native-geolocation-service,
                     // we'll just use coordinates and let users know they'll need to implement geocoding
@@ -197,7 +197,12 @@ const CreateChallengeScreen: React.FC = () => {
             Alert.alert('Error', 'Please enter a title for your challenge');
             return;
         }
-
+        for (const key in formData) {
+            if (formData.hasOwnProperty(key)) {
+                // @ts-ignore
+                console.log(`${key}: ${formData[key]}`);
+            }
+        }
         // Format verification methods for API
         const activeVerificationMethods = formData.verificationMethods
             .filter(vm => vm.enabled)
@@ -288,7 +293,7 @@ const CreateChallengeScreen: React.FC = () => {
                                     onValueChange={(value: string) => updateFormField('type', value)}
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="Challenge" value="CHALLENGE"/>
+                                    <Picker.Item label="QUEST" value="QUEST"/>
                                     <Picker.Item label="Quiz" value="QUIZ"/>
                                     <Picker.Item label="Activity Partner" value="ACTIVITY_PARTNER"/>
                                     <Picker.Item label="Fitness Tracking" value="FITNESS_TRACKING"/>
@@ -306,9 +311,9 @@ const CreateChallengeScreen: React.FC = () => {
                                     onValueChange={(value) => updateFormField('visibility', value)}
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="Public" value="PUBLIC" />
-                                    <Picker.Item label="Private" value="PRIVATE" />
-                                    <Picker.Item label="Group Only" value="GROUP_ONLY" />
+                                    <Picker.Item label="Public" value="PUBLIC"/>
+                                    <Picker.Item label="Private" value="PRIVATE"/>
+                                    <Picker.Item label="Group Only" value="GROUP_ONLY"/>
                                 </Picker>
                             </View>
                         </View>
@@ -398,7 +403,7 @@ const CreateChallengeScreen: React.FC = () => {
                                                     disabled={locationFetching}
                                                 >
                                                     {locationFetching ? (
-                                                        <ActivityIndicator size="small" color="white" />
+                                                        <ActivityIndicator size="small" color="white"/>
                                                     ) : (
                                                         <Text style={styles.locationButtonText}>Get Current</Text>
                                                     )}

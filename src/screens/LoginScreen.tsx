@@ -87,7 +87,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
 
             // **Securely Store Tokens and User Info**
             await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken, user}));
-
             // **Update Auth State**
             dispatch(setTokens({accessToken, refreshToken, user}));
 

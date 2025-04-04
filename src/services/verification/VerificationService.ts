@@ -107,7 +107,7 @@ export class VerificationService {
 
         return new Promise((resolve, reject) => {
             Geolocation.getCurrentPosition(
-                (position) => {
+                (position: { coords: { latitude: any; longitude: any; }; }) => {
                     const { latitude, longitude } = position.coords;
 
                     // Note: We don't have direct reverse geocoding from react-native-geolocation-service
@@ -122,7 +122,7 @@ export class VerificationService {
                         timestamp: new Date().toISOString()
                     });
                 },
-                (error) => {
+                (error: { message: string; }) => {
                     console.error('Error getting location:', error);
                     Alert.alert('Error', 'Failed to get your location: ' + error.message);
                     resolve(null);

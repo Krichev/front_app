@@ -50,7 +50,7 @@ export type ChallengeFrequency = 'DAILY' | 'WEEKLY' | 'ONE_TIME';
 /**
  * Challenge type definition
  */
-export type ChallengeType = 'CHALLENGE' | 'QUIZ' | 'ACTIVITY_PARTNER' | 'FITNESS_TRACKING' | 'HABIT_BUILDING';
+export type ChallengeType = 'QUEST' | 'QUIZ' | 'ACTIVITY_PARTNER' | 'FITNESS_TRACKING' | 'HABIT_BUILDING';
 
 /**
  * Challenge visibility options

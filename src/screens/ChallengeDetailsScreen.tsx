@@ -64,7 +64,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     // Handle submit challenge completion
     const handleSubmitCompletion = async () => {
         try {
-            // In a real app, you'd handle file upload here
+            // In a real app, you'LocationVerificationScreen.tsx handle file upload here
             await submitCompletion({ id: challengeId, proof: { completed: true } }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');
@@ -136,7 +136,7 @@ const ChallengeDetailsScreen: React.FC = () => {
         );
     }
 
-    // Check if the user has already joined (in a real app, you'd check this)
+    // Check if the user has already joined (in a real app, you'LocationVerificationScreen.tsx check this)
     const userHasJoined = false; // Replace with actual check
 
     return (

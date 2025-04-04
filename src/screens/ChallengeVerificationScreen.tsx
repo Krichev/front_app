@@ -21,11 +21,16 @@ import {
 import {FormatterService, VerificationService} from '../services/verification/ui/Services.ts';
 import {LocationData, VerificationMethod, VerificationStatus} from '../app/types';
 // import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+// Import the navigation hooks
+
+// Inside the component, add:
 
 // Define type for navigation parameters
 type RootStackParamList = {
     ChallengeVerification: { challengeId: string };
     ChallengeDetails: { challengeId: string };
+    PhotoVerification: { challengeId: string; prompt?: string };
+    LocationVerification: { challengeId: string };
 };
 
 type ChallengeVerificationRouteProp = RouteProp<RootStackParamList, 'ChallengeVerification'>;
@@ -47,7 +52,6 @@ const ChallengeVerificationScreen: React.FC = () => {
     const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
     const [verifyPhoto] = useVerifyPhotoChallengeMutation();
     const [verifyLocation] = useVerifyLocationChallengeMutation();
-
     // Parse verification methods when challenge data loads
     useEffect(() => {
         if (challenge && challenge.verificationMethod) {
@@ -63,114 +67,27 @@ const ChallengeVerificationScreen: React.FC = () => {
 
     // Handle photo verification
     const handlePhotoVerification = async () => {
-        const photoUri = await VerificationService.takePhoto();
-        if (!photoUri) return;
-
-        setPhotoUri(photoUri);
-
-        // Get the photo verification method
         const photoMethod = verificationMethods.find(method => method.type === 'PHOTO');
-        if (!photoMethod) return;
+        navigateToPhotoVerification(
+            challengeId,
+            photoMethod?.details.photoPrompt
+        );
 
-        try {
-            setIsProcessing(true);
-
-            // Create form data for API call
-            const formData = VerificationService.createPhotoFormData(
-                photoUri,
-                challengeId,
-                photoMethod.details.photoPrompt,
-                photoMethod.details.aiPrompt
-            );
-
-            // Call API to verify photo
-            const result = await verifyPhoto(formData).unwrap();
-
-            // Update verification status based on result
-            const updatedMethods = verificationMethods.map((method) => {
-                if (method.type === 'PHOTO') {
-                    return {
-                        ...method,
-                        status: result.isVerified ? 'COMPLETED' : 'FAILED' as VerificationStatus,
-                        result: result,
-                    };
-                }
-                return method;
-            });
-
-            setVerificationMethods(updatedMethods);
-
-            // Show result to user
-            if (result.isVerified) {
-                Alert.alert('Photo Verified', result.message || 'Your photo has been verified successfully.');
-            } else {
-                Alert.alert('Verification Failed', result.message || 'Your photo could not be verified.');
-            }
-
-            setIsProcessing(false);
-        } catch (error) {
-            console.error('Error verifying photo:', error);
-            setIsProcessing(false);
-            Alert.alert('Error', 'Failed to verify photo. Please try again.');
-        }
     };
 
+    // Create navigation functions
+    const navigateToPhotoVerification = (challengeId: string, prompt?: string) => {
+        navigation.navigate('PhotoVerification', { challengeId, prompt });
+    };
+
+    const navigateToLocationVerification = (challengeId: string) => {
+        navigation.navigate('LocationVerification', { challengeId });
+    };
+
+
     // Handle location verification
-    const handleLocationVerification = async () => {
-        try {
-            setIsProcessing(true);
-
-            // Get current location
-            const location = await VerificationService.getCurrentLocation();
-            if (!location) {
-                setIsProcessing(false);
-                return;
-            }
-
-            setLocationData(location);
-
-            // Get the location verification method
-            const locationMethod = verificationMethods.find(method => method.type === 'LOCATION');
-            if (!locationMethod) {
-                setIsProcessing(false);
-                return;
-            }
-
-            // Call API to verify location
-            const result = await verifyLocation({
-                challengeId,
-                latitude: location.latitude,
-                longitude: location.longitude,
-                timestamp: location.timestamp
-            }).unwrap();
-
-            // Update verification status based on result
-            const updatedMethods = verificationMethods.map(method => {
-                if (method.type === 'LOCATION') {
-                    return {
-                        ...method,
-                        status: result.isVerified ? 'COMPLETED' : 'FAILED' as VerificationStatus,
-                        result: result
-                    };
-                }
-                return method;
-            });
-
-            setVerificationMethods(updatedMethods);
-
-            // Show result to user
-            if (result.isVerified) {
-                Alert.alert('Location Verified', result.message || 'Your location has been verified successfully.');
-            } else {
-                Alert.alert('Verification Failed', result.message || 'Your location could not be verified.');
-            }
-
-            setIsProcessing(false);
-        } catch (error) {
-            console.error('Error verifying location:', error);
-            setIsProcessing(false);
-            Alert.alert('Error', 'Failed to verify location. Please try again.');
-        }
+    const handleLocationVerification = () => {
+        navigateToLocationVerification(challengeId);
     };
 
     // Submit all verifications

@@ -1,35 +1,25 @@
+// Updated src/navigation/AppNavigator.tsx to include the What? Where? When? game screens
 import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-// Import screens
+// Import existing screens
 import ChallengesScreen from '../screens/ChallengeScreen.tsx';
 import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen.tsx';
 import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen.tsx';
 import CreateChallengeScreen from '../screens/CreateChallengeScreen.tsx';
-//
 import UserProfileScreen from '../screens/UserProfileScreen.tsx';
-// import EditProfileScreen from '../screens/EditProfileScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
-// import SearchScreen from '../screens/SearchScreen.tsx';
-// import GroupsScreen from '../screens/GroupsScreen.tsx';
 import LoginScreen from '../screens/LoginScreen.tsx';
 import SignupScreen from '../screens/SignupScreen.tsx';
+// Import new WWW game screens
+import WWWGameSetupScreen from '../screens/WWWGameSetupScreen.tsx';
+import WWWGamePlayScreen from '../screens/WWWGamePlayScreen.tsx';
+import WWWGameResultsScreen from '../screens/WWWGameResultsScreen.tsx';
+// Other imports
 import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
-console.log('Module CreateChallengeScreen:', CreateChallengeScreen);
-
-console.log('Module ChallengeVerificationScreen:', ChallengeVerificationScreen);
-
-console.log('Module ChallengeDetailsScreen:', ChallengeDetailsScreen);
-
-console.log('Module ChallengesScreen:', ChallengesScreen);
-
-console.log('Module UserProfileScreen:', UserProfileScreen);
-
-console.log('Module HomeScreen:', HomeScreen);
 
 // Define the types for the navigation parameters
 export type RootStackParamList = {
@@ -38,12 +28,25 @@ export type RootStackParamList = {
     Login: undefined;
     Signup: undefined;
     ChallengeDetails: { challengeId: string };
-    ChallengeVerification: { challengeId: string }; // Add the new route
+    ChallengeVerification: { challengeId: string };
     CreateChallenge: undefined;
     UserProfile: { userId: string };
-    // EditProfile: { userId: string };
-    // GroupDetails: { groupId: string };
-    // CreateGroup: undefined;
+    // WWW Game Screens
+    WWWGameSetup: undefined;
+    WWWGamePlay: {
+        teamName: string;
+        teamMembers: string[];
+        difficulty: string;
+        roundTime: number;
+        roundCount: number;
+        enableAIHost: boolean;
+    };
+    WWWGameResults: {
+        teamName: string;
+        score: number;
+        totalRounds: number;
+        roundsData: any[];
+    };
 };
 
 export type MainTabParamList = {
@@ -52,6 +55,7 @@ export type MainTabParamList = {
     Search: undefined;
     Groups: undefined;
     Profile: undefined;
+    WWWGame: undefined; // Add the game to main tabs
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -78,10 +82,11 @@ const MainTabNavigator = ({
                         Search: focused ? 'magnify' : 'magnify',
                         Groups: focused ? 'account-group' : 'account-group-outline',
                         Profile: focused ? 'account' : 'account-outline',
+                        WWWGame: focused ? 'brain' : 'brain', // Icon for the WWW game
                     };
 
                     return <MaterialCommunityIcons
-                        name={icons[route.name] || iconName}
+                        name={icons[route.name as keyof typeof icons] || iconName}
                         size={size}
                         color={color}
                     />;
@@ -93,9 +98,12 @@ const MainTabNavigator = ({
         >
             <Tab.Screen name="Home" component={HomeScreen} />
             <Tab.Screen name="Challenges" component={ChallengesScreen} />
-            {/*<Tab.Screen name="Search" component={SearchScreen} />*/}
-            {/*<Tab.Screen name="Groups" component={GroupsScreen} />*/}
-            <Tab.Screen name="Profile" component={UserProfileScreen}  />
+            <Tab.Screen
+                name="WWWGame"
+                component={WWWGameSetupScreen}
+                options={{ title: "What? Where? When?" }}
+            />
+            <Tab.Screen name="Profile" component={UserProfileScreen} />
         </Tab.Navigator>
     );
 };
@@ -145,21 +153,22 @@ const AppNavigation = () => {
                             component={UserProfileScreen}
                             options={{ title: 'User Profile' }}
                         />
-                        {/*<Stack.Screen*/}
-                        {/*    name="EditProfile"*/}
-                        {/*    component={EditProfileScreen}*/}
-                        {/*    options={{ title: 'Edit Profile' }}*/}
-                        {/*/>*/}
-                        {/*<Stack.Screen*/}
-                        {/*    name="GroupDetails"*/}
-                        {/*    component={() => <></>} // Placeholder, would be a real component*/}
-                        {/*    options={{ title: 'Group Details' }}*/}
-                        {/*/>*/}
-                        {/*<Stack.Screen*/}
-                        {/*    name="CreateGroup"*/}
-                        {/*    component={() => <></>} // Placeholder, would be a real component*/}
-                        {/*    options={{ title: 'Create Group' }}*/}
-                        {/*/>*/}
+                        {/* WWW Game screens */}
+                        <Stack.Screen
+                            name="WWWGameSetup"
+                            component={WWWGameSetupScreen}
+                            options={{ title: 'Game Setup' }}
+                        />
+                        <Stack.Screen
+                            name="WWWGamePlay"
+                            component={WWWGamePlayScreen}
+                            options={{ title: 'What? Where? When?', headerShown: false }}
+                        />
+                        <Stack.Screen
+                            name="WWWGameResults"
+                            component={WWWGameResultsScreen}
+                            options={{ title: 'Game Results' }}
+                        />
                     </>
                 ) : (
                     <>
