@@ -1,7 +1,8 @@
-// src/services/game/questionService.ts
+// src/services/wwwGame/questionService.ts
 import axios from 'axios';
-import {parseStringPromise} from 'xml2js';
-import {DeepSeekHostService} from "./deepseekHostService.ts";
+// import {parseStringPromise} from 'xml2js';
+import {XMLParser} from 'fast-xml-parser';
+import {DeepSeekHostService} from "./deepseekHostService";
 
 // Define types for question data
 export interface QuestionData {
@@ -20,7 +21,7 @@ export interface QuestionData {
 export class QuestionService {
     private static readonly BASE_URL = 'https://db.chgk.info/xml';
     private static cache: Record<string, QuestionData[]> = {};
-    private static isInitialized = false;
+    public static isInitialized = false;
 
     /**
      * Initialize the question service
@@ -62,7 +63,9 @@ export class QuestionService {
             const response = await axios.get(url);
 
             // Parse the XML response
-            const result = await parseStringPromise(response.data);
+            // const result = await parseStringPromise(response.data);
+            const parser = new XMLParser();
+            const result = parser.parse(response.data);
 
             // Process the questions
             let questions: QuestionData[] = [];
@@ -148,7 +151,10 @@ export class QuestionService {
             const response = await axios.get(url);
 
             // Parse the XML response
-            const result = await parseStringPromise(response.data);
+            // const result = await parseStringPromise(response.data);
+            const parser = new XMLParser();
+            const result = parser.parse(response.data);
+            console.log("response from answer service" + result)
 
             // Process the questions
             let questions: QuestionData[] = [];
@@ -291,10 +297,9 @@ export class QuestionService {
         question: string,
         answer: string
     ): Promise<'Easy' | 'Medium' | 'Hard'> {
-        // Attempt to use GPT-4 if available
+        // Attempt to use DeepSeek if available
         try {
-            // This assumes GPT4HostService is available and initialized
-            // Implement a method in GPT4HostService to classify question difficulty
+            // Check if DeepSeekHostService is available and initialized
             if (typeof DeepSeekHostService.classifyQuestionDifficulty === 'function') {
                 return await DeepSeekHostService.classifyQuestionDifficulty(question, answer);
             }
@@ -337,7 +342,24 @@ export class QuestionService {
                     answer: "Blue Whale",
                     difficulty: 'Easy' as const
                 },
-                // Add more easy questions...
+                {
+                    id: 'e3',
+                    question: "What is the capital of France?",
+                    answer: "Paris",
+                    difficulty: 'Easy' as const
+                },
+                {
+                    id: 'e4',
+                    question: "Which element has the chemical symbol 'O'?",
+                    answer: "Oxygen",
+                    difficulty: 'Easy' as const
+                },
+                {
+                    id: 'e5',
+                    question: "Which famous painting features a woman with a mysterious smile?",
+                    answer: "Mona Lisa",
+                    difficulty: 'Easy' as const
+                },
             ],
             'Medium': [
                 {
@@ -352,7 +374,24 @@ export class QuestionService {
                     answer: "Au",
                     difficulty: 'Medium' as const
                 },
-                // Add more medium questions...
+                {
+                    id: 'm3',
+                    question: "In which year did the Chernobyl disaster occur?",
+                    answer: "1986",
+                    difficulty: 'Medium' as const
+                },
+                {
+                    id: 'm4',
+                    question: "Which novel begins with the line 'It was the best of times, it was the worst of times'?",
+                    answer: "A Tale of Two Cities",
+                    difficulty: 'Medium' as const
+                },
+                {
+                    id: 'm5',
+                    question: "What is the currency of Japan?",
+                    answer: "Yen",
+                    difficulty: 'Medium' as const
+                },
             ],
             'Hard': [
                 {
@@ -367,13 +406,35 @@ export class QuestionService {
                     answer: "Jean-Paul Sartre",
                     difficulty: 'Hard' as const
                 },
-                // Add more hard questions...
+                {
+                    id: 'h3',
+                    question: "What is the hardest natural substance on Earth?",
+                    answer: "Diamond",
+                    difficulty: 'Hard' as const
+                },
+                {
+                    id: 'h4',
+                    question: "Which composer wrote 'The Magic Flute'?",
+                    answer: "Wolfgang Amadeus Mozart",
+                    difficulty: 'Hard' as const
+                },
+                {
+                    id: 'h5',
+                    question: "What is the chemical formula for sulfuric acid?",
+                    answer: "H2SO4",
+                    difficulty: 'Hard' as const
+                },
             ]
         };
 
         // Return questions matching the requested difficulty, or mix if not specified
         if (difficulty) {
-            return fallbackQuestions[difficulty].slice(0, count);
+            // Return up to the requested count, repeating if necessary
+            const questions = [...fallbackQuestions[difficulty]];
+            while (questions.length < count) {
+                questions.push(...fallbackQuestions[difficulty]);
+            }
+            return questions.slice(0, count);
         } else {
             // Mix questions from all difficulties
             const mixed = [
@@ -382,36 +443,42 @@ export class QuestionService {
                 ...fallbackQuestions.Hard
             ];
 
-            // Shuffle the array
-            for (let i = mixed.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [mixed[i], mixed[j]] = [mixed[j], mixed[i]];
+            // Repeat if necessary
+            const allQuestions = [...mixed];
+            while (allQuestions.length < count) {
+                allQuestions.push(...mixed);
             }
 
-            return mixed.slice(0, count);
+            // Shuffle the array
+            for (let i = allQuestions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+            }
+
+            return allQuestions.slice(0, count);
         }
     }
 
     /**
-     * Add a method to GPT4HostService for classifying question difficulty
-     * This extends the GPT4HostService with a new capability
+     * Add a method to DeepSeekHostService for classifying question difficulty
+     * This extends the DeepSeekHostService with a new capability
      */
     static extendGPT4HostService(): void {
         if (typeof DeepSeekHostService.classifyQuestionDifficulty !== 'function') {
-            DeepSeekHostService.classifyQuestionDifficulty = async function(
+            DeepSeekHostService.classifyQuestionDifficulty = async function (
                 question: string,
                 answer: string
             ): Promise<'Easy' | 'Medium' | 'Hard'> {
                 try {
-                    // Make API request to GPT-4
-                    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    // Make API request to DeepSeek
+                    const response = await fetch('https://api.deepseek.com/chat/completions', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${(this as any).config.apiKey}`
                         },
                         body: JSON.stringify({
-                            model: (this as any).config.model || 'gpt-4',
+                            model: (this as any).config.model || 'deepseek-chat',
                             messages: [
                                 {
                                     role: "system",
@@ -437,7 +504,7 @@ export class QuestionService {
                     });
 
                     if (!response.ok) {
-                        throw new Error(`OpenAI API error: ${response.status}`);
+                        throw new Error(`DeepSeek API error: ${response.status}`);
                     }
 
                     const data = await response.json();
@@ -454,9 +521,9 @@ export class QuestionService {
                     }
 
                 } catch (error) {
-                    console.error('Error classifying question difficulty with GPT-4:', error);
+                    console.error('Error classifying question difficulty with DeepSeek:', error);
 
-                    // Simple fallback based on answer length if GPT-4 classification fails
+                    // Simple fallback based on answer length if DeepSeek classification fails
                     if (answer.length <= 15) {
                         return 'Easy';
                     } else if (answer.length >= 30) {
@@ -467,5 +534,15 @@ export class QuestionService {
                 }
             };
         }
+
+        console.log('Extended DeepSeekHostService with question difficulty classification');
+    }
+
+    /**
+     * Clear the question cache
+     */
+    static clearCache(): void {
+        this.cache = {};
+        console.log('Question cache cleared');
     }
 }

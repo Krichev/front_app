@@ -1,5 +1,5 @@
 // src/screens/WWWGameSetupScreen.tsx
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -16,7 +16,8 @@ import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {GameSettings} from '../services/wwwGame/wwwGameService';
+import {GameSettings, initializeWWWGameServices} from '../services/wwwGame';
+import {useWWWGame} from '../app/providers/WWWGameProvider';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -28,16 +29,27 @@ type WWWGameSetupNavigationProp = NativeStackNavigationProp<RootStackParamList, 
 
 const WWWGameSetupScreen: React.FC = () => {
     const navigation = useNavigation<WWWGameSetupNavigationProp>();
-    const { user } = useSelector((state: RootState) => state.auth);
+    const {user} = useSelector((state: RootState) => state.auth);
+    const {isInitialized, config} = useWWWGame();
+
+    // Initialize game if not already initialized
+    useEffect(() => {
+        if (!isInitialized) {
+            // Initialize game services (fallback if provider is not used)
+            initializeWWWGameServices();
+        }
+    }, [isInitialized]);
 
     // State for game settings
     const [teamName, setTeamName] = useState('Team Intellect');
     const [teamMembers, setTeamMembers] = useState<string[]>([user?.name || 'Player 1']);
     const [newMember, setNewMember] = useState('');
-    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
-    const [roundTime, setRoundTime] = useState(60); // seconds
-    const [roundCount, setRoundCount] = useState(10);
-    const [enableAIHost, setEnableAIHost] = useState(true);
+    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(
+        config.questions.defaultDifficulty || 'Medium'
+    );
+    const [roundTime, setRoundTime] = useState(config.game.defaultRoundTime || 60); // seconds
+    const [roundCount, setRoundCount] = useState(config.game.defaultRoundCount || 10);
+    const [enableAIHost, setEnableAIHost] = useState<boolean>(config.aiHost.enabled || true);
 
     // Add team member
     const addTeamMember = () => {
@@ -464,7 +476,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: 'white',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.2,
         shadowRadius: 2,
         elevation: 2,
@@ -497,5 +509,3 @@ const styles = StyleSheet.create({
 });
 
 export default WWWGameSetupScreen;
-
-

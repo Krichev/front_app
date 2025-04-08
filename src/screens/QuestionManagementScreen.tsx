@@ -44,7 +44,7 @@ const QuestionManagementScreen: React.FC = () => {
     // Load questions when component mounts
     useEffect(() => {
         loadRandomQuestions();
-
+        console.log("loadRandomQuestions");
         // Load recent searches from storage (implementation placeholder)
         const loadRecentSearches = async () => {
             // In a real app, load from AsyncStorage or similar
@@ -101,8 +101,8 @@ const QuestionManagementScreen: React.FC = () => {
                     'No Results',
                     'No questions found matching your criteria. Try a different search term or difficulty.',
                     [
-                        { text: 'OK' },
-                        { text: 'Load Random Questions', onPress: loadRandomQuestions }
+                        {text: 'OK'},
+                        {text: 'Load Random Questions', onPress: loadRandomQuestions}
                     ]
                 );
             } else {
@@ -162,7 +162,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Render each question item
-    const renderQuestionItem = ({ item }: { item: QuestionData }) => {
+    const renderQuestionItem = ({item}: { item: QuestionData }) => {
         const isSelected = selectedQuestions.some(q => q.id === item.id);
 
         return (
@@ -202,8 +202,8 @@ const QuestionManagementScreen: React.FC = () => {
             'Question Details',
             `Q: ${question.question}\n\nA: ${question.answer}${question.additionalInfo ? `\n\nAdditional Info: ${question.additionalInfo}` : ''}${question.source ? `\n\nSource: ${question.source}` : ''}`,
             [
-                { text: 'Close' },
-                { text: question.difficulty || 'Set Difficulty', onPress: () => showDifficultySelection(question) }
+                {text: 'Close'},
+                {text: question.difficulty || 'Set Difficulty', onPress: () => showDifficultySelection(question)}
             ]
         );
     };
@@ -214,10 +214,10 @@ const QuestionManagementScreen: React.FC = () => {
             'Set Difficulty',
             'Choose difficulty level for this question:',
             [
-                { text: 'Easy', onPress: () => updateQuestionDifficulty(question, 'Easy') },
-                { text: 'Medium', onPress: () => updateQuestionDifficulty(question, 'Medium') },
-                { text: 'Hard', onPress: () => updateQuestionDifficulty(question, 'Hard') },
-                { text: 'Cancel', style: 'cancel' }
+                {text: 'Easy', onPress: () => updateQuestionDifficulty(question, 'Easy')},
+                {text: 'Medium', onPress: () => updateQuestionDifficulty(question, 'Medium')},
+                {text: 'Hard', onPress: () => updateQuestionDifficulty(question, 'Hard')},
+                {text: 'Cancel', style: 'cancel'}
             ]
         );
     };
@@ -226,14 +226,14 @@ const QuestionManagementScreen: React.FC = () => {
     const updateQuestionDifficulty = (question: QuestionData, newDifficulty: 'Easy' | 'Medium' | 'Hard') => {
         // Update in questions list
         const updatedQuestions = questions.map(q =>
-            q.id === question.id ? { ...q, difficulty: newDifficulty } : q
+            q.id === question.id ? {...q, difficulty: newDifficulty} : q
         );
         setQuestions(updatedQuestions);
 
         // Update in selected questions list if present
         if (selectedQuestions.some(q => q.id === question.id)) {
             const updatedSelected = selectedQuestions.map(q =>
-                q.id === question.id ? { ...q, difficulty: newDifficulty } : q
+                q.id === question.id ? {...q, difficulty: newDifficulty} : q
             );
             setSelectedQuestions(updatedSelected);
         }
@@ -324,7 +324,7 @@ const QuestionManagementScreen: React.FC = () => {
                 {/* Questions List */}
                 {loading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#4CAF50" />
+                        <ActivityIndicator size="large" color="#4CAF50"/>
                         <Text style={styles.loadingText}>Loading questions...</Text>
                     </View>
                 ) : (

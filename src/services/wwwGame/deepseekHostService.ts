@@ -1,11 +1,11 @@
-// src/services/game/deepseekHostService.ts
+// src/services/wwwGame/deepseekHostService.ts
 import {Platform} from 'react-native';
 
 /**
  * Configuration for the DeepSeek AI Host Service
  */
-interface DeepSeekHostConfig {
-    apiKey: string;             // DeepSeek API key
+export interface DeepSeekHostConfig {
+    apiKey: string | null;      // DeepSeek API key
     model: string;              // Model to use (e.g., "deepseek-chat")
     fallbackToLocal: boolean;   // Whether to use local methods if API fails
     language: string;           // Language for prompts and responses
@@ -14,9 +14,9 @@ interface DeepSeekHostConfig {
 }
 
 /**
- * Response structure from analysis
+ * Response structure from discussion analysis
  */
-interface DiscussionAnalysisResponse {
+export interface DiscussionAnalysisResponse {
     correctAnswerMentioned: boolean;
     bestGuesses: string[];
     analysis: string;
@@ -27,7 +27,7 @@ interface DiscussionAnalysisResponse {
  * Default configuration
  */
 const DEFAULT_CONFIG: DeepSeekHostConfig = {
-    apiKey: '',
+    apiKey: null,
     model: 'deepseek-chat',
     fallbackToLocal: true,
     language: 'en',
@@ -40,24 +40,55 @@ const DEFAULT_CONFIG: DeepSeekHostConfig = {
  */
 export class DeepSeekHostService {
     private static config: DeepSeekHostConfig = { ...DEFAULT_CONFIG };
+    private static isInitialized: boolean = false;
 
     /**
      * Initialize the DeepSeek Host service
      */
-    static initialize(config: Partial<DeepSeekHostConfig>): void {
+    static initialize(config: Partial<DeepSeekHostConfig> = {}): void {
         this.config = { ...DEFAULT_CONFIG, ...config };
+        this.isInitialized = true;
 
         if (!this.config.apiKey) {
             console.warn('DeepSeekHostService: No API key provided. The service will use local fallbacks only.');
+        } else {
+            console.log('DeepSeekHostService initialized with model:', this.config.model);
         }
+    }
 
-        console.log('DeepSeekHostService initialized with model:', this.config.model);
+    /**
+     * Get whether the service is initialized
+     */
+    static getIsInitialized(): boolean {
+        return this.isInitialized;
+    }
+
+    /**
+     * Update configuration
+     */
+    static updateConfig(config: Partial<DeepSeekHostConfig>): void {
+        this.config = { ...this.config, ...config };
+    }
+
+    /**
+     * Get current configuration
+     */
+    static getConfig(): DeepSeekHostConfig {
+        return { ...this.config };
     }
 
     /**
      * Core function to call DeepSeek API
      */
-    private static async callDeepSeekAPI(messages: any[], options = {}) {
+    private static async callDeepSeekAPI(messages: any[], options: any = {}): Promise<string> {
+        if (!this.isInitialized) {
+            throw new Error('DeepSeekHostService is not initialized. Call DeepSeekHostService.initialize() first.');
+        }
+
+        if (!this.config.apiKey) {
+            throw new Error('No API key provided. Please set a valid API key.');
+        }
+
         const {
             model = this.config.model,
             temperature = this.config.temperature,
@@ -89,10 +120,16 @@ export class DeepSeekHostService {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const responseText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, message: ${responseText}`);
             }
 
             const data = await response.json();
+
+            if (!data.choices || data.choices.length === 0 || !data.choices[0].message) {
+                throw new Error('Invalid response format from DeepSeek API');
+            }
+
             return data.choices[0].message.content;
         } catch (error) {
             console.error('Error calling DeepSeek API:', error);
@@ -143,37 +180,38 @@ Did the team mention the correct answer or something very close to it? Extract t
                 }
             ];
 
-            // Call the DeepSeek API
-            const responseContent = await this.callDeepSeekAPI(messages, {
-                temperature: 0.3,
-                max_tokens: 300
-            });
-
-            // Parse the JSON response
             try {
-                const parsedResponse = JSON.parse(responseContent);
-                return {
-                    correctAnswerMentioned: !!parsedResponse.correctAnswerMentioned,
-                    bestGuesses: Array.isArray(parsedResponse.bestGuesses) ? parsedResponse.bestGuesses : [],
-                    analysis: parsedResponse.analysis || 'No analysis provided',
-                    confidence: typeof parsedResponse.confidence === 'number'
-                        ? parsedResponse.confidence
-                        : 0.7
-                };
-            } catch (parseError) {
-                console.error('Failed to parse DeepSeek response:', parseError);
-                throw new Error('Invalid response format from DeepSeek');
-            }
+                // Call the DeepSeek API
+                const responseContent = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.3,
+                    max_tokens: 300
+                });
 
+                // Parse the JSON response
+                try {
+                    const parsedResponse = JSON.parse(responseContent);
+                    return {
+                        correctAnswerMentioned: !!parsedResponse.correctAnswerMentioned,
+                        bestGuesses: Array.isArray(parsedResponse.bestGuesses) ? parsedResponse.bestGuesses : [],
+                        analysis: parsedResponse.analysis || 'No analysis provided',
+                        confidence: typeof parsedResponse.confidence === 'number'
+                            ? parsedResponse.confidence
+                            : 0.7
+                    };
+                } catch (parseError) {
+                    console.error('Failed to parse DeepSeek response:', parseError);
+                    throw new Error('Invalid response format from DeepSeek');
+                }
+            } catch (apiError) {
+                // If API call fails and fallback is enabled, use local analysis
+                if (this.config.fallbackToLocal) {
+                    console.log('Falling back to local discussion analysis');
+                    return this.localAnalyzeDiscussion(discussionText, correctAnswer);
+                }
+                throw apiError;
+            }
         } catch (error) {
             console.error('Error in DeepSeek discussion analysis:', error);
-
-            // Use local analysis as fallback if enabled
-            if (this.config.fallbackToLocal) {
-                console.log('Falling back to local discussion analysis');
-                return this.localAnalyzeDiscussion(discussionText, correctAnswer);
-            }
-
             return this.getDefaultAnalysisResponse();
         }
     }
@@ -184,7 +222,7 @@ Did the team mention the correct answer or something very close to it? Extract t
     static async generateHint(
         question: string,
         correctAnswer: string,
-        difficulty: 'Easy' | 'Medium' | 'Hard',
+        difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium',
         previousHints: string[] = []
     ): Promise<string> {
         if (!question || !correctAnswer) {
@@ -233,28 +271,29 @@ Did the team mention the correct answer or something very close to it? Extract t
                 }
             ];
 
-            // Call the DeepSeek API
-            const hint = await this.callDeepSeekAPI(messages, {
-                temperature: 0.7,
-                max_tokens: 100
-            });
+            try {
+                // Call the DeepSeek API
+                const hint = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.7,
+                    max_tokens: 100
+                });
 
-            if (!hint) {
-                throw new Error('Empty hint from DeepSeek');
+                if (!hint) {
+                    throw new Error('Empty hint from DeepSeek');
+                }
+
+                return hint;
+            } catch (apiError) {
+                // If API call fails and fallback is enabled, use local hint generation
+                if (this.config.fallbackToLocal) {
+                    console.log('Falling back to local hint generation');
+                    return this.localGenerateHint(correctAnswer, difficulty);
+                }
+                throw apiError;
             }
-
-            return hint;
-
         } catch (error) {
             console.error('Error generating hint with DeepSeek:', error);
-
-            // Fall back to local hint generation
-            if (this.config.fallbackToLocal) {
-                console.log('Falling back to local hint generation');
-                return this.localGenerateHint(correctAnswer, difficulty);
-            }
-
-            return `The answer has ${correctAnswer.length} characters.`;
+            return this.localGenerateHint(correctAnswer, difficulty);
         }
     }
 
@@ -316,33 +355,40 @@ Did the team mention the correct answer or something very close to it? Extract t
                 }
             ];
 
-            // Call the DeepSeek API
-            const feedback = await this.callDeepSeekAPI(messages, {
-                temperature: 0.7,
-                max_tokens: 300
-            });
+            try {
+                // Call the DeepSeek API
+                const feedback = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.7,
+                    max_tokens: 300
+                });
 
-            if (!feedback) {
-                throw new Error('Empty feedback from DeepSeek');
+                if (!feedback) {
+                    throw new Error('Empty feedback from DeepSeek');
+                }
+
+                return feedback;
+            } catch (apiError) {
+                // If API call fails and fallback is enabled, use local feedback generation
+                if (this.config.fallbackToLocal) {
+                    return this.localGenerateGameFeedback(
+                        correctAnswers,
+                        totalQuestions,
+                        playerPerformances,
+                        questionData.filter(q => !q.isCorrect)
+                    );
+                }
+                throw apiError;
             }
-
-            return feedback;
-
         } catch (error) {
             console.error('Error generating game feedback with DeepSeek:', error);
 
-            // Fall back to local feedback generation
-            if (this.config.fallbackToLocal) {
-                return this.localGenerateGameFeedback(
-                    correctAnswers,
-                    totalQuestions,
-                    playerPerformances,
-                    questionData.filter(q => !q.isCorrect)
-                );
-            }
-
             // Basic fallback message
-            return `Your team answered ${correctAnswers} out of ${totalQuestions} questions correctly. Great effort!`;
+            return this.localGenerateGameFeedback(
+                correctAnswers,
+                totalQuestions,
+                playerPerformances,
+                questionData.filter(q => !q.isCorrect)
+            );
         }
     }
 
@@ -374,22 +420,32 @@ Did the team mention the correct answer or something very close to it? Extract t
                 }
             ];
 
-            // Call the DeepSeek API
-            const result = await this.callDeepSeekAPI(messages, {
-                temperature: 0.3,
-                max_tokens: 10
-            });
+            try {
+                // Call the DeepSeek API
+                const result = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.3,
+                    max_tokens: 10
+                });
 
-            if (result?.toLowerCase().includes('easy')) {
-                return 'Easy';
-            } else if (result?.toLowerCase().includes('medium')) {
-                return 'Medium';
-            } else if (result?.toLowerCase().includes('hard')) {
-                return 'Hard';
-            } else {
-                return 'Medium'; // Default to Medium if classification fails
+                if (result?.toLowerCase().includes('easy')) {
+                    return 'Easy';
+                } else if (result?.toLowerCase().includes('medium')) {
+                    return 'Medium';
+                } else if (result?.toLowerCase().includes('hard')) {
+                    return 'Hard';
+                } else {
+                    return 'Medium'; // Default to Medium if classification fails
+                }
+            } catch (apiError) {
+                // Simple fallback
+                if (answer.length <= 15) {
+                    return 'Easy';
+                } else if (answer.length >= 30) {
+                    return 'Hard';
+                } else {
+                    return 'Medium';
+                }
             }
-
         } catch (error) {
             console.error('Error classifying question difficulty with DeepSeek:', error);
 
@@ -437,19 +493,23 @@ Did the team mention the correct answer or something very close to it? Extract t
                 }
             ];
 
-            // Call the DeepSeek API
-            const intro = await this.callDeepSeekAPI(messages, {
-                temperature: 0.7,
-                max_tokens: 100
-            });
+            try {
+                // Call the DeepSeek API
+                const intro = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.7,
+                    max_tokens: 100
+                });
 
-            if (!intro) {
-                throw new Error('Empty introduction from DeepSeek');
+                if (!intro) {
+                    throw new Error('Empty introduction from DeepSeek');
+                }
+
+                // Combine introduction with the question
+                return `${intro}\n\nQuestion ${roundNumber} of ${totalRounds}: ${question}`;
+            } catch (apiError) {
+                // Simple fallback introduction if DeepSeek fails
+                return `Let's move on to question ${roundNumber} of ${totalRounds}. ${question}`;
             }
-
-            // Combine introduction with the question
-            return `${intro}\n\nQuestion ${roundNumber} of ${totalRounds}: ${question}`;
-
         } catch (error) {
             console.error('Error generating question introduction with DeepSeek:', error);
 
@@ -498,19 +558,23 @@ Did the team mention the correct answer or something very close to it? Extract t
                 }
             ];
 
-            // Call the DeepSeek API
-            const feedback = await this.callDeepSeekAPI(messages, {
-                temperature: 0.4,
-                max_tokens: 60
-            });
+            try {
+                // Call the DeepSeek API
+                const feedback = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.4,
+                    max_tokens: 60
+                });
 
-            // Don't provide feedback if the AI returns null or similar
-            if (!feedback || feedback.toLowerCase() === 'null' || feedback.toLowerCase() === 'no') {
+                // Don't provide feedback if the AI returns null or similar
+                if (!feedback || feedback.toLowerCase() === 'null' || feedback.toLowerCase() === 'no') {
+                    return null;
+                }
+
+                return feedback;
+            } catch (error) {
+                console.error('Error in live discussion analysis:', error);
                 return null;
             }
-
-            return feedback;
-
         } catch (error) {
             console.error('Error in live discussion analysis:', error);
             return null;
