@@ -4,6 +4,37 @@ import axios from 'axios';
 import {XMLParser} from 'fast-xml-parser';
 import {DeepSeekHostService} from "./deepseekHostService";
 
+// Types for the XML response from db.chgk.info
+interface XMLQuestionFields {
+    dbid?: string | string[];
+    text?: string | string[];
+    answer?: string | string[];
+    sources?: Array<{
+        source?: string | string[];
+    }> | {
+        source?: string | string[];
+    };
+    comments?: string | string[];
+    topic?: string | string[];
+    tournamentTitle?: string | string[];
+    tourTitle?: string | string[];
+    authorsList?: string | string[];
+    date?: string | string[];
+    url?: string | string[];
+}
+
+interface XMLSearchResponse {
+    search: {
+        question: XMLQuestionFields[] | XMLQuestionFields;
+    };
+}
+
+interface XMLSingleQuestionResponse {
+    question: XMLQuestionFields;
+}
+
+type XMLParsedResponse = XMLSearchResponse | XMLSingleQuestionResponse;
+
 // Define types for question data
 export interface QuestionData {
     id: string;
@@ -54,41 +85,34 @@ export class QuestionService {
 
             // Try to get from cache first
             const cacheKey = `random_${fromYear || 'all'}_${count}`;
-            if (this.cache[cacheKey]) {
-                console.log('Returning cached questions');
-                return this.cache[cacheKey];
-            }
+            // if (this.cache[cacheKey]) {
+            //     console.log('Returning cached questions');
+            //     return this.cache[cacheKey];
+            // }
 
             // Fetch the data
             const response = await axios.get(url);
-
+console.log(response);
             // Parse the XML response
             // const result = await parseStringPromise(response.data);
             const parser = new XMLParser();
-            const result = parser.parse(response.data);
+            const result = parser.parse(response.data) as XMLParsedResponse;
 
-            // Process the questions
+// Process the questions
             let questions: QuestionData[] = [];
 
-            if (result && result.search && result.search.question) {
+            if (result && 'search' in result && result.search.question) {
                 // Multiple questions
-                questions = await Promise.all(result.search.question.map(async (q: any) => {
+                const questionArray = Array.isArray(result.search.question)
+                    ? result.search.question
+                    : [result.search.question];
+
+                questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields) => {
                     const questionData = this.parseQuestionFromXml(q);
-
-                    // Assign difficulty if requested
-                    if (difficulty) {
-                        questionData.difficulty = difficulty;
-                    } else {
-                        // Auto-classify difficulty
-                        questionData.difficulty = await this.classifyQuestionDifficulty(
-                            questionData.question,
-                            questionData.answer
-                        );
-                    }
-
+                    // ... rest of your processing
                     return questionData;
                 }));
-            } else if (result && result.question) {
+            } else if (result && 'question' in result) {
                 // Single question
                 const questionData = this.parseQuestionFromXml(result.question);
 
@@ -222,7 +246,7 @@ export class QuestionService {
     /**
      * Clean and parse a question object from the XML response
      */
-    private static parseQuestionFromXml(q: any): QuestionData {
+    private static parseQuestionFromXml(q: XMLQuestionFields): QuestionData {
         let questionText = '';
         let answerText = '';
         let sourceText = '';
@@ -230,34 +254,38 @@ export class QuestionService {
         let id = '';
 
         // Extract ID
-        if (q.dbid && q.dbid[0]) {
-            id = q.dbid[0];
+        if (q.dbid) {
+            id = Array.isArray(q.dbid) ? q.dbid[0] : q.dbid;
         }
 
         // Extract question text
-        if (q.text && q.text[0]) {
-            questionText = this.cleanText(q.text[0]);
+        if (q.text) {
+            questionText = this.cleanText(Array.isArray(q.text) ? q.text[0] : q.text);
         }
 
         // Extract answer text
-        if (q.answer && q.answer[0]) {
-            answerText = this.cleanText(q.answer[0]);
+        if (q.answer) {
+            answerText = this.cleanText(Array.isArray(q.answer) ? q.answer[0] : q.answer);
         }
 
         // Extract source if available
-        if (q.sources && q.sources[0] && q.sources[0].source) {
-            sourceText = this.cleanText(q.sources[0].source[0]);
+        if (q.sources) {
+            const sourcesArray = Array.isArray(q.sources) ? q.sources : [q.sources];
+            if (sourcesArray[0] && sourcesArray[0].source) {
+                const source = sourcesArray[0].source;
+                sourceText = this.cleanText(Array.isArray(source) ? source[0] : source);
+            }
         }
 
         // Extract additional info (comments, etc.)
-        if (q.comments && q.comments[0]) {
-            additionalInfo = this.cleanText(q.comments[0]);
+        if (q.comments) {
+            additionalInfo = this.cleanText(Array.isArray(q.comments) ? q.comments[0] : q.comments);
         }
 
         // Extract topic if available
         let topic = '';
-        if (q.topic && q.topic[0]) {
-            topic = this.cleanText(q.topic[0]);
+        if (q.topic) {
+            topic = this.cleanText(Array.isArray(q.topic) ? q.topic[0] : q.topic);
         }
 
         return {

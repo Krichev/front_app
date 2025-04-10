@@ -59,6 +59,7 @@ const QuestionManagementScreen: React.FC = () => {
         setLoading(true);
         try {
             const randomQuestions = await QuestionService.fetchRandomQuestions(20);
+            console.log("randomQuestions----", randomQuestions);
             setQuestions(randomQuestions);
         } catch (error) {
             console.error('Error loading random questions:', error);

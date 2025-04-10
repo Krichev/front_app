@@ -17,11 +17,6 @@ import {useLoginMutation} from "../entities/AuthState/model/slice/authApi.ts";
 import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
 import {RootStackParamList} from "../navigation/AppNavigator.tsx";
 
-// type RootStackParamList = {
-//     Login: undefined;
-//     Signup: undefined;
-//     Home: undefined;
-// };
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
 interface LoginScreenProps {
@@ -32,7 +27,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     const [formData, setFormData] = useState({username: '', password: ''});
     const [login, {isLoading, error}] = useLoginMutation();
     const dispatch = useDispatch();
-    console.log('login screen ====================');
+
     useEffect(() => {
         const checkTokens = async () => {
             try {
@@ -41,7 +36,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                     console.log(credentials)
                     const {accessToken, refreshToken, user} = JSON.parse(credentials.password);
                     dispatch(setTokens({accessToken, refreshToken, user}));
-                    // navigation.navigate('Home');
+                    // Navigate to Main with Home tab
                     navigation.navigate('Main', { screen: 'Home' });
                 }
             } catch (err) {
@@ -61,42 +56,29 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     const handleLogin = async (): Promise<void> => {
         const {username, password} = formData;
 
-        console.log('handleLogin');
-
-        // **Input Validation**
+        // Input Validation
         if (!username.trim() || !password.trim()) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
-        // const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        // if (!emailRegex.test(email)) {
-        //     Alert.alert('Error', 'Please enter a valid email address');
-        //     return;
-        // }
-
         try {
-            console.log(username);
-            console.log(password);
-
-
-            // **Attempt Login**
+            // Attempt Login
             const result = await login({username, password}).unwrap();
-            console.log(result)
             const {accessToken, refreshToken, user} = result;
 
-            // **Securely Store Tokens and User Info**
+            // Securely Store Tokens and User Info
             await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken, user}));
-            // **Update Auth State**
+
+            // Update Auth State
             dispatch(setTokens({accessToken, refreshToken, user}));
 
-            // **Navigate to Home Screen**
-            // navigation.navigate('Home');
+            // Navigate to Main with Home tab
             navigation.navigate('Main', { screen: 'Home' });
         } catch (err: any) {
             const errorMessage = err.data?.message || 'An error occurred';
             Alert.alert('Error', errorMessage);
-            console.log( err.data);
+            console.log(err.data);
         }
     };
 

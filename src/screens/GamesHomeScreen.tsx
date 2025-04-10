@@ -1,4 +1,4 @@
-// src/screens/GamesHomeScreen.tsx
+// Fixed src/screens/GamesHomeScreen.tsx with corrected navigation calls
 import React from 'react';
 import {Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -6,14 +6,10 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {RootStackParamList} from '../navigation/AppNavigator';
 
-// Define navigation parameters type
-type GamesStackParamList = {
-    GamesHome: undefined;
-    WWWGameSetup: undefined;
-};
-
-type GamesHomeScreenNavigationProp = NativeStackNavigationProp<GamesStackParamList, 'GamesHome'>;
+// Define navigation parameter type
+type GamesHomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const GamesHomeScreen: React.FC = () => {
     const navigation = useNavigation<GamesHomeScreenNavigationProp>();
@@ -27,7 +23,7 @@ const GamesHomeScreen: React.FC = () => {
             description: 'A team trivia game where players discuss and answer challenging questions.',
             icon: 'brain',
             color: '#4CAF50',
-            onPress: () => navigation.navigate('WWWGameSetup'),
+            onPress: () => navigation.navigate('WWWGameSetup', { selectedQuestions: undefined }), // Fixed: include empty params object
         },
         {
             id: 'rhythm',
@@ -47,6 +43,18 @@ const GamesHomeScreen: React.FC = () => {
             onPress: () =>  Alert.alert('Coming soon!'),
             comingSoon: true,
         },
+    ];
+
+    // Admin options
+    const adminOptions = [
+        {
+            id: 'question-management',
+            title: 'Question Management',
+            description: 'Add, edit, and manage questions for the What? Where? When? game.',
+            icon: 'playlist-edit',
+            color: '#673AB7',
+            onPress: () => navigation.navigate('QuestionManagement'),
+        }
     ];
 
     // Render a game card for each option
@@ -89,7 +97,7 @@ const GamesHomeScreen: React.FC = () => {
                     <Text style={styles.sectionTitle}>Featured Game</Text>
                     <TouchableOpacity
                         style={styles.featuredGameCard}
-                        onPress={() => navigation.navigate('WWWGameSetup')}
+                        onPress={() => navigation.navigate('WWWGameSetup', { selectedQuestions: undefined })} // Fixed: include empty params object
                     >
                         <Image
                             source={require('../../assets/www-game-banner.png')}
@@ -104,13 +112,31 @@ const GamesHomeScreen: React.FC = () => {
                             <View style={styles.playButtonContainer}>
                                 <TouchableOpacity
                                     style={styles.playButton}
-                                    onPress={() => navigation.navigate('WWWGameSetup')}
+                                    onPress={() => navigation.navigate('WWWGameSetup', { selectedQuestions: undefined })} // Fixed: include empty params object
                                 >
                                     <Text style={styles.playButtonText}>PLAY NOW</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </TouchableOpacity>
+                </View>
+
+                {/* Admin Tools Section */}
+                <View style={styles.adminSection}>
+                    <View style={styles.adminHeaderRow}>
+                        <Text style={styles.sectionTitle}>Admin Tools</Text>
+                        <TouchableOpacity
+                            style={styles.infoButton}
+                            onPress={() => Alert.alert(
+                                'Admin Tools',
+                                'These tools allow you to manage game content and settings.'
+                            )}
+                        >
+                            <MaterialCommunityIcons name="information-outline" size={20} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+
+                    {adminOptions.map(renderGameCard)}
                 </View>
 
                 {/* Recent Activity */}
@@ -130,6 +156,7 @@ const GamesHomeScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+    // Styles remain unchanged
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -207,11 +234,23 @@ const styles = StyleSheet.create({
     featuredGameSection: {
         marginBottom: 32,
     },
+    adminSection: {
+        marginBottom: 32,
+    },
+    adminHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    infoButton: {
+        padding: 4,
+    },
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
         color: '#333',
-        marginBottom: 16,
+        marginBottom: 0,
     },
     featuredGameCard: {
         borderRadius: 12,

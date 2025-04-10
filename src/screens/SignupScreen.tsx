@@ -1,4 +1,4 @@
-// SignupScreen.tsx
+// Updated navigation in SignupScreen.tsx
 import React, {useState} from 'react';
 import {
     Alert,
@@ -18,14 +18,6 @@ import * as Keychain from 'react-native-keychain';
 import {useSignupMutation} from "../entities/AuthState/model/slice/authApi.ts";
 import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
 import {RootStackParamList} from "../navigation/AppNavigator.tsx";
-
-// Define types for navigation and props
-// type RootStackParamList = {
-//     Login: undefined;
-//     Signup: undefined;
-//     Home: undefined;
-//     ForgotPassword: undefined;
-// };
 
 type SignupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Signup'>;
 
@@ -61,7 +53,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
     const handleSignup = async (): Promise<void> => {
         const {username, email, password, confirmPassword} = formData;
 
-        // **Input Validation**
+        // Input Validation
         if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
@@ -80,21 +72,20 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
         }
 
         try {
-            // **Attempt Signup**
+            // Attempt Signup
             const result = await signup({username, email, password}).unwrap();
             const {accessToken, refreshToken, user} = result;
 
-            // **Securely Store Tokens**
+            // Securely Store Tokens
             await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken}));
 
-            // **Update Auth State**
+            // Update Auth State
             dispatch(setTokens({accessToken, refreshToken, user}));
 
-            // **Navigate to Home Screen**
-            // navigation.navigate('Home');
+            // Navigate to Main with Home tab
             navigation.navigate('Main', { screen: 'Home' });
 
-            // **Reset Form (Optional)**
+            // Reset Form (Optional)
             setFormData({
                 username: '',
                 email: '',
