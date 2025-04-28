@@ -42,7 +42,7 @@ export interface CreateChallengeRequest {
 export interface GetChallengesParams {
     page?: number;
     limit?: number;
-    type?: string;
+    type?: string| null;
     visibility?: string;
     status?: string;
     creator_id?: string;

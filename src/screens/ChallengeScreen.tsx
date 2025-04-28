@@ -37,14 +37,14 @@ type ChallengesScreenNavigationProp = NativeStackNavigationProp<RootStackParamLi
 const ChallengesScreen: React.FC = () => {
     const route = useRoute<ChallengesScreenRouteProp>();
     const navigation = useNavigation<ChallengesScreenNavigationProp>();
-    const { user } = useSelector((state: RootState) => state.auth);
+    const {user} = useSelector((state: RootState) => state.auth);
 
     // If the screen was navigated to with an initial filter, use it
     const initialFilterType = route.params?.initialFilter || null;
     const [selectedType, setSelectedType] = useState<string | null>(initialFilterType);
 
     // RTK Query call to fetch challenges
-    const { data: challenges, error, isLoading, refetch } = useGetChallengesQuery({
+    const {data: challenges, error, isLoading, refetch} = useGetChallengesQuery({
         page: 1,
         limit: 50, // Increase limit to get more challenges
         type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType, // Special handling for WWW filter
@@ -79,7 +79,7 @@ const ChallengesScreen: React.FC = () => {
     }, [challenges, selectedType]);
 
     // Renders each challenge item in the list
-    const renderChallengeItem = ({ item }: { item: Challenge }) => {
+    const renderChallengeItem = ({item}: { item: Challenge }) => {
         // Detect if this is a quiz challenge
         const isQuizChallenge = item.type === 'QUIZ';
 
@@ -87,7 +87,7 @@ const ChallengesScreen: React.FC = () => {
             return (
                 <QuizChallengeCard
                     challenge={item}
-                    onPress={() => navigation.navigate('ChallengeDetails', { challengeId: item.id })}
+                    onPress={() => navigation.navigate('ChallengeDetails', {challengeId: item.id})}
                 />
             );
         }
@@ -96,7 +96,7 @@ const ChallengesScreen: React.FC = () => {
         return (
             <TouchableOpacity
                 style={styles.challengeItem}
-                onPress={() => navigation.navigate('ChallengeDetails', { challengeId: item.id })}
+                onPress={() => navigation.navigate('ChallengeDetails', {challengeId: item.id})}
             >
                 <View style={styles.challengeHeader}>
                     <Text style={styles.challengeTitle}>{item.title}</Text>
@@ -200,7 +200,7 @@ const ChallengesScreen: React.FC = () => {
                     style={styles.refreshButton}
                     onPress={() => refetch()}
                 >
-                    <MaterialCommunityIcons name="refresh" size={24} color="white" />
+                    <MaterialCommunityIcons name="refresh" size={24} color="white"/>
                 </TouchableOpacity>
             </View>
 
@@ -219,7 +219,7 @@ const ChallengesScreen: React.FC = () => {
                     </View>
                 ) : error ? (
                     <View style={styles.errorContainer}>
-                        <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336" />
+                        <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
                         <Text style={styles.errorText}>Failed to load challenges.</Text>
                         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
                             <Text style={styles.retryButtonText}>Retry</Text>
@@ -235,7 +235,7 @@ const ChallengesScreen: React.FC = () => {
                     />
                 ) : (
                     <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons name="bulletin-board" size={60} color="#e0e0e0" />
+                        <MaterialCommunityIcons name="bulletin-board" size={60} color="#e0e0e0"/>
                         <Text style={styles.noDataText}>
                             {selectedType ?
                                 `No ${selectedType === 'WWW_QUIZ' ? 'What? Where? When?' : selectedType} challenges found.` :
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
         elevation: 4,
         shadowOpacity: 0.2,
         shadowRadius: 3,
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {width: 0, height: 2},
     },
     headerTitle: {
         fontSize: 20,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
         elevation: 2,
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
     },
     challengeHeader: {
         flexDirection: 'row',
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
         elevation: 6,
         shadowOpacity: 0.3,
         shadowRadius: 4,
-        shadowOffset: { width: 0, height: 3 },
+        shadowOffset: {width: 0, height: 3},
     },
     fabText: {
         fontSize: 24,

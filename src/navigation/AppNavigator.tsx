@@ -15,7 +15,6 @@ import ChallengesScreen from '../screens/ChallengeScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
 import GroupsScreen from '../screens/GroupsScreen';
-
 // Challenge screens
 import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen';
 import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen';
