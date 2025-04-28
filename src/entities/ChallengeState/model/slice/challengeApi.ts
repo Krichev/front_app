@@ -2,7 +2,9 @@
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 import {RootState} from "../../../../app/providers/StoreProvider/store";
 
-// Define challenge types based on your DB schema
+// src/entities/ChallengeState/model/slice/challengeApi.ts
+
+// Update the Challenge interface in the API file
 export interface Challenge {
     id: string;
     title: string;
@@ -20,6 +22,7 @@ export interface Challenge {
     frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
     startDate?: string;
     endDate?: string;
+    quizConfig?: string; // Added to store JSON string of quiz configuration
 }
 
 export interface CreateChallengeRequest {

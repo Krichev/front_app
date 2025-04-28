@@ -1,61 +1,56 @@
-// Fixed src/navigation/AppNavigator.tsx
+// src/navigation/AppNavigator.tsx
 import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-// Import existing screens
-import ChallengesScreen from '../screens/ChallengeScreen.tsx';
-import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen.tsx';
-import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen.tsx';
-import CreateChallengeScreen from '../screens/CreateChallengeScreen.tsx';
-import UserProfileScreen from '../screens/UserProfileScreen.tsx';
-import HomeScreen from '../screens/HomeScreen.tsx';
-import LoginScreen from '../screens/LoginScreen.tsx';
-import SignupScreen from '../screens/SignupScreen.tsx';
-// Import verification screens
-import LocationVerificationScreen from '../screens/LocationVerificationScreen.tsx';
-import PhotoVerificationScreen from '../screens/PhotoVerificationScreen.tsx';
-// Import games screens
-import GamesHomeScreen from '../screens/GamesHomeScreen.tsx';
-import WWWGameSetupScreen from '../screens/WWWGameSetupScreen.tsx';
-import WWWGamePlayScreen from '../screens/WWWGamePlayScreen.tsx';
-import WWWGameResultsScreen from '../screens/WWWGameResultsScreen.tsx';
-import QuestionManagementScreen from '../screens/QuestionManagementScreen.tsx';
+
+// Import screens
+// Auth screens
+import LoginScreen from '../screens/LoginScreen';
+import SignupScreen from '../screens/SignupScreen';
+
+// Main screens
+import HomeScreen from '../screens/HomeScreen';
+import ChallengesScreen from '../screens/ChallengeScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
+import SearchScreen from '../screens/SearchScreen';
+import GroupsScreen from '../screens/GroupsScreen';
+
+// Challenge screens
+import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen';
+import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen';
+import CreateChallengeScreen from '../screens/CreateChallengeScreen';
+import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen';
+import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
+import LocationVerificationScreen from '../screens/LocationVerificationScreen';
+
+// WWW Game screens
+import WWWGameSetupScreen from '../screens/WWWGameSetupScreen';
+import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
+import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
+import QuizResultsScreen from '../screens/QuizResultsScreen';
+
 // Other imports
 import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-// Define the types for the main tab navigation
-export type MainTabParamList = {
-    Home: undefined;
-    Challenges: undefined;
-    Games: undefined;
-    Profile: undefined;
-};
-
-// Define the types for the root stack navigation
+// Define the types for the navigation parameters
 export type RootStackParamList = {
-    // Main tab navigator
-    Main: { screen?: keyof MainTabParamList };
-
-    // Auth screens
+    Main: { screen?: keyof MainTabParamList; params?: any };
+    Home: undefined;
     Login: undefined;
     Signup: undefined;
-    Home: undefined; // Adding this for direct navigation to Home screen from auth
-
-    // Challenge flow screens
     ChallengeDetails: { challengeId: string };
     ChallengeVerification: { challengeId: string };
-    CreateChallenge: undefined;
     PhotoVerification: { challengeId: string; prompt?: string };
     LocationVerification: { challengeId: string };
-
-    // User profile
+    CreateChallenge: undefined;
+    CreateWWWQuest: undefined;
     UserProfile: { userId: string };
-
-    // Games flow screens
-    WWWGameSetup: { selectedQuestions?: any[] };
+    EditProfile: { userId: string };
+    // WWW Game Screens
+    WWWGameSetup: undefined;
     WWWGamePlay: {
         teamName: string;
         teamMembers: string[];
@@ -63,30 +58,46 @@ export type RootStackParamList = {
         roundTime: number;
         roundCount: number;
         enableAIHost: boolean;
+        challengeId?: string; // Optional to track which challenge this game is for
     };
     WWWGameResults: {
         teamName: string;
         score: number;
         totalRounds: number;
         roundsData: any[];
+        challengeId?: string; // Optional to track completion
     };
-    QuestionManagement: undefined;
+    QuizResults: {
+        challengeId: string;
+        score: number;
+        totalRounds: number;
+        teamName: string;
+        roundsData: any[];
+    };
+};
+
+export type MainTabParamList = {
+    Home: undefined;
+    Challenges: { initialFilter?: string };
+    Search: undefined;
+    Groups: undefined;
+    Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Bottom tab navigator - only include core features
+// Bottom tab navigator
 const MainTabNavigator = ({
                               route
                           }: {
     route: RouteProp<RootStackParamList, 'Main'>
 }) => {
-    const { screen } = route.params || {};
+    const { screen, params } = route.params || {};
 
     return (
         <Tab.Navigator
-            initialRouteName={screen || 'Home'}
+            initialRouteName={screen || 'Home'} // Set initial tab based on params
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ focused, color, size }) => {
                     let iconName = 'help-circle-outline';
@@ -94,7 +105,8 @@ const MainTabNavigator = ({
                     const icons = {
                         Home: focused ? 'home' : 'home-outline',
                         Challenges: focused ? 'trophy' : 'trophy-outline',
-                        Games: focused ? 'gamepad-variant' : 'gamepad-variant-outline',
+                        Search: focused ? 'magnify' : 'magnify',
+                        Groups: focused ? 'account-group' : 'account-group-outline',
                         Profile: focused ? 'account' : 'account-outline',
                     };
 
@@ -110,8 +122,13 @@ const MainTabNavigator = ({
             })}
         >
             <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="Challenges" component={ChallengesScreen} />
-            <Tab.Screen name="Games" component={GamesHomeScreen} />
+            <Tab.Screen
+                name="Challenges"
+                component={ChallengesScreen}
+                initialParams={params}
+            />
+            <Tab.Screen name="Search" component={SearchScreen} />
+            <Tab.Screen name="Groups" component={GroupsScreen} />
             <Tab.Screen name="Profile" component={UserProfileScreen} />
         </Tab.Navigator>
     );
@@ -119,6 +136,7 @@ const MainTabNavigator = ({
 
 // Main navigator
 const AppNavigation = () => {
+    // Get auth state from Redux
     const isAuthenticated = useSelector((state: RootState) => state.auth.accessToken);
 
     return (
@@ -135,22 +153,16 @@ const AppNavigation = () => {
                 }}
             >
                 {isAuthenticated ? (
+                    // Authenticated user stack
                     <>
-                        {/* Core navigation */}
+                        {/* Main Tab Navigator */}
                         <Stack.Screen
                             name="Main"
                             component={MainTabNavigator}
                             options={{ headerShown: false }}
                         />
 
-                        {/* Home screen when accessed directly */}
-                        <Stack.Screen
-                            name="Home"
-                            component={HomeScreen}
-                            options={{ headerShown: false }}
-                        />
-
-                        {/* Challenge flow */}
+                        {/* Challenge Screens */}
                         <Stack.Screen
                             name="ChallengeDetails"
                             component={ChallengeDetailsScreen}
@@ -162,11 +174,6 @@ const AppNavigation = () => {
                             options={{ title: 'Verify Challenge' }}
                         />
                         <Stack.Screen
-                            name="CreateChallenge"
-                            component={CreateChallengeScreen}
-                            options={{ title: 'Create Challenge' }}
-                        />
-                        <Stack.Screen
                             name="PhotoVerification"
                             component={PhotoVerificationScreen}
                             options={{ title: 'Photo Verification' }}
@@ -176,15 +183,30 @@ const AppNavigation = () => {
                             component={LocationVerificationScreen}
                             options={{ title: 'Location Verification' }}
                         />
+                        <Stack.Screen
+                            name="CreateChallenge"
+                            component={CreateChallengeScreen}
+                            options={{ title: 'Create Challenge' }}
+                        />
+                        <Stack.Screen
+                            name="CreateWWWQuest"
+                            component={CreateWWWQuestScreen}
+                            options={{ title: 'Create Quiz Challenge' }}
+                        />
 
-                        {/* User profile */}
+                        {/* User Screens */}
                         <Stack.Screen
                             name="UserProfile"
                             component={UserProfileScreen}
                             options={{ title: 'User Profile' }}
                         />
+                        <Stack.Screen
+                            name="EditProfile"
+                            component={EditProfileScreen}
+                            options={{ title: 'Edit Profile' }}
+                        />
 
-                        {/* Games flow */}
+                        {/* WWW Game screens */}
                         <Stack.Screen
                             name="WWWGameSetup"
                             component={WWWGameSetupScreen}
@@ -201,14 +223,14 @@ const AppNavigation = () => {
                             options={{ title: 'Game Results' }}
                         />
                         <Stack.Screen
-                            name="QuestionManagement"
-                            component={QuestionManagementScreen}
-                            options={{ title: 'Manage Questions' }}
+                            name="QuizResults"
+                            component={QuizResultsScreen}
+                            options={{ title: 'Quiz Challenge Results' }}
                         />
                     </>
                 ) : (
+                    // Unauthenticated user stack
                     <>
-                        {/* Auth screens */}
                         <Stack.Screen
                             name="Login"
                             component={LoginScreen}
@@ -217,6 +239,12 @@ const AppNavigation = () => {
                         <Stack.Screen
                             name="Signup"
                             component={SignupScreen}
+                            options={{ headerShown: false }}
+                        />
+                        {/* Home is included here to handle cases where a deep link might bring an unauthenticated user */}
+                        <Stack.Screen
+                            name="Home"
+                            component={HomeScreen}
                             options={{ headerShown: false }}
                         />
                     </>

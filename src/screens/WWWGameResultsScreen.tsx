@@ -1,11 +1,22 @@
 // src/screens/WWWGameResultsScreen.tsx
-import React from 'react';
-import {SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import React, {useState} from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {WWWGameService} from "../services/wwwGame/wwwGameService.ts";
+import {useSubmitChallengeCompletionMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -14,9 +25,17 @@ type RootStackParamList = {
         score: number;
         totalRounds: number;
         roundsData: RoundData[];
+        challengeId?: string; // Optional challenge ID for tracking
     };
     WWWGameSetup: undefined;
     Main: { screen: string };
+    QuizResults: {
+        challengeId: string;
+        score: number;
+        totalRounds: number;
+        teamName: string;
+        roundsData: any[];
+    };
 };
 
 type WWWGameResultsRouteProp = RouteProp<RootStackParamList, 'WWWGameResults'>;
@@ -35,8 +54,17 @@ interface RoundData {
 const WWWGameResultsScreen: React.FC = () => {
     const route = useRoute<WWWGameResultsRouteProp>();
     const navigation = useNavigation<WWWGameResultsNavigationProp>();
-    const { teamName, score, totalRounds, roundsData } = route.params;
+    const { teamName, score, totalRounds, roundsData, challengeId } = route.params;
     const { user } = useSelector((state: RootState) => state.auth);
+    const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
+
+    // State variables
+    const [showEndGameModal, setShowEndGameModal] = useState(false);
+    const [submittingChallenge, setSubmittingChallenge] = useState(false);
+
+    // Variables for progress bar - added these
+    const roundCount = totalRounds; // Total number of rounds
+    const currentRound = totalRounds; // On results screen, all rounds are complete
 
     // Calculate stats
     const correctPercentage = (score / totalRounds) * 100;
@@ -54,22 +82,152 @@ const WWWGameResultsScreen: React.FC = () => {
         return WWWGameService.generateGameFeedback(roundsData, performances);
     };
 
+    // Play again button handler
     const playAgain = () => {
-        navigation.navigate('WWWGameSetup');
+        // Check if this game was part of a challenge
+        if (challengeId) {
+            // Prompt to complete the challenge
+            Alert.alert(
+                'Complete Challenge?',
+                'Would you like to mark this challenge as completed?',
+                [
+                    {
+                        text: 'Yes, Complete It',
+                        onPress: () => {
+                            // Submit challenge completion
+                            submitChallengeWithResults();
+                        }
+                    },
+                    {
+                        text: 'No, Play Again',
+                        onPress: () => navigation.navigate('WWWGameSetup')
+                    }
+                ]
+            );
+        } else {
+            // Regular game, just go back to setup
+            navigation.navigate('WWWGameSetup');
+        }
     };
 
+    // Return home button handler
     const returnHome = () => {
-        navigation.navigate('Main', { screen: 'Home' });
+        // Check if this game was part of a challenge
+        if (challengeId) {
+            // Prompt to complete the challenge
+            Alert.alert(
+                'Complete Challenge?',
+                'Would you like to mark this challenge as completed?',
+                [
+                    {
+                        text: 'Yes, Complete It',
+                        onPress: () => {
+                            // Submit challenge completion
+                            submitChallengeWithResults();
+                        }
+                    },
+                    {
+                        text: 'No, Return Home',
+                        onPress: () => navigation.navigate('Main', { screen: 'Home' })
+                    }
+                ]
+            );
+        } else {
+            // Regular game, just go home
+            navigation.navigate('Main', { screen: 'Home' });
+        }
+    };
+
+    // Submit challenge with results
+    const submitChallengeWithResults = async () => {
+        if (!challengeId) return;
+
+        try {
+            // Show loading indicator
+            setSubmittingChallenge(true);
+
+            // Submit completion with the game results
+            await submitCompletion({
+                id: challengeId,
+                proof: {
+                    score,
+                    totalRounds,
+                    completed: true,
+                    teamName,
+                    roundsData: roundsData.map(round => ({
+                        question: round.question,
+                        correctAnswer: round.correctAnswer,
+                        teamAnswer: round.teamAnswer,
+                        isCorrect: round.isCorrect,
+                        playerWhoAnswered: round.playerWhoAnswered
+                    }))
+                }
+            }).unwrap();
+
+            // Navigate to the quiz results screen
+            navigation.navigate('QuizResults', {
+                challengeId,
+                score,
+                totalRounds,
+                teamName,
+                roundsData
+            });
+        } catch (error) {
+            console.error('Error completing challenge:', error);
+            Alert.alert(
+                'Error',
+                'Failed to submit challenge completion. Please try again.',
+                [{ text: 'OK', onPress: () => navigation.navigate('Main', { screen: 'Home' }) }]
+            );
+        } finally {
+            setSubmittingChallenge(false);
+        }
+    };
+
+    // Legacy end game function for non-challenge games
+    const endGame = () => {
+        setShowEndGameModal(false);
+
+        // If this game was started from a challenge, offer to mark it as completed
+        if (challengeId) {
+            Alert.alert(
+                'Complete Challenge?',
+                'Would you like to mark this challenge as completed?',
+                [
+                    {
+                        text: 'Yes',
+                        onPress: submitChallengeWithResults
+                    },
+                    {
+                        text: 'No',
+                        onPress: () => navigation.navigate('Main', { screen: 'Home' })
+                    }
+                ]
+            );
+        } else {
+            // Regular game flow
+            navigation.navigate('Main', { screen: 'Home' });
+        }
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView style={styles.scrollView}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Game Results</Text>
+            <View style={styles.header}>
+                <View style={styles.headerTop}>
                     <Text style={styles.teamName}>{teamName}</Text>
+                    <Text style={styles.scoreText}>Score: {score}/{totalRounds}</Text>
                 </View>
+                <View style={styles.progressBar}>
+                    <View
+                        style={[
+                            styles.progressFill,
+                            { width: `${(currentRound / roundCount) * 100}%` }
+                        ]}
+                    />
+                </View>
+            </View>
 
+            <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.scoreContainer}>
                     <Text style={styles.scoreText}>Score: {score}/{totalRounds}</Text>
                     <View style={styles.scoreBar}>
@@ -91,7 +249,7 @@ const WWWGameResultsScreen: React.FC = () => {
 
                 <View style={styles.performanceContainer}>
                     <Text style={styles.sectionTitle}>Player Performance</Text>
-                    {performances.map((perf: { player: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; correct: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; total: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; percentage: number; }, index: React.Key | null | undefined) => (
+                    {performances.map((perf, index) => (
                         <View key={index} style={styles.playerItem}>
                             <View style={styles.playerInfo}>
                                 <Text style={styles.playerName}>{perf.player}</Text>
@@ -150,20 +308,56 @@ const WWWGameResultsScreen: React.FC = () => {
 
                 <View style={styles.buttonsContainer}>
                     <TouchableOpacity
-                        style={styles.primaryButton}
+                        style={[styles.primaryButton, (submittingChallenge) && styles.disabledButton]}
                         onPress={playAgain}
+                        disabled={submittingChallenge}
                     >
-                        <Text style={styles.buttonText}>Play Again</Text>
+                        {submittingChallenge ? (
+                            <ActivityIndicator size="small" color="white" />
+                        ) : (
+                            <Text style={styles.buttonText}>Play Again</Text>
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={styles.secondaryButton}
+                        style={[styles.secondaryButton, (submittingChallenge) && styles.disabledButton]}
                         onPress={returnHome}
+                        disabled={submittingChallenge}
                     >
                         <Text style={styles.secondaryButtonText}>Return to Home</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* End Game Modal */}
+            <Modal
+                visible={showEndGameModal}
+                transparent
+                animationType="fade"
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Game Over!</Text>
+                        <Text style={styles.modalText}>
+                            Your team scored {score} out of {totalRounds} questions.
+                        </Text>
+                        <Text style={styles.modalScore}>
+                            {score === totalRounds
+                                ? 'Perfect score! Incredible!'
+                                : score > totalRounds / 2
+                                    ? 'Well done!'
+                                    : 'Better luck next time!'}
+                        </Text>
+
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={endGame}
+                        >
+                            <Text style={styles.modalButtonText}>See Detailed Results</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -173,23 +367,39 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
-    scrollView: {
-        flex: 1,
-    },
     header: {
         backgroundColor: '#4CAF50',
-        padding: 20,
-        alignItems: 'center',
+        padding: 16,
     },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'white',
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 8,
     },
     teamName: {
         fontSize: 18,
-        color: 'rgba(255, 255, 255, 0.9)',
+        fontWeight: 'bold',
+        color: 'white',
+    },
+    scoreText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: 'white',
+    },
+    progressBar: {
+        height: 6,
+        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    progressFill: {
+        height: '100%',
+        backgroundColor: 'white',
+    },
+    content: {
+        padding: 16,
+        flexGrow: 1,
     },
     scoreContainer: {
         margin: 16,
@@ -203,12 +413,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
-    scoreText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
-    },
+    // scoreText: {
+    //     fontSize: 24,
+    //     fontWeight: 'bold',
+    //     color: '#333',
+    //     marginBottom: 16,
+    // },
     scoreBar: {
         height: 16,
         width: '100%',
@@ -399,6 +609,52 @@ const styles = StyleSheet.create({
         color: '#4CAF50',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 24,
+        width: '80%',
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 16,
+    },
+    modalText: {
+        fontSize: 16,
+        color: '#555',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalScore: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#4CAF50',
+        marginBottom: 24,
+        textAlign: 'center',
+    },
+    modalButton: {
+        backgroundColor: '#4CAF50',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+    },
+    modalButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    disabledButton: {
+        opacity: 0.7,
     },
 });
 

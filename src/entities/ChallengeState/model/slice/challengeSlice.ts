@@ -1,6 +1,8 @@
+// src/entities/ChallengeState/model/slice/challengeSlice.ts
+
 import {createSlice, PayloadAction} from "@reduxjs/toolkit";
 
-interface Challenge {
+export interface Challenge {
     id: string;
     title: string;
     description: string;
@@ -8,6 +10,13 @@ interface Challenge {
     participants: string[];
     rewards: number;
     status: 'active' | 'completed' | 'failed';
+    type?: 'QUEST' | 'QUIZ' | 'ACTIVITY_PARTNER' | 'FITNESS_TRACKING' | 'HABIT_BUILDING';
+    visibility?: string;
+    created_at?: string;
+    updated_at?: string;
+    creator_id?: string;
+    verificationMethod?: string;
+    quizConfig?: string; // Added to store JSON string of quiz configuration
 }
 
 interface ChallengeState {

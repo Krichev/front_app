@@ -15,8 +15,11 @@ import {
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
-import {NativeStackNavigationProp} from "react-native-screens/native-stack";
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import {NativeStackNavigationProp} from "@react-navigation/native-stack";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useSelector} from 'react-redux';
+import {RootState} from '../app/providers/StoreProvider/store';
+import {FormatterService} from '../services/verification/ui/Services';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -26,6 +29,15 @@ type RootStackParamList = {
     ChallengeVerification: { challengeId: string };
     CreateChallenge: undefined;
     UserProfile: { userId: string };
+    WWWGamePlay: {
+        teamName: string;
+        teamMembers: string[];
+        difficulty: string;
+        roundTime: number;
+        roundCount: number;
+        enableAIHost: boolean;
+        challengeId?: string;
+    };
 };
 
 type ChallengeDetailsRouteProp = RouteProp<RootStackParamList, 'ChallengeDetails'>;
@@ -35,6 +47,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     const route = useRoute<ChallengeDetailsRouteProp>();
     const navigation = useNavigation<ChallengeDetailsNavigationProp>();
     const { challengeId } = route.params;
+    const { user } = useSelector((state: RootState) => state.auth);
 
     // State for verification upload
     const [proofSubmitted, setProofSubmitted] = useState(false);
@@ -64,8 +77,10 @@ const ChallengeDetailsScreen: React.FC = () => {
     // Handle submit challenge completion
     const handleSubmitCompletion = async () => {
         try {
-            // In a real app, you'LocationVerificationScreen.tsx handle file upload here
-            await submitCompletion({ id: challengeId, proof: { completed: true } }).unwrap();
+            await submitCompletion({
+                id: challengeId,
+                proof: { completed: true }
+            }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');
             refetch();
@@ -84,15 +99,95 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Format date
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
+        return FormatterService.formatDate(dateString);
+    };
+
+    // Render quiz specific content
+    const renderQuizContent = () => {
+        if (!challenge || challenge.type !== 'QUIZ') return null;
+
+        let quizConfig = null;
+        try {
+            // Parse quiz configuration if available
+            if (challenge.quizConfig) {
+                quizConfig = JSON.parse(challenge.quizConfig);
+            }
+        } catch (e) {
+            console.error('Error parsing quiz config:', e);
+        }
+
+        // Check if this is a What? Where? When? quiz
+        const isWWWQuiz = quizConfig && quizConfig.gameType === 'WWW';
+
+        return (
+            <View style={styles.quizContainer}>
+                <Text style={styles.quizTitle}>Quiz Challenge</Text>
+
+                {quizConfig && (
+                    <View style={styles.quizDetails}>
+                        {isWWWQuiz ? (
+                            <>
+                                <Text style={styles.quizType}>What? Where? When? Team Quiz</Text>
+
+                                <View style={styles.quizStat}>
+                                    <Text style={styles.quizStatLabel}>Difficulty:</Text>
+                                    <Text style={styles.quizStatValue}>{quizConfig.difficulty || 'Medium'}</Text>
+                                </View>
+
+                                <View style={styles.quizStat}>
+                                    <Text style={styles.quizStatLabel}>Questions:</Text>
+                                    <Text style={styles.quizStatValue}>{quizConfig.roundCount || 10}</Text>
+                                </View>
+
+                                <View style={styles.quizStat}>
+                                    <Text style={styles.quizStatLabel}>Time per question:</Text>
+                                    <Text style={styles.quizStatValue}>{quizConfig.roundTime || 60} seconds</Text>
+                                </View>
+
+                                {quizConfig.teamName && (
+                                    <View style={styles.quizStat}>
+                                        <Text style={styles.quizStatLabel}>Team:</Text>
+                                        <Text style={styles.quizStatValue}>{quizConfig.teamName}</Text>
+                                    </View>
+                                )}
+
+                                <TouchableOpacity
+                                    style={styles.playButton}
+                                    onPress={() => startWWWGame(quizConfig)}
+                                >
+                                    <Text style={styles.playButtonText}>Play Quiz Game</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <>
+                                <Text style={styles.quizType}>Standard Quiz</Text>
+                                {/* Render standard quiz details */}
+                                <TouchableOpacity style={styles.playButton}>
+                                    <Text style={styles.playButtonText}>Start Quiz</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    // Start the WWW game
+    const startWWWGame = (quizConfig: any) => {
+        // Navigate to the WWW game screen with the config
+        navigation.navigate('WWWGamePlay', {
+            teamName: quizConfig.teamName || 'Team Intellect',
+            teamMembers: quizConfig.teamMembers || [user?.name || 'Player'],
+            difficulty: quizConfig.difficulty || 'Medium',
+            roundTime: quizConfig.roundTime || 60,
+            roundCount: quizConfig.roundCount || 10,
+            enableAIHost: quizConfig.enableAIHost !== false,
+            challengeId: challenge?.id // Pass the challenge ID to track completion
         });
     };
 
-    // Parse verification methods from the challenge
+    // Parse verification methods from challenge data
     const getVerificationMethods = () => {
         if (!challenge?.verificationMethod) return [];
 
@@ -113,6 +208,22 @@ const ChallengeDetailsScreen: React.FC = () => {
     // Check if this is a daily challenge that requires regular verification
     const isDailyChallenge = () => {
         return challenge?.type === 'HABIT_BUILDING' || challenge?.frequency === 'DAILY';
+    };
+
+    // Get status badge style
+    const getStatusBadgeStyle = () => {
+        if (!challenge) return {};
+
+        switch (challenge.status.toLowerCase()) {
+            case 'active':
+                return styles.statusActive;
+            case 'completed':
+                return styles.statusCompleted;
+            case 'failed':
+                return styles.statusFailed;
+            default:
+                return {};
+        }
     };
 
     // Render loading state
@@ -136,7 +247,7 @@ const ChallengeDetailsScreen: React.FC = () => {
         );
     }
 
-    // Check if the user has already joined (in a real app, you'LocationVerificationScreen.tsx check this)
+    // Check if the user has already joined (in a real app, you'd check this)
     const userHasJoined = false; // Replace with actual check
 
     return (
@@ -149,7 +260,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                         <View style={styles.typeBadge}>
                             <Text style={styles.badgeText}>{challenge.type}</Text>
                         </View>
-                        <View style={styles.statusBadge}>
+                        <View style={[styles.statusBadge, getStatusBadgeStyle()]}>
                             <Text style={styles.badgeText}>{challenge.status}</Text>
                         </View>
                     </View>
@@ -158,10 +269,13 @@ const ChallengeDetailsScreen: React.FC = () => {
                 {/* Challenge Details */}
                 <View style={styles.content}>
                     {/* Description */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Description</Text>
-                        <Text style={styles.description}>{challenge.description || 'No description provided.'}</Text>
+                    <View style={styles.descriptionContainer}>
+                        <Text style={styles.descriptionTitle}>Challenge Description:</Text>
+                        <Text style={styles.descriptionText}>{challenge.description || 'No description provided.'}</Text>
                     </View>
+
+                    {/* Special Quiz Content */}
+                    {challenge.type === 'QUIZ' && renderQuizContent()}
 
                     {/* Challenge Info */}
                     <View style={styles.section}>
@@ -224,49 +338,54 @@ const ChallengeDetailsScreen: React.FC = () => {
                         </View>
                     </TouchableOpacity>
 
-                    {/* Action Buttons */}
-                    <View style={styles.actionSection}>
-                        {!userHasJoined ? (
-                            <TouchableOpacity
-                                style={styles.primaryButton}
-                                onPress={handleJoinChallenge}
-                                disabled={isJoining}
-                            >
-                                {isJoining ? (
-                                    <ActivityIndicator size="small" color="white" />
-                                ) : (
-                                    <Text style={styles.buttonText}>Join Challenge</Text>
-                                )}
-                            </TouchableOpacity>
-                        ) : (
-                            // For daily challenges, show the verification button
-                            isDailyChallenge() ? (
+                    {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
+                    {(challenge.type !== 'QUIZ' || !challenge.quizConfig) && (
+                        <View style={styles.actionSection}>
+                            {!userHasJoined ? (
                                 <TouchableOpacity
-                                    style={styles.verifyButton}
-                                    onPress={navigateToVerification}
+                                    style={styles.primaryButton}
+                                    onPress={handleJoinChallenge}
+                                    disabled={isJoining}
                                 >
-                                    <MaterialIcons name="verified" size={20} color="white" />
-                                    <Text style={styles.buttonText}>Daily Check-In</Text>
-                                </TouchableOpacity>
-                            ) : proofSubmitted ? (
-                                <View style={styles.successMessage}>
-                                    <Text style={styles.successText}>Completion Submitted</Text>
-                                </View>
-                            ) : (
-                                <TouchableOpacity
-                                    style={styles.secondaryButton}
-                                    onPress={handleSubmitCompletion}
-                                    disabled={isSubmitting}
-                                >
-                                    {isSubmitting ? (
+                                    {isJoining ? (
                                         <ActivityIndicator size="small" color="white" />
                                     ) : (
-                                        <Text style={styles.buttonText}>Submit Completion</Text>
+                                        <Text style={styles.buttonText}>Join Challenge</Text>
                                     )}
                                 </TouchableOpacity>
-                            )
-                        )}
-                    </View>
+                            ) : (
+                                // For daily challenges, show the verification button
+                                isDailyChallenge() ? (
+                                    <TouchableOpacity
+                                        style={styles.verifyButton}
+                                        onPress={navigateToVerification}
+                                    >
+                                        <MaterialCommunityIcons name="check-circle" size={20} color="white" />
+                                        <Text style={styles.buttonText}>Daily Check-In</Text>
+                                    </TouchableOpacity>
+                                ) : proofSubmitted ? (
+                                    <View style={styles.successMessage}>
+                                        <Text style={styles.successText}>Completion Submitted</Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.secondaryButton}
+                                        onPress={handleSubmitCompletion}
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? (
+                                            <ActivityIndicator size="small" color="white" />
+                                        ) : (
+                                            <>
+                                                <MaterialCommunityIcons name="check" size={20} color="white" />
+                                                <Text style={styles.buttonText}>Submit Completion</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                )
+                            )}
+                        </View>
+                    )}
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -304,7 +423,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     header: {
-        padding: 20,
+        padding: 16,
         backgroundColor: '#4CAF50',
     },
     headerTitle: {
@@ -329,6 +448,15 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 4,
     },
+    statusActive: {
+        backgroundColor: 'rgba(76, 175, 80, 0.7)',
+    },
+    statusCompleted: {
+        backgroundColor: 'rgba(33, 150, 243, 0.7)',
+    },
+    statusFailed: {
+        backgroundColor: 'rgba(244, 67, 54, 0.7)',
+    },
     badgeText: {
         color: 'white',
         fontSize: 12,
@@ -336,6 +464,27 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 16,
+    },
+    descriptionContainer: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 1,
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 1 },
+    },
+    descriptionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        color: '#333',
+    },
+    descriptionText: {
+        fontSize: 14,
+        color: '#555',
+        lineHeight: 20,
     },
     section: {
         backgroundColor: 'white',
@@ -352,11 +501,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 12,
         color: '#333',
-    },
-    description: {
-        fontSize: 16,
-        lineHeight: 24,
-        color: '#555',
     },
     infoRow: {
         flexDirection: 'row',
@@ -465,6 +609,60 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     successText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    quizContainer: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 1,
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 1 },
+    },
+    quizTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 12,
+        color: '#333',
+    },
+    quizDetails: {
+        backgroundColor: '#f9f9f9',
+        padding: 12,
+        borderRadius: 6,
+    },
+    quizType: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#4CAF50',
+        marginBottom: 12,
+    },
+    quizStat: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    quizStatLabel: {
+        fontSize: 14,
+        color: '#555',
+    },
+    quizStatValue: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '500',
+    },
+    playButton: {
+        backgroundColor: '#4CAF50',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 16,
+    },
+    playButtonText: {
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
