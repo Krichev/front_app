@@ -5,37 +5,32 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {useNavigation} from '@react-navigation/native';
 import {FormatterService} from '../../../services/verification/ui/Services';
 import {Challenge} from "../model/slice/challengeApi.ts";
+import {isWWWQuiz, parseQuizConfig} from "../model/types";
 
 interface QuizChallengeCardProps {
     challenge: Challenge;
     onPress: () => void;
 }
 
+// Define valid challenge status types
+type ChallengeStatus = 'active' | 'completed' | 'failed' | 'open' | 'in_progress';
+
 const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPress }) => {
     const navigation = useNavigation();
 
-    // Parse quiz configuration if available
-    let quizConfig: { gameType: string; difficulty: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; roundCount: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; teamBased: any; } | null = null;
-    let isWWWQuiz: null | boolean = false;
-
-    try {
-        if (challenge.quizConfig) {
-            quizConfig = JSON.parse(challenge.quizConfig);
-            isWWWQuiz = quizConfig && quizConfig.gameType === 'WWW';
-        }
-    } catch (e) {
-        console.error('Error parsing quiz config:', e);
-    }
+    // Parse quiz configuration using our new helper function
+    const quizConfig = parseQuizConfig(challenge.quizConfig);
+    const isWWW = isWWWQuiz(quizConfig);
 
     const getQuizIcon = () => {
-        if (isWWWQuiz) {
+        if (isWWW) {
             return 'brain';
         }
         return 'help-circle';
     };
 
     const getQuizTypeLabel = () => {
-        if (isWWWQuiz) {
+        if (isWWW) {
             return 'What? Where? When?';
         }
         return 'Quiz';
@@ -46,25 +41,46 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
 
         return (
             <View style={styles.quizDetails}>
-                {quizConfig.difficulty && (
+                {isWWW && quizConfig.difficulty && (
                     <View style={styles.badge}>
                         <Text style={styles.badgeText}>{quizConfig.difficulty}</Text>
                     </View>
                 )}
 
-                {quizConfig.roundCount && (
+                {isWWW && quizConfig.roundCount && (
                     <View style={styles.badge}>
                         <Text style={styles.badgeText}>{quizConfig.roundCount} Questions</Text>
                     </View>
                 )}
 
-                {isWWWQuiz && quizConfig.teamBased && (
+                {isWWW && quizConfig.teamBased && (
                     <View style={styles.badge}>
                         <Text style={styles.badgeText}>Team</Text>
                     </View>
                 )}
             </View>
         );
+    };
+
+    // Get the status style in a type-safe way
+    const getStatusStyle = () => {
+        const normalizedStatus = challenge.status.toLowerCase();
+
+        // Use specific status checks instead of dynamic property access
+        switch (normalizedStatus) {
+            case 'active':
+                return styles.status_active;
+            case 'completed':
+                return styles.status_completed;
+            case 'failed':
+                return styles.status_failed;
+            case 'open':
+                return styles.status_open;
+            case 'in_progress':
+                return styles.status_in_progress;
+            default:
+                return {}; // Default empty style
+        }
     };
 
     return (
@@ -90,7 +106,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
                 {renderQuizDetails()}
 
                 <View style={styles.statusContainer}>
-                    <View style={[styles.statusBadge, styles[`status_${challenge.status}`]]}>
+                    <View style={[styles.statusBadge, getStatusStyle()]}>
                         <Text style={styles.statusText}>{challenge.status.toUpperCase()}</Text>
                     </View>
 
@@ -184,6 +200,12 @@ const styles = StyleSheet.create({
     },
     status_failed: {
         backgroundColor: '#FFEBEE',
+    },
+    status_open: {
+        backgroundColor: '#E8F5E9', // Same as active
+    },
+    status_in_progress: {
+        backgroundColor: '#FFF9C4', // Yellow-ish for in progress
     },
     statusText: {
         fontSize: 10,

@@ -18,18 +18,11 @@ import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {GameSettings} from '../services/wwwGame/wwwGameService';
-import {
-    BaseQueryApi,
-    BaseQueryArg,
-    BaseQueryError,
-    BaseQueryExtraOptions,
-    BaseQueryMeta,
-    QueryReturnValue
-} from "@reduxjs/toolkit/query";
+import {WWWQuizConfig} from '../entities/ChallengeState/model/types'; // Import the new type
 
 type RootStackParamList = {
     Challenges: undefined;
-    WWWGamePlay: GameSettings;
+    WWWGamePlay: GameSettings & { challengeId?: string };
 };
 
 type CreateWWWQuestScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -87,14 +80,20 @@ const CreateWWWQuestScreen: React.FC = () => {
         }
 
         try {
+            // Create the quiz config object with proper typing
+            const quizConfig: WWWQuizConfig = {
+                gameType: 'WWW',
+                teamName,
+                teamMembers,
+                difficulty,
+                roundTime,
+                roundCount,
+                enableAIHost,
+                teamBased: true
+            };
+
             // Create a new challenge with QUIZ type
             const result = await createChallenge({
-                query(arg: QueryArg): BaseQueryArg<BaseQuery> {
-                    return undefined;
-                },
-                queryFn(arg: QueryArg, api: BaseQueryApi, extraOptions: BaseQueryExtraOptions<BaseQuery>, baseQuery: (arg: Parameters<BaseQuery>[0]) => ReturnType<BaseQuery>): MaybePromise<QueryReturnValue<ResultType, BaseQueryError<BaseQuery>, BaseQueryMeta<BaseQuery>>> {
-                    return undefined;
-                },
                 title,
                 description,
                 type: 'QUIZ',
@@ -102,15 +101,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                 status: 'OPEN',
                 reward,
                 // Store WWW specific config as JSON
-                quizConfig: JSON.stringify({
-                    gameType: 'WWW',
-                    teamName,
-                    teamMembers,
-                    difficulty,
-                    roundTime,
-                    roundCount,
-                    enableAIHost
-                })
+                quizConfig: JSON.stringify(quizConfig)
             }).unwrap();
 
             Alert.alert('Success', 'Quiz challenge created successfully!', [
@@ -523,7 +514,7 @@ const styles = StyleSheet.create({
     timeButton: {
         paddingVertical: 8,
         paddingHorizontal: 12,
-        borderRadius: a6,
+        borderRadius: 16,
         marginRight: 8,
         backgroundColor: '#f0f0f0',
     },

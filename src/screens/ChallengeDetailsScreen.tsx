@@ -106,7 +106,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     const renderQuizContent = () => {
         if (!challenge || challenge.type !== 'QUIZ') return null;
 
-        let quizConfig = null;
+        let quizConfig: { gameType: string; difficulty: any; roundCount: any; roundTime: any; teamName: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; } | null = null;
         try {
             // Parse quiz configuration if available
             if (challenge.quizConfig) {

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
-import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
+import {Challenge, useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChallengeFilters from './components/ChallengeFilters';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
@@ -48,7 +48,7 @@ const ChallengesScreen: React.FC = () => {
         page: 1,
         limit: 50, // Increase limit to get more challenges
         type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType, // Special handling for WWW filter
-        participant_id: user?.id // Optionally filter to user's challenges
+        participant_id: user?.id ?? undefined // Convert null to undefined using nullish coalescing
     });
 
     // Update filter if route params change
@@ -79,7 +79,7 @@ const ChallengesScreen: React.FC = () => {
     }, [challenges, selectedType]);
 
     // Renders each challenge item in the list
-    const renderChallengeItem = ({ item }) => {
+    const renderChallengeItem = ({ item }: { item: Challenge }) => {
         // Detect if this is a quiz challenge
         const isQuizChallenge = item.type === 'QUIZ';
 
@@ -133,21 +133,24 @@ const ChallengesScreen: React.FC = () => {
     };
 
     // Helper to get status badge style
-    const getStatusStyle = (status) => {
-        switch (status) {
+    const getStatusStyle = (status: string) => {
+        switch (status.toLowerCase()) {
             case 'active':
                 return styles.statusActive;
             case 'completed':
                 return styles.statusCompleted;
             case 'failed':
                 return styles.statusFailed;
+            case 'open':
+                return styles.statusActive; // Reuse active style
+            case 'in_progress':
+                return {}; // Add a style if needed
             default:
                 return {};
         }
     };
-
     // Helper to get icon for challenge type
-    const getChallengeTypeIcon = (type) => {
+    const getChallengeTypeIcon = (type: string) => {
         switch (type) {
             case 'QUEST':
                 return 'trophy';
