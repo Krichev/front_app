@@ -1,10 +1,10 @@
-// src/screens/EditProfileScreen.tsx
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
     Image,
     KeyboardAvoidingView,
+    PermissionsAndroid,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -19,13 +19,13 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {useGetUserProfileQuery, useUpdateUserProfileMutation} from '../entities/UserState/model/slice/userApi';
-import * as ImagePicker from 'expo-image-picker';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {ImagePickerResponse, launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
-    EditProfile: { userId: string };
     UserProfile: { userId: string };
+    EditProfile: { userId: string };
 };
 
 type EditProfileRouteProp = RouteProp<RootStackParamList, 'EditProfile'>;
@@ -35,103 +35,197 @@ const EditProfileScreen: React.FC = () => {
     const route = useRoute<EditProfileRouteProp>();
     const navigation = useNavigation<EditProfileNavigationProp>();
     const { userId } = route.params;
-    const { user: authUser } = useSelector((state: RootState) => state.auth);
+    const { user: currentUser } = useSelector((state: RootState) => state.auth);
 
     // Check if user is editing their own profile
-    const isCurrentUser = authUser?.id === userId;
+    const isOwn = currentUser?.id === userId;
 
-    // Get user profile data
-    const { data: user, isLoading, error } = useGetUserProfileQuery(userId);
+    // RTK Query hooks
+    const { data: userProfile, isLoading: profileLoading, error: profileError } = useGetUserProfileQuery(userId);
     const [updateProfile, { isLoading: isUpdating }] = useUpdateUserProfileMutation();
 
     // Form state
-    const [username, setUsername] = useState('');
-    const [bio, setBio] = useState('');
-    const [avatar, setAvatar] = useState<string | null>(null);
-    const [email, setEmail] = useState('');
+    const [formData, setFormData] = useState({
+        username: '',
+        bio: '',
+        avatar: '',
+    });
 
-    // Initialize form with user data when it loads
+    // Local avatar state for preview
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+    // Initialize form with data when profile loads
     useEffect(() => {
-        if (user) {
-            setUsername(user.username || '');
-            setBio(user.bio || '');
-            setAvatar(user.avatar || null);
-            setEmail(user.email || '');
-        }
-    }, [user]);
-
-    // Handle image picker for profile photo
-    const handlePickImage = async () => {
-        try {
-            // Request permission
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-            if (status !== 'granted') {
-                Alert.alert('Permission Denied', 'We need camera roll permissions to change your profile picture.');
-                return;
-            }
-
-            // Launch image picker
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [1, 1],
-                quality: 0.7,
+        if (userProfile) {
+            setFormData({
+                username: userProfile.username || '',
+                bio: userProfile.bio || '',
+                avatar: userProfile.avatar || '',
             });
+            setAvatarUri(userProfile.avatar || null);
+        }
+    }, [userProfile]);
 
-            if (!result.canceled && result.assets && result.assets.length > 0) {
-                setAvatar(result.assets[0].uri);
+    // Handle input changes
+    const handleInputChange = (field: string, value: string) => {
+        setFormData({
+            ...formData,
+            [field]: value,
+        });
+    };
+
+    // Request camera permissions
+    const requestCameraPermission = async (): Promise<boolean> => {
+        if (Platform.OS === 'ios') {
+            return true; // iOS handles permissions through Info.plist
+        }
+
+        try {
+            const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.CAMERA,
+                {
+                    title: "Camera Permission",
+                    message: "This app needs access to your camera to take profile photos",
+                    buttonNeutral: "Ask Me Later",
+                    buttonNegative: "Cancel",
+                    buttonPositive: "OK"
+                }
+            );
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                Alert.alert('Permission Required', 'Camera permission is needed for this feature.');
+                return false;
             }
+            return true;
         } catch (err) {
-            console.error('Error picking image:', err);
-            Alert.alert('Error', 'Failed to pick image. Please try again.');
+            console.warn(err);
+            return false;
         }
     };
 
-    // Save profile changes
+    // Request storage permissions
+    const requestStoragePermission = async (): Promise<boolean> => {
+        if (Platform.OS === 'ios') {
+            return true; // iOS handles permissions through Info.plist
+        }
+
+        try {
+            // Use READ_MEDIA_IMAGES for Android 13+ or READ_EXTERNAL_STORAGE for older versions
+            const permission = PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES ||
+                PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+
+            const granted = await PermissionsAndroid.request(permission, {
+                title: "Storage Permission",
+                message: "This app needs access to your photos to set a profile picture",
+                buttonNeutral: "Ask Me Later",
+                buttonNegative: "Cancel",
+                buttonPositive: "OK"
+            });
+
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                Alert.alert('Permission Required', 'Storage permission is needed for this feature.');
+                return false;
+            }
+            return true;
+        } catch (err) {
+            console.warn(err);
+            return false;
+        }
+    };
+
+    // Take a photo using camera
+    const takePhoto = async () => {
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) return;
+
+        launchCamera({
+            mediaType: 'photo',
+            quality: 0.8,
+            maxWidth: 500,
+            maxHeight: 500,
+            saveToPhotos: false,
+        }, (response: ImagePickerResponse) => {
+            if (response.didCancel) {
+                console.log('User cancelled camera');
+            } else if (response.errorCode) {
+                console.log('Camera Error: ', response.errorMessage);
+                Alert.alert('Error', 'Failed to take photo');
+            } else if (response.assets && response.assets.length > 0) {
+                const uri = response.assets[0].uri;
+                if (uri) {
+                    setAvatarUri(uri);
+                    setFormData({ ...formData, avatar: uri });
+                }
+            }
+        });
+    };
+
+    // Pick image from gallery
+    const pickImage = async () => {
+        const hasPermission = await requestStoragePermission();
+        if (!hasPermission) return;
+
+        launchImageLibrary({
+            mediaType: 'photo',
+            quality: 0.8,
+            maxWidth: 500,
+            maxHeight: 500,
+        }, (response: ImagePickerResponse) => {
+            if (response.didCancel) {
+                console.log('User cancelled image picker');
+            } else if (response.errorCode) {
+                console.log('ImagePicker Error: ', response.errorMessage);
+                Alert.alert('Error', 'Failed to select image');
+            } else if (response.assets && response.assets.length > 0) {
+                const uri = response.assets[0].uri;
+                if (uri) {
+                    setAvatarUri(uri);
+                    setFormData({ ...formData, avatar: uri });
+                }
+            }
+        });
+    };
+
+    // Show image picker options (camera or gallery)
+    const showImagePickerOptions = () => {
+        Alert.alert(
+            'Change Profile Picture',
+            'Choose an option',
+            [
+                { text: 'Take Photo', onPress: takePhoto },
+                { text: 'Select from Gallery', onPress: pickImage },
+                { text: 'Cancel', style: 'cancel' }
+            ]
+        );
+    };
+
+    // Handle save profile changes
     const handleSaveProfile = async () => {
-        if (!username.trim()) {
-            Alert.alert('Error', 'Username is required');
+        // Simple validation
+        if (!formData.username.trim()) {
+            Alert.alert('Error', 'Username cannot be empty');
             return;
         }
 
         try {
-            // Prepare update data
-            const updateData = {
+            // Submit profile update
+            await updateProfile({
                 id: userId,
-                username,
-                bio,
-            };
+                ...formData
+            }).unwrap();
 
-            // Only include avatar if it has changed
-            if (avatar && avatar !== user?.avatar) {
-                // In a real app, you might need to upload the image first
-                // and then update the avatar URL
-                Object.assign(updateData, { avatar });
-            }
-
-            // Update profile
-            await updateProfile(updateData).unwrap();
-
-            Alert.alert('Success', 'Profile updated successfully', [
-                {
-                    text: 'OK',
-                    onPress: () => navigation.navigate('UserProfile', { userId })
-                }
-            ]);
-        } catch (err) {
-            console.error('Failed to update profile:', err);
+            Alert.alert(
+                'Success',
+                'Profile updated successfully',
+                [{ text: 'OK', onPress: () => navigation.goBack() }]
+            );
+        } catch (error) {
+            console.error('Update profile error:', error);
             Alert.alert('Error', 'Failed to update profile. Please try again.');
         }
     };
 
-    // Handle cancel
-    const handleCancel = () => {
-        navigation.goBack();
-    };
-
     // Render loading state
-    if (isLoading) {
+    if (profileLoading) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#4CAF50" />
@@ -141,24 +235,11 @@ const EditProfileScreen: React.FC = () => {
     }
 
     // Render error state
-    if (error || !user) {
+    if (profileError) {
         return (
             <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={50} color="#F44336" />
+                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F44336" />
                 <Text style={styles.errorText}>Failed to load profile information.</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
-                    <Text style={styles.retryButtonText}>Go Back</Text>
-                </TouchableOpacity>
-            </SafeAreaView>
-        );
-    }
-
-    // Check if user has permission to edit
-    if (!isCurrentUser) {
-        return (
-            <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="lock" size={50} color="#F44336" />
-                <Text style={styles.errorText}>You don't have permission to edit this profile.</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
                     <Text style={styles.retryButtonText}>Go Back</Text>
                 </TouchableOpacity>
@@ -177,86 +258,71 @@ const EditProfileScreen: React.FC = () => {
                         <Text style={styles.headerTitle}>Edit Profile</Text>
                     </View>
 
-                    <View style={styles.content}>
-                        {/* Profile Picture */}
-                        <View style={styles.avatarContainer}>
-                            {avatar ? (
-                                <Image source={{ uri: avatar }} style={styles.avatar} />
+                    {/* Profile Picture */}
+                    <View style={styles.pictureContainer}>
+                        <TouchableOpacity style={styles.avatarContainer} onPress={showImagePickerOptions}>
+                            {avatarUri ? (
+                                <Image source={{ uri: avatarUri }} style={styles.avatar} />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
-                                    <Text style={styles.avatarText}>{username.charAt(0).toUpperCase()}</Text>
+                                    <Text style={styles.avatarText}>
+                                        {formData.username ? formData.username.charAt(0).toUpperCase() : 'U'}
+                                    </Text>
                                 </View>
                             )}
+                            <View style={styles.editIconContainer}>
+                                <MaterialCommunityIcons name="camera" size={16} color="white" />
+                            </View>
+                        </TouchableOpacity>
+                        <Text style={styles.changePhotoText}>Tap to change profile picture</Text>
+                    </View>
 
-                            <TouchableOpacity
-                                style={styles.changePhotoButton}
-                                onPress={handlePickImage}
-                            >
-                                <MaterialCommunityIcons name="camera" size={18} color="white" />
-                                <Text style={styles.changePhotoText}>Change Photo</Text>
-                            </TouchableOpacity>
+                    {/* Form Fields */}
+                    <View style={styles.formContainer}>
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Username</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={formData.username}
+                                onChangeText={(value) => handleInputChange('username', value)}
+                                placeholder="Enter your username"
+                            />
                         </View>
 
-                        {/* Form Fields */}
-                        <View style={styles.formContainer}>
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>Username</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={username}
-                                    onChangeText={setUsername}
-                                    placeholder="Enter username"
-                                />
-                            </View>
-
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>Email</Text>
-                                <TextInput
-                                    style={[styles.input, styles.disabledInput]}
-                                    value={email}
-                                    editable={false}
-                                    placeholder="Email address"
-                                />
-                                <Text style={styles.helperText}>Email cannot be changed</Text>
-                            </View>
-
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>Bio</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    value={bio}
-                                    onChangeText={setBio}
-                                    placeholder="Tell us about yourself"
-                                    multiline
-                                    numberOfLines={4}
-                                    textAlignVertical="top"
-                                />
-                            </View>
-                        </View>
-
-                        {/* Action Buttons */}
-                        <View style={styles.actionButtons}>
-                            <TouchableOpacity
-                                style={[styles.saveButton, isUpdating && styles.disabledButton]}
-                                onPress={handleSaveProfile}
-                                disabled={isUpdating}
-                            >
-                                {isUpdating ? (
-                                    <ActivityIndicator size="small" color="white" />
-                                ) : (
-                                    <Text style={styles.saveButtonText}>Save Changes</Text>
-                                )}
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.cancelButton}
-                                onPress={handleCancel}
-                                disabled={isUpdating}
-                            >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
-                            </TouchableOpacity>
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Bio</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={formData.bio}
+                                onChangeText={(value) => handleInputChange('bio', value)}
+                                placeholder="Tell something about yourself"
+                                multiline
+                                numberOfLines={4}
+                            />
                         </View>
                     </View>
+
+                    {/* Save Button */}
+                    <TouchableOpacity
+                        style={[styles.saveButton, isUpdating && styles.disabledButton]}
+                        onPress={handleSaveProfile}
+                        disabled={isUpdating}
+                    >
+                        {isUpdating ? (
+                            <ActivityIndicator size="small" color="white" />
+                        ) : (
+                            <Text style={styles.saveButtonText}>Save Changes</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    {/* Cancel Button */}
+                    <TouchableOpacity
+                        style={styles.cancelButton}
+                        onPress={() => navigation.goBack()}
+                        disabled={isUpdating}
+                    >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -273,6 +339,17 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
+        paddingBottom: 20,
+    },
+    header: {
+        backgroundColor: '#4CAF50',
+        padding: 16,
+        alignItems: 'center',
+    },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: 'white',
     },
     loadingContainer: {
         flex: 1,
@@ -292,45 +369,36 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     errorText: {
+        marginTop: 12,
         fontSize: 16,
         color: '#555',
-        textAlign: 'center',
-        marginTop: 16,
         marginBottom: 16,
     },
     retryButton: {
         backgroundColor: '#4CAF50',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 5,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
     },
     retryButtonText: {
         color: 'white',
         fontWeight: 'bold',
     },
-    header: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
+    pictureContainer: {
         alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    content: {
-        padding: 16,
+        marginTop: 20,
+        marginBottom: 20,
     },
     avatarContainer: {
-        alignItems: 'center',
-        marginBottom: 24,
+        position: 'relative',
+        marginBottom: 8,
     },
     avatar: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        borderWidth: 3,
-        borderColor: 'white',
+        borderWidth: 2,
+        borderColor: '#4CAF50',
     },
     avatarPlaceholder: {
         width: 120,
@@ -339,37 +407,34 @@ const styles = StyleSheet.create({
         backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 3,
-        borderColor: 'white',
+        borderWidth: 2,
+        borderColor: '#4CAF50',
     },
     avatarText: {
         fontSize: 48,
         fontWeight: 'bold',
-        color: '#757575',
+        color: '#9E9E9E',
     },
-    changePhotoButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
+    editIconContainer: {
+        position: 'absolute',
+        right: 0,
+        bottom: 0,
         backgroundColor: '#4CAF50',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        marginTop: 12,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: 'white',
     },
     changePhotoText: {
-        color: 'white',
-        marginLeft: 6,
-        fontWeight: '600',
+        fontSize: 14,
+        color: '#4CAF50',
+        marginTop: 8,
     },
     formContainer: {
-        backgroundColor: 'white',
-        borderRadius: 8,
         padding: 16,
-        marginBottom: 16,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
     },
     formGroup: {
         marginBottom: 16,
@@ -381,7 +446,7 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     input: {
-        backgroundColor: '#f9f9f9',
+        backgroundColor: 'white',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
@@ -389,31 +454,17 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
     },
-    disabledInput: {
-        backgroundColor: '#f0f0f0',
-        color: '#888',
-    },
     textArea: {
         minHeight: 100,
         textAlignVertical: 'top',
-    },
-    helperText: {
-        fontSize: 12,
-        color: '#888',
-        marginTop: 4,
-    },
-    actionButtons: {
-        marginBottom: 24,
     },
     saveButton: {
         backgroundColor: '#4CAF50',
         padding: 16,
         borderRadius: 8,
+        marginHorizontal: 16,
         alignItems: 'center',
         marginBottom: 12,
-    },
-    disabledButton: {
-        opacity: 0.7,
     },
     saveButtonText: {
         color: 'white',
@@ -421,16 +472,21 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     cancelButton: {
-        backgroundColor: 'transparent',
+        backgroundColor: '#f5f5f5',
         padding: 16,
         borderRadius: 8,
+        marginHorizontal: 16,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#ddd',
     },
     cancelButtonText: {
-        color: '#555',
+        color: '#666',
         fontSize: 16,
+        fontWeight: '500',
+    },
+    disabledButton: {
+        opacity: 0.7,
     },
 });
 
