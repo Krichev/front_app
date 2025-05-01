@@ -73,8 +73,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             // Update Auth State
             dispatch(setTokens({accessToken, refreshToken, user}));
 
-            // Navigate to Main with Home tab
-            navigation.navigate('Main', { screen: 'Home' });
         } catch (err: any) {
             const errorMessage = err.data?.message || 'An error occurred';
             Alert.alert('Error', errorMessage);

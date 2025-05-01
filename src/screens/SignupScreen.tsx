@@ -77,13 +77,13 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
             const {accessToken, refreshToken, user} = result;
 
             // Securely Store Tokens
-            await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken}));
+            await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken, user}));
 
             // Update Auth State
             dispatch(setTokens({accessToken, refreshToken, user}));
 
-            // Navigate to Main with Home tab
-            navigation.navigate('Main', { screen: 'Home' });
+            // Remove this navigation line - let Redux state change handle navigation
+            // navigation.navigate('Main', { screen: 'Home' });
 
             // Reset Form (Optional)
             setFormData({

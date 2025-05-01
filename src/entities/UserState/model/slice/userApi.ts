@@ -40,12 +40,12 @@ export const userApi = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: 'http://10.0.2.2:8082/challenger/api',
         prepareHeaders: (headers, { getState }) => {
-            // Get the token from the state
-            const token = (getState() as any).auth.token;
+            // Get the token from the state - FIXED: using accessToken instead of token
+            const token = (getState() as any).auth.accessToken;
 
             // If we have a token, add it to the headers
             if (token) {
-                headers.set('authorization', `Bearer ${token}`);
+                headers.set('Authorization', `Bearer ${token}`);
             }
 
             return headers;

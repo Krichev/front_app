@@ -81,7 +81,8 @@ export const challengeApi = createApi({
 
             // If we have a token, add it to the headers
             if (token) {
-                headers.set('authorization', `Bearer ${token}`);
+                // Changed from lowercase 'authorization' to capitalized 'Authorization'
+                headers.set('Authorization', `Bearer ${token}`);
             }
 
             return headers;

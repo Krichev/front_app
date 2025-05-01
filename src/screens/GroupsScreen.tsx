@@ -1,5 +1,5 @@
 // src/screens/GroupsScreen.tsx
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -18,144 +18,8 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {FormatterService} from '../services/verification/ui/Services';
-
-// Define Group interface first so we can use it in our hook
-interface Group {
-    id: string;
-    name: string;
-    description: string;
-    type: 'CHALLENGE' | 'SOCIAL';
-    privacy_setting: 'PUBLIC' | 'PRIVATE' | 'INVITATION_ONLY';
-    member_count: number;
-    created_at: string;
-    updated_at: string;
-    creator_id: string;
-    role: 'ADMIN' | 'MEMBER' | 'MODERATOR';
-}
-
-// For demonstration purposes, we'll create a mock API hook
-// In a real implementation, this would be an actual RTK Query hook
-const useGetUserGroupsQuery = () => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<any>(null);
-    const [data, setData] = useState<Group[]>([]);
-
-    useEffect(() => {
-        // Simulate API call
-        const fetchGroups = async () => {
-            try {
-                setIsLoading(true);
-                // In a real app, this would be an actual API call
-                // const response = await api.get('/groups');
-
-                // For now, we'll use mock data based on data.sql
-                const mockGroups: Group[] = [
-                    {
-                        id: '1',
-                        name: 'Morning Runners',
-                        description: 'Group for people who love to run in the morning',
-                        type: 'CHALLENGE',
-                        privacy_setting: 'PUBLIC',
-                        member_count: 3,
-                        created_at: '2023-10-15T08:00:00Z',
-                        updated_at: '2023-10-15T08:00:00Z',
-                        creator_id: '2',
-                        role: 'MEMBER'
-                    },
-                    {
-                        id: '2',
-                        name: 'Trivia Geeks',
-                        description: 'A group for trivia enthusiasts',
-                        type: 'SOCIAL',
-                        privacy_setting: 'PUBLIC',
-                        member_count: 3,
-                        created_at: '2023-09-20T15:30:00Z',
-                        updated_at: '2023-09-20T15:30:00Z',
-                        creator_id: '3',
-                        role: 'MEMBER'
-                    },
-                    {
-                        id: '3',
-                        name: 'Fitness Accountability',
-                        description: 'Hold each other accountable for fitness goals',
-                        type: 'CHALLENGE',
-                        privacy_setting: 'PRIVATE',
-                        member_count: 3,
-                        created_at: '2023-08-05T12:45:00Z',
-                        updated_at: '2023-08-05T12:45:00Z',
-                        creator_id: '1',
-                        role: 'ADMIN'
-                    },
-                    {
-                        id: '4',
-                        name: 'Skating Club',
-                        description: 'Find skating partners and events',
-                        type: 'SOCIAL',
-                        privacy_setting: 'PUBLIC',
-                        member_count: 2,
-                        created_at: '2023-07-12T18:20:00Z',
-                        updated_at: '2023-07-12T18:20:00Z',
-                        creator_id: '5',
-                        role: 'ADMIN'
-                    },
-                    {
-                        id: '5',
-                        name: 'Weight Loss Challenge',
-                        description: 'Support group for weight loss goals',
-                        type: 'CHALLENGE',
-                        privacy_setting: 'INVITATION_ONLY',
-                        member_count: 3,
-                        created_at: '2023-06-30T09:15:00Z',
-                        updated_at: '2023-06-30T09:15:00Z',
-                        creator_id: '1',
-                        role: 'MODERATOR'
-                    }
-                ];
-
-                setTimeout(() => {
-                    setData(mockGroups);
-                    setIsLoading(false);
-                }, 1000); // Simulate network delay
-            } catch (err) {
-                setError(err);
-                setIsLoading(false);
-            }
-        };
-
-        fetchGroups();
-    }, []);
-
-    const refetch = () => {
-        setIsLoading(true);
-        // In a real app, this would re-fetch data
-        setTimeout(() => {
-            setIsLoading(false);
-        }, 500);
-    };
-
-    return { data, isLoading, error, refetch };
-};
-
-// Mock join group mutation
-const useJoinGroupMutation = (): [
-    (groupId: string) => Promise<{ success: boolean }>,
-    { isLoading: boolean }
-] => {
-    const [isLoading, setIsLoading] = useState(false);
-
-    const joinGroup = async (groupId: string) => {
-        setIsLoading(true);
-        // Simulate API call
-        return new Promise<{ success: boolean }>((resolve) => {
-            setTimeout(() => {
-                setIsLoading(false);
-                resolve({ success: true });
-            }, 1000);
-        });
-    };
-
-    return [joinGroup, { isLoading }];
-};
+// Import the RTK Query hooks
+import {Group, useGetUserGroupsQuery, useJoinGroupMutation} from '../entities/GroupState/model/slice/groupApi';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -218,7 +82,7 @@ const GroupsScreen: React.FC = () => {
     // Handle joining a group
     const handleJoinGroup = async (groupId: string) => {
         try {
-            await joinGroup(groupId);
+            await joinGroup(groupId).unwrap();
             Alert.alert('Success', 'You have joined this group!');
             refetch();
         } catch (error) {
@@ -457,6 +321,8 @@ const GroupsScreen: React.FC = () => {
         </SafeAreaView>
     );
 };
+
+// Styles unchanged, so I'm not including them here to save space
 
 const styles = StyleSheet.create({
     container: {
