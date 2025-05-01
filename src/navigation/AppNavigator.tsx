@@ -33,6 +33,7 @@ import QuizResultsScreen from '../screens/QuizResultsScreen';
 import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import EditProfileScreen from "../screens/EditProfileScreen.tsx";
 
 // Define the types for the navigation parameters
 export type RootStackParamList = {
