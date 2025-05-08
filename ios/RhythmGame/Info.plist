@@ -9,6 +9,9 @@
 <string>We need your location to provide features in the background.</string>
 <key>NSCameraUsageDescription</key>
 <string>This app needs access to your camera to verify challenges.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Allow microphone access for real-time transcription</string>
+
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

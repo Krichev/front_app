@@ -45,7 +45,7 @@ const ChallengesScreen: React.FC = () => {
 
     // RTK Query call to fetch challenges
     const {data: challenges, error, isLoading, refetch} = useGetChallengesQuery({
-        page: 1,
+        page: 0,
         limit: 50, // Increase limit to get more challenges
         type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType, // Special handling for WWW filter
         participant_id: user?.id ?? undefined // Convert null to undefined using nullish coalescing

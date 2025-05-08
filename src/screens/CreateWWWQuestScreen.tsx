@@ -97,8 +97,9 @@ const CreateWWWQuestScreen: React.FC = () => {
                 title,
                 description,
                 type: 'QUIZ',
+                verificationMethod: 'QUIZ',
                 visibility: 'PUBLIC',
-                status: 'OPEN',
+                status: 'ACTIVE',
                 reward,
                 // Store WWW specific config as JSON
                 quizConfig: JSON.stringify(quizConfig)

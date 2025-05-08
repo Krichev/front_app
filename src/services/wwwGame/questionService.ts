@@ -3,6 +3,7 @@ import axios from 'axios';
 // import {parseStringPromise} from 'xml2js';
 import {XMLParser} from 'fast-xml-parser';
 import {DeepSeekHostService} from "./deepseekHostService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Types for the XML response from db.chgk.info
 interface XMLQuestionFields {
@@ -46,6 +47,11 @@ export interface QuestionData {
     additionalInfo?: string;
 }
 
+export interface UserQuestion extends QuestionData {
+    createdAt: string;
+    lastUsed?: string;
+}
+
 /**
  * Service for fetching and managing questions from external APIs
  */
@@ -60,6 +66,74 @@ export class QuestionService {
     static initialize(): void {
         this.isInitialized = true;
         console.log('Question Service initialized');
+    }
+
+    static async saveUserQuestion(question: Omit<UserQuestion, 'id' | 'createdAt'>): Promise<UserQuestion> {
+        try {
+            // Generate a unique ID
+            const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            // Create new question object
+            const newQuestion: UserQuestion = {
+                ...question,
+                id,
+                createdAt: new Date().toISOString(),
+            };
+
+            // Get existing questions
+            const existingQuestions = await this.getUserQuestions();
+
+            // Add new question
+            const updatedQuestions = [...existingQuestions, newQuestion];
+
+            // Save to AsyncStorage
+            await AsyncStorage.setItem('userQuestions', JSON.stringify(updatedQuestions));
+
+            return newQuestion;
+        } catch (error) {
+            console.error('Error saving user question:', error);
+            throw error;
+        }
+    }
+
+    // Get all user-created questions
+    static async getUserQuestions(): Promise<UserQuestion[]> {
+        try {
+            const questionsJson = await AsyncStorage.getItem('userQuestions');
+            if (questionsJson) {
+                return JSON.parse(questionsJson);
+            }
+            return [];
+        } catch (error) {
+            console.error('Error getting user questions:', error);
+            return [];
+        }
+    }
+
+    // Delete a user question
+    static async deleteUserQuestion(id: string): Promise<void> {
+        try {
+            const questions = await this.getUserQuestions();
+            const updatedQuestions = questions.filter(q => q.id !== id);
+            await AsyncStorage.setItem('userQuestions', JSON.stringify(updatedQuestions));
+        } catch (error) {
+            console.error('Error deleting user question:', error);
+            throw error;
+        }
+    }
+
+    // Update a user question
+    static async updateUserQuestion(updatedQuestion: UserQuestion): Promise<void> {
+        try {
+            const questions = await this.getUserQuestions();
+            const updatedQuestions = questions.map(q =>
+                q.id === updatedQuestion.id ? updatedQuestion : q
+            );
+            await AsyncStorage.setItem('userQuestions', JSON.stringify(updatedQuestions));
+        } catch (error) {
+            console.error('Error updating user question:', error);
+            throw error;
+        }
     }
 
     /**

@@ -223,7 +223,7 @@ const CreateChallengeScreen: React.FC = () => {
                 description: formData.description,
                 type: formData.type,
                 visibility: formData.visibility,
-                status: 'OPEN',
+                status: 'ACTIVE',
                 reward: formData.reward,
                 penalty: formData.penalty,
                 verificationMethod: JSON.stringify(activeVerificationMethods), // Correctly stringify the array

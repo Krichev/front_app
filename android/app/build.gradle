@@ -109,6 +109,10 @@ android {
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
+    implementation 'io.grpc:grpc-okhttp:1.32.2'
+        implementation 'io.grpc:grpc-protobuf:1.32.2'
+        implementation 'io.grpc:grpc-stub:1.32.2'
+        implementation 'com.google.protobuf:protobuf-java:3.12.2'
     implementation("com.facebook.react:react-android")
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     if (hermesEnabled.toBoolean()) {

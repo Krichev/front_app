@@ -1,6 +1,8 @@
 // src/services/game/wwwGameService.ts
 
 // Define types for game data
+import {UserQuestion} from "./questionService.ts";
+
 export interface RoundData {
     question: string;
     correctAnswer: string;
@@ -24,9 +26,11 @@ export interface GameSettings {
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
+    questionSource?: 'app' | 'user'; // Add this
+    userQuestions?: UserQuestion[]; // Add this
 }
-
 export type GamePhase = 'question' | 'discussion' | 'answer' | 'feedback';
+
 
 // Questions database by difficulty
 const QUESTIONS = {
@@ -218,16 +222,38 @@ const QUESTIONS = {
     ]
 };
 
+
+
 export class WWWGameService {
     /**
      * Initialize a new game with the given settings
      */
+
+
+
+// Then update the initializeGame method
     static initializeGame(settings: GameSettings): {
         gameQuestions: Array<{ question: string, answer: string }>,
         roundsData: RoundData[]
     } {
-        // Shuffle and select questions based on difficulty and round count
-        const gameQuestions = this.getShuffledQuestions(settings.difficulty, settings.roundCount);
+        let gameQuestions;
+
+        // Use user questions if specified
+        if (settings.questionSource === 'user' && settings.userQuestions && settings.userQuestions.length > 0) {
+            // Use the user-provided questions
+            gameQuestions = settings.userQuestions.map(q => ({
+                question: q.question,
+                answer: q.answer
+            }));
+
+            // If we don't have enough user questions, limit rounds
+            if (gameQuestions.length < settings.roundCount) {
+                settings.roundCount = gameQuestions.length;
+            }
+        } else {
+            // Use the original question selection logic
+            gameQuestions = this.getShuffledQuestions(settings.difficulty, settings.roundCount);
+        }
 
         // Initialize rounds data structure
         const roundsData = gameQuestions.map(q => ({
@@ -239,7 +265,7 @@ export class WWWGameService {
             discussionNotes: ''
         }));
 
-        return { gameQuestions, roundsData };
+        return {gameQuestions, roundsData};
     }
 
     /**
@@ -297,7 +323,7 @@ export class WWWGameService {
             discussionNotes
         };
 
-        return { updatedRoundsData, isCorrect };
+        return {updatedRoundsData, isCorrect};
     }
 
     /**
@@ -313,7 +339,7 @@ export class WWWGameService {
             if (!player) return; // Skip if no player answered
 
             if (!playerStatsMap.has(player)) {
-                playerStatsMap.set(player, { total: 0, correct: 0 });
+                playerStatsMap.set(player, {total: 0, correct: 0});
             }
 
             const stats = playerStatsMap.get(player)!;
@@ -522,6 +548,6 @@ export class WWWGameService {
             }
         }
 
-        return { mentionedCorrectAnswer, potentialAnswers };
+        return {mentionedCorrectAnswer, potentialAnswers};
     }
 }

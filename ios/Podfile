@@ -23,6 +23,11 @@ target 'RhythmGame' do
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
 
+
+pod 'gRPC-Swift', '~> 1.5.0'
+pod 'gRPC-Swift-Plugins'
+
+
   target 'RhythmGameTests' do
     inherit! :complete
     # Pods for testing

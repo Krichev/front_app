@@ -34,6 +34,9 @@ import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import EditProfileScreen from "../screens/EditProfileScreen.tsx";
+import {QuestionData, UserQuestion} from "../services/wwwGame/questionService.ts";
+import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
+import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
 
 // Define the types for the navigation parameters
 export type RootStackParamList = {
@@ -50,7 +53,6 @@ export type RootStackParamList = {
     UserProfile: { userId: string };
     EditProfile: { userId: string };
     // WWW Game Screens
-    WWWGameSetup: undefined;
     WWWGamePlay: {
         teamName: string;
         teamMembers: string[];
@@ -74,6 +76,11 @@ export type RootStackParamList = {
         teamName: string;
         roundsData: any[];
     };
+    WWWGameSetup: { selectedQuestions?: QuestionData[] };
+    QuestionManagement: undefined;
+    UserQuestions: undefined;
+    CreateUserQuestion: undefined;
+    EditUserQuestion: { question: UserQuestion };
 };
 
 export type MainTabParamList = {
@@ -226,6 +233,21 @@ const AppNavigation = () => {
                             name="QuizResults"
                             component={QuizResultsScreen}
                             options={{ title: 'Quiz Challenge Results' }}
+                        />
+                        <Stack.Screen
+                            name="UserQuestions"
+                            component={UserQuestionsScreen}
+                            options={{ title: 'My Questions' }}
+                        />
+                        <Stack.Screen
+                            name="CreateUserQuestion"
+                            component={CreateUserQuestionScreen}
+                            options={{ title: 'Create Question' }}
+                        />
+                        <Stack.Screen
+                            name="EditUserQuestion"
+                            component={CreateUserQuestionScreen}
+                            options={{ title: 'Edit Question' }}
                         />
                     </>
                 ) : (
