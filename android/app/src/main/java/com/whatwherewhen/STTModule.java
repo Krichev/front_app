@@ -15,6 +15,24 @@ public String getName() {
 }
 
 @ReactMethod
+public void requestAudioPermission(Promise promise) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (reactContext.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            promise.resolve(true);
+        } else {
+            ActivityCompat.requestPermissions(
+                getCurrentActivity(),
+                new String[]{Manifest.permission.RECORD_AUDIO},
+                1234
+            );
+            promise.resolve(false);
+        }
+    } else {
+        promise.resolve(true);
+    }
+}
+
+@ReactMethod
 public void startStreaming(String iamToken, String folderId) {
     sttClient.startStreaming(iamToken, folderId, new StreamObserver<SttServiceOuterClass.StreamingResponse>() {
         @Override

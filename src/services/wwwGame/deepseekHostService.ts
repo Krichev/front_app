@@ -155,24 +155,25 @@ export class DeepSeekHostService {
             const messages = [
                 {
                     role: "system",
-                    content: `You are an AI host for a "What? Where? When?" trivia game. Your task is to analyze the team's discussion to determine:
-          1. If they mentioned the correct answer or something very close to it
-          2. What their best guesses were
-          3. How confident they seemed in their answers
-          
-          Respond with a JSON object structured as follows:
-          {
-            "correctAnswerMentioned": boolean,
-            "bestGuesses": string[],
-            "analysis": string,
-            "confidence": number
-          }
-          
-          Where confidence is a number from 0 to 1 representing how confident you are in your analysis.`
+                    content: `You are an AI host for a "What? Where? When?" trivia game. Your task is to analyze the team's discussion, which has been transcribed from speech. 
+        
+        Analyze to determine:
+        1. If they mentioned the correct answer or something very close to it
+        2. What their best guesses were
+        3. How confident they seemed in their answers
+        4. How well they collaborated during the discussion
+        
+        Respond with a JSON object structured as follows:
+        {
+          "correctAnswerMentioned": boolean,
+          "bestGuesses": string[],
+          "analysis": string,
+          "confidence": number
+        }`
                 },
                 {
                     role: "user",
-                    content: `Team discussion: "${discussionText}"
+                    content: `Team discussion transcript: "${discussionText}"
 
 Correct answer: "${correctAnswer}"
 
