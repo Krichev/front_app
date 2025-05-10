@@ -14,7 +14,7 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import io.grpc.stub.StreamObserver;
-import yandex.cloud.ai.stt.v3.SttServiceOuterClass;
+import yandex.cloud.api.ai.stt.v3.SttServiceOuterClass;
 
 public class STTModule extends ReactContextBaseJavaModule {
     private final ReactApplicationContext reactContext;

@@ -11,7 +11,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint;
 import com.facebook.react.defaults.DefaultReactHost;
 import com.facebook.react.defaults.DefaultReactNativeHost;
 import com.facebook.soloader.SoLoader;
-import com.audio.ReactNativeAudioToolkitPackage;
+import com.reactnativecommunity.rctaudiotoolkit.ReactNativeAudioToolkitPackage;
 import java.util.List;
 
 public class MainApplication extends Application implements ReactApplication {

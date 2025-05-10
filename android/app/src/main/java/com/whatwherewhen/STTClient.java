@@ -6,8 +6,8 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
 import io.grpc.stub.StreamObserver;
-import yandex.cloud.ai.stt.v3.SttServiceGrpc;
-import yandex.cloud.ai.stt.v3.SttServiceOuterClass;
+import yandex.cloud.api.ai.stt.v3.SttServiceGrpc;
+import yandex.cloud.api.ai.stt.v3.SttServiceOuterClass;
 
 public class STTClient {
     private ManagedChannel channel;
