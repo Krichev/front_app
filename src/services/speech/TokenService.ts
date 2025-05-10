@@ -9,7 +9,7 @@ interface TokenResponse {
 export class TokenService {
     private static readonly TOKEN_STORAGE_KEY = 'yandex_iam_token';
     private static readonly SERVER_URL = 'https://your-server-domain.com/get-iam-token'; // Update with your server URL
-    private static readonly FOLDER_ID = 'your_folder_id'; // Update with your Yandex folder ID
+    private static readonly FOLDER_ID = 'b1g4a3qse3vma1o2ms01'; // Update with your Yandex folder ID
 
     // Get IAM token, fetching a new one if needed
     public static async getIAMToken(): Promise<string> {
@@ -21,8 +21,9 @@ export class TokenService {
             }
 
             // Fetch new token
-            const newToken = await this.fetchToken();
-            return newToken;
+            // const newToken = await this.fetchToken();
+            // return newToken;
+            return 'here will be token';
         } catch (error) {
             console.error('Error getting IAM token:', error);
             throw error;

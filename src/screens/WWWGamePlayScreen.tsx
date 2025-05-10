@@ -15,6 +15,7 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
+import VoiceRecorder from '../components/VoiceRecorder';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -231,6 +232,15 @@ const WWWGamePlayScreen: React.FC = () => {
 
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
+
+                        {/* Add VoiceRecorder component */}
+                        <VoiceRecorder
+                            isActive={gamePhase === 'discussion'}
+                            onTranscription={(text) => {
+                                // Append transcribed text to discussion notes
+                                setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
+                            }}
+                        />
 
                         <View style={styles.notesContainer}>
                             <Text style={styles.notesLabel}>Discussion Notes (AI Host is listening)</Text>
