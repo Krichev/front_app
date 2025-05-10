@@ -83,6 +83,18 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
         }
     };
 
+    const renderCreatorBadge = () => {
+        if (challenge.userIsCreator) {
+            return (
+                <View style={styles.creatorBadge}>
+                    <MaterialCommunityIcons name="crown" size={12} color="#FFD700" />
+                    <Text style={styles.creatorBadgeText}>Creator</Text>
+                </View>
+            );
+        }
+        return null;
+    };
+
     return (
         <TouchableOpacity style={styles.container} onPress={onPress}>
             <View style={styles.iconContainer}>
@@ -94,7 +106,15 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
             </View>
 
             <View style={styles.content}>
-                <Text style={styles.title}>{challenge.title}</Text>
+                <View style={styles.titleRow}>
+                    <Text style={styles.title}>{challenge.title}</Text>
+                    {challenge.userIsCreator && (
+                        <View style={styles.creatorBadge}>
+                            <MaterialCommunityIcons name="crown" size={12} color="#FFD700" />
+                            <Text style={styles.creatorBadgeText}>Creator</Text>
+                        </View>
+                    )}
+                </View>
 
                 <View style={styles.typeContainer}>
                     <Text style={styles.typeLabel}>{getQuizTypeLabel()}</Text>
@@ -215,6 +235,26 @@ const styles = StyleSheet.create({
     rewards: {
         fontSize: 12,
         color: '#555',
+    },
+
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    creatorBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF9C4',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    creatorBadgeText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#FF9800',
+        marginLeft: 4,
     },
 });
 

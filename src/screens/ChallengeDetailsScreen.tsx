@@ -119,6 +119,102 @@ const ChallengeDetailsScreen: React.FC = () => {
         // Check if this is a What? Where? When? quiz
         const isWWWQuiz = quizConfig && quizConfig.gameType === 'WWW';
 
+        const handleJoinChallenge = async () => {
+            try {
+                setIsJoining(true);
+                await joinChallenge(challengeId).unwrap();
+                Alert.alert('Success', 'You have joined this challenge!');
+                refetch(); // Refresh challenge data
+            } catch (error) {
+                console.error('Error joining challenge:', error);
+                Alert.alert('Error', 'Failed to join challenge. Please try again.');
+            } finally {
+                setIsJoining(false);
+            }
+        };
+
+// Handler for submitting challenge completion
+        const handleSubmitCompletion = async () => {
+            try {
+                setIsSubmitting(true);
+                await submitCompletion({
+                    id: challengeId,
+                    proof: { completed: true }
+                }).unwrap();
+                setProofSubmitted(true);
+                Alert.alert('Success', 'Your completion has been submitted for verification!');
+                refetch(); // Refresh challenge data
+            } catch (error) {
+                console.error('Error submitting completion:', error);
+                Alert.alert('Error', 'Failed to submit completion. Please try again.');
+            } finally {
+                setIsSubmitting(false);
+            }
+        };
+
+// Handler for verifying challenge completions (for creators)
+        const handleVerifyCompletions = () => {
+            // Navigate to a verification screen or show a modal with pending completions
+            if (!challenge) return;
+
+            // Option 1: Navigate to dedicated verification screen
+            navigation.navigate('VerifyCompletions', {
+                challengeId: challenge.id,
+                challengeTitle: challenge.title
+            });
+
+            // Option 2: Show pending completions in a modal
+            /*
+            // This would require additional state and components
+            setPendingCompletionsVisible(true);
+            fetchPendingCompletions(challenge.id);
+            */
+        };
+
+// Handler for editing the challenge (for creators)
+        const handleEditChallenge = () => {
+            if (!challenge) return;
+
+            // Navigate to edit challenge screen
+            navigation.navigate('EditChallenge', {
+                challengeId: challenge.id,
+                challenge: challenge // Optionally pass the full challenge object
+            });
+        };
+
+        const renderActions = () => {
+            if (challenge.userIsCreator) {
+                return (
+                    <View style={styles.actionSection}>
+                        <TouchableOpacity style={styles.editButton} onPress={handleEditChallenge}>
+                            <MaterialCommunityIcons name="pencil" size={20} color="white" />
+                            <Text style={styles.buttonText}>Edit Challenge</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyCompletions}>
+                            <MaterialCommunityIcons name="check-all" size={20} color="white" />
+                            <Text style={styles.buttonText}>Verify Completions</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            } else if (userHasJoined) {
+                return (
+                    <View style={styles.actionSection}>
+                        <TouchableOpacity style={styles.submitButton} onPress={handleSubmitCompletion}>
+                            <MaterialCommunityIcons name="check" size={20} color="white" />
+                            <Text style={styles.buttonText}>Submit Completion</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            } else {
+                return (
+                    <TouchableOpacity style={styles.joinButton} onPress={handleJoinChallenge}>
+                        <Text style={styles.buttonText}>Join Challenge</Text>
+                    </TouchableOpacity>
+                );
+            }
+        };
+
         return (
             <View style={styles.quizContainer}>
                 <Text style={styles.quizTitle}>Quiz Challenge</Text>
@@ -226,6 +322,8 @@ const ChallengeDetailsScreen: React.FC = () => {
         }
     };
 
+
+
     // Render loading state
     if (isLoading) {
         return (
@@ -266,8 +364,16 @@ const ChallengeDetailsScreen: React.FC = () => {
                     </View>
                 </View>
 
-                {/* Challenge Details */}
+                {/* Content */}
                 <View style={styles.content}>
+                    {/* Creator Badge */}
+                    {challenge.userIsCreator && (
+                        <View style={styles.creatorContainer}>
+                            <MaterialCommunityIcons name="crown" size={20} color="#FFD700" />
+                            <Text style={styles.creatorText}>You created this challenge</Text>
+                        </View>
+                    )}
+
                     {/* Description */}
                     <View style={styles.descriptionContainer}>
                         <Text style={styles.descriptionTitle}>Challenge Description:</Text>
@@ -306,7 +412,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                             <View style={styles.infoRow}>
                                 <Text style={styles.infoLabel}>Verification</Text>
                                 <View style={styles.verificationMethods}>
-                                    {getVerificationMethods().map((method: any, index: number) => (
+                                    {getVerificationMethods().map((method, index) => (
                                         <View key={index} style={styles.verificationBadge}>
                                             <Text style={styles.verificationText}>
                                                 {method.type.charAt(0) + method.type.slice(1).toLowerCase()}
@@ -338,54 +444,77 @@ const ChallengeDetailsScreen: React.FC = () => {
                         </View>
                     </TouchableOpacity>
 
-                    {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
-                    {(challenge.type !== 'QUIZ' || !challenge.quizConfig) && (
-                        <View style={styles.actionSection}>
-                            {!userHasJoined ? (
+                    {/* Role-based Action Buttons */}
+                    <View style={styles.actionSection}>
+                        {challenge.userIsCreator ? (
+                            // Creator Actions
+                            <>
                                 <TouchableOpacity
-                                    style={styles.primaryButton}
-                                    onPress={handleJoinChallenge}
-                                    disabled={isJoining}
+                                    style={styles.editButton}
+                                    onPress={handleEditChallenge}
                                 >
-                                    {isJoining ? (
-                                        <ActivityIndicator size="small" color="white" />
-                                    ) : (
-                                        <Text style={styles.buttonText}>Join Challenge</Text>
-                                    )}
+                                    <MaterialCommunityIcons name="pencil" size={20} color="white" />
+                                    <Text style={styles.buttonText}>Edit Challenge</Text>
                                 </TouchableOpacity>
-                            ) : (
-                                // For daily challenges, show the verification button
-                                isDailyChallenge() ? (
-                                    <TouchableOpacity
-                                        style={styles.verifyButton}
-                                        onPress={navigateToVerification}
-                                    >
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="white" />
-                                        <Text style={styles.buttonText}>Daily Check-In</Text>
-                                    </TouchableOpacity>
-                                ) : proofSubmitted ? (
-                                    <View style={styles.successMessage}>
-                                        <Text style={styles.successText}>Completion Submitted</Text>
-                                    </View>
+
+                                <View style={styles.buttonSpacing} />
+
+                                <TouchableOpacity
+                                    style={styles.verifyButton}
+                                    onPress={handleVerifyCompletions}
+                                >
+                                    <MaterialCommunityIcons name="check-all" size={20} color="white" />
+                                    <Text style={styles.buttonText}>Verify Completions</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : !userHasJoined ? (
+                            // Non-joined User Actions
+                            <TouchableOpacity
+                                style={styles.joinButton}
+                                onPress={handleJoinChallenge}
+                                disabled={isJoining}
+                            >
+                                {isJoining ? (
+                                    <ActivityIndicator size="small" color="white" />
                                 ) : (
-                                    <TouchableOpacity
-                                        style={styles.secondaryButton}
-                                        onPress={handleSubmitCompletion}
-                                        disabled={isSubmitting}
-                                    >
-                                        {isSubmitting ? (
-                                            <ActivityIndicator size="small" color="white" />
-                                        ) : (
-                                            <>
-                                                <MaterialCommunityIcons name="check" size={20} color="white" />
-                                                <Text style={styles.buttonText}>Submit Completion</Text>
-                                            </>
-                                        )}
-                                    </TouchableOpacity>
-                                )
-                            )}
-                        </View>
-                    )}
+                                    <>
+                                        <MaterialCommunityIcons name="account-plus" size={20} color="white" />
+                                        <Text style={styles.buttonText}>Join Challenge</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        ) : isDailyChallenge() ? (
+                            // Daily Challenge Participant Actions
+                            <TouchableOpacity
+                                style={styles.submitButton}
+                                onPress={navigateToVerification}
+                            >
+                                <MaterialCommunityIcons name="check-circle" size={20} color="white" />
+                                <Text style={styles.buttonText}>Daily Check-In</Text>
+                            </TouchableOpacity>
+                        ) : proofSubmitted ? (
+                            // Completed Challenge Participant Actions
+                            <View style={styles.successMessage}>
+                                <Text style={styles.successText}>Completion Submitted</Text>
+                            </View>
+                        ) : (
+                            // Standard Challenge Participant Actions
+                            <TouchableOpacity
+                                style={styles.submitButton}
+                                onPress={handleSubmitCompletion}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="check" size={20} color="white" />
+                                        <Text style={styles.buttonText}>Submit Completion</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -666,6 +795,45 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    creatorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF8E1',
+        padding: 12,
+        borderRadius: 8,
+        marginVertical: 12,
+    },
+    creatorText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#FF9800',
+        marginLeft: 8,
+    },
+    editButton: {
+        backgroundColor: '#FF9800',
+        padding: 16,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    joinButton: {
+        backgroundColor: '#4CAF50',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+    },
+    submitButton: {
+        backgroundColor: '#2196F3',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
     },
 });
 

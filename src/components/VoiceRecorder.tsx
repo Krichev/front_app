@@ -1,4 +1,4 @@
-// src/components/VoiceRecorder.tsx
+// Modified src/components/VoiceRecorder.tsx
 import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {SpeechToTextService} from '../services/speech/SpeechToTextService';
@@ -15,6 +15,8 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, isActive
     const [isRecording, setIsRecording] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isReconnecting, setIsReconnecting] = useState(false);
+    const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
     // Initialize STT service
     useEffect(() => {
@@ -27,17 +29,33 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, isActive
                 const iamToken = await TokenService.getIAMToken();
                 const folderId = TokenService.getFolderId();
 
-                // Create STT service
+                // Create STT service with reconnection handlers
                 const service = new SpeechToTextService({
                     iamToken,
                     folderId,
                     onTranscription: (text) => {
                         onTranscription(text);
+                        // Reset reconnection UI state on successful transcription
+                        setIsReconnecting(false);
+                        setReconnectAttempt(0);
                     },
                     onError: (err) => {
                         console.error('STT error:', err);
-                        setError('Error with speech recognition');
-                    }
+                        // Only show error if we're not in reconnection state
+                        if (!isReconnecting) {
+                            setError('Error with speech recognition');
+                        }
+                    },
+                    onReconnecting: (attempt) => {
+                        setIsReconnecting(true);
+                        setReconnectAttempt(attempt);
+                    },
+                    onReconnectFailed: () => {
+                        setIsReconnecting(false);
+                        setReconnectAttempt(0);
+                        setError('Connection failed after multiple attempts');
+                    },
+                    maxReconnectAttempts: 5
                 });
 
                 setSTTService(service);
@@ -68,9 +86,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, isActive
         if (isRecording) {
             sttService.stopRecording();
             setIsRecording(false);
+            setIsReconnecting(false);
+            setReconnectAttempt(0);
         } else {
             sttService.startRecording();
             setIsRecording(true);
+            setError(null);
         }
     };
 
@@ -85,7 +106,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, isActive
         );
     }
 
-    if (error) {
+    if (error && !isReconnecting) {
         return (
             <View style={styles.container}>
                 <MaterialCommunityIcons name="alert-circle" size={24} color="#F44336" />
@@ -97,18 +118,30 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, isActive
     return (
         <View style={styles.container}>
             <TouchableOpacity
-                style={[styles.recordButton, isRecording && styles.recordingButton]}
+                style={[
+                    styles.recordButton,
+                    isRecording && !isReconnecting && styles.recordingButton,
+                    isReconnecting && styles.reconnectingButton
+                ]}
                 onPress={toggleRecording}
-                disabled={!sttService}
+                disabled={!sttService || isReconnecting}
             >
-                <MaterialCommunityIcons
-                    name={isRecording ? "stop" : "microphone"}
-                    size={24}
-                    color="white"
-                />
+                {isReconnecting ? (
+                    <ActivityIndicator size="small" color="white" />
+                ) : (
+                    <MaterialCommunityIcons
+                        name={isRecording ? "stop" : "microphone"}
+                        size={24}
+                        color="white"
+                    />
+                )}
             </TouchableOpacity>
             <Text style={styles.statusText}>
-                {isRecording ? 'Listening...' : 'Tap to record discussion'}
+                {isReconnecting
+                    ? `Reconnecting (${reconnectAttempt}/5)...`
+                    : isRecording
+                        ? 'Listening...'
+                        : 'Tap to record discussion'}
             </Text>
         </View>
     );
@@ -135,6 +168,9 @@ const styles = StyleSheet.create({
     },
     recordingButton: {
         backgroundColor: '#F44336',
+    },
+    reconnectingButton: {
+        backgroundColor: '#FF9800',
     },
     statusText: {
         fontSize: 14,

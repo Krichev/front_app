@@ -37,6 +37,7 @@ import EditProfileScreen from "../screens/EditProfileScreen.tsx";
 import {QuestionData, UserQuestion} from "../services/wwwGame/questionService.ts";
 import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
 import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
+import {Challenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
 
 // Define the types for the navigation parameters
 export type RootStackParamList = {
@@ -81,6 +82,8 @@ export type RootStackParamList = {
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
+    EditChallenge: { challengeId: string, challenge?: Challenge };
+    VerifyCompletions: { challengeId: string, challengeTitle: string };
 };
 
 export type MainTabParamList = {

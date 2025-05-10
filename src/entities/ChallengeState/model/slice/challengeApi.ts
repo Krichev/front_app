@@ -21,6 +21,8 @@ export interface Challenge {
     startDate?: string;
     endDate?: string;
     quizConfig?: string; // JSON string of QuizConfig
+    userIsCreator?: boolean; // Flag indicating if the current user is the creator
+    userRole?: string; // Optional field to store the user's role (CREATOR, PARTICIPANT, etc.)
 }
 
 export interface CreateChallengeRequest {

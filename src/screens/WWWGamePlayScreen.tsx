@@ -1,4 +1,4 @@
-// src/screens/WWWGamePlayScreen.tsx
+// src/screens/WWWGamePlayScreen.tsx with voice recording capabilities
 import React, {useEffect, useRef, useState} from 'react';
 import {
     Alert,
@@ -15,6 +15,7 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 
 // Define the types for the navigation parameters
@@ -58,6 +59,11 @@ const WWWGamePlayScreen: React.FC = () => {
     const [currentQuestion, setCurrentQuestion] = useState('');
     const [currentAnswer, setCurrentAnswer] = useState('');
     const [showHint, setShowHint] = useState(false);
+
+    // Voice recording state
+    const [isVoiceRecordingEnabled, setIsVoiceRecordingEnabled] = useState(difficulty === 'Easy');
+    const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
+    const [voiceTranscription, setVoiceTranscription] = useState('');
 
     // Animated values
     const timerAnimation = useRef(new Animated.Value(1)).current;
@@ -120,12 +126,36 @@ const WWWGamePlayScreen: React.FC = () => {
         setGamePhase('discussion');
         setTimer(roundTime);
         setIsTimerRunning(true);
+        // Reset voice transcription when starting discussion
+        setVoiceTranscription('');
+    };
+
+    // Handle voice transcription updates
+    const handleVoiceTranscription = (text: string) => {
+        if (gamePhase === 'discussion') {
+            // For discussion phase, append to discussion notes
+            setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
+            setVoiceTranscription(text);
+        } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
+            // For answer phase, set as the team answer
+            setTeamAnswer(text);
+            setVoiceTranscription(text);
+        }
+    };
+
+    // Toggle voice answer recording
+    const toggleVoiceAnswer = () => {
+        setIsRecordingVoiceAnswer(!isRecordingVoiceAnswer);
+        if (!isRecordingVoiceAnswer) {
+            // Reset the team answer when starting recording
+            setTeamAnswer('');
+        }
     };
 
     // Submit team answer
     const submitAnswer = () => {
         if (!teamAnswer.trim()) {
-            Alert.alert('Error', 'Please enter an answer');
+            Alert.alert('Error', 'Please enter or record an answer');
             return;
         }
 
@@ -153,6 +183,9 @@ const WWWGamePlayScreen: React.FC = () => {
 
         // Move to feedback phase
         setGamePhase('feedback');
+
+        // Reset voice recording state
+        setIsRecordingVoiceAnswer(false);
     };
 
     // Move to next round
@@ -171,6 +204,7 @@ const WWWGamePlayScreen: React.FC = () => {
         setDiscussionNotes('');
         setSelectedPlayer('');
         setShowHint(false);
+        setVoiceTranscription('');
 
         // Set next question
         setCurrentQuestion(roundsData[currentRound + 1].question);
@@ -233,17 +267,24 @@ const WWWGamePlayScreen: React.FC = () => {
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
 
-                        {/* Add VoiceRecorder component */}
-                        <VoiceRecorder
-                            isActive={gamePhase === 'discussion'}
-                            onTranscription={(text) => {
-                                // Append transcribed text to discussion notes
-                                setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
-                            }}
-                        />
+                        {/* Voice Recording for Easy Difficulty */}
+                        {isVoiceRecordingEnabled && (
+                            <View style={styles.voiceRecorderContainer}>
+                                <VoiceRecorder
+                                    onTranscription={handleVoiceTranscription}
+                                    isActive={gamePhase === 'discussion'}
+                                />
+                                {voiceTranscription ? (
+                                    <View style={styles.transcriptionContainer}>
+                                        <Text style={styles.transcriptionLabel}>Last Transcription:</Text>
+                                        <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
+                                    </View>
+                                ) : null}
+                            </View>
+                        )}
 
                         <View style={styles.notesContainer}>
-                            <Text style={styles.notesLabel}>Discussion Notes (AI Host is listening)</Text>
+                            <Text style={styles.notesLabel}>Discussion Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}</Text>
                             <TextInput
                                 style={styles.notesInput}
                                 multiline
@@ -308,6 +349,40 @@ const WWWGamePlayScreen: React.FC = () => {
                                 onChangeText={setTeamAnswer}
                                 placeholder="Enter your team's final answer"
                             />
+                        </View>
+
+                        {/* Voice Answer Option */}
+                        <View style={styles.voiceAnswerContainer}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.voiceAnswerButton,
+                                    isRecordingVoiceAnswer && styles.voiceAnswerButtonActive
+                                ]}
+                                onPress={toggleVoiceAnswer}
+                            >
+                                <MaterialCommunityIcons
+                                    name={isRecordingVoiceAnswer ? "stop" : "microphone"}
+                                    size={24}
+                                    color="white"
+                                />
+                                <Text style={styles.voiceAnswerButtonText}>
+                                    {isRecordingVoiceAnswer ? "Stop Recording" : "Record Answer"}
+                                </Text>
+                            </TouchableOpacity>
+
+                            {isRecordingVoiceAnswer && (
+                                <VoiceRecorder
+                                    onTranscription={handleVoiceTranscription}
+                                    isActive={isRecordingVoiceAnswer}
+                                />
+                            )}
+
+                            {isRecordingVoiceAnswer && voiceTranscription && (
+                                <View style={styles.transcriptionContainer}>
+                                    <Text style={styles.transcriptionLabel}>Voice Answer:</Text>
+                                    <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
+                                </View>
+                            )}
                         </View>
 
                         {enableAIHost && (
@@ -723,6 +798,52 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    // Voice recording styles
+    voiceRecorderContainer: {
+        marginBottom: 16,
+        backgroundColor: '#f9f9f9',
+        padding: 12,
+        borderRadius: 8,
+    },
+    transcriptionContainer: {
+        marginTop: 8,
+        backgroundColor: '#f0f0f0',
+        padding: 12,
+        borderRadius: 8,
+    },
+    transcriptionLabel: {
+        fontWeight: 'bold',
+        fontSize: 14,
+        color: '#555',
+        marginBottom: 4,
+    },
+    transcriptionText: {
+        fontSize: 14,
+        color: '#333',
+        fontStyle: 'italic',
+    },
+    voiceAnswerContainer: {
+        marginBottom: 16,
+    },
+    voiceAnswerButton: {
+        flexDirection: 'row',
+        backgroundColor: '#FF9800',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    voiceAnswerButtonActive: {
+        backgroundColor: '#F44336',
+    },
+    voiceAnswerButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
 });
 
