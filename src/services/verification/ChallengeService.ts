@@ -1,4 +1,4 @@
-import {Challenge} from '../../entities/ChallengeState/model/slice/challengeApi';
+import {ApiChallenge} from '../../entities/ChallengeState/model/slice/challengeApi';
 import {VerificationMethod} from '../../app/types';
 
 /**
@@ -7,10 +7,10 @@ import {VerificationMethod} from '../../app/types';
 export class ChallengeService {
     /**
      * Parse verification methods from challenge
-     * @param {Challenge|null|undefined} challenge - Challenge object
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
      * @returns {VerificationMethod[]} Array of verification methods
      */
-    static getVerificationMethods(challenge?: Challenge | null): VerificationMethod[] {
+    static getVerificationMethods(challenge?: ApiChallenge | null): VerificationMethod[] {
         if (!challenge?.verificationMethod) return [];
 
         try {
@@ -37,19 +37,19 @@ export class ChallengeService {
 
     /**
      * Check if the challenge is a daily challenge
-     * @param {Challenge|null|undefined} challenge - Challenge object
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
      * @returns {boolean} Whether it's a daily challenge
      */
-    static isDailyChallenge(challenge?: Challenge | null): boolean {
+    static isDailyChallenge(challenge?: ApiChallenge | null): boolean {
         return challenge?.type === 'HABIT_BUILDING' || challenge?.frequency === 'DAILY';
     }
 
     /**
      * Check if the challenge has verification methods
-     * @param {Challenge|null|undefined} challenge - Challenge object
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
      * @returns {boolean} Whether the challenge has verification methods
      */
-    static hasVerificationMethods(challenge?: Challenge | null): boolean {
+    static hasVerificationMethods(challenge?: ApiChallenge | null): boolean {
         const methods = this.getVerificationMethods(challenge);
         return methods.length > 0;
     }
@@ -70,10 +70,10 @@ export class ChallengeService {
 
     /**
      * Get remaining time for challenge completion
-     * @param {Challenge} challenge - Challenge object
+     * @param {ApiChallenge} challenge - Challenge object
      * @returns {string} Remaining time string
      */
-    static getRemainingTime(challenge: Challenge): string {
+    static getRemainingTime(challenge: ApiChallenge): string {
         if (!challenge.endDate) return 'No end date';
 
         const endDate = new Date(challenge.endDate);
@@ -100,12 +100,12 @@ export class ChallengeService {
 
     /**
      * Calculate challenge progress
-     * @param {Challenge} challenge - Challenge object
+     * @param {ApiChallenge} challenge - Challenge object
      * @param {number} completedTasks - Number of completed tasks
      * @param {number} totalTasks - Total number of tasks
      * @returns {number} Progress percentage (0-100)
      */
-    static calculateProgress(challenge: Challenge, completedTasks: number, totalTasks: number): number {
+    static calculateProgress(challenge: ApiChallenge, completedTasks: number, totalTasks: number): number {
         if (totalTasks === 0) return 0;
 
         // For daily challenges, calculate based on days
@@ -137,11 +137,11 @@ export class ChallengeService {
 
     /**
      * Check if the user has completed today's verification
-     * @param {Challenge} challenge - Challenge object
+     * @param {ApiChallenge} challenge - Challenge object
      * @param {Array} verificationHistory - History of verifications
      * @returns {boolean} Whether today's verification is completed
      */
-    static isTodayVerified(challenge: Challenge, verificationHistory: any[]): boolean {
+    static isTodayVerified(challenge: ApiChallenge, verificationHistory: any[]): boolean {
         if (!verificationHistory || verificationHistory.length === 0) return false;
 
         // Get today's date (without time)

@@ -2,7 +2,7 @@
 
 import {createSlice, PayloadAction} from "@reduxjs/toolkit";
 
-export interface Challenge {
+export interface StateChallenge {
     id: string;
     title: string;
     description: string;
@@ -20,8 +20,8 @@ export interface Challenge {
 }
 
 interface ChallengeState {
-    challenges: Challenge[];
-    currentChallenge: Challenge | null;
+    challenges: StateChallenge[];
+    currentChallenge: StateChallenge | null;
 }
 
 const initialChallengeState: ChallengeState = {
@@ -33,12 +33,12 @@ export const challengeSlice = createSlice({
     name: 'challenge',
     initialState: initialChallengeState,
     reducers: {
-        addChallenge: (state, action: PayloadAction<Challenge>) => {
+        addChallenge: (state, action: PayloadAction<StateChallenge>) => {
             state.challenges.push(action.payload);
         },
         updateChallengeStatus: (state, action: PayloadAction<{
             challengeId: string;
-            status: Challenge['status'];
+            status: StateChallenge['status'];
         }>) => {
             const challenge = state.challenges.find(
                 ch => ch.id === action.payload.challengeId

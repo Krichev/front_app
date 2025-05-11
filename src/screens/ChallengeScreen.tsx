@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
-import {Challenge, useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
+import {ApiChallenge, useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChallengeFilters from './components/ChallengeFilters';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
@@ -43,12 +43,16 @@ const ChallengesScreen: React.FC = () => {
     const initialFilterType = route.params?.initialFilter || null;
     const [selectedType, setSelectedType] = useState<string | null>(initialFilterType);
 
+    const [showParticipating, setShowParticipating] = useState<boolean>(true);
+    const [showCreated, setShowCreated] = useState<boolean>(false);
+
     // RTK Query call to fetch challenges
     const {data: challenges, error, isLoading, refetch} = useGetChallengesQuery({
         page: 0,
-        limit: 50, // Increase limit to get more challenges
-        type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType, // Special handling for WWW filter
-        participant_id: user?.id ?? undefined // Convert null to undefined using nullish coalescing
+        limit: 50,
+        type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType,
+        participant_id: showParticipating ? user?.id : undefined,
+        creator_id: showCreated ? user?.id : undefined
     });
 
     // Update filter if route params change
@@ -79,7 +83,7 @@ const ChallengesScreen: React.FC = () => {
     }, [challenges, selectedType]);
 
     // Renders each challenge item in the list
-    const renderChallengeItem = ({item}: { item: Challenge }) => {
+    const renderChallengeItem = ({item}: { item: ApiChallenge }) => {
         // Detect if this is a quiz challenge
         const isQuizChallenge = item.type === 'QUIZ';
 
@@ -209,6 +213,34 @@ const ChallengesScreen: React.FC = () => {
                 selectedType={selectedType}
                 onSelectType={setSelectedType}
             />
+            <View style={styles.roleFiltersContainer}>
+                <Text style={styles.filterLabel}>Show challenges where I am:</Text>
+                <View style={styles.checkboxRow}>
+                    <TouchableOpacity
+                        style={styles.checkboxContainer}
+                        onPress={() => setShowParticipating(!showParticipating)}
+                    >
+                        <View style={[styles.checkbox, showParticipating && styles.checkboxChecked]}>
+                            {showParticipating && (
+                                <MaterialCommunityIcons name="check" size={16} color="white" />
+                            )}
+                        </View>
+                        <Text style={styles.checkboxLabel}>Participant</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.checkboxContainer}
+                        onPress={() => setShowCreated(!showCreated)}
+                    >
+                        <View style={[styles.checkbox, showCreated && styles.checkboxChecked]}>
+                            {showCreated && (
+                                <MaterialCommunityIcons name="check" size={16} color="white" />
+                            )}
+                        </View>
+                        <Text style={styles.checkboxLabel}>Creator</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
 
             {/* Main content area */}
             <View style={styles.content}>
@@ -439,6 +471,43 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
+    },
+    roleFiltersContainer: {
+        padding: 16,
+        paddingTop: 0,
+    },
+    checkboxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: 24,
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: '#4CAF50',
+        marginRight: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    checkboxChecked: {
+        backgroundColor: '#4CAF50',
+    },
+    checkboxLabel: {
+        fontSize: 14,
+        color: '#555',
+    },
+    filterLabel: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#555',
+        marginBottom: 8,
     },
 });
 

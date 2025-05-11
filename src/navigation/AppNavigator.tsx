@@ -37,7 +37,8 @@ import EditProfileScreen from "../screens/EditProfileScreen.tsx";
 import {QuestionData, UserQuestion} from "../services/wwwGame/questionService.ts";
 import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
 import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
-import {Challenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
+import {StateChallenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
+import {AuthNavigationHandler} from "../entities/AuthState/ui/AuthNavigationHandler.tsx";
 
 // Define the types for the navigation parameters
 export type RootStackParamList = {
@@ -82,7 +83,7 @@ export type RootStackParamList = {
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
-    EditChallenge: { challengeId: string, challenge?: Challenge };
+    EditChallenge: { challengeId: string, challenge?: StateChallenge };
     VerifyCompletions: { challengeId: string, challengeTitle: string };
 };
 
@@ -151,6 +152,7 @@ const AppNavigation = () => {
 
     return (
         <NavigationContainer>
+            <AuthNavigationHandler />
             <Stack.Navigator
                 screenOptions={{
                     headerStyle: {

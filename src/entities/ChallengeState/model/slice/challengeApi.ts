@@ -3,7 +3,7 @@ import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 import {RootState} from "../../../../app/providers/StoreProvider/store";
 
 // Update the Challenge interface with proper quizConfig typing
-export interface Challenge {
+export interface ApiChallenge {
     id: string;
     title: string;
     description?: string;
@@ -13,6 +13,7 @@ export interface Challenge {
     created_at: string;
     updated_at: string;
     creator_id: string;
+    participants: string[];
     reward?: string;
     penalty?: string;
     verificationMethod?: string; // JSON string of VerificationMethod[]
@@ -93,7 +94,7 @@ export const challengeApi = createApi({
     tagTypes: ['Challenge', 'Verification'],
     endpoints: (builder) => ({
         // Get all challenges with filtering
-        getChallenges: builder.query<Challenge[], GetChallengesParams>({
+        getChallenges: builder.query<ApiChallenge[], GetChallengesParams>({
             query: (params) => ({
                 url: '/challenges',
                 params,
@@ -108,13 +109,13 @@ export const challengeApi = createApi({
         }),
 
         // Get a single challenge by ID
-        getChallengeById: builder.query<Challenge, string>({
+        getChallengeById: builder.query<ApiChallenge, string>({
             query: (id) => `/challenges/${id}`,
             providesTags: (_, __, id) => [{type: 'Challenge', id}],
         }),
 
         // Create a new challenge
-        createChallenge: builder.mutation<Challenge, CreateChallengeRequest>({
+        createChallenge: builder.mutation<ApiChallenge, CreateChallengeRequest>({
             query: (body) => ({
                 url: '/challenges',
                 method: 'POST',
@@ -124,7 +125,7 @@ export const challengeApi = createApi({
         }),
 
         // Update an existing challenge
-        updateChallenge: builder.mutation<Challenge, Partial<Challenge> & { id: string }>({
+        updateChallenge: builder.mutation<ApiChallenge, Partial<ApiChallenge> & { id: string }>({
             query: ({id, ...patch}) => ({
                 url: `/challenges/${id}`,
                 method: 'PATCH',
@@ -172,7 +173,7 @@ export const challengeApi = createApi({
         }),
 
         // Search challenges by keyword
-        searchChallenges: builder.query<Challenge[], string>({
+        searchChallenges: builder.query<ApiChallenge[], string>({
             query: (searchTerm) => ({
                 url: '/challenges/search',
                 params: {q: searchTerm},

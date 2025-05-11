@@ -37,7 +37,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                     const {accessToken, refreshToken, user} = JSON.parse(credentials.password);
                     dispatch(setTokens({accessToken, refreshToken, user}));
                     // Navigate to Main with Home tab
-                    navigation.navigate('Main', { screen: 'Home' });
+                    // navigation.navigate('Main', { screen: 'Home' });
                 }
             } catch (err) {
                 console.log('Error checking stored tokens:', err);

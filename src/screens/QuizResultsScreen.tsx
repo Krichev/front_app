@@ -18,6 +18,7 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {useUpdateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {DeepSeekHostService} from '../services/wwwGame/deepseekHostService';
+import {navigateToTab} from "../utils/navigation.ts";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -38,10 +39,10 @@ type QuizResultsNavigationProp = NativeStackNavigationProp<RootStackParamList, '
 const QuizResultsScreen: React.FC = () => {
     const route = useRoute<QuizResultsRouteProp>();
     const navigation = useNavigation<QuizResultsNavigationProp>();
-    const { user } = useSelector((state: RootState) => state.auth);
-    const [updateChallenge, { isLoading }] = useUpdateChallengeMutation();
+    const {user} = useSelector((state: RootState) => state.auth);
+    const [updateChallenge, {isLoading}] = useUpdateChallengeMutation();
 
-    const { challengeId, score, totalRounds, teamName, roundsData } = route.params;
+    const {challengeId, score, totalRounds, teamName, roundsData} = route.params;
     const [feedback, setFeedback] = React.useState<string>('');
     const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
 
@@ -61,7 +62,7 @@ const QuizResultsScreen: React.FC = () => {
                     if (!round.playerWhoAnswered) return;
 
                     if (!playerMap.has(round.playerWhoAnswered)) {
-                        playerMap.set(round.playerWhoAnswered, { player: round.playerWhoAnswered, correct: 0, total: 0 });
+                        playerMap.set(round.playerWhoAnswered, {player: round.playerWhoAnswered, correct: 0, total: 0});
                     }
 
                     const playerData = playerMap.get(round.playerWhoAnswered);
@@ -106,7 +107,7 @@ const QuizResultsScreen: React.FC = () => {
             Alert.alert(
                 'Success',
                 'Challenge marked as completed!',
-                [{ text: 'OK', onPress: () => navigation.navigate('Challenges') }]
+                [{text: 'OK', onPress: () => navigateToTab(navigation, 'Challenges')}]
             );
         } catch (error) {
             console.error('Error updating challenge:', error);
@@ -154,13 +155,13 @@ const QuizResultsScreen: React.FC = () => {
                 {/* AI Feedback */}
                 <View style={styles.feedbackContainer}>
                     <View style={styles.feedbackHeader}>
-                        <MaterialCommunityIcons name="comment-text" size={20} color="#4CAF50" />
+                        <MaterialCommunityIcons name="comment-text" size={20} color="#4CAF50"/>
                         <Text style={styles.feedbackTitle}>Quiz Analysis</Text>
                     </View>
 
                     {isGeneratingFeedback ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="small" color="#4CAF50" />
+                            <ActivityIndicator size="small" color="#4CAF50"/>
                             <Text style={styles.loadingText}>Analyzing your performance...</Text>
                         </View>
                     ) : (
@@ -217,7 +218,7 @@ const QuizResultsScreen: React.FC = () => {
                         style={styles.shareButton}
                         onPress={shareResults}
                     >
-                        <MaterialCommunityIcons name="share" size={18} color="white" />
+                        <MaterialCommunityIcons name="share" size={18} color="white"/>
                         <Text style={styles.buttonText}>Share Results</Text>
                     </TouchableOpacity>
 
@@ -227,10 +228,10 @@ const QuizResultsScreen: React.FC = () => {
                         disabled={isLoading}
                     >
                         {isLoading ? (
-                            <ActivityIndicator size="small" color="white" />
+                            <ActivityIndicator size="small" color="white"/>
                         ) : (
                             <>
-                                <MaterialCommunityIcons name="check-circle" size={18} color="white" />
+                                <MaterialCommunityIcons name="check-circle" size={18} color="white"/>
                                 <Text style={styles.buttonText}>Mark Completed</Text>
                             </>
                         )}
@@ -238,9 +239,9 @@ const QuizResultsScreen: React.FC = () => {
 
                     <TouchableOpacity
                         style={styles.backButton}
-                        onPress={() => navigation.navigate('ChallengeDetails', { challengeId })}
+                        onPress={() => navigation.navigate('ChallengeDetails', {challengeId})}
                     >
-                        <MaterialCommunityIcons name="arrow-left" size={18} color="#555" />
+                        <MaterialCommunityIcons name="arrow-left" size={18} color="#555"/>
                         <Text style={styles.backButtonText}>Back to Challenge</Text>
                     </TouchableOpacity>
                 </View>
@@ -274,7 +275,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         elevation: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
         shadowOpacity: 0.1,
         shadowRadius: 2,
     },
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         elevation: 1,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
         shadowOpacity: 0.1,
         shadowRadius: 2,
     },

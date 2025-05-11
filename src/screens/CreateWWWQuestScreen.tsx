@@ -18,7 +18,8 @@ import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {GameSettings} from '../services/wwwGame/wwwGameService';
-import {WWWQuizConfig} from '../entities/ChallengeState/model/types'; // Import the new type
+import {WWWQuizConfig} from '../entities/ChallengeState/model/types';
+import {navigateToTab} from "../utils/navigation.ts"; // Import the new type
 
 type RootStackParamList = {
     Challenges: undefined;
@@ -123,7 +124,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                 },
                 {
                     text: 'Back to Challenges',
-                    onPress: () => navigation.navigate('Challenges')
+                    onPress: () => navigateToTab(navigation, 'Challenges')
                 }
             ]);
         } catch (error) {

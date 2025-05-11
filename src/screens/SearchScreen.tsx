@@ -14,7 +14,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {Challenge, useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
+import {ApiChallenge, useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import {UserProfile, useSearchUsersQuery} from '../entities/UserState/model/slice/userApi';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
@@ -105,7 +105,7 @@ const SearchScreen: React.FC = () => {
     };
 
     // Render challenge item
-    const renderChallengeItem = ({item}: { item: Challenge }) => {
+    const renderChallengeItem = ({item}: { item: ApiChallenge }) => {
         // Use QuizChallengeCard component for quiz type challenges
         if (item.type === 'QUIZ') {
             return (
@@ -342,7 +342,7 @@ const SearchScreen: React.FC = () => {
                                         <Text style={styles.loadingText}>Searching challenges...</Text>
                                     </View>
                                 ) : standardChallengeResults.length > 0 ? (
-                                    <FlatList<Challenge>
+                                    <FlatList<ApiChallenge>
                                         data={standardChallengeResults}
                                         renderItem={renderChallengeItem}
                                         keyExtractor={(item) => item.id}
@@ -392,7 +392,7 @@ const SearchScreen: React.FC = () => {
                                         <Text style={styles.loadingText}>Searching quizzes...</Text>
                                     </View>
                                 ) : quizResults.length > 0 ? (
-                                    <FlatList<Challenge>
+                                    <FlatList<ApiChallenge>
                                         data={quizResults}
                                         renderItem={renderChallengeItem}
                                         keyExtractor={(item) => item.id}
