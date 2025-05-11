@@ -37,13 +37,18 @@ type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
 const WWWGamePlayScreen: React.FC = () => {
     const route = useRoute<WWWGamePlayRouteProp>();
     const navigation = useNavigation<WWWGamePlayNavigationProp>();
+
+    // In WWWGamePlayScreen.tsx
     const {
         teamName,
         teamMembers,
         difficulty,
         roundTime,
         roundCount,
-        enableAIHost
+        enableAIHost,
+        challengeId,
+        questionSource,
+        userQuestions
     } = route.params;
 
     // Game state
@@ -70,6 +75,55 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Modal visibility
     const [showEndGameModal, setShowEndGameModal] = useState(false);
+
+    // useEffect(() => {
+    //     // For example, when submitting the game result
+    //     if (gameOver && challengeId) {
+    //         // Update the challenge status
+    //         submitGameResult(challengeId, score);
+    //     }
+    // }, [gameOver, challengeId, score]);
+
+// And then initialize the game with these parameters
+    useEffect(() => {
+        // Use the game service to initialize the game
+        let initParams = {
+            teamName,
+            teamMembers,
+            difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
+            roundTime,
+            roundCount,
+            enableAIHost
+        };
+
+        if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
+            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
+                ...initParams,
+                userQuestions
+            });
+
+            // Setup first question
+            if (gameQuestions.length > 0) {
+                setCurrentQuestion(gameQuestions[0].question);
+                setCurrentAnswer(gameQuestions[0].answer);
+            }
+
+            // Set the initial rounds data
+            setRoundsData(initialRoundsData);
+        } else {
+            // Use the default initialization
+            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame(initParams);
+
+            // Setup first question
+            if (gameQuestions.length > 0) {
+                setCurrentQuestion(gameQuestions[0].question);
+                setCurrentAnswer(gameQuestions[0].answer);
+            }
+
+            // Set the initial rounds data
+            setRoundsData(initialRoundsData);
+        }
+    }, [difficulty, roundCount, teamName, teamMembers, enableAIHost, questionSource, userQuestions]);
 
     // Initialize game with questions and round data
     useEffect(() => {
@@ -218,9 +272,9 @@ const WWWGamePlayScreen: React.FC = () => {
             teamName,
             score,
             totalRounds: roundCount,
-            roundsData
+            roundsData,
+            challengeId // Pass the challengeId to the results screen
         });
-    };
 
     // AI host feedback
     const getAIFeedback = () => {

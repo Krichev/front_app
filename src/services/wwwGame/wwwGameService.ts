@@ -1,7 +1,7 @@
 // src/services/game/wwwGameService.ts
 
 // Define types for game data
-import {UserQuestion} from "./questionService.ts";
+import {QuestionData, UserQuestion} from "./questionService.ts";
 
 export interface RoundData {
     question: string;
@@ -26,10 +26,13 @@ export interface GameSettings {
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
-    questionSource?: 'app' | 'user'; // Add this
-    userQuestions?: UserQuestion[]; // Add this
+    // Add these new properties:
+    questionSource?: 'app' | 'user';
+    userQuestions?: QuestionData[] | UserQuestion[];
+    challengeId?: string; // Challenge ID for tracking
 }
 export type GamePhase = 'question' | 'discussion' | 'answer' | 'feedback';
+
 
 
 // Questions database by difficulty
@@ -229,7 +232,40 @@ export class WWWGameService {
      * Initialize a new game with the given settings
      */
 
+// In src/services/wwwGame/wwwGameService.ts
+// Add this method to handle external questions
+    static initializeGameWithExternalQuestions(
+        settings: GameSettings & { userQuestions?: QuestionData[] }
+    ): {
+        gameQuestions: Array<{ question: string, answer: string }>,
+        roundsData: RoundData[]
+    } {
+        if (settings.userQuestions && settings.userQuestions.length > 0) {
+            // Convert user questions to game format
+            const gameQuestions = settings.userQuestions.map(q => ({
+                question: q.question,
+                answer: q.answer
+            }));
 
+            // Limit to the round count
+            const limitedQuestions = gameQuestions.slice(0, settings.roundCount);
+
+            // Initialize rounds data structure
+            const roundsData = limitedQuestions.map(q => ({
+                question: q.question,
+                correctAnswer: q.answer,
+                teamAnswer: '',
+                isCorrect: false,
+                playerWhoAnswered: '',
+                discussionNotes: ''
+            }));
+
+            return { gameQuestions: limitedQuestions, roundsData };
+        }
+
+        // Fall back to default initialization if no user questions
+        return this.initializeGame(settings);
+    }
 
 // Then update the initializeGame method
     static initializeGame(settings: GameSettings): {

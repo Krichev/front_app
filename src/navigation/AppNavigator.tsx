@@ -39,6 +39,7 @@ import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
 import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
 import {StateChallenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
 import {AuthNavigationHandler} from "../entities/AuthState/ui/AuthNavigationHandler.tsx";
+import {GameSettings} from "../services/wwwGame";
 
 // Define the types for the navigation parameters
 export type RootStackParamList = {
@@ -55,15 +56,7 @@ export type RootStackParamList = {
     UserProfile: { userId: string };
     EditProfile: { userId: string };
     // WWW Game Screens
-    WWWGamePlay: {
-        teamName: string;
-        teamMembers: string[];
-        difficulty: string;
-        roundTime: number;
-        roundCount: number;
-        enableAIHost: boolean;
-        challengeId?: string; // Optional to track which challenge this game is for
-    };
+    WWWGamePlay: GameSettings;
     WWWGameResults: {
         teamName: string;
         score: number;

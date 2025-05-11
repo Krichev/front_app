@@ -135,9 +135,8 @@ export class QuestionService {
             throw error;
         }
     }
-
     /**
-     * Fetch a set of random questions
+     * Fetch a set of random questions from db.chgk.info
      * @param count Number of questions to fetch
      * @param fromYear Optional year to start from (e.g., '2015')
      * @param difficulty Optional difficulty level to filter by
@@ -157,22 +156,18 @@ export class QuestionService {
 
             url += `/limit${count * 2}`; // Request more than needed to account for filtering
 
-            // Try to get from cache first
-            const cacheKey = `random_${fromYear || 'all'}_${count}`;
-            // if (this.cache[cacheKey]) {
-            //     console.log('Returning cached questions');
-            //     return this.cache[cacheKey];
-            // }
+            console.log(`Fetching questions from: ${url}`);
 
             // Fetch the data
             const response = await axios.get(url);
-console.log(response);
-            // Parse the XML response
-            // const result = await parseStringPromise(response.data);
-            const parser = new XMLParser();
-            const result = parser.parse(response.data) as XMLParsedResponse;
+            console.log("Received response from db.chgk.info");
 
-// Process the questions
+            // Parse the XML response
+            const parser = new XMLParser();
+            const result = parser.parse(response.data);
+            console.log("Parsed XML data successfully");
+
+            // Process the questions
             let questions: QuestionData[] = [];
 
             if (result && 'search' in result && result.search.question) {
@@ -181,9 +176,21 @@ console.log(response);
                     ? result.search.question
                     : [result.search.question];
 
+                console.log(`Found ${questionArray.length} questions in response`);
+
                 questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields) => {
                     const questionData = this.parseQuestionFromXml(q);
-                    // ... rest of your processing
+
+                    // Assign difficulty
+                    if (difficulty) {
+                        questionData.difficulty = difficulty;
+                    } else {
+                        questionData.difficulty = await this.classifyQuestionDifficulty(
+                            questionData.question,
+                            questionData.answer
+                        );
+                    }
+
                     return questionData;
                 }));
             } else if (result && 'question' in result) {
@@ -204,22 +211,21 @@ console.log(response);
             }
 
             // Filter invalid questions (with very short answers or questions)
-            questions = questions.filter(q =>
-                q.question && q.question.length > 10 &&
-                q.answer && q.answer.length > 1
-            );
+            // questions = questions.filter(q =>
+            //     q.question && q.question.length > 10 &&
+            //     q.answer && q.answer.length > 1
+            // );
 
             // Limit to requested count
             questions = questions.slice(0, count);
-
-            // Cache the results
-            this.cache[cacheKey] = questions;
+            console.log(`Returning ${questions.length} filtered questions`);
 
             return questions;
         } catch (error) {
-            console.error('Error fetching random questions:', error);
+            console.error('Error fetching questions from db.chgk.info:', error);
 
-            // Return fallback questions if fetch fails
+            // If API fails, use fallback
+            console.log('Using fallback questions due to API failure');
             return this.getFallbackQuestions(count, difficulty);
         }
     }
@@ -425,7 +431,7 @@ console.log(response);
     /**
      * Provides fallback questions in case API calls fail
      */
-    private static getFallbackQuestions(
+    static getFallbackQuestions(
         count: number = 10,
         difficulty?: 'Easy' | 'Medium' | 'Hard'
     ): QuestionData[] {
