@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -46,17 +46,23 @@ type ChallengeDetailsNavigationProp = NativeStackNavigationProp<RootStackParamLi
 const ChallengeDetailsScreen: React.FC = () => {
     const route = useRoute<ChallengeDetailsRouteProp>();
     const navigation = useNavigation<ChallengeDetailsNavigationProp>();
-    const { challengeId } = route.params;
-    const { user } = useSelector((state: RootState) => state.auth);
+    const {challengeId} = route.params;
+    const {user} = useSelector((state: RootState) => state.auth);
 
     // State for verification upload
     const [proofSubmitted, setProofSubmitted] = useState(false);
 
     // RTK Query hooks
-    const { data: challenge, isLoading, error, refetch } = useGetChallengeByIdQuery(challengeId);
-    const [joinChallenge, { isLoading: isJoining }] = useJoinChallengeMutation();
-    const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
+    const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId);
+    const [joinChallenge, {isLoading: isJoining}] = useJoinChallengeMutation();
+    const [submitCompletion, {isLoading: isSubmitting}] = useSubmitChallengeCompletionMutation();
 
+
+    useEffect(() => {
+        if (error) {
+            console.error('Error loading challenge details:', error);
+        }
+    }, [error]);
     // Handle join challenge
     const handleJoinChallenge = async () => {
         try {
@@ -71,7 +77,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Navigate to verification screen
     const navigateToVerification = () => {
-        navigation.navigate('ChallengeVerification', { challengeId });
+        navigation.navigate('ChallengeVerification', {challengeId});
     };
 
     // Handle submit challenge completion
@@ -79,7 +85,7 @@ const ChallengeDetailsScreen: React.FC = () => {
         try {
             await submitCompletion({
                 id: challengeId,
-                proof: { completed: true }
+                proof: {completed: true}
             }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');
@@ -93,7 +99,9 @@ const ChallengeDetailsScreen: React.FC = () => {
     // Handle view creator profile
     const navigateToCreatorProfile = () => {
         if (challenge?.creator_id) {
-            navigation.navigate('UserProfile', { userId: challenge.creator_id });
+            navigation.navigate('UserProfile', {userId: challenge.creator_id});
+        } else {
+            Alert.alert('Error', 'Creator information is not available');
         }
     };
 
@@ -221,7 +229,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Get status badge style
     const getStatusBadgeStyle = () => {
-        if (!challenge) return {};
+        if (!challenge || !challenge.status) return {};
 
         switch (challenge.status.toLowerCase()) {
             case 'active':
@@ -234,7 +242,10 @@ const ChallengeDetailsScreen: React.FC = () => {
                 return {};
         }
     };
-
+    const getCreatorInitial = (creatorId?: string | null): string => {
+        if (!creatorId) return '?';
+        return creatorId.charAt(0).toUpperCase();
+    };
     // Check if the user has already joined the challenge
     const userHasJoined = () => {
         if (!challenge || !user) return false;
@@ -248,7 +259,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     if (isLoading) {
         return (
             <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4CAF50" />
+                <ActivityIndicator size="large" color="#4CAF50"/>
             </SafeAreaView>
         );
     }
@@ -257,9 +268,14 @@ const ChallengeDetailsScreen: React.FC = () => {
     if (error || !challenge) {
         return (
             <SafeAreaView style={styles.errorContainer}>
-                <Text style={styles.errorText}>Failed to load challenge details.</Text>
+                <Text style={styles.errorText}>
+                    Failed to load challenge details. {error ? `Error: ${JSON.stringify(error)}` : ''}
+                </Text>
                 <TouchableOpacity style={styles.retryButton} onPress={refetch}>
                     <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+                    <Text style={styles.retryButtonText}>Go Back</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         );
@@ -286,7 +302,8 @@ const ChallengeDetailsScreen: React.FC = () => {
                     {/* Description */}
                     <View style={styles.descriptionContainer}>
                         <Text style={styles.descriptionTitle}>Challenge Description:</Text>
-                        <Text style={styles.descriptionText}>{challenge.description || 'No description provided.'}</Text>
+                        <Text
+                            style={styles.descriptionText}>{challenge.description || 'No description provided.'}</Text>
                     </View>
 
                     {/* Special Quiz Content */}
@@ -344,12 +361,14 @@ const ChallengeDetailsScreen: React.FC = () => {
                     <TouchableOpacity style={styles.creatorSection} onPress={navigateToCreatorProfile}>
                         <Text style={styles.sectionTitle}>Created By</Text>
                         <View style={styles.creatorInfo}>
-                            <View style={styles.creatorAvatar}>
-                                <Text style={styles.creatorInitials}>
-                                    {challenge.creator_id ? challenge.creator_id.charAt(0).toUpperCase() : 'U'}
-                                </Text>
-                            </View>
-                            <Text style={styles.creatorName}>User ID: {challenge.creator_id}</Text>
+                            {/*<View style={styles.creatorAvatar}>*/}
+                            {/*    <Text style={styles.creatorInitials}>*/}
+                            {/*        {challenge?.creator_id ? challenge.creator_id?.charAt(0).toUpperCase() : '?'}*/}
+                            {/*    </Text>*/}
+                            {/*</View>*/}
+                            <Text style={styles.creatorName}>
+                                {challenge?.creator_id ? `User ID: ${challenge.creator_id}` : 'Unknown Creator'}
+                            </Text>
                         </View>
                     </TouchableOpacity>
 
@@ -363,7 +382,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     disabled={isJoining}
                                 >
                                     {isJoining ? (
-                                        <ActivityIndicator size="small" color="white" />
+                                        <ActivityIndicator size="small" color="white"/>
                                     ) : (
                                         <Text style={styles.buttonText}>Join Challenge</Text>
                                     )}
@@ -375,7 +394,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                         style={styles.verifyButton}
                                         onPress={navigateToVerification}
                                     >
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="white" />
+                                        <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
                                         <Text style={styles.buttonText}>Daily Check-In</Text>
                                     </TouchableOpacity>
                                 ) : proofSubmitted ? (
@@ -389,10 +408,10 @@ const ChallengeDetailsScreen: React.FC = () => {
                                         disabled={isSubmitting}
                                     >
                                         {isSubmitting ? (
-                                            <ActivityIndicator size="small" color="white" />
+                                            <ActivityIndicator size="small" color="white"/>
                                         ) : (
                                             <>
-                                                <MaterialCommunityIcons name="check" size={20} color="white" />
+                                                <MaterialCommunityIcons name="check" size={20} color="white"/>
                                                 <Text style={styles.buttonText}>Submit Completion</Text>
                                             </>
                                         )}
@@ -488,7 +507,7 @@ const styles = StyleSheet.create({
         elevation: 1,
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
     },
     descriptionTitle: {
         fontSize: 16,
@@ -509,7 +528,7 @@ const styles = StyleSheet.create({
         elevation: 1,
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
     },
     sectionTitle: {
         fontSize: 18,
@@ -559,7 +578,7 @@ const styles = StyleSheet.create({
         elevation: 1,
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
     },
     creatorInfo: {
         flexDirection: 'row',
@@ -636,7 +655,7 @@ const styles = StyleSheet.create({
         elevation: 1,
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: {width: 0, height: 1},
     },
     quizTitle: {
         fontSize: 18,

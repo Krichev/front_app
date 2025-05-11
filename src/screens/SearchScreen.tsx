@@ -2,6 +2,7 @@
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     Image,
     SafeAreaView,
@@ -96,7 +97,19 @@ const SearchScreen: React.FC = () => {
 
     // Navigate to challenge details
     const navigateToChallengeDetails = (challengeId: string) => {
-        navigation.navigate('ChallengeDetails', {challengeId});
+        try {
+            if (!challengeId) {
+                console.error('Cannot navigate: Challenge ID is undefined');
+                Alert.alert('Error', 'Cannot open this challenge (missing ID)');
+                return;
+            }
+
+            console.log('Navigating to challenge details with ID:', challengeId);
+            navigation.navigate('ChallengeDetails', { challengeId });
+        } catch (error) {
+            console.error('Navigation error:', error);
+            Alert.alert('Error', 'Could not open challenge details');
+        }
     };
 
     // Navigate to user profile
@@ -107,11 +120,21 @@ const SearchScreen: React.FC = () => {
     // Render challenge item
     const renderChallengeItem = ({item}: { item: ApiChallenge }) => {
         // Use QuizChallengeCard component for quiz type challenges
-        if (item.type === 'QUIZ') {
+
+        if (!item || !item.id) {
+            console.warn('Invalid challenge item:', item);
+            return null;
+        }
+        const isQuizChallenge = item.type === 'QUIZ';
+
+        if (isQuizChallenge) {
             return (
                 <QuizChallengeCard
                     challenge={item}
-                    onPress={() => navigateToChallengeDetails(item.id)}
+                    onPress={() => {
+                        console.log('Opening quiz challenge:', item.id);
+                        navigateToChallengeDetails(item.id);
+                    }}
                 />
             );
         }
@@ -120,7 +143,10 @@ const SearchScreen: React.FC = () => {
         return (
             <TouchableOpacity
                 style={styles.challengeItem}
-                onPress={() => navigateToChallengeDetails(item.id)}
+                onPress={() => {
+                    console.log('Opening challenge:', item.id);
+                    navigateToChallengeDetails(item.id);
+                }}
             >
                 <View style={styles.challengeHeader}>
                     <Text style={styles.challengeTitle}>{item.title}</Text>

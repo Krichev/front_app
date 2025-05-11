@@ -1,4 +1,4 @@
-// Fixed navigation calls in WWWGameSetupScreen
+// Update the Game Setup screen to ensure Question Source selector appears
 import React, {useEffect, useState} from 'react';
 import {
     Alert,
@@ -16,27 +16,59 @@ import {useNavigation} from '@react-navigation/native';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {RootStackParamList} from '../navigation/AppNavigator'; // Import the correct type
+import {RootStackParamList} from '../navigation/AppNavigator';
 import {GameSettings, initializeWWWGameServices} from '../services/wwwGame';
 import {useWWWGame} from '../app/providers/WWWGameProvider';
-import {UserQuestion} from "../services/wwwGame/questionService.ts";
-import QuestionSourceSelector from "../components/QuestionSourceSelector.tsx";
+import {QuestionService, UserQuestion} from "../services/wwwGame/questionService";
+import QuestionSourceSelector from "../components/QuestionSourceSelector";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-// Define the type for navigation
 
 const WWWGameSetupScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-    const {user} = useSelector((state: RootState) => state.auth);
-    const {isInitialized, config} = useWWWGame();
+    const { user } = useSelector((state: RootState) => state.auth);
+    const { isInitialized, config } = useWWWGame();
+
+    // State for question source
     const [questionSource, setQuestionSource] = useState<'app' | 'user'>('app');
     const [userQuestions, setUserQuestions] = useState<UserQuestion[]>([]);
+
     // Initialize game if not already initialized
     useEffect(() => {
         if (!isInitialized) {
-            // Initialize game services (fallback if provider is not used)
             initializeWWWGameServices();
         }
     }, [isInitialized]);
+
+    // Load user questions when source changes
+    useEffect(() => {
+        const loadUserQuestions = async () => {
+            if (questionSource === 'user') {
+                try {
+                    const questions = await QuestionService.getUserQuestions();
+                    setUserQuestions(questions);
+
+                    // If no questions are available, alert the user
+                    if (questions.length === 0) {
+                        Alert.alert(
+                            'No Custom Questions',
+                            'You haven\'t created any questions yet. Would you like to create some now?',
+                            [
+                                { text: 'Not Now', style: 'cancel' },
+                                {
+                                    text: 'Create Questions',
+                                    onPress: () => navigation.navigate('UserQuestions')
+                                }
+                            ]
+                        );
+                    }
+                } catch (error) {
+                    console.error('Error loading user questions:', error);
+                }
+            }
+        };
+
+        loadUserQuestions();
+    }, [questionSource, navigation]);
 
     // State for game settings
     const [teamName, setTeamName] = useState('Team Intellect');
@@ -79,6 +111,11 @@ const WWWGameSetupScreen: React.FC = () => {
             return;
         }
 
+        if (questionSource === 'user' && userQuestions.length === 0) {
+            Alert.alert('Error', 'No custom questions available. Please create some questions or switch to App Questions.');
+            return;
+        }
+
         // Create game settings object to pass to the game screen
         const gameSettings: GameSettings = {
             teamName,
@@ -87,16 +124,11 @@ const WWWGameSetupScreen: React.FC = () => {
             roundTime,
             roundCount,
             enableAIHost,
-            questionSource, // Add this property
-            userQuestions: questionSource === 'user' ? userQuestions : undefined, // Add this property
+            questionSource,
+            userQuestions: questionSource === 'user' ? userQuestions : undefined,
         };
 
         navigation.navigate('WWWGamePlay', gameSettings);
-    };
-
-    // Navigate to Question Management Screen
-    const navigateToQuestionManagement = () => {
-        navigation.navigate('QuestionManagement');
     };
 
     return (
@@ -112,7 +144,7 @@ const WWWGameSetupScreen: React.FC = () => {
                         <Text style={styles.headerSubtitle}>Game Setup</Text>
                     </View>
 
-                    {/* Question Source Section */}
+                    {/* Question Source Section - Ensure this appears */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Question Source</Text>
                         <QuestionSourceSelector
@@ -128,6 +160,12 @@ const WWWGameSetupScreen: React.FC = () => {
                                 <MaterialCommunityIcons name="playlist-edit" size={18} color="#4CAF50"/>
                                 <Text style={styles.manageQuestionsText}>Manage My Questions</Text>
                             </TouchableOpacity>
+                        )}
+
+                        {questionSource === 'user' && userQuestions.length > 0 && (
+                            <Text style={styles.infoText}>
+                                You have {userQuestions.length} custom questions available
+                            </Text>
                         )}
                     </View>
 
@@ -264,7 +302,7 @@ const WWWGameSetupScreen: React.FC = () => {
 
                             {questionSource === 'user' && userQuestions.length > 0 && userQuestions.length < roundCount && (
                                 <Text style={styles.warningText}>
-                                    Note: You only have {userQuestions.length} user questions available.
+                                    Note: You only have {userQuestions.length} custom questions available.
                                     The game will use all available questions.
                                 </Text>
                             )}
@@ -304,17 +342,17 @@ const WWWGameSetupScreen: React.FC = () => {
                     <View style={styles.actionsContainer}>
                         {/* Start Game Button */}
                         <TouchableOpacity
-                            style={styles.startButton}
+                            style={[
+                                styles.startButton,
+                                (questionSource === 'user' && userQuestions.length === 0) && styles.disabledButton
+                            ]}
                             onPress={startGame}
-                            disabled={
-                                questionSource === 'user' &&
-                                (!userQuestions || userQuestions.length === 0)
-                            }
+                            disabled={questionSource === 'user' && userQuestions.length === 0}
                         >
                             <Text style={styles.startButtonText}>Start Game</Text>
                         </TouchableOpacity>
 
-                        {questionSource === 'user' && (!userQuestions || userQuestions.length === 0) && (
+                        {questionSource === 'user' && userQuestions.length === 0 && (
                             <Text style={styles.errorText}>
                                 Please create and select some questions first
                             </Text>
@@ -334,9 +372,7 @@ const WWWGameSetupScreen: React.FC = () => {
     );
 };
 
-// Styles remain unchanged
 const styles = StyleSheet.create({
-    // Container styles
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -347,8 +383,6 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
     },
-
-    // Header styles
     header: {
         backgroundColor: '#4CAF50',
         padding: 20,
@@ -364,18 +398,16 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.8)',
         marginTop: 5,
     },
-
-    // Section styles
     section: {
         backgroundColor: 'white',
         borderRadius: 8,
         padding: 16,
         margin: 16,
         marginBottom: 8,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        elevation: 2,
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
+        shadowOffset: { width: 0, height: 2 },
     },
     sectionTitle: {
         fontSize: 18,
@@ -383,14 +415,12 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 16,
     },
-
-    // Question source management
     manageQuestionsButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 12,
-        marginTop: 8,
+        marginTop: 12,
         backgroundColor: '#f0f0f0',
         borderRadius: 8,
     },
@@ -400,8 +430,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '500',
     },
-
-    // Form elements
+    infoText: {
+        fontSize: 14,
+        color: '#666',
+        fontStyle: 'italic',
+        marginTop: 12,
+        textAlign: 'center',
+    },
     formGroup: {
         marginBottom: 16,
     },
@@ -420,8 +455,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#333',
     },
-
-    // Team members
     teamMembersContainer: {
         backgroundColor: '#f9f9f9',
         borderRadius: 8,
@@ -481,8 +514,6 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
-
-    // Settings
     settingItem: {
         marginBottom: 16,
     },
@@ -491,8 +522,6 @@ const styles = StyleSheet.create({
         color: '#555',
         marginBottom: 8,
     },
-
-    // Difficulty buttons
     difficultyButtons: {
         flexDirection: 'row',
     },
@@ -514,8 +543,6 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
-
-    // Time buttons
     timeButtons: {
         flexDirection: 'row',
     },
@@ -537,8 +564,6 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
-
-    // Count buttons
     countButtons: {
         flexDirection: 'row',
     },
@@ -560,8 +585,12 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
-
-    // Toggle switch
+    warningText: {
+        color: '#FF9800',
+        fontSize: 12,
+        marginTop: 8,
+        fontStyle: 'italic',
+    },
     switchRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -607,22 +636,12 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         marginTop: 8,
     },
-
-    // Warning and error messages
-    warningText: {
-        color: '#FF9800',
-        fontSize: 12,
-        marginTop: 8,
-        fontStyle: 'italic',
-    },
     errorText: {
         color: '#F44336',
         fontSize: 14,
         textAlign: 'center',
         marginTop: 8,
     },
-
-    // Action buttons
     actionsContainer: {
         padding: 16,
         marginBottom: 24,
@@ -650,41 +669,8 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.7,
+        backgroundColor: '#A5D6A7',
     },
-
-    // Question management button
-    questionManagementButton: {
-        position: 'absolute',
-        right: 16,
-        top: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    questionManagementButtonText: {
-        color: 'white',
-        marginLeft: 4,
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    questionManagementButtonAlt: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        marginTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
-    },
-    questionManagementButtonAltText: {
-        marginLeft: 6,
-        color: '#4CAF50',
-        fontSize: 14,
-        fontWeight: '500',
-    }
 });
 
 export default WWWGameSetupScreen;

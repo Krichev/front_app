@@ -36,6 +36,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                     console.log(credentials)
                     const {accessToken, refreshToken, user} = JSON.parse(credentials.password);
                     dispatch(setTokens({accessToken, refreshToken, user}));
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Main' }],
+                    });
+
                     // Navigate to Main with Home tab
                     // navigation.navigate('Main', { screen: 'Home' });
                 }

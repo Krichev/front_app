@@ -81,7 +81,10 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
             // Update Auth State
             dispatch(setTokens({accessToken, refreshToken, user}));
-
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Main' }],
+            });
             // Remove this navigation line - let Redux state change handle navigation
             // navigation.navigate('Main', { screen: 'Home' });
 

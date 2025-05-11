@@ -45,7 +45,7 @@ export interface CreateChallengeRequest {
 export interface GetChallengesParams {
     page?: number;
     limit?: number;
-    type?: string| null;
+    type?: string | null;
     visibility?: string;
     status?: string;
     creator_id?: string;
@@ -110,7 +110,12 @@ export const challengeApi = createApi({
 
         // Get a single challenge by ID
         getChallengeById: builder.query<ApiChallenge, string>({
-            query: (id) => `/challenges/${id}`,
+            query: (id) => {
+                if (!id) {
+                    throw new Error('Invalid challenge ID');
+                }
+                return `/challenges/${id}`;
+            },
             providesTags: (_, __, id) => [{type: 'Challenge', id}],
         }),
 
