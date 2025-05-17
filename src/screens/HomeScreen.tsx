@@ -12,17 +12,6 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.tsx";
 
 
-// Define the types for your navigation stack
-// type RootStackParamList = {
-//     Home: undefined;
-//     Challenges: undefined;
-//     // Groups: undefined;
-//     // Quests: undefined;
-//     // Profile: undefined;
-//     // Users: undefined;
-// };
-
-
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
 const HomeScreen: React.FC = () => {

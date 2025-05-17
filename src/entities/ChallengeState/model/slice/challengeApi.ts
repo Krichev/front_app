@@ -2,7 +2,7 @@
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 import {RootState} from "../../../../app/providers/StoreProvider/store";
 
-// Update the Challenge interface with proper quizConfig typing
+// Update the Challenge interface with proper participants typing
 export interface ApiChallenge {
     id: string;
     title: string;
@@ -13,7 +13,7 @@ export interface ApiChallenge {
     created_at: string;
     updated_at: string;
     creator_id: string;
-    participants: string[];
+    participants: string[] | string | null; // Allow multiple types for participants
     reward?: string;
     penalty?: string;
     verificationMethod?: string; // JSON string of VerificationMethod[]

@@ -1,3 +1,4 @@
+// src/screens/ChallengeDetailsScreen.tsx
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
@@ -20,6 +21,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
+import {navigateToTab} from "../utils/navigation.ts";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -46,29 +48,72 @@ type ChallengeDetailsNavigationProp = NativeStackNavigationProp<RootStackParamLi
 const ChallengeDetailsScreen: React.FC = () => {
     const route = useRoute<ChallengeDetailsRouteProp>();
     const navigation = useNavigation<ChallengeDetailsNavigationProp>();
-    const {challengeId} = route.params;
+
+    // Add error handling for missing params
+    const challengeId = route.params?.challengeId;
     const {user} = useSelector((state: RootState) => state.auth);
+
+    // Handle missing challenge ID
+    useEffect(() => {
+        if (!challengeId) {
+            Alert.alert(
+                'Error',
+                'Challenge ID not found. Returning to challenges list.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () =>  navigateToTab(navigation, 'Challenges')
+                    }
+                ]
+            );
+        }
+    }, [challengeId, navigation]);
 
     // State for verification upload
     const [proofSubmitted, setProofSubmitted] = useState(false);
 
-    // RTK Query hooks
-    const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId);
+    // RTK Query hooks - skip query if no challengeId
+    const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId!, {
+        skip: !challengeId, // Skip the query if challengeId is undefined
+    });
     const [joinChallenge, {isLoading: isJoining}] = useJoinChallengeMutation();
     const [submitCompletion, {isLoading: isSubmitting}] = useSubmitChallengeCompletionMutation();
-
 
     useEffect(() => {
         if (error) {
             console.error('Error loading challenge details:', error);
         }
     }, [error]);
+
+    // Enhanced debug logging
+    useEffect(() => {
+        if (challenge && user) {
+            console.log('=== Challenge Join Status Debug ===');
+            console.log('Challenge ID:', challenge.id);
+            console.log('User ID:', user.id);
+            console.log('Challenge participants:', challenge.participants);
+            console.log('Participants type:', typeof challenge.participants);
+            console.log('Is participants array:', Array.isArray(challenge.participants));
+            console.log('User in participants:', challenge.participants?.includes(user.id));
+            console.log('UserIsCreator flag:', challenge.userIsCreator);
+            console.log('Creator ID:', challenge.creator_id);
+            console.log('Verification Method (raw):', challenge.verificationMethod);
+            console.log('Verification Method type:', typeof challenge.verificationMethod);
+            console.log('===================================');
+        }
+    }, [challenge, user]);
+
     // Handle join challenge
     const handleJoinChallenge = async () => {
+        if (!challengeId) {
+            Alert.alert('Error', 'Challenge ID not found');
+            return;
+        }
         try {
             await joinChallenge(challengeId).unwrap();
             Alert.alert('Success', 'You have joined this challenge!');
-            refetch();
+            // Force refetch to get updated challenge data
+            await refetch();
         } catch (error) {
             Alert.alert('Error', 'Failed to join challenge. Please try again.');
             console.error('Join challenge error:', error);
@@ -77,11 +122,19 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Navigate to verification screen
     const navigateToVerification = () => {
+        if (!challengeId) {
+            Alert.alert('Error', 'Challenge ID not found');
+            return;
+        }
         navigation.navigate('ChallengeVerification', {challengeId});
     };
 
     // Handle submit challenge completion
     const handleSubmitCompletion = async () => {
+        if (!challengeId) {
+            Alert.alert('Error', 'Challenge ID not found');
+            return;
+        }
         try {
             await submitCompletion({
                 id: challengeId,
@@ -204,14 +257,46 @@ const ChallengeDetailsScreen: React.FC = () => {
         });
     };
 
-    // Parse verification methods from challenge data
+    // Parse verification methods from challenge data with better error handling
     const getVerificationMethods = () => {
         if (!challenge?.verificationMethod) return [];
 
         try {
-            return JSON.parse(challenge.verificationMethod);
+            // If it's already an object, return it
+            if (typeof challenge.verificationMethod === 'object') {
+                return Array.isArray(challenge.verificationMethod)
+                    ? challenge.verificationMethod
+                    : [challenge.verificationMethod];
+            }
+
+            // If it's a string, try to parse it as JSON
+            if (typeof challenge.verificationMethod === 'string') {
+                // Check if it starts with [ or { (likely JSON)
+                if (challenge.verificationMethod.trim().startsWith('[') ||
+                    challenge.verificationMethod.trim().startsWith('{')) {
+                    return JSON.parse(challenge.verificationMethod);
+                } else {
+                    // It's a plain string, wrap it in an object
+                    return [{
+                        type: challenge.verificationMethod,
+                        details: {}
+                    }];
+                }
+            }
+
+            return [];
         } catch (e) {
             console.error('Error parsing verification methods:', e);
+            console.log('Raw verificationMethod value:', challenge.verificationMethod);
+
+            // Fallback: try to create a basic verification method from the string
+            if (typeof challenge.verificationMethod === 'string') {
+                return [{
+                    type: challenge.verificationMethod,
+                    details: {}
+                }];
+            }
+
             return [];
         }
     };
@@ -242,18 +327,73 @@ const ChallengeDetailsScreen: React.FC = () => {
                 return {};
         }
     };
+
     const getCreatorInitial = (creatorId?: string | null): string => {
         if (!creatorId) return '?';
         return creatorId.charAt(0).toUpperCase();
     };
-    // Check if the user has already joined the challenge
-    const userHasJoined = () => {
-        if (!challenge || !user) return false;
 
-        // Check if user is in the participants array
-        return challenge.participants && Array.isArray(challenge.participants) &&
-            challenge.participants.includes(user.id);
+    // Enhanced user has joined check with multiple fallbacks
+    const userHasJoined = () => {
+        if (!challenge || !user) {
+            console.log('No challenge or user data');
+            return false;
+        }
+
+        // Method 1: Check userIsCreator flag (creator is automatically "joined")
+        if (challenge.userIsCreator) {
+            console.log('User is creator, treating as joined');
+            return true;
+        }
+
+        // Method 2: Check if user ID matches creator ID
+        if (challenge.creator_id === user.id) {
+            console.log('User ID matches creator ID');
+            return true;
+        }
+
+        // Method 3: Check participants array
+        if (challenge.participants) {
+            // Handle array of participants
+            if (Array.isArray(challenge.participants)) {
+                const isInParticipants = challenge.participants.includes(user.id);
+                console.log('Checking participants array:', isInParticipants);
+                return isInParticipants;
+            }
+
+            // Handle string of participants (comma-separated)
+            if (typeof challenge.participants === 'string') {
+                const participantsList = challenge.participants.split(',').map(p => p.trim());
+                const isInStringList = participantsList.includes(user.id);
+                console.log('Checking participants as string:', isInStringList);
+                return isInStringList;
+            }
+
+            // Handle single participant as string
+            if (challenge.participants === user.id) {
+                console.log('Single participant matches user ID');
+                return true;
+            }
+        }
+
+        console.log('User has not joined the challenge');
+        return false;
     };
+
+    // Render loading state
+    if (!challengeId) {
+        return (
+            <SafeAreaView style={styles.errorContainer}>
+                <Text style={styles.errorText}>Challenge ID not found</Text>
+                <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={() =>  navigateToTab(navigation, 'Challenges')}
+                >
+                    <Text style={styles.retryButtonText}>Back to Challenges</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
+        );
+    }
 
     // Render loading state
     if (isLoading) {
@@ -280,6 +420,8 @@ const ChallengeDetailsScreen: React.FC = () => {
             </SafeAreaView>
         );
     }
+
+    const hasUserJoined = userHasJoined();
 
     return (
         <SafeAreaView style={styles.container}>
@@ -308,6 +450,16 @@ const ChallengeDetailsScreen: React.FC = () => {
 
                     {/* Special Quiz Content */}
                     {challenge.type === 'QUIZ' && renderQuizContent()}
+
+                    {/* Debug Info - Remove in production */}
+                    <View style={styles.debugContainer}>
+                        <Text style={styles.debugTitle}>Debug Info:</Text>
+                        <Text style={styles.debugText}>User ID: {user?.id}</Text>
+                        <Text style={styles.debugText}>Creator ID: {challenge.creator_id}</Text>
+                        <Text style={styles.debugText}>User is creator: {challenge.userIsCreator ? 'Yes' : 'No'}</Text>
+                        <Text style={styles.debugText}>Has joined: {hasUserJoined ? 'Yes' : 'No'}</Text>
+                        <Text style={styles.debugText}>Participants: {JSON.stringify(challenge.participants)}</Text>
+                    </View>
 
                     {/* Challenge Info */}
                     <View style={styles.section}>
@@ -361,11 +513,6 @@ const ChallengeDetailsScreen: React.FC = () => {
                     <TouchableOpacity style={styles.creatorSection} onPress={navigateToCreatorProfile}>
                         <Text style={styles.sectionTitle}>Created By</Text>
                         <View style={styles.creatorInfo}>
-                            {/*<View style={styles.creatorAvatar}>*/}
-                            {/*    <Text style={styles.creatorInitials}>*/}
-                            {/*        {challenge?.creator_id ? challenge.creator_id?.charAt(0).toUpperCase() : '?'}*/}
-                            {/*    </Text>*/}
-                            {/*</View>*/}
                             <Text style={styles.creatorName}>
                                 {challenge?.creator_id ? `User ID: ${challenge.creator_id}` : 'Unknown Creator'}
                             </Text>
@@ -375,7 +522,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                     {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
                     {(challenge.type !== 'QUIZ' || !challenge.quizConfig) && (
                         <View style={styles.actionSection}>
-                            {!userHasJoined() ? (
+                            {!hasUserJoined ? (
                                 <TouchableOpacity
                                     style={styles.primaryButton}
                                     onPress={handleJoinChallenge}
@@ -388,35 +535,40 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     )}
                                 </TouchableOpacity>
                             ) : (
-                                // For daily challenges, show the verification button
-                                isDailyChallenge() ? (
-                                    <TouchableOpacity
-                                        style={styles.verifyButton}
-                                        onPress={navigateToVerification}
-                                    >
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
-                                        <Text style={styles.buttonText}>Daily Check-In</Text>
-                                    </TouchableOpacity>
-                                ) : proofSubmitted ? (
-                                    <View style={styles.successMessage}>
-                                        <Text style={styles.successText}>Completion Submitted</Text>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity
-                                        style={styles.secondaryButton}
-                                        onPress={handleSubmitCompletion}
-                                        disabled={isSubmitting}
-                                    >
-                                        {isSubmitting ? (
-                                            <ActivityIndicator size="small" color="white"/>
-                                        ) : (
-                                            <>
-                                                <MaterialCommunityIcons name="check" size={20} color="white"/>
-                                                <Text style={styles.buttonText}>Submit Completion</Text>
-                                            </>
-                                        )}
-                                    </TouchableOpacity>
-                                )
+                                // Show different content when user has joined
+                                <View style={styles.joinedSection}>
+                                    <Text style={styles.joinedText}>✓ You have joined this challenge</Text>
+
+                                    {/* For daily challenges, show the verification button */}
+                                    {isDailyChallenge() ? (
+                                        <TouchableOpacity
+                                            style={styles.verifyButton}
+                                            onPress={navigateToVerification}
+                                        >
+                                            <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
+                                            <Text style={styles.buttonText}>Daily Check-In</Text>
+                                        </TouchableOpacity>
+                                    ) : proofSubmitted ? (
+                                        <View style={styles.successMessage}>
+                                            <Text style={styles.successText}>Completion Submitted</Text>
+                                        </View>
+                                    ) : (
+                                        <TouchableOpacity
+                                            style={styles.secondaryButton}
+                                            onPress={handleSubmitCompletion}
+                                            disabled={isSubmitting}
+                                        >
+                                            {isSubmitting ? (
+                                                <ActivityIndicator size="small" color="white"/>
+                                            ) : (
+                                                <>
+                                                    <MaterialCommunityIcons name="check" size={20} color="white"/>
+                                                    <Text style={styles.buttonText}>Submit Completion</Text>
+                                                </>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
                             )}
                         </View>
                     )}
@@ -451,6 +603,7 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: '#4CAF50',
         borderRadius: 4,
+        marginBottom: 8,
     },
     retryButtonText: {
         color: 'white',
@@ -520,6 +673,25 @@ const styles = StyleSheet.create({
         color: '#555',
         lineHeight: 20,
     },
+    debugContainer: {
+        backgroundColor: '#ffe6e6',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#ffcccc',
+    },
+    debugTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#cc0000',
+        marginBottom: 8,
+    },
+    debugText: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 4,
+    },
     section: {
         backgroundColor: 'white',
         borderRadius: 8,
@@ -584,20 +756,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
-    creatorAvatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#4CAF50',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-    },
-    creatorInitials: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
     creatorName: {
         fontSize: 16,
         color: '#333',
@@ -605,6 +763,15 @@ const styles = StyleSheet.create({
     actionSection: {
         marginTop: 8,
         marginBottom: 24,
+    },
+    joinedSection: {
+        alignItems: 'center',
+    },
+    joinedText: {
+        fontSize: 16,
+        color: '#4CAF50',
+        fontWeight: 'bold',
+        marginBottom: 16,
     },
     primaryButton: {
         backgroundColor: '#4CAF50',

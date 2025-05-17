@@ -15,6 +15,7 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
+import {WWWGameServiceWithQuestions} from "../services/wwwGame/wwwGameServiceWithQuestions.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 
@@ -27,6 +28,7 @@ type RootStackParamList = {
         score: number;
         totalRounds: number;
         roundsData: RoundData[];
+        challengeId?: string;
     };
 };
 
@@ -38,7 +40,7 @@ const WWWGamePlayScreen: React.FC = () => {
     const route = useRoute<WWWGamePlayRouteProp>();
     const navigation = useNavigation<WWWGamePlayNavigationProp>();
 
-    // In WWWGamePlayScreen.tsx
+    // Extract parameters from route
     const {
         teamName,
         teamMembers,
@@ -76,76 +78,59 @@ const WWWGamePlayScreen: React.FC = () => {
     // Modal visibility
     const [showEndGameModal, setShowEndGameModal] = useState(false);
 
-    // useEffect(() => {
-    //     // For example, when submitting the game result
-    //     if (gameOver && challengeId) {
-    //         // Update the challenge status
-    //         submitGameResult(challengeId, score);
-    //     }
-    // }, [gameOver, challengeId, score]);
-
-// And then initialize the game with these parameters
-    useEffect(() => {
-        // Use the game service to initialize the game
-        let initParams = {
-            teamName,
-            teamMembers,
-            difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
-            roundTime,
-            roundCount,
-            enableAIHost
-        };
-
-        if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
-            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
-                ...initParams,
-                userQuestions
-            });
-
-            // Setup first question
-            if (gameQuestions.length > 0) {
-                setCurrentQuestion(gameQuestions[0].question);
-                setCurrentAnswer(gameQuestions[0].answer);
-            }
-
-            // Set the initial rounds data
-            setRoundsData(initialRoundsData);
-        } else {
-            // Use the default initialization
-            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame(initParams);
-
-            // Setup first question
-            if (gameQuestions.length > 0) {
-                setCurrentQuestion(gameQuestions[0].question);
-                setCurrentAnswer(gameQuestions[0].answer);
-            }
-
-            // Set the initial rounds data
-            setRoundsData(initialRoundsData);
-        }
-    }, [difficulty, roundCount, teamName, teamMembers, enableAIHost, questionSource, userQuestions]);
-
     // Initialize game with questions and round data
     useEffect(() => {
-        // Use the game service to initialize the game
-        const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame({
-            teamName,
-            teamMembers,
-            difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
-            roundTime,
-            roundCount,
-            enableAIHost
-        });
+        const initializeGame = async () => {
+            try {
+                let initResult;
 
-        // Setup first question
-        if (gameQuestions.length > 0) {
-            setCurrentQuestion(gameQuestions[0].question);
-            setCurrentAnswer(gameQuestions[0].answer);
-        }
+                // Create the game settings
+                const gameSettings: GameSettings = {
+                    teamName,
+                    teamMembers,
+                    difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
+                    roundTime,
+                    roundCount,
+                    enableAIHost,
+                    questionSource,
+                    userQuestions,
+                    challengeId
+                };
 
-        // Set the initial rounds data
-        setRoundsData(initialRoundsData);
-    }, [difficulty, roundCount, teamName, teamMembers, enableAIHost]);
+                // Initialize game based on question source
+                if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
+                    // Use the extended service for user questions
+                    initResult = await WWWGameServiceWithQuestions.initializeGameWithExternalQuestions(gameSettings);
+                } else {
+                    // Use the regular service for app questions
+                    initResult = WWWGameService.initializeGame(gameSettings);
+                }
+
+                // Extract game questions and rounds data
+                const { gameQuestions, roundsData: initialRoundsData } = initResult;
+
+                // Setup first question if available
+                if (gameQuestions.length > 0) {
+                    setCurrentQuestion(gameQuestions[0].question);
+                    setCurrentAnswer(gameQuestions[0].answer);
+                }
+
+                // Set the initial rounds data
+                setRoundsData(initialRoundsData);
+
+                console.log(`Game initialized with ${gameQuestions.length} questions`);
+            } catch (error) {
+                console.error('Error initializing game:', error);
+                Alert.alert(
+                    'Error',
+                    'Failed to initialize the game. Please try again.',
+                    [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
+            }
+        };
+
+        initializeGame();
+    }, [teamName, teamMembers, difficulty, roundTime, roundCount, enableAIHost, questionSource, userQuestions, challengeId, navigation]);
 
     // Timer effect
     useEffect(() => {
@@ -245,7 +230,7 @@ const WWWGamePlayScreen: React.FC = () => {
     // Move to next round
     const nextRound = () => {
         // Check if game is over
-        if (currentRound + 1 >= roundCount) {
+        if (currentRound + 1 >= roundCount || currentRound + 1 >= roundsData.length) {
             // End game
             setShowEndGameModal(true);
             return;
@@ -260,9 +245,12 @@ const WWWGamePlayScreen: React.FC = () => {
         setShowHint(false);
         setVoiceTranscription('');
 
-        // Set next question
-        setCurrentQuestion(roundsData[currentRound + 1].question);
-        setCurrentAnswer(roundsData[currentRound + 1].correctAnswer);
+        // Set next question if available
+        const nextRoundIndex = currentRound + 1;
+        if (roundsData[nextRoundIndex]) {
+            setCurrentQuestion(roundsData[nextRoundIndex].question);
+            setCurrentAnswer(roundsData[nextRoundIndex].correctAnswer);
+        }
     };
 
     // End game and navigate to results
@@ -271,14 +259,16 @@ const WWWGamePlayScreen: React.FC = () => {
         navigation.navigate('WWWGameResults', {
             teamName,
             score,
-            totalRounds: roundCount,
+            totalRounds: roundsData.length,
             roundsData,
             challengeId // Pass the challengeId to the results screen
         });
+    };
 
     // AI host feedback
     const getAIFeedback = () => {
         const currentRoundData = roundsData[currentRound];
+        if (!currentRoundData) return '';
         return WWWGameService.generateRoundFeedback(currentRoundData, enableAIHost);
     };
 
@@ -288,7 +278,7 @@ const WWWGamePlayScreen: React.FC = () => {
             case 'question':
                 return (
                     <View style={styles.phaseContainer}>
-                        <Text style={styles.questionNumber}>Question {currentRound + 1} of {roundCount}</Text>
+                        <Text style={styles.questionNumber}>Question {currentRound + 1} of {roundsData.length}</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
 
                         <TouchableOpacity
@@ -469,6 +459,14 @@ const WWWGamePlayScreen: React.FC = () => {
 
             case 'feedback':
                 const currentRoundData = roundsData[currentRound];
+                if (!currentRoundData) {
+                    return (
+                        <View style={styles.phaseContainer}>
+                            <Text>No data available for this round</Text>
+                        </View>
+                    );
+                }
+
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.feedbackTitle}>Answer Feedback</Text>
@@ -506,7 +504,7 @@ const WWWGamePlayScreen: React.FC = () => {
                             onPress={nextRound}
                         >
                             <Text style={styles.buttonText}>
-                                {currentRound + 1 >= roundCount ? 'See Final Results' : 'Next Question'}
+                                {currentRound + 1 >= roundsData.length ? 'See Final Results' : 'Next Question'}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -522,13 +520,13 @@ const WWWGamePlayScreen: React.FC = () => {
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <Text style={styles.teamName}>{teamName}</Text>
-                    <Text style={styles.scoreText}>Score: {score}/{roundCount}</Text>
+                    <Text style={styles.scoreText}>Score: {score}/{roundsData.length}</Text>
                 </View>
                 <View style={styles.progressBar}>
                     <View
                         style={[
                             styles.progressFill,
-                            { width: `${(currentRound / roundCount) * 100}%` }
+                            { width: `${roundsData.length > 0 ? (currentRound / roundsData.length) * 100 : 0}%` }
                         ]}
                     />
                 </View>
@@ -548,12 +546,12 @@ const WWWGamePlayScreen: React.FC = () => {
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Game Over!</Text>
                         <Text style={styles.modalText}>
-                            Your team scored {score} out of {roundCount} questions.
+                            Your team scored {score} out of {roundsData.length} questions.
                         </Text>
                         <Text style={styles.modalScore}>
-                            {score === roundCount
+                            {score === roundsData.length
                                 ? 'Perfect score! Incredible!'
-                                : score > roundCount / 2
+                                : score > roundsData.length / 2
                                     ? 'Well done!'
                                     : 'Better luck next time!'}
                         </Text>
