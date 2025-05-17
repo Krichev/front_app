@@ -7,6 +7,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Types for the XML response from db.chgk.info
 interface XMLQuestionFields {
+    // Add camelCase properties from the actual response
+    QuestionId?: string | number;
+    ParentId?: string | number;
+    Question?: string;
+    Answer?: string;
+    Comments?: string;
+    Sources?: string;
+    Topic?: string;
+    Authors?: string;
+    tournamentTitle?: string;
+    tourTitle?: string;
+
+    // Keep original properties for backward compatibility
     dbid?: string | string[];
     text?: string | string[];
     answer?: string | string[];
@@ -14,14 +27,11 @@ interface XMLQuestionFields {
         source?: string | string[];
     }> | {
         source?: string | string[];
-    };
+    } | string;
     comments?: string | string[];
     topic?: string | string[];
-    tournamentTitle?: string | string[];
-    tourTitle?: string | string[];
-    authorsList?: string | string[];
-    date?: string | string[];
-    url?: string | string[];
+    // Add catch-all for unexpected properties
+    [key: string]: any;
 }
 
 interface XMLSearchResponse {
@@ -163,7 +173,17 @@ export class QuestionService {
             console.log("Received response from db.chgk.info");
 
             // Parse the XML response
-            const parser = new XMLParser();
+            const parser = new XMLParser({
+                ignoreAttributes: false,
+                attributeNamePrefix: "",
+                textNodeName: "value",
+                allowBooleanAttributes: true,
+                parseTagValue: true,
+                trimValues: true,
+                // Add if you have arrays:
+                isArray: (name, jpath) => false // Customize array handling
+            });
+
             const result = parser.parse(response.data);
             console.log("Parsed XML data successfully");
 
@@ -333,43 +353,75 @@ export class QuestionService {
         let additionalInfo = '';
         let id = '';
 
-        // Extract ID
-        if (q.dbid) {
-            id = Array.isArray(q.dbid) ? q.dbid[0] : q.dbid;
+        // Extract ID - check for camelCase property first
+        if (q.QuestionId !== undefined) {
+            id = String(q.QuestionId);
+        } else if (q.dbid) {
+            id = Array.isArray(q.dbid) ? q.dbid[0] : String(q.dbid);
         }
 
-        // Extract question text
-        if (q.text) {
-            questionText = this.cleanText(Array.isArray(q.text) ? q.text[0] : q.text);
+        // Extract question text - check for camelCase property first
+        if (q.Question !== undefined) {
+            questionText = this.cleanText(String(q.Question));
+        } else if (q.text) {
+            questionText = this.cleanText(Array.isArray(q.text) ? q.text[0] : String(q.text));
         }
 
-        // Extract answer text
-        if (q.answer) {
-            answerText = this.cleanText(Array.isArray(q.answer) ? q.answer[0] : q.answer);
+        // Extract answer text - check for camelCase property first
+        if (q.Answer !== undefined) {
+            answerText = this.cleanText(String(q.Answer));
+        } else if (q.answer) {
+            answerText = this.cleanText(Array.isArray(q.answer) ? q.answer[0] : String(q.answer));
         }
 
         // Extract source if available
-        if (q.sources) {
+        if (q.Sources !== undefined) {
+            sourceText = this.cleanText(String(q.Sources));
+        } else if (q.sources) {
             const sourcesArray = Array.isArray(q.sources) ? q.sources : [q.sources];
-            if (sourcesArray[0] && sourcesArray[0].source) {
-                const source = sourcesArray[0].source;
-                sourceText = this.cleanText(Array.isArray(source) ? source[0] : source);
+            if (q.Sources !== undefined) {
+                // Direct string from camelCase property
+                sourceText = this.cleanText(String(q.Sources));
+            } else if (q.sources) {
+                // Check what type sources is
+                if (typeof q.sources === 'string') {
+                    // Direct string
+                    sourceText = this.cleanText(q.sources);
+                } else if (Array.isArray(q.sources)) {
+                    // Array of objects
+                    for (const sourceObj of q.sources) {
+                        if (sourceObj && typeof sourceObj === 'object' && sourceObj.source) {
+                            const source = sourceObj.source;
+                            sourceText = this.cleanText(Array.isArray(source) ? source[0] : String(source));
+                            break; // Just use the first one
+                        }
+                    }
+                } else if (typeof q.sources === 'object' && q.sources !== null) {
+                    // Single object with source property
+                    if (q.sources.source) {
+                        const source = q.sources.source;
+                        sourceText = this.cleanText(Array.isArray(source) ? source[0] : String(source));
+                    }
+                }
             }
         }
 
-        // Extract additional info (comments, etc.)
-        if (q.comments) {
-            additionalInfo = this.cleanText(Array.isArray(q.comments) ? q.comments[0] : q.comments);
+        if (q.Comments !== undefined) {
+            additionalInfo = this.cleanText(String(q.Comments));
+        } else if (q.comments) {
+            additionalInfo = this.cleanText(Array.isArray(q.comments) ? q.comments[0] : String(q.comments));
         }
 
         // Extract topic if available
         let topic = '';
-        if (q.topic) {
-            topic = this.cleanText(Array.isArray(q.topic) ? q.topic[0] : q.topic);
+        if (q.Topic !== undefined) {
+            topic = this.cleanText(String(q.Topic));
+        } else if (q.topic) {
+            topic = this.cleanText(Array.isArray(q.topic) ? q.topic[0] : String(q.topic));
         }
 
         return {
-            id: id,
+            id: id || 'unknown',
             question: questionText,
             answer: answerText,
             source: sourceText,
