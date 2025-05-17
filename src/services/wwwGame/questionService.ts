@@ -71,6 +71,22 @@ export class QuestionService {
     public static isInitialized = false;
 
     /**
+     * Check if text contains Cyrillic characters (Russian)
+     */
+    static containsCyrillic(text: string): boolean {
+        // Regular expression to match Cyrillic characters
+        const cyrillicPattern = /[\u0400-\u04FF]/;
+        return cyrillicPattern.test(text);
+    }
+
+    /**
+     * Get language of a question/answer for proper display and handling
+     */
+    static getTextLanguage(text: string): 'en' | 'ru' {
+        return this.containsCyrillic(text) ? 'ru' : 'en';
+    }
+
+    /**
      * Initialize the question service
      */
     static initialize(): void {

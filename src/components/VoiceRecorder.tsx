@@ -1,167 +1,197 @@
-// Modified src/components/VoiceRecorder.tsx
+// Modified src/components/VoiceRecorder.tsx with Russian language support
 import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {SpeechToTextService} from '../services/speech/SpeechToTextService';
-import {TokenService} from '../services/speech/TokenService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import AudioRecord from 'react-native-audio-record';
+import axios from 'axios';
 
 interface VoiceRecorderProps {
     onTranscription: (text: string) => void;
     isActive: boolean;
+    language?: 'en' | 'ru'; // Add language prop
+    onLanguageToggle?: () => void; // Optional callback for language toggle
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ onTranscription, isActive }) => {
-    const [sttService, setSTTService] = useState<SpeechToTextService | null>(null);
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
+                                                         onTranscription,
+                                                         isActive,
+                                                         language = 'en', // Default to English
+                                                         onLanguageToggle
+                                                     }) => {
     const [isRecording, setIsRecording] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isReconnecting, setIsReconnecting] = useState(false);
     const [reconnectAttempt, setReconnectAttempt] = useState(0);
+    const [audioData, setAudioData] = useState<string | null>(null);
 
-    // Initialize STT service
+    // API endpoint for your Java backend
+    const API_ENDPOINT = 'http://your-server-address/api/speech-to-text';
+
+    // Initialize audio recording
     useEffect(() => {
-        const initializeSTT = async () => {
+        const setupAudioRecording = async () => {
+            if (!isActive) return;
+
             try {
-                setIsLoading(true);
-                setError(null);
+                // Configure audio recording
+                const options = {
+                    sampleRate: 16000,
+                    channels: 1,
+                    bitsPerSample: 16,
+                    audioSource: 6, // MIC source
+                    wavFile: '', // No file saving (streaming only)
+                };
 
-                // Get IAM token
-                const iamToken = await TokenService.getIAMToken();
-                const folderId = TokenService.getFolderId();
+                await AudioRecord.init(options);
 
-                // Create STT service with reconnection handlers
-                const service = new SpeechToTextService({
-                    iamToken,
-                    folderId,
-                    onTranscription: (text) => {
-                        onTranscription(text);
-                        // Reset reconnection UI state on successful transcription
-                        setIsReconnecting(false);
-                        setReconnectAttempt(0);
-                    },
-                    onError: (err) => {
-                        console.error('STT error:', err);
-                        // Only show error if we're not in reconnection state
-                        if (!isReconnecting) {
-                            setError('Error with speech recognition');
-                        }
-                    },
-                    onReconnecting: (attempt) => {
-                        setIsReconnecting(true);
-                        setReconnectAttempt(attempt);
-                    },
-                    onReconnectFailed: () => {
-                        setIsReconnecting(false);
-                        setReconnectAttempt(0);
-                        setError('Connection failed after multiple attempts');
-                    },
-                    maxReconnectAttempts: 5
+                // Set up data handler
+                AudioRecord.on('data', (data) => {
+                    // Store the latest audio data
+                    setAudioData(data);
                 });
 
-                setSTTService(service);
+                setError(null);
             } catch (err) {
-                console.error('Error initializing STT:', err);
-                setError('Failed to initialize speech recognition');
-            } finally {
-                setIsLoading(false);
+                console.error('Error initializing audio recording:', err);
+                setError('Failed to initialize audio recording');
             }
         };
 
-        if (isActive) {
-            initializeSTT();
-        }
+        setupAudioRecording();
 
         // Cleanup
         return () => {
-            if (sttService) {
-                sttService.cleanup();
+            if (isRecording) {
+                AudioRecord.stop();
             }
         };
-    }, [isActive, onTranscription]);
+    }, [isActive]);
 
     // Toggle recording
-    const toggleRecording = () => {
-        if (!sttService) return;
-
+    const toggleRecording = async () => {
         if (isRecording) {
-            sttService.stopRecording();
+            // Stop recording
+            AudioRecord.stop();
             setIsRecording(false);
-            setIsReconnecting(false);
-            setReconnectAttempt(0);
+            setIsProcessing(true);
+
+            // Send the recorded audio to the backend for processing
+            if (audioData) {
+                try {
+                    // Send to your Java backend with language parameter
+                    const response = await axios.post(API_ENDPOINT, {
+                        audioData: audioData,
+                        language: language === 'en' ? 'en-US' : 'ru-RU', // Specify language
+                        format: 'raw' // Or whatever format your backend expects
+                    });
+
+                    // Process the transcription result
+                    if (response.data && response.data.transcription) {
+                        onTranscription(response.data.transcription);
+                    } else {
+                        setError('No transcription received');
+                    }
+                } catch (err) {
+                    console.error('Error sending audio to backend:', err);
+                    setError('Failed to process speech');
+                } finally {
+                    setIsProcessing(false);
+                    setAudioData(null); // Clear the audio data
+                }
+            } else {
+                setIsProcessing(false);
+                setError('No audio data captured');
+            }
         } else {
-            sttService.startRecording();
-            setIsRecording(true);
-            setError(null);
+            // Start recording
+            try {
+                setError(null);
+                await AudioRecord.start();
+                setIsRecording(true);
+            } catch (err) {
+                console.error('Error starting recording:', err);
+                setError('Failed to start recording');
+            }
         }
+    };
+
+    // Get colors based on language
+    const getLanguageColor = () => {
+        if (isRecording) return '#F44336'; // Red when recording for both languages
+        return language === 'en' ? '#4CAF50' : '#2196F3'; // Green for English, Blue for Russian
     };
 
     if (!isActive) return null;
 
-    if (isLoading) {
-        return (
-            <View style={styles.container}>
-                <ActivityIndicator size="small" color="#4CAF50" />
-                <Text style={styles.statusText}>Initializing voice recognition...</Text>
-            </View>
-        );
-    }
-
-    if (error && !isReconnecting) {
-        return (
-            <View style={styles.container}>
-                <MaterialCommunityIcons name="alert-circle" size={24} color="#F44336" />
-                <Text style={[styles.statusText, styles.errorText]}>{error}</Text>
-            </View>
-        );
-    }
-
     return (
         <View style={styles.container}>
-            <TouchableOpacity
-                style={[
-                    styles.recordButton,
-                    isRecording && !isReconnecting && styles.recordingButton,
-                    isReconnecting && styles.reconnectingButton
-                ]}
-                onPress={toggleRecording}
-                disabled={!sttService || isReconnecting}
-            >
-                {isReconnecting ? (
-                    <ActivityIndicator size="small" color="white" />
-                ) : (
-                    <MaterialCommunityIcons
-                        name={isRecording ? "stop" : "microphone"}
-                        size={24}
-                        color="white"
-                    />
-                )}
-            </TouchableOpacity>
-            <Text style={styles.statusText}>
-                {isReconnecting
-                    ? `Reconnecting (${reconnectAttempt}/5)...`
-                    : isRecording
-                        ? 'Listening...'
-                        : 'Tap to record discussion'}
-            </Text>
+            <View style={styles.recordControls}>
+                <TouchableOpacity
+                    style={[
+                        styles.recordButton,
+                        { backgroundColor: getLanguageColor() },
+                        isRecording && styles.recordingButton,
+                        isProcessing && styles.processingButton
+                    ]}
+                    onPress={toggleRecording}
+                    disabled={isProcessing}
+                >
+                    {isProcessing ? (
+                        <ActivityIndicator size="small" color="white" />
+                    ) : (
+                        <MaterialCommunityIcons
+                            name={isRecording ? "stop" : "microphone"}
+                            size={24}
+                            color="white"
+                        />
+                    )}
+                </TouchableOpacity>
+                <Text style={styles.statusText}>
+                    {isProcessing
+                        ? `Processing speech...`
+                        : isRecording
+                            ? `Recording in ${language === 'en' ? 'English' : 'Russian'}...`
+                            : `Tap to record ${language === 'en' ? 'English' : 'Russian'}`}
+                </Text>
+            </View>
+
+            {/* Language toggle button */}
+            {onLanguageToggle && (
+                <TouchableOpacity
+                    style={[styles.languageButton, { backgroundColor: getLanguageColor() }]}
+                    onPress={onLanguageToggle}
+                    disabled={isRecording || isProcessing}
+                >
+                    <Text style={styles.languageButtonText}>
+                        {language === 'en' ? 'EN' : 'RU'}
+                    </Text>
+                </TouchableOpacity>
+            )}
+
+            {error && (
+                <Text style={styles.errorText}>{error}</Text>
+            )}
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: 'column',
         padding: 8,
         backgroundColor: '#f5f5f5',
         borderRadius: 8,
         margin: 8,
     },
+    recordControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     recordButton: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#4CAF50',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -169,15 +199,32 @@ const styles = StyleSheet.create({
     recordingButton: {
         backgroundColor: '#F44336',
     },
-    reconnectingButton: {
+    processingButton: {
         backgroundColor: '#FF9800',
     },
     statusText: {
         fontSize: 14,
         color: '#555',
+        flex: 1,
     },
     errorText: {
         color: '#F44336',
+        fontSize: 12,
+        marginTop: 8,
+    },
+    languageButton: {
+        paddingVertical: 6,
+        paddingHorizontal: 10,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        alignSelf: 'flex-end',
+        marginTop: 8,
+    },
+    languageButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 12,
     },
 });
 

@@ -31,8 +31,8 @@ export interface GameSettings {
     userQuestions?: QuestionData[] | UserQuestion[];
     challengeId?: string; // Challenge ID for tracking
 }
-export type GamePhase = 'question' | 'discussion' | 'answer' | 'feedback';
 
+export type GamePhase = 'question' | 'discussion' | 'answer' | 'feedback';
 
 
 // Questions database by difficulty
@@ -226,7 +226,6 @@ const QUESTIONS = {
 };
 
 
-
 export class WWWGameService {
     /**
      * Initialize a new game with the given settings
@@ -260,7 +259,7 @@ export class WWWGameService {
                 discussionNotes: ''
             }));
 
-            return { gameQuestions: limitedQuestions, roundsData };
+            return {gameQuestions: limitedQuestions, roundsData};
         }
 
         // Fall back to default initialization if no user questions
@@ -322,14 +321,42 @@ export class WWWGameService {
     }
 
     /**
-     * Validate team answer against correct answer
+     * Validate team answer against correct answer with improved Russian language support
      */
     static validateAnswer(teamAnswer: string, correctAnswer: string): boolean {
         if (!teamAnswer || !correctAnswer) return false;
 
-        // Simple case-insensitive comparison
-        // This could be enhanced with more sophisticated comparison
-        return teamAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+        // Normalize strings for comparison (trim whitespace, remove punctuation, lowercase)
+        const normalizeForComparison = (text: string): string => {
+            return text
+                .toLowerCase()
+                .trim()
+                // Remove punctuation, but keep Cyrillic characters
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .replace(/\s{2,}/g, " ");
+        };
+
+        const normalizedTeamAnswer = normalizeForComparison(teamAnswer);
+        const normalizedCorrectAnswer = normalizeForComparison(correctAnswer);
+
+        // Direct match after normalization
+        if (normalizedTeamAnswer === normalizedCorrectAnswer) {
+            return true;
+        }
+
+        // Check for case where the team answer contains the correct answer or vice versa
+        if (normalizedTeamAnswer.includes(normalizedCorrectAnswer) ||
+            normalizedCorrectAnswer.includes(normalizedTeamAnswer)) {
+            return true;
+        }
+
+        // For short answers (1-2 words), use approximate matching
+        const isShortAnswer = normalizedCorrectAnswer.split(" ").length <= 2;
+        if (isShortAnswer) {
+            return this.isApproximatelyCorrect(teamAnswer, correctAnswer);
+        }
+
+        return false;
     }
 
     /**
@@ -487,31 +514,64 @@ export class WWWGameService {
     }
 
     /**
-     * Determine if an answer is approximately correct
-     * This provides more flexibility in accepting answers
+     * Improved isApproximatelyCorrect method with better support for Russian
      */
     static isApproximatelyCorrect(userAnswer: string, correctAnswer: string): boolean {
-        // Convert to lowercase and trim
-        const normalizedUserAnswer = userAnswer.toLowerCase().trim();
-        const normalizedCorrectAnswer = correctAnswer.toLowerCase().trim();
+        // Normalize strings
+        const normalizeForComparison = (text: string): string => {
+            return text
+                .toLowerCase()
+                .trim()
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                .replace(/\s{2,}/g, " ");
+        };
 
-        // Exact match
-        if (normalizedUserAnswer === normalizedCorrectAnswer) return true;
+        const normalizedUserAnswer = normalizeForComparison(userAnswer);
+        const normalizedCorrectAnswer = normalizeForComparison(correctAnswer);
 
-        // Check if the answer contains the correct answer (for partial matches)
+        // Exact match after normalization
+        if (normalizedUserAnswer === normalizedCorrectAnswer) {
+            return true;
+        }
+
+        // Check if one contains the other
         if (normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
             normalizedCorrectAnswer.includes(normalizedUserAnswer)) {
             return true;
         }
 
-        // Calculate similarity ratio using Levenshtein distance
-        // This is a simple implementation that could be improved
-        const distance = this.levenshteinDistance(normalizedUserAnswer, normalizedCorrectAnswer);
-        const maxLength = Math.max(normalizedUserAnswer.length, normalizedCorrectAnswer.length);
-        const similarityRatio = 1 - distance / maxLength;
+        // For Russian answers, check key parts of the answer
+        // Split by spaces and check if most important words match
+        const userWords = normalizedUserAnswer.split(' ');
+        const correctWords = normalizedCorrectAnswer.split(' ');
 
-        // Accept answers that are at least 80% similar
-        return similarityRatio >= 0.8;
+        // If it's a single word answer
+        if (correctWords.length === 1 && userWords.length === 1) {
+            // Allow for minor typos in single word answers
+            return this.levenshteinDistance(normalizedUserAnswer, normalizedCorrectAnswer) <= 2;
+        }
+
+        // For multi-word answers, check if key words match
+        if (correctWords.length > 1 && userWords.length > 0) {
+            // Find significant words (longer than 3 chars) in the correct answer
+            const significantWords = correctWords.filter(word => word.length > 3);
+
+            // Count how many significant words from the correct answer appear in the user's answer
+            let matchCount = 0;
+            for (const word of significantWords) {
+                if (userWords.some(userWord => this.levenshteinDistance(userWord, word) <= 2 ||
+                    userWord.includes(word) ||
+                    word.includes(userWord))) {
+                    matchCount++;
+                }
+            }
+
+            // If more than half of significant words match, consider it correct
+            if (significantWords.length > 0 &&
+                matchCount >= Math.ceil(significantWords.length * 0.5)) {
+                return true;
+            }
+        }
     }
 
     /**

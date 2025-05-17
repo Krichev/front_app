@@ -71,6 +71,12 @@ const WWWGamePlayScreen: React.FC = () => {
     const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
     const [voiceTranscription, setVoiceTranscription] = useState('');
 
+    const [recognitionLanguage, setRecognitionLanguage] = useState<'en' | 'ru'>('en');
+
+    const toggleRecognitionLanguage = () => {
+        setRecognitionLanguage(prev => prev === 'en' ? 'ru' : 'en');
+    };
+
     // Animated values
     const timerAnimation = useRef(new Animated.Value(1)).current;
 
@@ -348,7 +354,9 @@ const WWWGamePlayScreen: React.FC = () => {
                             <View style={styles.voiceRecorderContainer}>
                                 <VoiceRecorder
                                     onTranscription={handleVoiceTranscription}
-                                    isActive={gamePhase === 'discussion'}
+                                    isActive={gamePhase === 'discussion' || (gamePhase === 'answer' && isRecordingVoiceAnswer)}
+                                    language={recognitionLanguage}
+                                    onLanguageToggle={toggleRecognitionLanguage}
                                 />
                                 {voiceTranscription ? (
                                     <View style={styles.transcriptionContainer}>
@@ -419,12 +427,40 @@ const WWWGamePlayScreen: React.FC = () => {
 
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Team Answer:</Text>
-                            <TextInput
-                                style={styles.answerInput}
-                                value={teamAnswer}
-                                onChangeText={setTeamAnswer}
-                                placeholder="Enter your team's final answer"
-                            />
+                            <View style={styles.answerInputContainer}>
+                                <View style={styles.languageToggleContainer}>
+                                    <Text style={styles.languageToggleLabel}>Answer Language:</Text>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.languageToggleButton,
+                                            { backgroundColor: recognitionLanguage === 'en' ? '#2196F3' : '#4CAF50' }
+                                        ]}
+                                        onPress={toggleRecognitionLanguage}
+                                    >
+                                        <Text style={styles.languageToggleText}>
+                                            {recognitionLanguage === 'en' ? 'English' : 'Russian'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <TextInput
+                                    style={styles.answerInput}
+                                    value={teamAnswer}
+                                    onChangeText={setTeamAnswer}
+                                    placeholder="Enter your team's final answer (Russian accepted)"
+                                    placeholderTextColor="#999"
+                                    autoCorrect={false}
+                                    // These props help with proper display of Cyrillic characters
+                                    autoCapitalize="none"
+                                    // Support Russian keyboard input
+                                    keyboardType="default"
+                                />
+                                <View style={styles.languageIndicator}>
+                                    <Text style={styles.languageText}>EN/RU</Text>
+                                </View>
+                            </View>
+                            <Text style={styles.answerHintText}>
+                                Answers in both English and Russian are accepted.
+                            </Text>
                         </View>
 
                         {/* Voice Answer Option */}
@@ -929,6 +965,54 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginLeft: 8,
     },
+    answerInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: 'white',
+    },
+    languageIndicator: {
+        paddingHorizontal: 8,
+        backgroundColor: '#f0f0f0',
+        height: '100%',
+        justifyContent: 'center',
+        borderTopRightRadius: 8,
+        borderBottomRightRadius: 8,
+    },
+    languageText: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: 'bold',
+    },
+    answerHintText: {
+        fontSize: 12,
+        color: '#666',
+        fontStyle: 'italic',
+        marginTop: 4,
+    },
+    languageToggleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+    },
+    languageToggleLabel: {
+        fontSize: 14,
+        color: '#555',
+        marginRight: 8,
+    },
+    languageToggleButton: {
+        paddingVertical: 6,
+        paddingHorizontal: 16,
+        borderRadius: 16,
+        elevation: 1,
+    },
+    languageToggleText: {
+        color: 'white',
+        fontWeight: 'bold',
+    }
 });
 
 export default WWWGamePlayScreen;
