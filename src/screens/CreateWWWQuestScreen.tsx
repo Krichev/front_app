@@ -199,16 +199,8 @@ const CreateWWWQuestScreen: React.FC = () => {
                 teamBased: true
             };
 
-            // Create proper verification method as JSON string
-            const verificationMethod = JSON.stringify([
-                {
-                    type: 'QUIZ',
-                    details: {
-                        quizType: 'WWW',
-                        questionCount: Math.min(roundCount, questionsToUse.length)
-                    }
-                }
-            ]);
+            // Use simple enum string
+            const verificationMethod = "QUIZ";
 
             // Create a new challenge with QUIZ type
             const result = await createChallenge({
@@ -223,22 +215,29 @@ const CreateWWWQuestScreen: React.FC = () => {
                 quizConfig: JSON.stringify(quizConfig)
             }).unwrap();
 
+            // Log that we're about to navigate with questions
+            console.log(`Navigating to WWWGamePlay with ${questionsToUse.length} questions from ${questionSource} source`);
+            console.log(`First question: ${questionsToUse[0]?.question?.substring(0, 30)}...`);
+
             Alert.alert('Success', 'Quiz challenge created successfully!', [
                 {
                     text: 'Start Game Now',
                     onPress: () => {
-                        // Navigate to game with settings
-                        navigation.navigate('WWWGamePlay', {
+                        // Create params with proper type safety
+                        const navigationParams = {
                             teamName,
                             teamMembers,
                             difficulty,
                             roundTime,
                             roundCount: Math.min(roundCount, questionsToUse.length),
                             enableAIHost,
-                            challengeId: result.id, // Pass the challenge ID for tracking progress
-                            questionSource, // Pass as optional parameter
-                            userQuestions: questionSource === 'user' ? userQuestions : appQuestions, // Pass as optional parameter
-                        });
+                            challengeId: result.id,
+                            questionSource: questionSource as 'app' | 'user',
+                            userQuestions: questionsToUse
+                        };
+
+                        // Navigate with properly typed params
+                        navigation.navigate('WWWGamePlay', navigationParams);
                     }
                 },
                 {

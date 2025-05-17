@@ -15,7 +15,6 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
-import {WWWGameServiceWithQuestions} from "../services/wwwGame/wwwGameServiceWithQuestions.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 
@@ -80,58 +79,91 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Initialize game with questions and round data
     useEffect(() => {
-        const initializeGame = async () => {
-            try {
-                let initResult;
+        // Use the game service to initialize the game with the appropriate questions
+        console.log("Initializing game with params:", {
+            teamName,
+            teamMembers,
+            difficulty,
+            roundTime,
+            roundCount,
+            enableAIHost,
+            questionSource,
+            userQuestions: userQuestions?.length || 0,  // Log question count for debugging
+        });
 
-                // Create the game settings
-                const gameSettings: GameSettings = {
-                    teamName,
-                    teamMembers,
-                    difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
-                    roundTime,
-                    roundCount,
-                    enableAIHost,
-                    questionSource,
-                    userQuestions,
-                    challengeId
-                };
+        // Choose initialization method based on question source
+        if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
+            console.log("Initializing with user questions:", userQuestions.length);
 
-                // Initialize game based on question source
-                if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
-                    // Use the extended service for user questions
-                    initResult = await WWWGameServiceWithQuestions.initializeGameWithExternalQuestions(gameSettings);
-                } else {
-                    // Use the regular service for app questions
-                    initResult = WWWGameService.initializeGame(gameSettings);
-                }
+            // Use user questions
+            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
+                teamName,
+                teamMembers,
+                difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
+                roundTime,
+                roundCount,
+                enableAIHost,
+                userQuestions
+            });
 
-                // Extract game questions and rounds data
-                const { gameQuestions, roundsData: initialRoundsData } = initResult;
-
-                // Setup first question if available
-                if (gameQuestions.length > 0) {
-                    setCurrentQuestion(gameQuestions[0].question);
-                    setCurrentAnswer(gameQuestions[0].answer);
-                }
-
-                // Set the initial rounds data
-                setRoundsData(initialRoundsData);
-
-                console.log(`Game initialized with ${gameQuestions.length} questions`);
-            } catch (error) {
-                console.error('Error initializing game:', error);
-                Alert.alert(
-                    'Error',
-                    'Failed to initialize the game. Please try again.',
-                    [{ text: 'OK', onPress: () => navigation.goBack() }]
-                );
+            // Setup first question
+            if (gameQuestions.length > 0) {
+                console.log("First user question:", gameQuestions[0].question.substring(0, 30) + "...");
+                setCurrentQuestion(gameQuestions[0].question);
+                setCurrentAnswer(gameQuestions[0].answer);
             }
-        };
 
-        initializeGame();
-    }, [teamName, teamMembers, difficulty, roundTime, roundCount, enableAIHost, questionSource, userQuestions, challengeId, navigation]);
+            // Set the initial rounds data
+            setRoundsData(initialRoundsData);
+        }
+        else if (questionSource === 'app' && userQuestions && userQuestions.length > 0) {
+            console.log("Initializing with app questions from db.chgk.info:", userQuestions.length);
 
+            // Important: Use the app questions that were passed via navigation
+            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
+                teamName,
+                teamMembers,
+                difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
+                roundTime,
+                roundCount,
+                enableAIHost,
+                userQuestions  // This is actually appQuestions passed via navigation
+            });
+
+            // Setup first question
+            if (gameQuestions.length > 0) {
+                console.log("First app question:", gameQuestions[0].question.substring(0, 30) + "...");
+                setCurrentQuestion(gameQuestions[0].question);
+                setCurrentAnswer(gameQuestions[0].answer);
+            }
+
+            // Set the initial rounds data
+            setRoundsData(initialRoundsData);
+        }
+        else {
+            console.log("Initializing with default questions (no external questions provided)");
+
+            // Use the default initialization with built-in questions
+            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame({
+                teamName,
+                teamMembers,
+                difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
+                roundTime,
+                roundCount,
+                enableAIHost
+            });
+
+            // Setup first question
+            if (gameQuestions.length > 0) {
+                console.log("First default question:", gameQuestions[0].question.substring(0, 30) + "...");
+                setCurrentQuestion(gameQuestions[0].question);
+                setCurrentAnswer(gameQuestions[0].answer);
+            }
+
+            // Set the initial rounds data
+            setRoundsData(initialRoundsData);
+        }
+    }, [difficulty, roundCount, teamName, teamMembers, enableAIHost, questionSource, userQuestions]);
     // Timer effect
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;

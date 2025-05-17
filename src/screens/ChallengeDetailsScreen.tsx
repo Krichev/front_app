@@ -22,6 +22,7 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
 import {navigateToTab} from "../utils/navigation.ts";
+import {QuestionService} from "../services/wwwGame";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -163,7 +164,6 @@ const ChallengeDetailsScreen: React.FC = () => {
         return FormatterService.formatDate(dateString);
     };
 
-    // Render quiz specific content
     const renderQuizContent = () => {
         if (!challenge || challenge.type !== 'QUIZ') return null;
 
@@ -221,19 +221,22 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     </View>
                                 )}
 
+                                {/* Enhanced Play Button - more prominent */}
                                 <TouchableOpacity
-                                    style={styles.playButton}
+                                    style={styles.prominentPlayButton}
                                     onPress={() => startWWWGame(quizConfig)}
                                 >
-                                    <Text style={styles.playButtonText}>Play Quiz Game</Text>
+                                    <MaterialCommunityIcons name="play-circle" size={24} color="white" />
+                                    <Text style={styles.prominentPlayButtonText}>Start Quiz Game</Text>
                                 </TouchableOpacity>
                             </>
                         ) : (
                             <>
                                 <Text style={styles.quizType}>Standard Quiz</Text>
                                 {/* Render standard quiz details */}
-                                <TouchableOpacity style={styles.playButton}>
-                                    <Text style={styles.playButtonText}>Start Quiz</Text>
+                                <TouchableOpacity style={styles.prominentPlayButton}>
+                                    <MaterialCommunityIcons name="play-circle" size={24} color="white" />
+                                    <Text style={styles.prominentPlayButtonText}>Start Quiz</Text>
                                 </TouchableOpacity>
                             </>
                         )}
@@ -243,18 +246,56 @@ const ChallengeDetailsScreen: React.FC = () => {
         );
     };
 
+
     // Start the WWW game
     const startWWWGame = (quizConfig: any) => {
-        // Navigate to the WWW game screen with the config
-        navigation.navigate('WWWGamePlay', {
-            teamName: quizConfig.teamName || 'Team Intellect',
-            teamMembers: quizConfig.teamMembers || [user?.name || 'Player'],
-            difficulty: quizConfig.difficulty || 'Medium',
-            roundTime: quizConfig.roundTime || 60,
-            roundCount: quizConfig.roundCount || 10,
-            enableAIHost: quizConfig.enableAIHost !== false,
-            challengeId: challenge?.id // Pass the challenge ID to track completion
-        });
+        // First, try to get questions specifically for this quiz
+        const fetchQuestionsAndStartGame = async () => {
+            let questionsToUse: any[] = [];
+
+            try {
+                console.log("Fetching questions for WWW game...");
+                // Fetch questions based on the config difficulty
+                const difficulty = quizConfig.difficulty || 'Medium';
+                const count = quizConfig.roundCount || 10;
+
+                // Use the QuestionService to fetch questions from db.chgk.info
+                const questions = await QuestionService.getQuestionsByDifficulty(
+                    difficulty as 'Easy' | 'Medium' | 'Hard',
+                    count
+                );
+
+                console.log(`Fetched ${questions.length} questions from db.chgk.info`);
+                if (questions.length > 0) {
+                    questionsToUse = questions;
+                }
+            } catch (error) {
+                console.error("Error fetching questions:", error);
+                console.log("Will use fallback questions");
+                // Will continue with empty questionsToUse, which will trigger fallback
+            }
+
+            // Now navigate to the game with the fetched questions - with proper type safety
+            console.log(`Starting WWW game with ${questionsToUse.length} questions`);
+
+            // Create navigation params with proper types
+            const navigationParams = {
+                teamName: quizConfig.teamName || 'Team Intellect',
+                teamMembers: quizConfig.teamMembers || [user?.name || 'Player'],
+                difficulty: quizConfig.difficulty || 'Medium',
+                roundTime: quizConfig.roundTime || 60,
+                roundCount: quizConfig.roundCount || 10,
+                enableAIHost: quizConfig.enableAIHost !== false,
+                challengeId: challenge?.id, // Pass the challenge ID to track completion
+                questionSource: 'app' as 'app' | 'user', // Explicitly set source to 'app' with type assertion
+                userQuestions: questionsToUse // Pass the fetched questions
+            };
+
+            navigation.navigate('WWWGamePlay', navigationParams);
+        };
+
+        // Start fetching and navigate
+        fetchQuestionsAndStartGame();
     };
 
     // Parse verification methods from challenge data with better error handling
@@ -520,9 +561,39 @@ const ChallengeDetailsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
-                    {(challenge.type !== 'QUIZ' || !challenge.quizConfig) && (
-                        <View style={styles.actionSection}>
-                            {!hasUserJoined ? (
+                    <View style={styles.actionSection}>
+                        {challenge.type === 'QUIZ' ? (
+                            // For Quiz challenges, show a Start Quiz button
+                            <TouchableOpacity
+                                style={styles.startQuizButton}
+                                onPress={() => {
+                                    // Parse quiz configuration if available
+                                    let quizConfig = null;
+                                    try {
+                                        if (challenge.quizConfig) {
+                                            quizConfig = JSON.parse(challenge.quizConfig);
+                                        }
+                                    } catch (e) {
+                                        console.error('Error parsing quiz config:', e);
+                                    }
+
+                                    // Start the game with config or defaults
+                                    startWWWGame(quizConfig || {
+                                        teamName: 'Team Intellect',
+                                        teamMembers: [user?.name || 'Player'],
+                                        difficulty: 'Medium',
+                                        roundTime: 60,
+                                        roundCount: 10,
+                                        enableAIHost: true,
+                                    });
+                                }}
+                            >
+                                <MaterialCommunityIcons name="play-circle" size={24} color="white" />
+                                <Text style={styles.startQuizButtonText}>Start Quiz Game</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            // For non-Quiz challenges, show standard Join/Submit buttons
+                            !userHasJoined() ? (
                                 <TouchableOpacity
                                     style={styles.primaryButton}
                                     onPress={handleJoinChallenge}
@@ -535,43 +606,38 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     )}
                                 </TouchableOpacity>
                             ) : (
-                                // Show different content when user has joined
-                                <View style={styles.joinedSection}>
-                                    <Text style={styles.joinedText}>✓ You have joined this challenge</Text>
-
-                                    {/* For daily challenges, show the verification button */}
-                                    {isDailyChallenge() ? (
-                                        <TouchableOpacity
-                                            style={styles.verifyButton}
-                                            onPress={navigateToVerification}
-                                        >
-                                            <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
-                                            <Text style={styles.buttonText}>Daily Check-In</Text>
-                                        </TouchableOpacity>
-                                    ) : proofSubmitted ? (
-                                        <View style={styles.successMessage}>
-                                            <Text style={styles.successText}>Completion Submitted</Text>
-                                        </View>
-                                    ) : (
-                                        <TouchableOpacity
-                                            style={styles.secondaryButton}
-                                            onPress={handleSubmitCompletion}
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting ? (
-                                                <ActivityIndicator size="small" color="white"/>
-                                            ) : (
-                                                <>
-                                                    <MaterialCommunityIcons name="check" size={20} color="white"/>
-                                                    <Text style={styles.buttonText}>Submit Completion</Text>
-                                                </>
-                                            )}
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            )}
-                        </View>
-                    )}
+                                // For daily challenges, show the verification button
+                                isDailyChallenge() ? (
+                                    <TouchableOpacity
+                                        style={styles.verifyButton}
+                                        onPress={navigateToVerification}
+                                    >
+                                        <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
+                                        <Text style={styles.buttonText}>Daily Check-In</Text>
+                                    </TouchableOpacity>
+                                ) : proofSubmitted ? (
+                                    <View style={styles.successMessage}>
+                                        <Text style={styles.successText}>Completion Submitted</Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.secondaryButton}
+                                        onPress={handleSubmitCompletion}
+                                        disabled={isSubmitting}
+                                    >
+                                        {isSubmitting ? (
+                                            <ActivityIndicator size="small" color="white"/>
+                                        ) : (
+                                            <>
+                                                <MaterialCommunityIcons name="check" size={20} color="white"/>
+                                                <Text style={styles.buttonText}>Submit Completion</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                )
+                            )
+                        )}
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -867,6 +933,47 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    prominentPlayButton: {
+        backgroundColor: '#4CAF50',
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 20,
+        marginBottom: 10,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
+    prominentPlayButtonText: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 8,
+    },
+    startQuizButton: {
+        backgroundColor: '#4CAF50',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+    },
+    startQuizButtonText: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 8,
     },
 });
 
