@@ -514,64 +514,41 @@ export class WWWGameService {
     }
 
     /**
-     * Improved isApproximatelyCorrect method with better support for Russian
+     * Determine if an answer is approximately correct
+     * This provides more flexibility in accepting answers
      */
     static isApproximatelyCorrect(userAnswer: string, correctAnswer: string): boolean {
-        // Normalize strings
-        const normalizeForComparison = (text: string): string => {
-            return text
-                .toLowerCase()
-                .trim()
-                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-                .replace(/\s{2,}/g, " ");
-        };
+        // Handle null/undefined inputs
+        if (!userAnswer || !correctAnswer) return false;
 
-        const normalizedUserAnswer = normalizeForComparison(userAnswer);
-        const normalizedCorrectAnswer = normalizeForComparison(correctAnswer);
+        // Convert to lowercase and trim
+        const normalizedUserAnswer = userAnswer.toLowerCase().trim();
+        const normalizedCorrectAnswer = correctAnswer.toLowerCase().trim();
 
-        // Exact match after normalization
-        if (normalizedUserAnswer === normalizedCorrectAnswer) {
-            return true;
-        }
+        // Handle empty strings after normalization
+        if (!normalizedUserAnswer || !normalizedCorrectAnswer) return false;
 
-        // Check if one contains the other
+        // Exact match
+        if (normalizedUserAnswer === normalizedCorrectAnswer) return true;
+
+        // Check if the answer contains the correct answer (for partial matches)
         if (normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
             normalizedCorrectAnswer.includes(normalizedUserAnswer)) {
             return true;
         }
 
-        // For Russian answers, check key parts of the answer
-        // Split by spaces and check if most important words match
-        const userWords = normalizedUserAnswer.split(' ');
-        const correctWords = normalizedCorrectAnswer.split(' ');
+        // Calculate similarity ratio using Levenshtein distance
+        // This is a simple implementation that could be improved
+        const distance = this.levenshteinDistance(normalizedUserAnswer, normalizedCorrectAnswer);
+        const maxLength = Math.max(normalizedUserAnswer.length, normalizedCorrectAnswer.length);
 
-        // If it's a single word answer
-        if (correctWords.length === 1 && userWords.length === 1) {
-            // Allow for minor typos in single word answers
-            return this.levenshteinDistance(normalizedUserAnswer, normalizedCorrectAnswer) <= 2;
-        }
+        // Avoid division by zero (though this shouldn't happen after our checks above)
+        if (maxLength === 0) return false;
 
-        // For multi-word answers, check if key words match
-        if (correctWords.length > 1 && userWords.length > 0) {
-            // Find significant words (longer than 3 chars) in the correct answer
-            const significantWords = correctWords.filter(word => word.length > 3);
+        const similarityRatio = 1 - distance / maxLength;
 
-            // Count how many significant words from the correct answer appear in the user's answer
-            let matchCount = 0;
-            for (const word of significantWords) {
-                if (userWords.some(userWord => this.levenshteinDistance(userWord, word) <= 2 ||
-                    userWord.includes(word) ||
-                    word.includes(userWord))) {
-                    matchCount++;
-                }
-            }
-
-            // If more than half of significant words match, consider it correct
-            if (significantWords.length > 0 &&
-                matchCount >= Math.ceil(significantWords.length * 0.5)) {
-                return true;
-            }
-        }
+        // Accept answers that are at least 80% similar
+        return similarityRatio >= 0.8;
     }
 
     /**
