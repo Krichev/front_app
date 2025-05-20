@@ -15,8 +15,7 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import VoiceRecorder from '../components/VoiceRecorder';
+import VoiceRecorderV2 from "../components/VoiceRecorderV2.tsx";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -65,6 +64,9 @@ const WWWGamePlayScreen: React.FC = () => {
     const [currentQuestion, setCurrentQuestion] = useState('');
     const [currentAnswer, setCurrentAnswer] = useState('');
     const [showHint, setShowHint] = useState(false);
+
+    const [sttMode, setSttMode] = useState<'streaming' | 'file-upload' | 'auto'>('auto');
+    const [partialDiscussion, setPartialDiscussion] = useState('');
 
     // Voice recording state
     const [isVoiceRecordingEnabled, setIsVoiceRecordingEnabled] = useState(difficulty === 'Easy');
@@ -328,6 +330,7 @@ const WWWGamePlayScreen: React.FC = () => {
                     </View>
                 );
 
+            // Update the discussion phase rendering:
             case 'discussion':
                 return (
                     <View style={styles.phaseContainer}>
@@ -349,26 +352,54 @@ const WWWGamePlayScreen: React.FC = () => {
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
 
-                        {/* Voice Recording for Easy Difficulty */}
+                        {/* Enhanced Voice Recording */}
                         {isVoiceRecordingEnabled && (
                             <View style={styles.voiceRecorderContainer}>
-                                <VoiceRecorder
+                                <VoiceRecorderV2
                                     onTranscription={handleVoiceTranscription}
-                                    isActive={gamePhase === 'discussion' || (gamePhase === 'answer' && isRecordingVoiceAnswer)}
-                                    language={recognitionLanguage}
-                                    onLanguageToggle={toggleRecognitionLanguage}
+                                    onPartialTranscription={(text) => {
+                                        setPartialDiscussion(text);
+                                        // Optionally show partial transcription in real-time
+                                    }}
+                                    serverUrl="http://10.0.2.2:8080/api/speech/recognize"
+                                    language="en-US"
+                                    mode={sttMode}
+                                    useCase="discussion"
+                                    allowModeSwitch={true}
+                                    maxRecordingDuration={roundTime * 1000}
+                                    isActive={gamePhase === 'discussion'}
+                                    // Add WebSocket props if you have them configured
+                                    // iamToken="your-iam-token"
+                                    // folderId="your-folder-id"
+                                    onError={(error) => {
+                                        console.error('Voice recording error:', error);
+                                        Alert.alert('Voice Recording Error', error);
+                                    }}
                                 />
-                                {voiceTranscription ? (
+
+                                {/* Show partial transcription for streaming mode */}
+                                {partialDiscussion && sttMode === 'streaming' && (
+                                    <View style={styles.partialTranscriptionContainer}>
+                                        <Text style={styles.partialLabel}>Live transcription:</Text>
+                                        <Text style={styles.partialText}>{partialDiscussion}</Text>
+                                    </View>
+                                )}
+
+                                {/* Show last complete transcription */}
+                                {voiceTranscription && (
                                     <View style={styles.transcriptionContainer}>
-                                        <Text style={styles.transcriptionLabel}>Last Transcription:</Text>
+                                        <Text style={styles.transcriptionLabel}>Last complete transcription:</Text>
                                         <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
                                     </View>
-                                ) : null}
+                                )}
                             </View>
                         )}
 
                         <View style={styles.notesContainer}>
-                            <Text style={styles.notesLabel}>Discussion Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}</Text>
+                            <Text style={styles.notesLabel}>
+                                Discussion Notes
+                                {isVoiceRecordingEnabled ? ` (${sttMode} mode active)` : ''}
+                            </Text>
                             <TextInput
                                 style={styles.notesInput}
                                 multiline
@@ -427,69 +458,36 @@ const WWWGamePlayScreen: React.FC = () => {
 
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Team Answer:</Text>
-                            <View style={styles.answerInputContainer}>
-                                <View style={styles.languageToggleContainer}>
-                                    <Text style={styles.languageToggleLabel}>Answer Language:</Text>
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.languageToggleButton,
-                                            { backgroundColor: recognitionLanguage === 'en' ? '#2196F3' : '#4CAF50' }
-                                        ]}
-                                        onPress={toggleRecognitionLanguage}
-                                    >
-                                        <Text style={styles.languageToggleText}>
-                                            {recognitionLanguage === 'en' ? 'English' : 'Russian'}
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
-                                <TextInput
-                                    style={styles.answerInput}
-                                    value={teamAnswer}
-                                    onChangeText={setTeamAnswer}
-                                    placeholder="Enter your team's final answer (Russian accepted)"
-                                    placeholderTextColor="#999"
-                                    autoCorrect={false}
-                                    // These props help with proper display of Cyrillic characters
-                                    autoCapitalize="none"
-                                    // Support Russian keyboard input
-                                    keyboardType="default"
-                                />
-                                <View style={styles.languageIndicator}>
-                                    <Text style={styles.languageText}>EN/RU</Text>
-                                </View>
-                            </View>
-                            <Text style={styles.answerHintText}>
-                                Answers in both English and Russian are accepted.
-                            </Text>
+                            <TextInput
+                                style={styles.answerInput}
+                                value={teamAnswer}
+                                onChangeText={setTeamAnswer}
+                                placeholder="Enter your team's final answer"
+                            />
                         </View>
 
-                        {/* Voice Answer Option */}
+                        {/* Enhanced Voice Answer Option */}
                         <View style={styles.voiceAnswerContainer}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.voiceAnswerButton,
-                                    isRecordingVoiceAnswer && styles.voiceAnswerButtonActive
-                                ]}
-                                onPress={toggleVoiceAnswer}
-                            >
-                                <MaterialCommunityIcons
-                                    name={isRecordingVoiceAnswer ? "stop" : "microphone"}
-                                    size={24}
-                                    color="white"
-                                />
-                                <Text style={styles.voiceAnswerButtonText}>
-                                    {isRecordingVoiceAnswer ? "Stop Recording" : "Record Answer"}
-                                </Text>
-                            </TouchableOpacity>
+                            <Text style={styles.voiceAnswerLabel}>Or record your answer:</Text>
+                            <VoiceRecorderV2
+                                onTranscription={(text) => {
+                                    setTeamAnswer(text);
+                                    setVoiceTranscription(text);
+                                }}
+                                serverUrl="http://10.0.2.2:8080/api/speech/recognize"
+                                language="en-US"
+                                mode="file-upload" // Use file mode for final answers
+                                useCase="final-answer"
+                                allowModeSwitch={false} // Don't allow switching for answers
+                                maxRecordingDuration={30000} // 30 seconds for answers
+                                isActive={gamePhase === 'answer'}
+                                onError={(error: string | undefined) => {
+                                    console.error('Voice answer error:', error);
+                                    Alert.alert('Voice Answer Error', error);
+                                }}
+                            />
 
-                            {isRecordingVoiceAnswer && (
-                                <VoiceRecorder
-                                    onTranscription={handleVoiceTranscription}
-                                    isActive={isRecordingVoiceAnswer}
-                                />
-                            )}
-
-                            {isRecordingVoiceAnswer && voiceTranscription && (
+                            {voiceTranscription && (
                                 <View style={styles.transcriptionContainer}>
                                     <Text style={styles.transcriptionLabel}>Voice Answer:</Text>
                                     <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
@@ -1012,7 +1010,32 @@ const styles = StyleSheet.create({
     languageToggleText: {
         color: 'white',
         fontWeight: 'bold',
-    }
+    },
+    partialTranscriptionContainer: {
+        marginTop: 8,
+        padding: 8,
+        backgroundColor: '#fff9c4',
+        borderRadius: 4,
+        borderLeftWidth: 3,
+        borderLeftColor: '#FF9800',
+    },
+    partialLabel: {
+        fontSize: 12,
+        color: '#e65100',
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    partialText: {
+        fontSize: 12,
+        color: '#666',
+        fontStyle: 'italic',
+    },
+    voiceAnswerLabel: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
 });
 
 export default WWWGamePlayScreen;
