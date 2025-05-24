@@ -1,4 +1,4 @@
-// src/components/VoiceRecorderV2.tsx
+// src/components/VoiceRecorderV2.tsx For streaming mode
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Alert, Animated, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';

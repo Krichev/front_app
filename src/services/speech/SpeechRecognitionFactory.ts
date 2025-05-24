@@ -1,149 +1,88 @@
 // src/services/speech/SpeechRecognitionFactory.ts
-import {
-    FileUploadEvents,
-    SpeechRecognitionConfig,
-    SpeechRecognitionService,
-    StreamingEvents
-} from './SpeechRecognitionInterface';
-import {FileSpeechRecognitionService} from './FileSpeechRecognitionService';
-import {StreamingSpeechRecognitionService} from './StreamingSpeechRecognitionService'; // Your existing WebSocket implementation
+import {StreamingConfig, StreamingSpeechRecognitionService} from './StreamingSpeechRecognitionService';
+import {speechConfigV2} from "../../config/SpeechConfigV2.ts";
 
+/**
+ * Factory class for creating and managing speech recognition services
+ */
 export class SpeechRecognitionFactory {
     /**
-     * Create a speech recognition service based on the configuration
+     * Get the streaming speech recognition service instance
+     * @param config Optional configuration to override defaults
      */
-    static createService(
-        config: SpeechRecognitionConfig,
-        events: StreamingEvents | FileUploadEvents
-    ): SpeechRecognitionService {
-        switch (config.mode) {
-            case 'streaming':
-                return new StreamingSpeechRecognitionService(config, events as StreamingEvents);
-            case 'file-upload':
-                return new FileSpeechRecognitionServiceWrapper(config, events as FileUploadEvents);
-            default:
-                throw new Error(`Unsupported speech recognition mode: ${config.mode}`);
+    public static getStreamingService(config?: Partial<StreamingConfig>): StreamingSpeechRecognitionService {
+        // Get the singleton instance
+        const service = StreamingSpeechRecognitionService.getInstance();
+
+        // Initialize with merged config if provided
+        if (config) {
+            service.initialize(config).catch(error => {
+                console.error('Error initializing speech recognition service:', error);
+            });
         }
+
+        return service;
     }
 
     /**
-     * Get recommended configuration based on use case
+     * Create a configured streaming service based on environment and language
+     * @param language Language code (e.g., 'en-US', 'fr-FR')
      */
-    static getRecommendedConfig(useCase: 'real-time' | 'final-answer' | 'discussion'): Partial<SpeechRecognitionConfig> {
-        switch (useCase) {
-            case 'real-time':
-                return {
-                    mode: 'streaming',
-                    language: 'en-US',
-                    sampleRate: 16000,
-                    quality: 'medium',
-                };
-            case 'final-answer':
-                return {
-                    mode: 'file-upload',
-                    language: 'en-US',
-                    sampleRate: 16000,
-                    quality: 'high',
-                    maxRecordingDuration: 30000, // 30 seconds
-                };
-            case 'discussion':
-                return {
-                    mode: 'streaming', // Better for continuous discussion
-                    language: 'en-US',
-                    sampleRate: 16000,
-                    quality: 'medium',
-                };
-            default:
-                return {
-                    mode: 'file-upload',
-                    language: 'en-US',
-                    sampleRate: 16000,
-                    quality: 'medium',
-                };
-        }
+    public static createConfiguredService(language?: string): StreamingSpeechRecognitionService {
+        // Get the base config from the config service
+        const baseConfig = speechConfigV2.getConfig();
+
+        // Create streaming config from the base config
+        const streamingConfig: Partial<StreamingConfig> = {
+            language: language || baseConfig.recognition?.language || 'en-US',
+            sampleRate: baseConfig.audio?.sampleRate,
+            maxDuration: baseConfig.recognition?.maxDuration,
+            autoReconnect: true,
+            maxReconnectAttempts: baseConfig.webSocket?.reconnectAttempts,
+            serverUrl: baseConfig.webSocket?.url,
+        };
+
+        // Get and initialize the service
+        return this.getStreamingService(streamingConfig);
     }
-}
 
-// Wrapper to adapt FileSpeechRecognitionService to the interface
-class FileSpeechRecognitionServiceWrapper implements SpeechRecognitionService {
-    private service: FileSpeechRecognitionService;
-    private events: FileUploadEvents;
-
-    constructor(config: SpeechRecognitionConfig, events: FileUploadEvents) {
-        this.events = events;
-        this.service = new FileSpeechRecognitionService({
-            serverUrl: config.serverUrl || '',
-            language: config.language,
-            sampleRate: config.sampleRate,
-            quality: config.quality,
+    /**
+     * Create a service optimized for short voice commands
+     */
+    public static createCommandRecognitionService(): StreamingSpeechRecognitionService {
+        return this.getStreamingService({
+            maxDuration: 10, // Short 10-second limit for commands
+            autoReconnect: false, // No need to reconnect for short commands
+            serverUrl: speechConfigV2.getConfig().webSocket?.url,
         });
     }
 
-    async initialize(): Promise<boolean> {
-        try {
-            return await this.service.initialize();
-        } catch (error) {
-            if (this.events.onError) {
-                this.events.onError(error instanceof Error ? error.message : 'Initialization failed');
-            }
-            return false;
-        }
+    /**
+     * Create a service optimized for long-form dictation
+     */
+    public static createDictationService(language: string = 'en-US'): StreamingSpeechRecognitionService {
+        return this.getStreamingService({
+            language,
+            maxDuration: 300, // 5 minutes
+            autoReconnect: true,
+            maxReconnectAttempts: 5,
+            serverUrl: speechConfigV2.getConfig().webSocket?.url,
+        });
     }
 
-    async startRecording(): Promise<void> {
-        try {
-            await this.service.startRecording();
-        } catch (error) {
-            if (this.events.onError) {
-                this.events.onError(error instanceof Error ? error.message : 'Failed to start recording');
-            }
-        }
-    }
-
-    async stopRecording(): Promise<void> {
-        try {
-            if (this.events.onProcessingStart) {
-                this.events.onProcessingStart();
-            }
-
-            const filePath = await this.service.stopRecording();
-            if (filePath) {
-                const result = await this.service.recognizeAudioFile(filePath);
-
-                if (result.success && result.recognizedText && this.events.onTranscription) {
-                    this.events.onTranscription(result.recognizedText);
-                } else if (!result.success && this.events.onError) {
-                    this.events.onError(result.errorMessage || 'Recognition failed');
-                }
-            }
-        } catch (error) {
-            if (this.events.onError) {
-                this.events.onError(error instanceof Error ? error.message : 'Failed to stop recording');
-            }
-        } finally {
-            if (this.events.onProcessingEnd) {
-                this.events.onProcessingEnd();
-            }
-        }
-    }
-
-    async cleanup(): Promise<void> {
-        await this.service.cleanup();
-    }
-
-    isRecording(): boolean {
-        return this.service.getRecordingStatus().isRecording;
-    }
-
-    isInitialized(): boolean {
-        return this.service.getRecordingStatus().isInitialized;
-    }
-
-    getStatus() {
-        const status = this.service.getRecordingStatus();
-        return {
-            ...status,
-            mode: 'file-upload' as const,
-        };
+    /**
+     * Create a service optimized for the WWW game's discussion phase
+     */
+    public static createWWWGameDiscussionService(
+        roundTime: number = 60,
+        language: string = 'en-US'
+    ): StreamingSpeechRecognitionService {
+        return this.getStreamingService({
+            language,
+            maxDuration: roundTime, // Use the game's round time
+            autoReconnect: true,
+            maxReconnectAttempts: 3,
+            serverUrl: speechConfigV2.getConfig().webSocket?.url,
+        });
     }
 }
