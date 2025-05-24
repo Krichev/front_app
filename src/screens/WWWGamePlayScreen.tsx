@@ -4,6 +4,7 @@ import {
     Alert,
     Animated,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -15,7 +16,9 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
-import VoiceRecorderV2 from "../components/VoiceRecorderV2.tsx";
+import {FileService} from "../services/speech/FileService.ts";
+import VoiceRecorderWithFile from "../components/VoiceRecorderWithFile.tsx";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -84,6 +87,26 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Modal visibility
     const [showEndGameModal, setShowEndGameModal] = useState(false);
+
+    useEffect(() => {
+        FileService.initialize().catch(console.error);
+
+        // Cleanup old files on mount (optional)
+        FileService.cleanupOldFiles(3).catch(console.error); // Keep files for 3 days
+    }, []);
+
+    // REST API configuration
+    const speechAPIConfig = {
+        // For development with mock server
+        endpoint: __DEV__
+            ? Platform.OS === 'android'
+                ? 'http://10.0.2.2:3001/transcribe'
+                : 'http://localhost:3001/transcribe'
+            : 'https://your-production-api.com/speech-to-text',
+        apiKey: 'your-api-key',
+        language: 'en-US',
+    };
+
 
     // Initialize game with questions and round data
     useEffect(() => {
@@ -209,12 +232,32 @@ const WWWGamePlayScreen: React.FC = () => {
         setVoiceTranscription('');
     };
 
-    // Handle voice transcription updates
-    const handleVoiceTranscription = (text: string) => {
+    // // Handle voice transcription updates
+    // const handleVoiceTranscription = (text: string) => {
+    //     if (gamePhase === 'discussion') {
+    //         // For discussion phase, append to discussion notes
+    //         setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
+    //         setVoiceTranscription(text);
+    //     } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
+    //         // For answer phase, set as the team answer
+    //         setTeamAnswer(text);
+    //         setVoiceTranscription(text);
+    //     }
+    // };
+
+    // Enhanced voice transcription handler
+    const handleVoiceTranscription = async (text: string) => {
         if (gamePhase === 'discussion') {
             // For discussion phase, append to discussion notes
-            setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
+            setDiscussionNotes(prev => {
+                const newNotes = prev ? `${prev}\n${text}` : text;
+                return newNotes;
+            });
             setVoiceTranscription(text);
+
+            // Optional: Get all transcriptions for this game session
+            const transcriptions = await FileService.getTranscriptions();
+            console.log(`Total transcriptions this session: ${transcriptions.length}`);
         } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
             // For answer phase, set as the team answer
             setTeamAnswer(text);
@@ -312,6 +355,27 @@ const WWWGamePlayScreen: React.FC = () => {
         return WWWGameService.generateRoundFeedback(currentRoundData, enableAIHost);
     };
 
+    const exportGameSession = async () => {
+        try {
+            const transcriptions = await FileService.getTranscriptions();
+            const gameTranscriptions = transcriptions.filter(t =>
+                // Filter transcriptions from this game session
+                new Date(t.timestamp).getTime() > gameStartTime
+            );
+
+            // Export all audio files with transcriptions
+            for (const trans of gameTranscriptions) {
+                const exported = await FileService.exportAudioWithTranscription(trans.audioFilePath);
+                console.log('Exported:', exported);
+            }
+
+            Alert.alert('Success', 'Game audio exported successfully');
+        } catch (error) {
+            console.error('Error exporting game session:', error);
+            Alert.alert('Error', 'Failed to export game audio');
+        }
+    };
+
     // Render game UI based on phase
     const renderGamePhase = () => {
         switch (gamePhase) {
@@ -355,40 +419,19 @@ const WWWGamePlayScreen: React.FC = () => {
                         {/* Enhanced Voice Recording */}
                         {isVoiceRecordingEnabled && (
                             <View style={styles.voiceRecorderContainer}>
-                                <VoiceRecorderV2
+                                <VoiceRecorderWithFile
                                     onTranscription={handleVoiceTranscription}
-                                    onPartialTranscription={(text) => {
-                                        setPartialDiscussion(text);
-                                        // Optionally show partial transcription in real-time
-                                    }}
-                                    serverUrl="http://10.0.2.2:8080/api/speech/recognize"
-                                    language="en-US"
-                                    mode={sttMode}
-                                    useCase="discussion"
-                                    allowModeSwitch={true}
-                                    maxRecordingDuration={roundTime * 1000}
-                                    isActive={gamePhase === 'discussion'}
-                                    // Add WebSocket props if you have them configured
-                                    // iamToken="your-iam-token"
-                                    // folderId="your-folder-id"
-                                    onError={(error) => {
-                                        console.error('Voice recording error:', error);
-                                        Alert.alert('Voice Recording Error', error);
-                                    }}
+                                    isActive={gamePhase === 'discussion' && isTimerRunning}
+                                    restEndpoint={speechAPIConfig.endpoint}
+                                    apiKey={speechAPIConfig.apiKey}
+                                    language={speechAPIConfig.language}
+                                    maxRecordingDuration={roundTime} // Use round time as max duration
                                 />
 
-                                {/* Show partial transcription for streaming mode */}
-                                {partialDiscussion && sttMode === 'streaming' && (
-                                    <View style={styles.partialTranscriptionContainer}>
-                                        <Text style={styles.partialLabel}>Live transcription:</Text>
-                                        <Text style={styles.partialText}>{partialDiscussion}</Text>
-                                    </View>
-                                )}
-
-                                {/* Show last complete transcription */}
+                                {/* Optional: Show transcription history */}
                                 {voiceTranscription && (
-                                    <View style={styles.transcriptionContainer}>
-                                        <Text style={styles.transcriptionLabel}>Last complete transcription:</Text>
+                                    <View style={styles.transcriptionPreview}>
+                                        <Text style={styles.transcriptionLabel}>Last transcription:</Text>
                                         <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
                                     </View>
                                 )}
@@ -426,6 +469,40 @@ const WWWGamePlayScreen: React.FC = () => {
                     <View style={styles.phaseContainer}>
                         <Text style={styles.answerTitle}>Submit Your Answer</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
+
+                        {/* Voice Answer Option */}
+                        {!isRecordingVoiceAnswer ? (
+                            <TouchableOpacity
+                                style={styles.voiceAnswerButton}
+                                onPress={() => setIsRecordingVoiceAnswer(true)}
+                            >
+                                <MaterialCommunityIcons name="microphone" size={24} color="white" />
+                                <Text style={styles.voiceAnswerButtonText}>Record Voice Answer</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={styles.voiceAnswerContainer}>
+                                <VoiceRecorderWithFile
+                                    onTranscription={(text) => {
+                                        setTeamAnswer(text);
+                                        setVoiceTranscription(text);
+                                        setIsRecordingVoiceAnswer(false); // Auto-stop after transcription
+                                    }}
+                                    isActive={isRecordingVoiceAnswer}
+                                    restEndpoint={speechAPIConfig.endpoint}
+                                    apiKey={speechAPIConfig.apiKey}
+                                    language={speechAPIConfig.language}
+                                    maxRecordingDuration={30} // 30 seconds max for answers
+                                />
+
+                                <TouchableOpacity
+                                    style={styles.cancelRecordingButton}
+                                    onPress={() => setIsRecordingVoiceAnswer(false)}
+                                >
+                                    <Text style={styles.cancelRecordingText}>Cancel Recording</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
 
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Select Player Answering:</Text>
@@ -466,34 +543,38 @@ const WWWGamePlayScreen: React.FC = () => {
                             />
                         </View>
 
-                        {/* Enhanced Voice Answer Option */}
-                        <View style={styles.voiceAnswerContainer}>
-                            <Text style={styles.voiceAnswerLabel}>Or record your answer:</Text>
-                            <VoiceRecorderV2
-                                onTranscription={(text) => {
-                                    setTeamAnswer(text);
-                                    setVoiceTranscription(text);
-                                }}
-                                serverUrl="http://10.0.2.2:8080/api/speech/recognize"
-                                language="en-US"
-                                mode="file-upload" // Use file mode for final answers
-                                useCase="final-answer"
-                                allowModeSwitch={false} // Don't allow switching for answers
-                                maxRecordingDuration={30000} // 30 seconds for answers
-                                isActive={gamePhase === 'answer'}
-                                onError={(error: string | undefined) => {
-                                    console.error('Voice answer error:', error);
-                                    Alert.alert('Voice Answer Error', error);
-                                }}
-                            />
+                        {/* Voice Answer Option */}
+                        {!isRecordingVoiceAnswer ? (
+                            <TouchableOpacity
+                                style={styles.voiceAnswerButton}
+                                onPress={() => setIsRecordingVoiceAnswer(true)}
+                            >
+                                <MaterialCommunityIcons name="microphone" size={24} color="white" />
+                                <Text style={styles.voiceAnswerButtonText}>Record Voice Answer</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={styles.voiceAnswerContainer}>
+                                <VoiceRecorderWithFile
+                                    onTranscription={(text) => {
+                                        setTeamAnswer(text);
+                                        setVoiceTranscription(text);
+                                        setIsRecordingVoiceAnswer(false); // Auto-stop after transcription
+                                    }}
+                                    isActive={isRecordingVoiceAnswer}
+                                    restEndpoint={speechAPIConfig.endpoint}
+                                    apiKey={speechAPIConfig.apiKey}
+                                    language={speechAPIConfig.language}
+                                    maxRecordingDuration={30} // 30 seconds max for answers
+                                />
 
-                            {voiceTranscription && (
-                                <View style={styles.transcriptionContainer}>
-                                    <Text style={styles.transcriptionLabel}>Voice Answer:</Text>
-                                    <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
-                                </View>
-                            )}
-                        </View>
+                                <TouchableOpacity
+                                    style={styles.cancelRecordingButton}
+                                    onPress={() => setIsRecordingVoiceAnswer(false)}
+                                >
+                                    <Text style={styles.cancelRecordingText}>Cancel Recording</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                         {enableAIHost && (
                             <TouchableOpacity
@@ -1035,6 +1116,20 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 8,
         textAlign: 'center',
+    },
+    transcriptionPreview: {
+        marginTop: 12,
+        padding: 12,
+        backgroundColor: '#e8f5e9',
+        borderRadius: 8,
+    },
+    cancelRecordingButton: {
+        marginTop: 12,
+        padding: 8,
+    },
+    cancelRecordingText: {
+        color: '#F44336',
+        fontSize: 14,
     },
 });
 

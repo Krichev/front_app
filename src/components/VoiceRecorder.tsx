@@ -1,207 +1,273 @@
 // src/components/VoiceRecorder.tsx
-import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useRef, useState} from 'react';
+import {ActivityIndicator, PermissionsAndroid, Platform, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {speechEvents, useStreamingSpeechRecognition} from '../services/speech/StreamingSpeechRecognitionService';
+import AudioRecord from 'react-native-audio-record';
+import {Buffer} from 'buffer';
 
 interface VoiceRecorderProps {
     onTranscription: (text: string) => void;
-    isActive?: boolean;
+    isActive: boolean;
+    restEndpoint?: string;
+    apiKey?: string;
     language?: string;
-    maxDuration?: number;
-    buttonSize?: number;
-    showTranscription?: boolean;
-    customStyles?: {
-        container?: object;
-        button?: object;
-        activeButton?: object;
-        transcriptionContainer?: object;
-        transcriptionText?: object;
-    };
 }
 
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
                                                          onTranscription,
-                                                         isActive = false,
+                                                         isActive,
+                                                         restEndpoint = 'https://your-stt-api.com/transcribe', // Replace with your actual endpoint
+                                                         apiKey,
                                                          language = 'en-US',
-                                                         maxDuration = 60,
-                                                         buttonSize = 60,
-                                                         showTranscription = false,
-                                                         customStyles = {},
                                                      }) => {
-    const [transcription, setTranscription] = useState('');
-    const [isInitializing, setIsInitializing] = useState(true);
-    const [isListening, setIsListening] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [audioData, setAudioData] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [recordingTime, setRecordingTime] = useState(0);
-    const [visualFeedback, setVisualFeedback] = useState(0);
+    const [hasPermission, setHasPermission] = useState(false);
+    const recordingInterval = useRef<NodeJS.Timeout | null>(null);
+    const audioChunks = useRef<string[]>([]);
 
-    // Initialize the speech recognition service
-    const { startRecording, stopRecording, isRecording } = useStreamingSpeechRecognition(
-        (result) => {
-            // Update transcription state
-            setTranscription(result.text);
-
-            // Call the parent component's callback
-            if (result.text.trim()) {
-                onTranscription(result.text);
+    // Request microphone permissions
+    const requestPermissions = async (): Promise<boolean> => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+                    {
+                        title: 'Microphone Permission',
+                        message: 'App needs access to your microphone for voice recording',
+                        buttonNeutral: 'Ask Me Later',
+                        buttonNegative: 'Cancel',
+                        buttonPositive: 'OK',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.error('Failed to request permission:', err);
+                return false;
             }
-
-            // Update visual feedback based on confidence
-            if (result.confidence) {
-                setVisualFeedback(result.confidence);
-            }
-        },
-        (error) => {
-            console.error('Speech recognition error:', error);
-            setError(error.message || 'Speech recognition error');
-        },
-        {
-            language: language,
-            maxDuration: maxDuration,
-            autoReconnect: true,
+        } else {
+            // For iOS, permissions are handled through info.plist
+            return true;
         }
-    );
+    };
 
-    // Setup effect for initialization state
-    useEffect(() => {
-        const initTimeout = setTimeout(() => {
-            setIsInitializing(false);
-        }, 1000);
+    // Initialize audio recording
+    const initializeRecording = async () => {
+        const hasAudioPermission = await requestPermissions();
+        setHasPermission(hasAudioPermission);
 
-        // Listen for initialization events
-        const onInitialized = () => {
-            setIsInitializing(false);
-            clearTimeout(initTimeout);
+        if (!hasAudioPermission) {
+            setError('Microphone permission denied');
+            return false;
+        }
+
+        const options = {
+            sampleRate: 16000,
+            channels: 1,
+            bitsPerSample: 16,
+            audioSource: 6, // MIC source
+            wavFile: '', // No file saving (streaming only)
         };
 
-        speechEvents.on('initialized', onInitialized);
+        try {
+            await AudioRecord.init(options);
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize audio recording:', error);
+            setError('Failed to initialize audio recording');
+            return false;
+        }
+    };
 
-        // Cleanup
+    // Send audio data to REST API for transcription
+    const sendAudioToAPI = async (audioBase64: string) => {
+        try {
+            setIsProcessing(true);
+
+            // Convert base64 to blob
+            const audioBuffer = Buffer.from(audioBase64, 'base64');
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('audio', {
+                uri: `data:audio/wav;base64,${audioBase64}`,
+                type: 'audio/wav',
+                name: 'recording.wav',
+            } as any);
+            formData.append('language', language);
+
+            // Make REST API call
+            const response = await fetch(restEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Authorization': apiKey ? `Bearer ${apiKey}` : '',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+
+            // Handle the transcription result
+            if (result.transcription || result.text) {
+                const transcribedText = result.transcription || result.text;
+                onTranscription(transcribedText);
+                setError(null);
+            } else {
+                throw new Error('No transcription in response');
+            }
+        } catch (error) {
+            console.error('Error sending audio to API:', error);
+            setError('Failed to transcribe audio');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    // Alternative: Send audio chunks periodically for streaming-like behavior
+    const sendAudioChunks = async () => {
+        if (audioChunks.current.length === 0) return;
+
+        // Combine audio chunks
+        const combinedAudio = audioChunks.current.join('');
+        audioChunks.current = []; // Clear chunks
+
+        await sendAudioToAPI(combinedAudio);
+    };
+
+    // Start recording
+    const startRecording = async () => {
+        const initialized = await initializeRecording();
+        if (!initialized) return;
+
+        try {
+            // Clear previous data
+            audioChunks.current = [];
+            setAudioData([]);
+            setError(null);
+
+            // Set up data handler
+            AudioRecord.on('data', (data: string) => {
+                // Store audio chunks
+                audioChunks.current.push(data);
+            });
+
+            // Start recording
+            AudioRecord.start();
+            setIsRecording(true);
+
+            // Set up periodic sending of audio chunks (every 3 seconds)
+            recordingInterval.current = setInterval(() => {
+                sendAudioChunks();
+            }, 3000);
+        } catch (error) {
+            console.error('Failed to start recording:', error);
+            setError('Failed to start recording');
+        }
+    };
+
+    // Stop recording
+    const stopRecording = async () => {
+        if (!isRecording) return;
+
+        try {
+            // Stop the recording
+            await AudioRecord.stop();
+            setIsRecording(false);
+
+            // Clear interval
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+                recordingInterval.current = null;
+            }
+
+            // Send any remaining audio chunks
+            if (audioChunks.current.length > 0) {
+                await sendAudioChunks();
+            }
+        } catch (error) {
+            console.error('Failed to stop recording:', error);
+            setError('Failed to stop recording');
+        }
+    };
+
+    // Toggle recording
+    const toggleRecording = () => {
+        if (isRecording) {
+            stopRecording();
+        } else {
+            startRecording();
+        }
+    };
+
+    // Clean up on unmount
+    useEffect(() => {
         return () => {
-            clearTimeout(initTimeout);
-            speechEvents.off('initialized', onInitialized);
+            if (isRecording) {
+                stopRecording();
+            }
+            if (recordingInterval.current) {
+                clearInterval(recordingInterval.current);
+            }
         };
     }, []);
 
-    // Effect for automatic recording when isActive changes
+    // Auto-start/stop based on isActive prop
     useEffect(() => {
-        if (isActive && !isListening && !isInitializing) {
-            handleStartRecording();
-        } else if (!isActive && isListening) {
-            handleStopRecording();
-        }
-    }, [isActive, isInitializing]);
-
-    // Setup recording timer
-    useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
-
-        if (isListening) {
-            interval = setInterval(() => {
-                setRecordingTime((prevTime) => prevTime + 1);
-            }, 1000);
-        } else if (!isListening) {
-            setRecordingTime(0);
-        }
-
-        return () => {
-            if (interval) {
-                clearInterval(interval);
-            }
-        };
-    }, [isListening]);
-
-    // Handle start recording
-    const handleStartRecording = async () => {
-        try {
-            setError(null);
-            const started = await startRecording();
-            if (started) {
-                setIsListening(true);
-            } else {
-                setError('Failed to start recording');
-            }
-        } catch (err) {
-            setError('Error starting recording');
-            console.error('Error starting recording:', err);
-        }
-    };
-
-    // Handle stop recording
-    const handleStopRecording = () => {
-        try {
+        if (isActive && !isRecording) {
+            startRecording();
+        } else if (!isActive && isRecording) {
             stopRecording();
-            setIsListening(false);
-        } catch (err) {
-            console.error('Error stopping recording:', err);
         }
-    };
-
-    // Toggle recording state
-    const toggleRecording = () => {
-        if (isListening) {
-            handleStopRecording();
-        } else {
-            handleStartRecording();
-        }
-    };
-
-    // Format recording time
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    // Calculate button size based on visual feedback
-    const getButtonSize = () => {
-        // Scale between 0.8 and 1.2 of the original size based on confidence
-        const scaleFactor = 0.8 + (visualFeedback * 0.4);
-        return buttonSize * scaleFactor;
-    };
+    }, [isActive]);
 
     return (
-        <View style={[styles.container, customStyles.container]}>
-            {/* Recording button */}
+        <View style={styles.container}>
             <TouchableOpacity
-                onPress={toggleRecording}
-                disabled={isInitializing}
                 style={[
                     styles.recordButton,
-                    isListening && styles.recordingButton,
-                    customStyles.button,
-                    isListening && customStyles.activeButton,
-                    {
-                        width: getButtonSize(),
-                        height: getButtonSize(),
-                        borderRadius: getButtonSize() / 2,
-                    },
+                    isRecording && styles.recordingButton,
+                    !hasPermission && styles.disabledButton,
                 ]}
+                onPress={toggleRecording}
+                disabled={!hasPermission || isProcessing}
             >
-                {isInitializing ? (
-                    <ActivityIndicator color="white" size="small" />
-                ) : isListening ? (
-                    <MaterialCommunityIcons name="stop" size={buttonSize / 2} color="white" />
+                {isProcessing ? (
+                    <ActivityIndicator size="large" color="white" />
                 ) : (
-                    <MaterialCommunityIcons name="microphone" size={buttonSize / 2} color="white" />
+                    <MaterialCommunityIcons
+                        name={isRecording ? 'stop' : 'microphone'}
+                        size={36}
+                        color="white"
+                    />
                 )}
             </TouchableOpacity>
 
-            {/* Recording timer */}
-            {isListening && (
-                <Text style={styles.timerText}>{formatTime(recordingTime)}</Text>
+            <Text style={styles.statusText}>
+                {isProcessing
+                    ? 'Processing...'
+                    : isRecording
+                        ? 'Recording... Tap to stop'
+                        : 'Tap to start recording'}
+            </Text>
+
+            {error && (
+                <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={20} color="#F44336" />
+                    <Text style={styles.errorText}>{error}</Text>
+                </View>
             )}
 
-            {/* Show error if any */}
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
-            {/* Show transcription if enabled */}
-            {showTranscription && transcription && (
-                <View style={[styles.transcriptionContainer, customStyles.transcriptionContainer]}>
-                    <Text style={[styles.transcriptionText, customStyles.transcriptionText]}>
-                        {transcription}
-                    </Text>
+            {isRecording && (
+                <View style={styles.recordingIndicator}>
+                    <View style={styles.recordingDot} />
+                    <Text style={styles.recordingText}>Recording in progress</Text>
                 </View>
             )}
         </View>
@@ -211,44 +277,62 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 10,
+        padding: 16,
     },
     recordButton: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: '#4CAF50',
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 3,
+        marginBottom: 16,
+        elevation: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 3,
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     recordingButton: {
         backgroundColor: '#F44336',
-        transform: [{ scale: 1.1 }],
     },
-    timerText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: '#555',
-        fontWeight: '500',
+    disabledButton: {
+        backgroundColor: '#BDBDBD',
     },
-    transcriptionContainer: {
-        backgroundColor: '#f0f0f0',
-        padding: 10,
+    statusText: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 8,
+    },
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFEBEE',
+        padding: 12,
         borderRadius: 8,
-        marginTop: 10,
-        width: '100%',
-    },
-    transcriptionText: {
-        fontSize: 14,
-        color: '#333',
+        marginTop: 8,
     },
     errorText: {
         color: '#F44336',
-        marginTop: 8,
-        fontSize: 12,
+        marginLeft: 8,
+        fontSize: 14,
+    },
+    recordingIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    recordingDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#F44336',
+        marginRight: 8,
+        // Add pulsing animation
+    },
+    recordingText: {
+        color: '#F44336',
+        fontSize: 14,
     },
 });
 
