@@ -1,4 +1,4 @@
-// src/navigation/AppNavigator.tsx
+// Updated AppNavigator.tsx with fixed types
 import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -39,8 +39,9 @@ import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
 import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
 import {StateChallenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
 import {AuthNavigationHandler} from "../entities/AuthState/ui/AuthNavigationHandler.tsx";
+import {GameSettings} from "../services/wwwGame";
 
-// Define the types for the navigation parameters
+// FIXED: Updated navigation types with proper parameters
 export type RootStackParamList = {
     Main: { screen?: keyof MainTabParamList; params?: any };
     Home: undefined;
@@ -54,25 +55,17 @@ export type RootStackParamList = {
     CreateWWWQuest: undefined;
     UserProfile: { userId: string };
     EditProfile: { userId: string };
-    // Updated WWWGamePlay type definition with additional parameters
-    WWWGamePlay: {
-        teamName: string;
-        teamMembers: string[];
-        difficulty: string;
-        roundTime: number;
-        roundCount: number;
-        enableAIHost: boolean;
-        challengeId?: string;
-        // Add the missing parameters
-        questionSource?: 'app' | 'user';
-        userQuestions?: any[];
-    };
+    // WWW Game Screens
+    WWWGamePlay: GameSettings;
+    // FIXED: Updated WWWGameResults with all required parameters
     WWWGameResults: {
         teamName: string;
         score: number;
         totalRounds: number;
         roundsData: any[];
-        challengeId?: string;
+        challengeId?: string; // Optional to track completion
+        gameStartTime?: string; // FIXED: Added optional gameStartTime
+        gameDuration?: number; // FIXED: Added optional gameDuration
     };
     QuizResults: {
         challengeId: string;

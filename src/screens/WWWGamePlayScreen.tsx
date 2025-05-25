@@ -1,10 +1,9 @@
-// src/screens/WWWGamePlayScreen.tsx with voice recording capabilities
+// src/screens/WWWGamePlayScreen.tsx - FIXED navigation types
 import React, {useEffect, useRef, useState} from 'react';
 import {
     Alert,
     Animated,
     Modal,
-    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -16,11 +15,10 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
-import {FileService} from "../services/speech/FileService.ts";
-import VoiceRecorderWithFile from "../components/VoiceRecorderWithFile.tsx";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import VoiceRecorder from '../components/VoiceRecorder';
 
-// Define the types for the navigation parameters
+// FIXED: Updated navigation types to match AppNavigator
 type RootStackParamList = {
     WWWGameSetup: undefined;
     WWWGamePlay: GameSettings;
@@ -29,7 +27,9 @@ type RootStackParamList = {
         score: number;
         totalRounds: number;
         roundsData: RoundData[];
-        challengeId?: string;
+        challengeId?: string; // Optional to track completion
+        gameStartTime?: string; // FIXED: Added optional gameStartTime
+        gameDuration?: number; // FIXED: Added optional gameDuration
     };
 };
 
@@ -41,7 +41,6 @@ const WWWGamePlayScreen: React.FC = () => {
     const route = useRoute<WWWGamePlayRouteProp>();
     const navigation = useNavigation<WWWGamePlayNavigationProp>();
 
-    // Extract parameters from route
     const {
         teamName,
         teamMembers,
@@ -68,19 +67,14 @@ const WWWGamePlayScreen: React.FC = () => {
     const [currentAnswer, setCurrentAnswer] = useState('');
     const [showHint, setShowHint] = useState(false);
 
-    const [sttMode, setSttMode] = useState<'streaming' | 'file-upload' | 'auto'>('auto');
-    const [partialDiscussion, setPartialDiscussion] = useState('');
+    // Game timing state - FIXED: Added gameStartTime
+    const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
+    const [roundStartTime, setRoundStartTime] = useState<Date | null>(null);
 
     // Voice recording state
     const [isVoiceRecordingEnabled, setIsVoiceRecordingEnabled] = useState(difficulty === 'Easy');
     const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
     const [voiceTranscription, setVoiceTranscription] = useState('');
-
-    const [recognitionLanguage, setRecognitionLanguage] = useState<'en' | 'ru'>('en');
-
-    const toggleRecognitionLanguage = () => {
-        setRecognitionLanguage(prev => prev === 'en' ? 'ru' : 'en');
-    };
 
     // Animated values
     const timerAnimation = useRef(new Animated.Value(1)).current;
@@ -88,113 +82,55 @@ const WWWGamePlayScreen: React.FC = () => {
     // Modal visibility
     const [showEndGameModal, setShowEndGameModal] = useState(false);
 
-    useEffect(() => {
-        FileService.initialize().catch(console.error);
-
-        // Cleanup old files on mount (optional)
-        FileService.cleanupOldFiles(3).catch(console.error); // Keep files for 3 days
-    }, []);
-
-    // REST API configuration
-    const speechAPIConfig = {
-        // For development with mock server
-        endpoint: __DEV__
-            ? Platform.OS === 'android'
-                ? 'http://10.0.2.2:3001/transcribe'
-                : 'http://localhost:3001/transcribe'
-            : 'https://your-production-api.com/speech-to-text',
-        apiKey: 'your-api-key',
-        language: 'en-US',
-    };
-
-
     // Initialize game with questions and round data
     useEffect(() => {
-        // Use the game service to initialize the game with the appropriate questions
-        console.log("Initializing game with params:", {
-            teamName,
-            teamMembers,
-            difficulty,
-            roundTime,
-            roundCount,
-            enableAIHost,
-            questionSource,
-            userQuestions: userQuestions?.length || 0,  // Log question count for debugging
-        });
-
-        // Choose initialization method based on question source
-        if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
-            console.log("Initializing with user questions:", userQuestions.length);
-
-            // Use user questions
-            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
-                teamName,
-                teamMembers,
-                difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
-                roundTime,
-                roundCount,
-                enableAIHost,
-                userQuestions
-            });
-
-            // Setup first question
-            if (gameQuestions.length > 0) {
-                console.log("First user question:", gameQuestions[0].question.substring(0, 30) + "...");
-                setCurrentQuestion(gameQuestions[0].question);
-                setCurrentAnswer(gameQuestions[0].answer);
-            }
-
-            // Set the initial rounds data
-            setRoundsData(initialRoundsData);
-        }
-        else if (questionSource === 'app' && userQuestions && userQuestions.length > 0) {
-            console.log("Initializing with app questions from db.chgk.info:", userQuestions.length);
-
-            // Important: Use the app questions that were passed via navigation
-            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
-                teamName,
-                teamMembers,
-                difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
-                roundTime,
-                roundCount,
-                enableAIHost,
-                userQuestions  // This is actually appQuestions passed via navigation
-            });
-
-            // Setup first question
-            if (gameQuestions.length > 0) {
-                console.log("First app question:", gameQuestions[0].question.substring(0, 30) + "...");
-                setCurrentQuestion(gameQuestions[0].question);
-                setCurrentAnswer(gameQuestions[0].answer);
-            }
-
-            // Set the initial rounds data
-            setRoundsData(initialRoundsData);
-        }
-        else {
-            console.log("Initializing with default questions (no external questions provided)");
-
-            // Use the default initialization with built-in questions
-            const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame({
+        const initializeGame = () => {
+            let initParams = {
                 teamName,
                 teamMembers,
                 difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
                 roundTime,
                 roundCount,
                 enableAIHost
-            });
+            };
 
-            // Setup first question
-            if (gameQuestions.length > 0) {
-                console.log("First default question:", gameQuestions[0].question.substring(0, 30) + "...");
-                setCurrentQuestion(gameQuestions[0].question);
-                setCurrentAnswer(gameQuestions[0].answer);
+            if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
+                const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
+                    ...initParams,
+                    userQuestions
+                });
+
+                // Setup first question
+                if (gameQuestions.length > 0) {
+                    setCurrentQuestion(gameQuestions[0].question);
+                    setCurrentAnswer(gameQuestions[0].answer);
+                }
+
+                // Set the initial rounds data
+                setRoundsData(initialRoundsData);
+            } else {
+                // Use the default initialization
+                const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame(initParams);
+
+                // Setup first question
+                if (gameQuestions.length > 0) {
+                    setCurrentQuestion(gameQuestions[0].question);
+                    setCurrentAnswer(gameQuestions[0].answer);
+                }
+
+                // Set the initial rounds data
+                setRoundsData(initialRoundsData);
             }
 
-            // Set the initial rounds data
-            setRoundsData(initialRoundsData);
-        }
+            // FIXED: Set game start time when game initializes
+            const startTime = new Date();
+            setGameStartTime(startTime);
+            console.log('Game started at:', startTime.toISOString());
+        };
+
+        initializeGame();
     }, [difficulty, roundCount, teamName, teamMembers, enableAIHost, questionSource, userQuestions]);
+
     // Timer effect
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
@@ -230,34 +166,17 @@ const WWWGamePlayScreen: React.FC = () => {
         setIsTimerRunning(true);
         // Reset voice transcription when starting discussion
         setVoiceTranscription('');
+
+        // FIXED: Track round start time
+        setRoundStartTime(new Date());
     };
 
-    // // Handle voice transcription updates
-    // const handleVoiceTranscription = (text: string) => {
-    //     if (gamePhase === 'discussion') {
-    //         // For discussion phase, append to discussion notes
-    //         setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
-    //         setVoiceTranscription(text);
-    //     } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
-    //         // For answer phase, set as the team answer
-    //         setTeamAnswer(text);
-    //         setVoiceTranscription(text);
-    //     }
-    // };
-
-    // Enhanced voice transcription handler
-    const handleVoiceTranscription = async (text: string) => {
+    // Handle voice transcription updates
+    const handleVoiceTranscription = (text: string) => {
         if (gamePhase === 'discussion') {
             // For discussion phase, append to discussion notes
-            setDiscussionNotes(prev => {
-                const newNotes = prev ? `${prev}\n${text}` : text;
-                return newNotes;
-            });
+            setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
             setVoiceTranscription(text);
-
-            // Optional: Get all transcriptions for this game session
-            const transcriptions = await FileService.getTranscriptions();
-            console.log(`Total transcriptions this session: ${transcriptions.length}`);
         } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
             // For answer phase, set as the team answer
             setTeamAnswer(text);
@@ -313,7 +232,7 @@ const WWWGamePlayScreen: React.FC = () => {
     // Move to next round
     const nextRound = () => {
         // Check if game is over
-        if (currentRound + 1 >= roundCount || currentRound + 1 >= roundsData.length) {
+        if (currentRound + 1 >= roundCount) {
             // End game
             setShowEndGameModal(true);
             return;
@@ -328,52 +247,39 @@ const WWWGamePlayScreen: React.FC = () => {
         setShowHint(false);
         setVoiceTranscription('');
 
-        // Set next question if available
-        const nextRoundIndex = currentRound + 1;
-        if (roundsData[nextRoundIndex]) {
-            setCurrentQuestion(roundsData[nextRoundIndex].question);
-            setCurrentAnswer(roundsData[nextRoundIndex].correctAnswer);
-        }
+        // Set next question
+        setCurrentQuestion(roundsData[currentRound + 1].question);
+        setCurrentAnswer(roundsData[currentRound + 1].correctAnswer);
     };
 
-    // End game and navigate to results
+    // FIXED: End game and navigate to results with proper type safety
     const endGame = () => {
         setShowEndGameModal(false);
-        navigation.navigate('WWWGameResults', {
+
+        // FIXED: Calculate game duration
+        const gameEndTime = new Date();
+        const gameDuration = gameStartTime
+            ? Math.floor((gameEndTime.getTime() - gameStartTime.getTime()) / 1000)
+            : 0;
+
+        // FIXED: Create navigation parameters with proper typing
+        const navigationParams: RootStackParamList['WWWGameResults'] = {
             teamName,
             score,
-            totalRounds: roundsData.length,
+            totalRounds: roundCount,
             roundsData,
-            challengeId // Pass the challengeId to the results screen
-        });
+            ...(challengeId && { challengeId }), // Only include challengeId if it exists
+            gameStartTime: gameStartTime?.toISOString() || gameEndTime.toISOString(),
+            gameDuration
+        };
+
+        navigation.navigate('WWWGameResults', navigationParams);
     };
 
     // AI host feedback
     const getAIFeedback = () => {
         const currentRoundData = roundsData[currentRound];
-        if (!currentRoundData) return '';
         return WWWGameService.generateRoundFeedback(currentRoundData, enableAIHost);
-    };
-
-    const exportGameSession = async () => {
-        try {
-            const transcriptions = await FileService.getTranscriptions();
-            const gameTranscriptions = transcriptions.filter(t =>
-                // Filter transcriptions from this game session
-                new Date(t.timestamp).getTime() > gameStartTime
-            );
-
-            // Export all audio files with transcriptions
-            for (const trans of gameTranscriptions) {
-                const exported = await FileService.exportAudioWithTranscription(trans.audioFilePath);
-                console.log('Exported:', exported);
-            }
-
-            Alert.alert('Success', 'Game audio exported successfully');
-        } catch (error) {
-            console.error('Error exporting game session:', error);
-            Alert.alert('Error', 'Failed to export game audio');
-        }
     };
 
     // Render game UI based on phase
@@ -382,7 +288,7 @@ const WWWGamePlayScreen: React.FC = () => {
             case 'question':
                 return (
                     <View style={styles.phaseContainer}>
-                        <Text style={styles.questionNumber}>Question {currentRound + 1} of {roundsData.length}</Text>
+                        <Text style={styles.questionNumber}>Question {currentRound + 1} of {roundCount}</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
 
                         <TouchableOpacity
@@ -394,7 +300,6 @@ const WWWGamePlayScreen: React.FC = () => {
                     </View>
                 );
 
-            // Update the discussion phase rendering:
             case 'discussion':
                 return (
                     <View style={styles.phaseContainer}>
@@ -416,33 +321,24 @@ const WWWGamePlayScreen: React.FC = () => {
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
 
-                        {/* Enhanced Voice Recording */}
+                        {/* Voice Recording for Easy Difficulty */}
                         {isVoiceRecordingEnabled && (
                             <View style={styles.voiceRecorderContainer}>
-                                <VoiceRecorderWithFile
+                                <VoiceRecorder
                                     onTranscription={handleVoiceTranscription}
-                                    isActive={gamePhase === 'discussion' && isTimerRunning}
-                                    restEndpoint={speechAPIConfig.endpoint}
-                                    apiKey={speechAPIConfig.apiKey}
-                                    language={speechAPIConfig.language}
-                                    maxRecordingDuration={roundTime} // Use round time as max duration
+                                    isActive={gamePhase === 'discussion'}
                                 />
-
-                                {/* Optional: Show transcription history */}
-                                {voiceTranscription && (
-                                    <View style={styles.transcriptionPreview}>
-                                        <Text style={styles.transcriptionLabel}>Last transcription:</Text>
+                                {voiceTranscription ? (
+                                    <View style={styles.transcriptionContainer}>
+                                        <Text style={styles.transcriptionLabel}>Last Transcription:</Text>
                                         <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
                                     </View>
-                                )}
+                                ) : null}
                             </View>
                         )}
 
                         <View style={styles.notesContainer}>
-                            <Text style={styles.notesLabel}>
-                                Discussion Notes
-                                {isVoiceRecordingEnabled ? ` (${sttMode} mode active)` : ''}
-                            </Text>
+                            <Text style={styles.notesLabel}>Discussion Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}</Text>
                             <TextInput
                                 style={styles.notesInput}
                                 multiline
@@ -469,40 +365,6 @@ const WWWGamePlayScreen: React.FC = () => {
                     <View style={styles.phaseContainer}>
                         <Text style={styles.answerTitle}>Submit Your Answer</Text>
                         <Text style={styles.question}>{currentQuestion}</Text>
-
-                        {/* Voice Answer Option */}
-                        {!isRecordingVoiceAnswer ? (
-                            <TouchableOpacity
-                                style={styles.voiceAnswerButton}
-                                onPress={() => setIsRecordingVoiceAnswer(true)}
-                            >
-                                <MaterialCommunityIcons name="microphone" size={24} color="white" />
-                                <Text style={styles.voiceAnswerButtonText}>Record Voice Answer</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <View style={styles.voiceAnswerContainer}>
-                                <VoiceRecorderWithFile
-                                    onTranscription={(text) => {
-                                        setTeamAnswer(text);
-                                        setVoiceTranscription(text);
-                                        setIsRecordingVoiceAnswer(false); // Auto-stop after transcription
-                                    }}
-                                    isActive={isRecordingVoiceAnswer}
-                                    restEndpoint={speechAPIConfig.endpoint}
-                                    apiKey={speechAPIConfig.apiKey}
-                                    language={speechAPIConfig.language}
-                                    maxRecordingDuration={30} // 30 seconds max for answers
-                                />
-
-                                <TouchableOpacity
-                                    style={styles.cancelRecordingButton}
-                                    onPress={() => setIsRecordingVoiceAnswer(false)}
-                                >
-                                    <Text style={styles.cancelRecordingText}>Cancel Recording</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
 
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Select Player Answering:</Text>
@@ -544,37 +406,38 @@ const WWWGamePlayScreen: React.FC = () => {
                         </View>
 
                         {/* Voice Answer Option */}
-                        {!isRecordingVoiceAnswer ? (
+                        <View style={styles.voiceAnswerContainer}>
                             <TouchableOpacity
-                                style={styles.voiceAnswerButton}
-                                onPress={() => setIsRecordingVoiceAnswer(true)}
+                                style={[
+                                    styles.voiceAnswerButton,
+                                    isRecordingVoiceAnswer && styles.voiceAnswerButtonActive
+                                ]}
+                                onPress={toggleVoiceAnswer}
                             >
-                                <MaterialCommunityIcons name="microphone" size={24} color="white" />
-                                <Text style={styles.voiceAnswerButtonText}>Record Voice Answer</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <View style={styles.voiceAnswerContainer}>
-                                <VoiceRecorderWithFile
-                                    onTranscription={(text) => {
-                                        setTeamAnswer(text);
-                                        setVoiceTranscription(text);
-                                        setIsRecordingVoiceAnswer(false); // Auto-stop after transcription
-                                    }}
-                                    isActive={isRecordingVoiceAnswer}
-                                    restEndpoint={speechAPIConfig.endpoint}
-                                    apiKey={speechAPIConfig.apiKey}
-                                    language={speechAPIConfig.language}
-                                    maxRecordingDuration={30} // 30 seconds max for answers
+                                <MaterialCommunityIcons
+                                    name={isRecordingVoiceAnswer ? "stop" : "microphone"}
+                                    size={24}
+                                    color="white"
                                 />
+                                <Text style={styles.voiceAnswerButtonText}>
+                                    {isRecordingVoiceAnswer ? "Stop Recording" : "Record Answer"}
+                                </Text>
+                            </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    style={styles.cancelRecordingButton}
-                                    onPress={() => setIsRecordingVoiceAnswer(false)}
-                                >
-                                    <Text style={styles.cancelRecordingText}>Cancel Recording</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                            {isRecordingVoiceAnswer && (
+                                <VoiceRecorder
+                                    onTranscription={handleVoiceTranscription}
+                                    isActive={isRecordingVoiceAnswer}
+                                />
+                            )}
+
+                            {isRecordingVoiceAnswer && voiceTranscription && (
+                                <View style={styles.transcriptionContainer}>
+                                    <Text style={styles.transcriptionLabel}>Voice Answer:</Text>
+                                    <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
+                                </View>
+                            )}
+                        </View>
 
                         {enableAIHost && (
                             <TouchableOpacity
@@ -606,14 +469,6 @@ const WWWGamePlayScreen: React.FC = () => {
 
             case 'feedback':
                 const currentRoundData = roundsData[currentRound];
-                if (!currentRoundData) {
-                    return (
-                        <View style={styles.phaseContainer}>
-                            <Text>No data available for this round</Text>
-                        </View>
-                    );
-                }
-
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.feedbackTitle}>Answer Feedback</Text>
@@ -651,7 +506,7 @@ const WWWGamePlayScreen: React.FC = () => {
                             onPress={nextRound}
                         >
                             <Text style={styles.buttonText}>
-                                {currentRound + 1 >= roundsData.length ? 'See Final Results' : 'Next Question'}
+                                {currentRound + 1 >= roundCount ? 'See Final Results' : 'Next Question'}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -667,16 +522,22 @@ const WWWGamePlayScreen: React.FC = () => {
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <Text style={styles.teamName}>{teamName}</Text>
-                    <Text style={styles.scoreText}>Score: {score}/{roundsData.length}</Text>
+                    <Text style={styles.scoreText}>Score: {score}/{roundCount}</Text>
                 </View>
                 <View style={styles.progressBar}>
                     <View
                         style={[
                             styles.progressFill,
-                            { width: `${roundsData.length > 0 ? (currentRound / roundsData.length) * 100 : 0}%` }
+                            { width: `${(currentRound / roundCount) * 100}%` }
                         ]}
                     />
                 </View>
+                {/* FIXED: Add game timing info */}
+                {gameStartTime && (
+                    <Text style={styles.gameTimeText}>
+                        Started: {gameStartTime.toLocaleTimeString()}
+                    </Text>
+                )}
             </View>
 
             <ScrollView contentContainerStyle={styles.content}>
@@ -693,12 +554,12 @@ const WWWGamePlayScreen: React.FC = () => {
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Game Over!</Text>
                         <Text style={styles.modalText}>
-                            Your team scored {score} out of {roundsData.length} questions.
+                            Your team scored {score} out of {roundCount} questions.
                         </Text>
                         <Text style={styles.modalScore}>
-                            {score === roundsData.length
+                            {score === roundCount
                                 ? 'Perfect score! Incredible!'
-                                : score > roundsData.length / 2
+                                : score > roundCount / 2
                                     ? 'Well done!'
                                     : 'Better luck next time!'}
                         </Text>
@@ -750,6 +611,13 @@ const styles = StyleSheet.create({
     progressFill: {
         height: '100%',
         backgroundColor: 'white',
+    },
+    // FIXED: Add game time text style
+    gameTimeText: {
+        fontSize: 12,
+        color: 'rgba(255, 255, 255, 0.8)',
+        marginTop: 4,
+        textAlign: 'center',
     },
     content: {
         padding: 16,
@@ -1043,93 +911,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 8,
-    },
-    answerInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        backgroundColor: 'white',
-    },
-    languageIndicator: {
-        paddingHorizontal: 8,
-        backgroundColor: '#f0f0f0',
-        height: '100%',
-        justifyContent: 'center',
-        borderTopRightRadius: 8,
-        borderBottomRightRadius: 8,
-    },
-    languageText: {
-        fontSize: 12,
-        color: '#666',
-        fontWeight: 'bold',
-    },
-    answerHintText: {
-        fontSize: 12,
-        color: '#666',
-        fontStyle: 'italic',
-        marginTop: 4,
-    },
-    languageToggleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16,
-    },
-    languageToggleLabel: {
-        fontSize: 14,
-        color: '#555',
-        marginRight: 8,
-    },
-    languageToggleButton: {
-        paddingVertical: 6,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        elevation: 1,
-    },
-    languageToggleText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    partialTranscriptionContainer: {
-        marginTop: 8,
-        padding: 8,
-        backgroundColor: '#fff9c4',
-        borderRadius: 4,
-        borderLeftWidth: 3,
-        borderLeftColor: '#FF9800',
-    },
-    partialLabel: {
-        fontSize: 12,
-        color: '#e65100',
-        fontWeight: 'bold',
-        marginBottom: 4,
-    },
-    partialText: {
-        fontSize: 12,
-        color: '#666',
-        fontStyle: 'italic',
-    },
-    voiceAnswerLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-        textAlign: 'center',
-    },
-    transcriptionPreview: {
-        marginTop: 12,
-        padding: 12,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 8,
-    },
-    cancelRecordingButton: {
-        marginTop: 12,
-        padding: 8,
-    },
-    cancelRecordingText: {
-        color: '#F44336',
-        fontSize: 14,
     },
 });
 
