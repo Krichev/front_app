@@ -316,7 +316,7 @@ export class QuestionService {
             return this.getFallbackQuestions(count, difficulty);
         }
     }
-    
+
     /**
      * Search for questions by topic or keyword
      */
@@ -509,7 +509,14 @@ export class QuestionService {
             .replace(/&lt;/g, '<')
             .replace(/&gt;/g, '>')
             .replace(/&quot;/g, '"')
-            .replace(/&#039;/g, "'");
+            .replace(/&#039;/g, "'")
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&mdash;/g, '—')
+            .replace(/&ndash;/g, '–')
+            .replace(/&laquo;/g, '«')
+            .replace(/&raquo;/g, '»')
+            .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec))
+            .replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
 
         // Normalize whitespace
         cleaned = cleaned.replace(/\s+/g, ' ').trim();

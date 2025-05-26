@@ -3,6 +3,7 @@ import React, {useEffect} from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     SafeAreaView,
     ScrollView,
     Share,
@@ -396,10 +397,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#555',
     },
+
     questionText: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#333',
         marginBottom: 8,
+        lineHeight: 22,
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     answerContainer: {
         backgroundColor: '#f9f9f9',

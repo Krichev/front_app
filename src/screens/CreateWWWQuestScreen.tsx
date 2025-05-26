@@ -320,11 +320,27 @@ const CreateWWWQuestScreen: React.FC = () => {
                                             {questionFetchError ? (
                                                 <Text style={styles.errorText}>{questionFetchError}</Text>
                                             ) : (
-                                                <Text style={styles.infoText}>
-                                                    {appQuestions.length > 0
-                                                        ? `${appQuestions.length} questions loaded with ${difficulty} difficulty`
-                                                        : 'No questions loaded yet'}
-                                                </Text>
+                                                <>
+                                                    <Text style={styles.infoText}>
+                                                        {appQuestions.length > 0
+                                                            ? `${appQuestions.length} questions loaded with ${difficulty} difficulty`
+                                                            : 'No questions loaded yet'}
+                                                    </Text>
+
+                                                    {/* Question preview */}
+                                                    {appQuestions.length > 0 && (
+                                                        <View style={styles.questionPreview}>
+                                                            <Text style={styles.previewTitle}>Sample Question:</Text>
+                                                            <Text style={styles.previewQuestion}>
+                                                                {appQuestions[0].question.substring(0, 100)}
+                                                                {appQuestions[0].question.length > 100 ? '...' : ''}
+                                                            </Text>
+                                                            <Text style={styles.previewLanguage}>
+                                                                Language: {QuestionService.getTextLanguage(appQuestions[0].question) === 'ru' ? 'Russian' : 'English'}
+                                                            </Text>
+                                                        </View>
+                                                    )}
+                                                </>
                                             )}
 
                                             <TouchableOpacity
@@ -867,6 +883,32 @@ const styles = StyleSheet.create({
         marginLeft: 4,
         fontSize: 14,
         fontWeight: '500',
+    },
+    questionPreview: {
+        marginTop: 12,
+        padding: 12,
+        backgroundColor: '#f0f0f0',
+        borderRadius: 6,
+        borderLeftWidth: 3,
+        borderLeftColor: '#4CAF50',
+    },
+    previewTitle: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#666',
+        marginBottom: 4,
+    },
+    previewQuestion: {
+        fontSize: 14,
+        color: '#333',
+        lineHeight: 20,
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    },
+    previewLanguage: {
+        fontSize: 12,
+        color: '#666',
+        fontStyle: 'italic',
+        marginTop: 4,
     },
 });
 

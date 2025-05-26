@@ -550,10 +550,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 12,
     },
+
     questionText: {
         fontSize: 16,
         color: '#333',
-        marginBottom: 12,
+        marginBottom: 8,
+        lineHeight: 22,
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     answerContainer: {
         backgroundColor: '#f9f9f9',

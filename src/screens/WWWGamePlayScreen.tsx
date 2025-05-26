@@ -4,6 +4,7 @@ import {
     Alert,
     Animated,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -95,7 +96,10 @@ const WWWGamePlayScreen: React.FC = () => {
             };
 
             if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
-                const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGameWithExternalQuestions({
+                const {
+                    gameQuestions,
+                    roundsData: initialRoundsData
+                } = WWWGameService.initializeGameWithExternalQuestions({
                     ...initParams,
                     userQuestions
                 });
@@ -110,7 +114,7 @@ const WWWGamePlayScreen: React.FC = () => {
                 setRoundsData(initialRoundsData);
             } else {
                 // Use the default initialization
-                const { gameQuestions, roundsData: initialRoundsData } = WWWGameService.initializeGame(initParams);
+                const {gameQuestions, roundsData: initialRoundsData} = WWWGameService.initializeGame(initParams);
 
                 // Setup first question
                 if (gameQuestions.length > 0) {
@@ -206,7 +210,7 @@ const WWWGamePlayScreen: React.FC = () => {
         }
 
         // Process the answer using the game service
-        const { updatedRoundsData, isCorrect } = WWWGameService.processRoundAnswer(
+        const {updatedRoundsData, isCorrect} = WWWGameService.processRoundAnswer(
             roundsData,
             currentRound,
             teamAnswer,
@@ -268,7 +272,7 @@ const WWWGamePlayScreen: React.FC = () => {
             score,
             totalRounds: roundCount,
             roundsData,
-            ...(challengeId && { challengeId }), // Only include challengeId if it exists
+            ...(challengeId && {challengeId}), // Only include challengeId if it exists
             gameStartTime: gameStartTime?.toISOString() || gameEndTime.toISOString(),
             gameDuration
         };
@@ -309,10 +313,12 @@ const WWWGamePlayScreen: React.FC = () => {
                                 <Animated.View
                                     style={[
                                         styles.timerProgress,
-                                        { width: timerAnimation.interpolate({
+                                        {
+                                            width: timerAnimation.interpolate({
                                                 inputRange: [0, 1],
                                                 outputRange: ['0%', '100%'],
-                                            })}
+                                            })
+                                        }
                                     ]}
                                 />
                             </View>
@@ -338,7 +344,8 @@ const WWWGamePlayScreen: React.FC = () => {
                         )}
 
                         <View style={styles.notesContainer}>
-                            <Text style={styles.notesLabel}>Discussion Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}</Text>
+                            <Text style={styles.notesLabel}>Discussion
+                                Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}</Text>
                             <TextInput
                                 style={styles.notesInput}
                                 multiline
@@ -528,7 +535,7 @@ const WWWGamePlayScreen: React.FC = () => {
                     <View
                         style={[
                             styles.progressFill,
-                            { width: `${(currentRound / roundCount) * 100}%` }
+                            {width: `${(currentRound / roundCount) * 100}%`}
                         ]}
                     />
                 </View>
@@ -630,7 +637,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         elevation: 2,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.1,
         shadowRadius: 4,
     },
@@ -644,6 +651,8 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 24,
+        lineHeight: 28,
+        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
     primaryButton: {
         backgroundColor: '#4CAF50',

@@ -331,8 +331,8 @@ export class WWWGameService {
             return text
                 .toLowerCase()
                 .trim()
-                // Remove punctuation, but keep Cyrillic characters
-                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+                // Remove punctuation, but keep Cyrillic and Latin characters
+                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()""''«»]/g, "")
                 .replace(/\s{2,}/g, " ");
         };
 
