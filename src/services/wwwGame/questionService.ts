@@ -161,6 +161,7 @@ export class QuestionService {
             throw error;
         }
     }
+
     /**
      * Fetch a set of random questions from db.chgk.info
      * @param count Number of questions to fetch
@@ -181,12 +182,27 @@ export class QuestionService {
             }
 
             url += `/limit${count * 2}`; // Request more than needed to account for filtering
+            url += `/types1`; // Add question type parameter
 
             console.log(`Fetching questions from: ${url}`);
 
-            // Fetch the data
-            const response = await axios.get(url);
+            // Fetch the data with better error handling
+            const response = await axios.get(url, {
+                headers: {
+                    'Accept': 'application/xml, text/xml',
+                    'Content-Type': 'application/xml'
+                },
+                timeout: 10000 // 10 second timeout
+            });
+
             console.log("Received response from db.chgk.info");
+            console.log("Response status:", response.status);
+            console.log("Response data type:", typeof response.data);
+
+            // Check if we got HTML instead of XML (common error)
+            if (typeof response.data === 'string' && response.data.includes('<!DOCTYPE html>')) {
+                throw new Error('Received HTML instead of XML from API');
+            }
 
             // Parse the XML response
             const parser = new XMLParser({
@@ -196,23 +212,28 @@ export class QuestionService {
                 allowBooleanAttributes: true,
                 parseTagValue: true,
                 trimValues: true,
-                // Add if you have arrays:
-                isArray: (name, jpath) => false // Customize array handling
+                parseAttributeValue: true,
+                // Force arrays for question elements
+                isArray: (name, jpath) => {
+                    return name === 'question';
+                }
             });
 
             const result = parser.parse(response.data);
             console.log("Parsed XML data successfully");
+            console.log("Result structure:", JSON.stringify(Object.keys(result), null, 2));
 
             // Process the questions
             let questions: QuestionData[] = [];
 
-            if (result && 'search' in result && result.search.question) {
-                // Multiple questions
+            // Handle different response structures
+            if (result && result.search && result.search.question) {
+                // Multiple questions in search results
                 const questionArray = Array.isArray(result.search.question)
                     ? result.search.question
                     : [result.search.question];
 
-                console.log(`Found ${questionArray.length} questions in response`);
+                console.log(`Found ${questionArray.length} questions in search response`);
 
                 questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields) => {
                     const questionData = this.parseQuestionFromXml(q);
@@ -229,43 +250,73 @@ export class QuestionService {
 
                     return questionData;
                 }));
-            } else if (result && 'question' in result) {
-                // Single question
-                const questionData = this.parseQuestionFromXml(result.question);
+            } else if (result && result.question) {
+                // Single question or array of questions at root level
+                const questionArray = Array.isArray(result.question)
+                    ? result.question
+                    : [result.question];
 
-                // Assign difficulty
-                if (difficulty) {
-                    questionData.difficulty = difficulty;
-                } else {
-                    questionData.difficulty = await this.classifyQuestionDifficulty(
-                        questionData.question,
-                        questionData.answer
-                    );
-                }
+                console.log(`Found ${questionArray.length} questions at root level`);
 
-                questions = [questionData];
+                questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields) => {
+                    const questionData = this.parseQuestionFromXml(q);
+
+                    // Assign difficulty
+                    if (difficulty) {
+                        questionData.difficulty = difficulty;
+                    } else {
+                        questionData.difficulty = await this.classifyQuestionDifficulty(
+                            questionData.question,
+                            questionData.answer
+                        );
+                    }
+
+                    return questionData;
+                }));
+            } else {
+                console.log("Unexpected XML structure:", JSON.stringify(result, null, 2));
+                throw new Error('Unexpected XML response structure');
             }
 
             // Filter invalid questions (with very short answers or questions)
-            // questions = questions.filter(q =>
-            //     q.question && q.question.length > 10 &&
-            //     q.answer && q.answer.length > 1
-            // );
+            questions = questions.filter(q =>
+                q.question && q.question.length > 10 &&
+                q.answer && q.answer.length > 0
+            );
 
             // Limit to requested count
             questions = questions.slice(0, count);
             console.log(`Returning ${questions.length} filtered questions`);
 
+            // Log first question for debugging
+            if (questions.length > 0) {
+                console.log("Sample question:", {
+                    question: questions[0].question.substring(0, 50) + "...",
+                    answer: questions[0].answer
+                });
+            }
+
             return questions;
         } catch (error) {
             console.error('Error fetching questions from db.chgk.info:', error);
+
+            // Log more details about the error
+            if (axios.isAxiosError(error)) {
+                console.error('Axios error details:', {
+                    message: error.message,
+                    code: error.code,
+                    status: error.response?.status,
+                    statusText: error.response?.statusText,
+                    data: error.response?.data ? String(error.response.data).substring(0, 200) : 'No data'
+                });
+            }
 
             // If API fails, use fallback
             console.log('Using fallback questions due to API failure');
             return this.getFallbackQuestions(count, difficulty);
         }
     }
-
+    
     /**
      * Search for questions by topic or keyword
      */
