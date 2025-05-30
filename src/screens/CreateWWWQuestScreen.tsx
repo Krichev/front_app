@@ -1,4 +1,4 @@
-// src/screens/CreateWWWQuestScreen.tsx - Updated to use Quiz API
+// src/screens/CreateWWWQuestScreen.tsx - Fixed to use QuestionService directly
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
@@ -16,15 +16,13 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
-import {
-    useGetQuestionsByDifficultyQuery,
-    useGetUserQuestionsQuery,
-    useStartQuizSessionMutation
-} from '../entities/QuizState/model/slice/quizApi';
+import {useGetUserQuestionsQuery, useStartQuizSessionMutation} from '../entities/QuizState/model/slice/quizApi';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {navigateToTab} from "../utils/navigation.ts";
+// Import the old QuestionService
+import {QuestionData, QuestionService} from '../services/wwwGame/questionService';
 
 type RootStackParamList = {
     Challenges: undefined;
@@ -56,6 +54,11 @@ const CreateWWWQuestScreen: React.FC = () => {
         skip: questionSource !== 'user'
     });
 
+    // App questions state (using old QuestionService)
+    const [appQuestions, setAppQuestions] = useState<QuestionData[]>([]);
+    const [isLoadingAppQuestions, setIsLoadingAppQuestions] = useState(false);
+    const [appQuestionsError, setAppQuestionsError] = useState<string | null>(null);
+
     // Form state
     const [title, setTitle] = useState('What? Where? When? Quiz');
     const [description, setDescription] = useState('Test your knowledge in this team-based quiz game.');
@@ -63,22 +66,45 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [teamName, setTeamName] = useState('Team Intellect');
     const [teamMembers, setTeamMembers] = useState<string[]>([user?.name || 'Player 1']);
     const [newMember, setNewMember] = useState('');
-    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
     const [roundTime, setRoundTime] = useState(60);
     const [roundCount, setRoundCount] = useState(10);
     const [enableAIHost, setEnableAIHost] = useState<boolean>(true);
     const [selectedUserQuestions, setSelectedUserQuestions] = useState<string[]>([]);
 
-    // App questions query (only when needed)
-    const {
-        data: appQuestions = [],
-        isLoading: isLoadingAppQuestions,
-        error: appQuestionsError,
-        refetch: refetchAppQuestions
-    } = useGetQuestionsByDifficultyQuery(
-        { difficulty, count: roundCount * 2 },
-        { skip: questionSource !== 'app' }
-    );
+    // Load app questions when difficulty changes and source is 'app'
+    useEffect(() => {
+        if (questionSource === 'app') {
+            loadAppQuestions();
+        }
+    }, [questionSource, difficulty, roundCount]);
+
+    // Load app questions using old QuestionService
+    const loadAppQuestions = async () => {
+        setIsLoadingAppQuestions(true);
+        setAppQuestionsError(null);
+
+        try {
+            console.log(`Loading ${difficulty} questions for ${roundCount} rounds...`);
+            const questions = await QuestionService.getQuestionsByDifficulty(
+                difficulty,
+                roundCount * 2 // Get more questions than needed
+            );
+            console.log(`Loaded ${questions.length} questions successfully`);
+            setAppQuestions(questions);
+        } catch (error) {
+            console.error('Error loading app questions:', error);
+            setAppQuestionsError('Failed to load questions');
+            setAppQuestions([]);
+        } finally {
+            setIsLoadingAppQuestions(false);
+        }
+    };
+
+    // Retry loading app questions
+    const refetchAppQuestions = () => {
+        loadAppQuestions();
+    };
 
     // Auto-select user questions when source changes
     useEffect(() => {
@@ -164,13 +190,13 @@ const CreateWWWQuestScreen: React.FC = () => {
             }
         } else if (questionSource === 'app') {
             if (appQuestions.length === 0) {
-                Alert.alert('Error', 'No app questions available. Please try a different difficulty or check your connection.');
+                Alert.alert('Error', 'No app questions available. Please try refreshing or check your connection.');
                 return;
             }
         }
 
         try {
-            // First, create a challenge to track this quiz
+            // For now, just create a simple challenge - skip the Quiz API parts since they're not implemented
             const challengeResult = await createChallenge({
                 title,
                 description,
@@ -179,27 +205,27 @@ const CreateWWWQuestScreen: React.FC = () => {
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
                 reward,
-            }).unwrap();
-
-            // Then create a quiz session
-            const sessionResult = await startQuizSession({
-                challengeId: challengeResult.id,
-                teamName,
-                teamMembers,
-                difficulty,
-                roundTimeSeconds: roundTime,
-                totalRounds: questionSource === 'user' ? selectedUserQuestions.length : roundCount,
-                enableAiHost: enableAIHost,
-                questionSource,
-                ...(questionSource === 'user' && { customQuestionIds: selectedUserQuestions })
+                // Store the quiz configuration as JSON in the challenge
+                quizConfig: JSON.stringify({
+                    gameType: 'WWW',
+                    teamName,
+                    teamMembers,
+                    difficulty,
+                    roundTime,
+                    roundCount: questionSource === 'user' ? selectedUserQuestions.length : roundCount,
+                    enableAIHost,
+                    questionSource,
+                    ...(questionSource === 'user' && { customQuestionIds: selectedUserQuestions })
+                })
             }).unwrap();
 
             Alert.alert('Success', 'Quiz challenge created successfully!', [
                 {
                     text: 'Start Game Now',
                     onPress: () => {
-                        navigation.navigate('WWWGamePlay', {
-                            sessionId: sessionResult.id,
+                        // Navigate to the game setup screen with the challenge info
+                        // For now, we'll use the old game flow since Quiz API isn't implemented
+                        navigation.navigate('WWWGameSetup', {
                             challengeId: challengeResult.id
                         });
                     }
@@ -312,10 +338,10 @@ const CreateWWWQuestScreen: React.FC = () => {
                                         </View>
                                     ) : appQuestionsError ? (
                                         <View>
-                                            <Text style={styles.errorText}>Failed to load questions</Text>
+                                            <Text style={styles.errorText}>Failed to load questions: {appQuestionsError}</Text>
                                             <TouchableOpacity
                                                 style={styles.refreshButton}
-                                                onPress={() => refetchAppQuestions()}
+                                                onPress={refetchAppQuestions}
                                             >
                                                 <MaterialCommunityIcons name="refresh" size={16} color="#4CAF50" />
                                                 <Text style={styles.refreshButtonText}>Retry</Text>
@@ -436,7 +462,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                             <View style={styles.settingItem}>
                                 <Text style={styles.settingLabel}>Difficulty</Text>
                                 <View style={styles.difficultyButtons}>
-                                    {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
+                                    {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
                                         <TouchableOpacity
                                             key={level}
                                             style={[
