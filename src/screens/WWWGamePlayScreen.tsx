@@ -1,4 +1,4 @@
-// src/screens/WWWGamePlayScreen.tsx - FIXED navigation types
+// src/screens/WWWGamePlayScreen.tsx - Updated to use Quiz Session API
 import React, {useEffect, useRef, useState} from 'react';
 import {
     Alert,
@@ -15,26 +15,34 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {GameSettings, RoundData, WWWGameService} from "../services/wwwGame/wwwGameService.ts";
+import {
+    QuizRound,
+    useBeginQuizSessionMutation,
+    useCompleteQuizSessionMutation,
+    useGetQuizRoundsQuery,
+    useGetQuizSessionQuery,
+    useSubmitRoundAnswerMutation
+} from '../entities/QuizState/model/slice/quizApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 
-// FIXED: Updated navigation types to match AppNavigator
 type RootStackParamList = {
     WWWGameSetup: undefined;
-    WWWGamePlay: GameSettings;
+    WWWGamePlay: {
+        sessionId: string;
+        challengeId?: string;
+    };
     WWWGameResults: {
+        sessionId: string;
+        challengeId?: string;
         teamName: string;
         score: number;
         totalRounds: number;
-        roundsData: RoundData[];
-        challengeId?: string; // Optional to track completion
-        gameStartTime?: string; // FIXED: Added optional gameStartTime
-        gameDuration?: number; // FIXED: Added optional gameDuration
+        gameStartTime?: string;
+        gameDuration?: number;
     };
 };
 
-// Define navigation and route prop types
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
 
@@ -42,38 +50,29 @@ const WWWGamePlayScreen: React.FC = () => {
     const route = useRoute<WWWGamePlayRouteProp>();
     const navigation = useNavigation<WWWGamePlayNavigationProp>();
 
-    const {
-        teamName,
-        teamMembers,
-        difficulty,
-        roundTime,
-        roundCount,
-        enableAIHost,
-        challengeId,
-        questionSource,
-        userQuestions
-    } = route.params;
+    const { sessionId, challengeId } = route.params;
+
+    // API hooks
+    const { data: session, isLoading: isLoadingSession } = useGetQuizSessionQuery(sessionId);
+    const { data: rounds = [], isLoading: isLoadingRounds, refetch: refetchRounds } = useGetQuizRoundsQuery(sessionId);
+    const [beginQuizSession] = useBeginQuizSessionMutation();
+    const [submitRoundAnswer] = useSubmitRoundAnswerMutation();
+    const [completeQuizSession] = useCompleteQuizSessionMutation();
 
     // Game state
     const [currentRound, setCurrentRound] = useState(0);
-    const [score, setScore] = useState(0);
-    const [roundsData, setRoundsData] = useState<RoundData[]>([]);
-    const [gamePhase, setGamePhase] = useState<'question' | 'discussion' | 'answer' | 'feedback'>('question');
+    const [gamePhase, setGamePhase] = useState<'waiting' | 'question' | 'discussion' | 'answer' | 'feedback'>('waiting');
     const [timer, setTimer] = useState(0);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [discussionNotes, setDiscussionNotes] = useState('');
     const [selectedPlayer, setSelectedPlayer] = useState('');
     const [teamAnswer, setTeamAnswer] = useState('');
-    const [currentQuestion, setCurrentQuestion] = useState('');
-    const [currentAnswer, setCurrentAnswer] = useState('');
     const [showHint, setShowHint] = useState(false);
-
-    // Game timing state - FIXED: Added gameStartTime
     const [gameStartTime, setGameStartTime] = useState<Date | null>(null);
     const [roundStartTime, setRoundStartTime] = useState<Date | null>(null);
 
     // Voice recording state
-    const [isVoiceRecordingEnabled, setIsVoiceRecordingEnabled] = useState(difficulty === 'Easy');
+    const [isVoiceRecordingEnabled, setIsVoiceRecordingEnabled] = useState(false);
     const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
     const [voiceTranscription, setVoiceTranscription] = useState('');
 
@@ -83,57 +82,44 @@ const WWWGamePlayScreen: React.FC = () => {
     // Modal visibility
     const [showEndGameModal, setShowEndGameModal] = useState(false);
 
-    // Initialize game with questions and round data
+    // Initialize game when session and rounds are loaded
     useEffect(() => {
-        const initializeGame = () => {
-            let initParams = {
-                teamName,
-                teamMembers,
-                difficulty: difficulty as 'Easy' | 'Medium' | 'Hard',
-                roundTime,
-                roundCount,
-                enableAIHost
-            };
+        if (session && rounds.length > 0) {
+            if (session.status === 'CREATED') {
+                setGamePhase('question');
+            } else if (session.status === 'IN_PROGRESS') {
+                // Determine current round based on completed rounds
+                const currentRoundIndex = session.completedRounds || 0;
+                setCurrentRound(currentRoundIndex);
 
-            if (questionSource === 'user' && userQuestions && userQuestions.length > 0) {
-                const {
-                    gameQuestions,
-                    roundsData: initialRoundsData
-                } = WWWGameService.initializeGameWithExternalQuestions({
-                    ...initParams,
-                    userQuestions
-                });
-
-                // Setup first question
-                if (gameQuestions.length > 0) {
-                    setCurrentQuestion(gameQuestions[0].question);
-                    setCurrentAnswer(gameQuestions[0].answer);
+                if (currentRoundIndex >= rounds.length) {
+                    // Game should be completed
+                    setShowEndGameModal(true);
+                } else {
+                    // Check if current round has an answer
+                    const currentRoundData = rounds[currentRoundIndex];
+                    if (currentRoundData.teamAnswer) {
+                        setGamePhase('feedback');
+                        setTeamAnswer(currentRoundData.teamAnswer);
+                        setSelectedPlayer(currentRoundData.playerWhoAnswered || '');
+                        setDiscussionNotes(currentRoundData.discussionNotes || '');
+                    } else {
+                        setGamePhase('question');
+                    }
                 }
-
-                // Set the initial rounds data
-                setRoundsData(initialRoundsData);
-            } else {
-                // Use the default initialization
-                const {gameQuestions, roundsData: initialRoundsData} = WWWGameService.initializeGame(initParams);
-
-                // Setup first question
-                if (gameQuestions.length > 0) {
-                    setCurrentQuestion(gameQuestions[0].question);
-                    setCurrentAnswer(gameQuestions[0].answer);
-                }
-
-                // Set the initial rounds data
-                setRoundsData(initialRoundsData);
+            } else if (session.status === 'COMPLETED') {
+                setShowEndGameModal(true);
             }
 
-            // FIXED: Set game start time when game initializes
-            const startTime = new Date();
-            setGameStartTime(startTime);
-            console.log('Game started at:', startTime.toISOString());
-        };
+            // Set voice recording based on difficulty
+            setIsVoiceRecordingEnabled(session.difficulty === 'EASY');
 
-        initializeGame();
-    }, [difficulty, roundCount, teamName, teamMembers, enableAIHost, questionSource, userQuestions]);
+            // Set game start time
+            if (session.startedAt && !gameStartTime) {
+                setGameStartTime(new Date(session.startedAt));
+            }
+        }
+    }, [session, rounds, gameStartTime]);
 
     // Timer effect
     useEffect(() => {
@@ -146,7 +132,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
             // Animate timer
             Animated.timing(timerAnimation, {
-                toValue: timer / roundTime,
+                toValue: timer / (session?.roundTimeSeconds || 60),
                 duration: 1000,
                 useNativeDriver: false,
             }).start();
@@ -161,28 +147,37 @@ const WWWGamePlayScreen: React.FC = () => {
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [isTimerRunning, timer, gamePhase, roundTime, timerAnimation]);
+    }, [isTimerRunning, timer, gamePhase, session?.roundTimeSeconds, timerAnimation]);
+
+    // Start the game session
+    const startGame = async () => {
+        if (!session) return;
+
+        try {
+            await beginQuizSession(sessionId).unwrap();
+            setGameStartTime(new Date());
+            setGamePhase('question');
+        } catch (error) {
+            console.error('Failed to start quiz session:', error);
+            Alert.alert('Error', 'Failed to start the quiz session');
+        }
+    };
 
     // Start discussion phase
     const startDiscussion = () => {
         setGamePhase('discussion');
-        setTimer(roundTime);
+        setTimer(session?.roundTimeSeconds || 60);
         setIsTimerRunning(true);
-        // Reset voice transcription when starting discussion
         setVoiceTranscription('');
-
-        // FIXED: Track round start time
         setRoundStartTime(new Date());
     };
 
     // Handle voice transcription updates
     const handleVoiceTranscription = (text: string) => {
         if (gamePhase === 'discussion') {
-            // For discussion phase, append to discussion notes
             setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
             setVoiceTranscription(text);
         } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
-            // For answer phase, set as the team answer
             setTeamAnswer(text);
             setVoiceTranscription(text);
         }
@@ -192,13 +187,12 @@ const WWWGamePlayScreen: React.FC = () => {
     const toggleVoiceAnswer = () => {
         setIsRecordingVoiceAnswer(!isRecordingVoiceAnswer);
         if (!isRecordingVoiceAnswer) {
-            // Reset the team answer when starting recording
             setTeamAnswer('');
         }
     };
 
     // Submit team answer
-    const submitAnswer = () => {
+    const submitAnswer = async () => {
         if (!teamAnswer.trim()) {
             Alert.alert('Error', 'Please enter or record an answer');
             return;
@@ -209,35 +203,35 @@ const WWWGamePlayScreen: React.FC = () => {
             return;
         }
 
-        // Process the answer using the game service
-        const {updatedRoundsData, isCorrect} = WWWGameService.processRoundAnswer(
-            roundsData,
-            currentRound,
-            teamAnswer,
-            selectedPlayer,
-            discussionNotes
-        );
+        try {
+            await submitRoundAnswer({
+                sessionId,
+                request: {
+                    roundNumber: currentRound + 1,
+                    teamAnswer,
+                    playerWhoAnswered: selectedPlayer,
+                    discussionNotes,
+                    hintUsed: showHint,
+                    voiceRecordingUsed: isRecordingVoiceAnswer,
+                }
+            }).unwrap();
 
-        // Update state with new data
-        setRoundsData(updatedRoundsData);
+            // Refetch rounds to get updated data
+            refetchRounds();
 
-        // Update score
-        if (isCorrect) {
-            setScore(prevScore => prevScore + 1);
+            // Move to feedback phase
+            setGamePhase('feedback');
+            setIsRecordingVoiceAnswer(false);
+        } catch (error) {
+            console.error('Failed to submit answer:', error);
+            Alert.alert('Error', 'Failed to submit answer. Please try again.');
         }
-
-        // Move to feedback phase
-        setGamePhase('feedback');
-
-        // Reset voice recording state
-        setIsRecordingVoiceAnswer(false);
     };
 
     // Move to next round
     const nextRound = () => {
         // Check if game is over
-        if (currentRound + 1 >= roundCount) {
-            // End game
+        if (currentRound + 1 >= (session?.totalRounds || 0)) {
             setShowEndGameModal(true);
             return;
         }
@@ -250,29 +244,31 @@ const WWWGamePlayScreen: React.FC = () => {
         setSelectedPlayer('');
         setShowHint(false);
         setVoiceTranscription('');
-
-        // Set next question
-        setCurrentQuestion(roundsData[currentRound + 1].question);
-        setCurrentAnswer(roundsData[currentRound + 1].correctAnswer);
     };
 
-    // FIXED: End game and navigate to results with proper type safety
-    const endGame = () => {
+    // End game and navigate to results
+    const endGame = async () => {
+        if (!session) return;
+
+        try {
+            await completeQuizSession(sessionId).unwrap();
+        } catch (error) {
+            console.error('Failed to complete quiz session:', error);
+        }
+
         setShowEndGameModal(false);
 
-        // FIXED: Calculate game duration
         const gameEndTime = new Date();
         const gameDuration = gameStartTime
             ? Math.floor((gameEndTime.getTime() - gameStartTime.getTime()) / 1000)
             : 0;
 
-        // FIXED: Create navigation parameters with proper typing
         const navigationParams: RootStackParamList['WWWGameResults'] = {
-            teamName,
-            score,
-            totalRounds: roundCount,
-            roundsData,
-            ...(challengeId && {challengeId}), // Only include challengeId if it exists
+            sessionId,
+            challengeId,
+            teamName: session.teamName,
+            score: session.correctAnswers,
+            totalRounds: session.totalRounds,
             gameStartTime: gameStartTime?.toISOString() || gameEndTime.toISOString(),
             gameDuration
         };
@@ -280,20 +276,87 @@ const WWWGamePlayScreen: React.FC = () => {
         navigation.navigate('WWWGameResults', navigationParams);
     };
 
-    // AI host feedback
-    const getAIFeedback = () => {
-        const currentRoundData = roundsData[currentRound];
-        return WWWGameService.generateRoundFeedback(currentRoundData, enableAIHost);
+    // Get current round data
+    const getCurrentRound = (): QuizRound | null => {
+        return rounds[currentRound] || null;
     };
+
+    // Generate hint
+    const generateHint = (correctAnswer: string): string => {
+        if (!correctAnswer) return 'No hint available';
+
+        const words = correctAnswer.split(' ');
+        const difficulty = session?.difficulty || 'MEDIUM';
+
+        switch (difficulty) {
+            case 'EASY':
+                const firstLetters = words.map(w => w[0]).join(' ');
+                return `Starts with: ${firstLetters} (${words.length} word${words.length !== 1 ? 's' : ''})`;
+            case 'MEDIUM':
+                return `${correctAnswer.length} characters, ${words.length} word${words.length !== 1 ? 's' : ''}`;
+            case 'HARD':
+                return words.length > 1 ? `${words.length}-word answer` : `Single word, ${correctAnswer.length} letters`;
+            default:
+                return `${correctAnswer.length} characters total`;
+        }
+    };
+
+    if (isLoadingSession || isLoadingRounds) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <Text style={styles.loadingText}>Loading quiz session...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!session) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Quiz session not found</Text>
+                    <TouchableOpacity
+                        style={styles.errorButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.errorButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    const currentRoundData = getCurrentRound();
 
     // Render game UI based on phase
     const renderGamePhase = () => {
         switch (gamePhase) {
-            case 'question':
+            case 'waiting':
                 return (
                     <View style={styles.phaseContainer}>
-                        <Text style={styles.questionNumber}>Question {currentRound + 1} of {roundCount}</Text>
-                        <Text style={styles.question}>{currentQuestion}</Text>
+                        <Text style={styles.waitingTitle}>Ready to Start?</Text>
+                        <Text style={styles.waitingDescription}>
+                            Your quiz session is ready. When you're ready to begin, press the button below.
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.primaryButton}
+                            onPress={startGame}
+                        >
+                            <Text style={styles.buttonText}>Start Quiz</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+
+            case 'question':
+                if (!currentRoundData) return null;
+
+                return (
+                    <View style={styles.phaseContainer}>
+                        <Text style={styles.questionNumber}>
+                            Question {currentRound + 1} of {session.totalRounds}
+                        </Text>
+                        <Text style={styles.question}>{currentRoundData.question.question}</Text>
 
                         <TouchableOpacity
                             style={styles.primaryButton}
@@ -305,6 +368,8 @@ const WWWGamePlayScreen: React.FC = () => {
                 );
 
             case 'discussion':
+                if (!currentRoundData) return null;
+
                 return (
                     <View style={styles.phaseContainer}>
                         <View style={styles.timerContainer}>
@@ -325,9 +390,8 @@ const WWWGamePlayScreen: React.FC = () => {
                         </View>
 
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
-                        <Text style={styles.question}>{currentQuestion}</Text>
+                        <Text style={styles.question}>{currentRoundData.question.question}</Text>
 
-                        {/* Voice Recording for Easy Difficulty */}
                         {isVoiceRecordingEnabled && (
                             <View style={styles.voiceRecorderContainer}>
                                 <VoiceRecorder
@@ -344,8 +408,9 @@ const WWWGamePlayScreen: React.FC = () => {
                         )}
 
                         <View style={styles.notesContainer}>
-                            <Text style={styles.notesLabel}>Discussion
-                                Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}</Text>
+                            <Text style={styles.notesLabel}>
+                                Discussion Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}
+                            </Text>
                             <TextInput
                                 style={styles.notesInput}
                                 multiline
@@ -368,10 +433,12 @@ const WWWGamePlayScreen: React.FC = () => {
                 );
 
             case 'answer':
+                if (!currentRoundData) return null;
+
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.answerTitle}>Submit Your Answer</Text>
-                        <Text style={styles.question}>{currentQuestion}</Text>
+                        <Text style={styles.question}>{currentRoundData.question.question}</Text>
 
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Select Player Answering:</Text>
@@ -380,7 +447,7 @@ const WWWGamePlayScreen: React.FC = () => {
                                 showsHorizontalScrollIndicator={false}
                                 style={styles.playersScroll}
                             >
-                                {teamMembers.map((player, index) => (
+                                {session.teamMembers.map((player, index) => (
                                     <TouchableOpacity
                                         key={index}
                                         style={[
@@ -412,7 +479,6 @@ const WWWGamePlayScreen: React.FC = () => {
                             />
                         </View>
 
-                        {/* Voice Answer Option */}
                         <View style={styles.voiceAnswerContainer}>
                             <TouchableOpacity
                                 style={[
@@ -437,16 +503,9 @@ const WWWGamePlayScreen: React.FC = () => {
                                     isActive={isRecordingVoiceAnswer}
                                 />
                             )}
-
-                            {isRecordingVoiceAnswer && voiceTranscription && (
-                                <View style={styles.transcriptionContainer}>
-                                    <Text style={styles.transcriptionLabel}>Voice Answer:</Text>
-                                    <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
-                                </View>
-                            )}
                         </View>
 
-                        {enableAIHost && (
+                        {session.enableAiHost && (
                             <TouchableOpacity
                                 style={styles.hintButton}
                                 onPress={() => setShowHint(!showHint)}
@@ -460,7 +519,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         {showHint && (
                             <View style={styles.hintContainer}>
                                 <Text style={styles.hintText}>
-                                    {WWWGameService.generateHint(currentAnswer)}
+                                    {generateHint(currentRoundData.question.answer)}
                                 </Text>
                             </View>
                         )}
@@ -475,17 +534,18 @@ const WWWGamePlayScreen: React.FC = () => {
                 );
 
             case 'feedback':
-                const currentRoundData = roundsData[currentRound];
+                if (!currentRoundData) return null;
+
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.feedbackTitle}>Answer Feedback</Text>
 
                         <View style={styles.resultContainer}>
                             <Text style={styles.resultLabel}>Your Answer:</Text>
-                            <Text style={styles.resultValue}>{currentRoundData.teamAnswer}</Text>
+                            <Text style={styles.resultValue}>{currentRoundData.teamAnswer || teamAnswer}</Text>
 
                             <Text style={styles.resultLabel}>Correct Answer:</Text>
-                            <Text style={styles.resultValue}>{currentRoundData.correctAnswer}</Text>
+                            <Text style={styles.resultValue}>{currentRoundData.question.answer}</Text>
 
                             <Text style={styles.resultLabel}>Result:</Text>
                             <View style={[
@@ -498,13 +558,13 @@ const WWWGamePlayScreen: React.FC = () => {
                             </View>
 
                             <Text style={styles.resultLabel}>Answered By:</Text>
-                            <Text style={styles.resultValue}>{currentRoundData.playerWhoAnswered}</Text>
+                            <Text style={styles.resultValue}>{currentRoundData.playerWhoAnswered || selectedPlayer}</Text>
                         </View>
 
-                        {enableAIHost && (
+                        {session.enableAiHost && currentRoundData.aiFeedback && (
                             <View style={styles.aiFeedbackContainer}>
                                 <Text style={styles.aiFeedbackTitle}>AI Host Feedback:</Text>
-                                <Text style={styles.aiFeedbackText}>{getAIFeedback()}</Text>
+                                <Text style={styles.aiFeedbackText}>{currentRoundData.aiFeedback}</Text>
                             </View>
                         )}
 
@@ -513,7 +573,7 @@ const WWWGamePlayScreen: React.FC = () => {
                             onPress={nextRound}
                         >
                             <Text style={styles.buttonText}>
-                                {currentRound + 1 >= roundCount ? 'See Final Results' : 'Next Question'}
+                                {currentRound + 1 >= session.totalRounds ? 'See Final Results' : 'Next Question'}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -528,18 +588,17 @@ const WWWGamePlayScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
-                    <Text style={styles.teamName}>{teamName}</Text>
-                    <Text style={styles.scoreText}>Score: {score}/{roundCount}</Text>
+                    <Text style={styles.teamName}>{session.teamName}</Text>
+                    <Text style={styles.scoreText}>Score: {session.correctAnswers}/{session.totalRounds}</Text>
                 </View>
                 <View style={styles.progressBar}>
                     <View
                         style={[
                             styles.progressFill,
-                            {width: `${(currentRound / roundCount) * 100}%`}
+                            {width: `${(currentRound / session.totalRounds) * 100}%`}
                         ]}
                     />
                 </View>
-                {/* FIXED: Add game timing info */}
                 {gameStartTime && (
                     <Text style={styles.gameTimeText}>
                         Started: {gameStartTime.toLocaleTimeString()}
@@ -561,12 +620,12 @@ const WWWGamePlayScreen: React.FC = () => {
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Game Over!</Text>
                         <Text style={styles.modalText}>
-                            Your team scored {score} out of {roundCount} questions.
+                            Your team scored {session.correctAnswers} out of {session.totalRounds} questions.
                         </Text>
                         <Text style={styles.modalScore}>
-                            {score === roundCount
+                            {session.correctAnswers === session.totalRounds
                                 ? 'Perfect score! Incredible!'
-                                : score > roundCount / 2
+                                : session.correctAnswers > session.totalRounds / 2
                                     ? 'Well done!'
                                     : 'Better luck next time!'}
                         </Text>
@@ -619,7 +678,6 @@ const styles = StyleSheet.create({
         height: '100%',
         backgroundColor: 'white',
     },
-    // FIXED: Add game time text style
     gameTimeText: {
         fontSize: 12,
         color: 'rgba(255, 255, 255, 0.8)',
@@ -629,6 +687,38 @@ const styles = StyleSheet.create({
     content: {
         padding: 16,
         flexGrow: 1,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 18,
+        color: '#F44336',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    errorButton: {
+        backgroundColor: '#4CAF50',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+    },
+    errorButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     phaseContainer: {
         backgroundColor: 'white',
@@ -640,6 +730,20 @@ const styles = StyleSheet.create({
         shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.1,
         shadowRadius: 4,
+    },
+    waitingTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 16,
+        textAlign: 'center',
+    },
+    waitingDescription: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 24,
+        textAlign: 'center',
+        lineHeight: 22,
     },
     questionNumber: {
         fontSize: 14,
@@ -875,7 +979,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
     },
-    // Voice recording styles
     voiceRecorderContainer: {
         marginBottom: 16,
         backgroundColor: '#f9f9f9',

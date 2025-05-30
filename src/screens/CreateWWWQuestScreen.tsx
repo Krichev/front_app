@@ -1,4 +1,4 @@
-// src/screens/CreateWWWQuestScreen.tsx
+// src/screens/CreateWWWQuestScreen.tsx - Updated to use Quiz API
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
@@ -16,72 +16,45 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
+import {
+    useGetQuestionsByDifficultyQuery,
+    useGetUserQuestionsQuery,
+    useStartQuizSessionMutation
+} from '../entities/QuizState/model/slice/quizApi';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
-import {GameSettings, initializeWWWGameServices, QuestionData} from '../services/wwwGame';
-import {useWWWGame} from '../app/providers/WWWGameProvider';
-import {QuestionService, UserQuestion} from "../services/wwwGame/questionService";
-import QuestionSourceSelector from "../components/QuestionSourceSelector";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import {WWWQuizConfig} from '../entities/ChallengeState/model/types';
 import {navigateToTab} from "../utils/navigation.ts";
 
 type RootStackParamList = {
     Challenges: undefined;
     UserQuestions: undefined;
-    WWWGamePlay: GameSettings & { challengeId?: string };
+    WWWGamePlay: {
+        sessionId: string;
+        challengeId?: string;
+    };
 };
 
 type CreateWWWQuestScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CreateWWWQuestScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
     const { user } = useSelector((state: RootState) => state.auth);
-    const [createChallenge, { isLoading }] = useCreateChallengeMutation();
-    const { isInitialized, config } = useWWWGame();
 
-    // Initialize game if not already initialized
-    useEffect(() => {
-        if (!isInitialized) {
-            initializeWWWGameServices();
-        }
-    }, [isInitialized]);
+    // API hooks
+    const [createChallenge, { isLoading: isCreatingChallenge }] = useCreateChallengeMutation();
+    const [startQuizSession, { isLoading: isStartingSession }] = useStartQuizSessionMutation();
 
-    // State for question source
+    // Question source state
     const [questionSource, setQuestionSource] = useState<'app' | 'user'>('app');
-    const [userQuestions, setUserQuestions] = useState<UserQuestion[]>([]);
 
-    // Load user questions when source changes
-    useEffect(() => {
-        const loadUserQuestions = async () => {
-            if (questionSource === 'user') {
-                try {
-                    const questions = await QuestionService.getUserQuestions();
-                    setUserQuestions(questions);
-
-                    // If no questions are available, alert the user
-                    if (questions.length === 0) {
-                        Alert.alert(
-                            'No Custom Questions',
-                            'You haven\'t created any questions yet. Would you like to create some now?',
-                            [
-                                { text: 'Not Now', style: 'cancel' },
-                                {
-                                    text: 'Create Questions',
-                                    onPress: () => navigation.navigate('UserQuestions')
-                                }
-                            ]
-                        );
-                    }
-                } catch (error) {
-                    console.error('Error loading user questions:', error);
-                }
-            }
-        };
-
-        loadUserQuestions();
-    }, [questionSource, navigation]);
+    // User questions query (only when needed)
+    const {
+        data: userQuestions = [],
+        isLoading: isLoadingUserQuestions
+    } = useGetUserQuestionsQuery(undefined, {
+        skip: questionSource !== 'user'
+    });
 
     // Form state
     const [title, setTitle] = useState('What? Where? When? Quiz');
@@ -90,52 +63,35 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [teamName, setTeamName] = useState('Team Intellect');
     const [teamMembers, setTeamMembers] = useState<string[]>([user?.name || 'Player 1']);
     const [newMember, setNewMember] = useState('');
-    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(
-        config?.questions?.defaultDifficulty || 'Medium'
+    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+    const [roundTime, setRoundTime] = useState(60);
+    const [roundCount, setRoundCount] = useState(10);
+    const [enableAIHost, setEnableAIHost] = useState<boolean>(true);
+    const [selectedUserQuestions, setSelectedUserQuestions] = useState<string[]>([]);
+
+    // App questions query (only when needed)
+    const {
+        data: appQuestions = [],
+        isLoading: isLoadingAppQuestions,
+        error: appQuestionsError,
+        refetch: refetchAppQuestions
+    } = useGetQuestionsByDifficultyQuery(
+        { difficulty, count: roundCount * 2 },
+        { skip: questionSource !== 'app' }
     );
-    const [roundTime, setRoundTime] = useState(config?.game?.defaultRoundTime || 60); // seconds
-    const [roundCount, setRoundCount] = useState(config?.game?.defaultRoundCount || 10);
-    const [enableAIHost, setEnableAIHost] = useState<boolean>(config?.aiHost?.enabled || true);
-    const [appQuestions, setAppQuestions] = useState<QuestionData[]>([]);
-    const [loadingQuestions, setLoadingQuestions] = useState(false);
-    const [questionFetchError, setQuestionFetchError] = useState<string | null>(null);
 
+    // Auto-select user questions when source changes
     useEffect(() => {
-        const fetchAppQuestions = async () => {
-            if (questionSource === 'app') {
-                try {
-                    setLoadingQuestions(true);
-                    setQuestionFetchError(null);
-
-                    // Fetch random questions based on difficulty
-                    const questions = await QuestionService.getQuestionsByDifficulty(
-                        difficulty,
-                        roundCount * 2 // Fetch extra to ensure we have enough
-                    );
-
-                    console.log(`Fetched ${questions.length} questions from db.chgk.info`);
-                    setAppQuestions(questions);
-                } catch (error) {
-                    console.error('Error fetching app questions:', error);
-                    setQuestionFetchError('Failed to load questions. Using fallback questions.');
-
-                    // Use fallback questions
-                    const fallbackQuestions = QuestionService.getFallbackQuestions(roundCount, difficulty);
-                    setAppQuestions(fallbackQuestions);
-                } finally {
-                    setLoadingQuestions(false);
-                }
-            }
-        };
-
-        fetchAppQuestions();
-    }, [questionSource, difficulty, roundCount]);
-
-    const handleDifficultyChange = (newDifficulty: 'Easy' | 'Medium' | 'Hard') => {
-        setDifficulty(newDifficulty);
-
-        // Questions will be refreshed by the useEffect when difficulty changes
-    };
+        if (questionSource === 'user' && userQuestions.length > 0) {
+            // Auto-select up to roundCount questions
+            const autoSelected = userQuestions
+                .slice(0, roundCount)
+                .map(q => q.id);
+            setSelectedUserQuestions(autoSelected);
+        } else {
+            setSelectedUserQuestions([]);
+        }
+    }, [questionSource, userQuestions, roundCount]);
 
     // Add team member
     const addTeamMember = () => {
@@ -165,79 +121,87 @@ const CreateWWWQuestScreen: React.FC = () => {
         setTeamMembers(updatedMembers);
     };
 
-    // Create the quest
-    // Update the handleCreateQuest function to pass the appropriate questions
+    // Toggle user question selection
+    const toggleQuestionSelection = (questionId: string) => {
+        setSelectedUserQuestions(prev => {
+            if (prev.includes(questionId)) {
+                return prev.filter(id => id !== questionId);
+            } else {
+                if (prev.length >= roundCount) {
+                    Alert.alert('Selection Limit', `You can only select up to ${roundCount} questions.`);
+                    return prev;
+                }
+                return [...prev, questionId];
+            }
+        });
+    };
+
+    // Create the quiz
     const handleCreateQuest = async () => {
         if (!title.trim()) {
             Alert.alert('Error', 'Please enter a title for your quiz');
             return;
         }
 
-        if (questionSource === 'user' && userQuestions.length === 0) {
-            Alert.alert('Error', 'No custom questions available. Please create some questions or switch to App Questions.');
-            return;
-        }
-
-        // Determine questions to use
-        const questionsToUse = questionSource === 'user' ? userQuestions : appQuestions;
-
-        if (questionsToUse.length < 1) {
-            Alert.alert('Error', 'No questions available. Please try again or change question settings.');
-            return;
+        // Validate questions
+        if (questionSource === 'user') {
+            if (selectedUserQuestions.length === 0) {
+                Alert.alert('Error', 'Please select at least one question for your quiz.');
+                return;
+            }
+            if (selectedUserQuestions.length < roundCount) {
+                const proceed = await new Promise<boolean>((resolve) => {
+                    Alert.alert(
+                        'Fewer Questions Selected',
+                        `You selected ${selectedUserQuestions.length} questions but want ${roundCount} rounds. The quiz will only have ${selectedUserQuestions.length} rounds. Continue?`,
+                        [
+                            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                            { text: 'Continue', onPress: () => resolve(true) }
+                        ]
+                    );
+                });
+                if (!proceed) return;
+            }
+        } else if (questionSource === 'app') {
+            if (appQuestions.length === 0) {
+                Alert.alert('Error', 'No app questions available. Please try a different difficulty or check your connection.');
+                return;
+            }
         }
 
         try {
-            // Create the quiz config object with proper typing
-            const quizConfig: WWWQuizConfig = {
-                gameType: 'WWW',
-                teamName,
-                teamMembers,
-                difficulty,
-                roundTime,
-                roundCount,
-                enableAIHost,
-                teamBased: true
-            };
-
-            // Use simple enum string
-            const verificationMethod = "QUIZ";
-
-            // Create a new challenge with QUIZ type
-            const result = await createChallenge({
+            // First, create a challenge to track this quiz
+            const challengeResult = await createChallenge({
                 title,
                 description,
                 type: 'QUIZ',
-                verificationMethod,
+                verificationMethod: 'QUIZ',
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
                 reward,
-                // Store WWW specific config as JSON
-                quizConfig: JSON.stringify(quizConfig)
             }).unwrap();
 
-            // Log that we're about to navigate with questions
-            console.log(`Navigating to WWWGamePlay with ${questionsToUse.length} questions from ${questionSource} source`);
-            console.log(`First question: ${questionsToUse[0]?.question?.substring(0, 30)}...`);
+            // Then create a quiz session
+            const sessionResult = await startQuizSession({
+                challengeId: challengeResult.id,
+                teamName,
+                teamMembers,
+                difficulty,
+                roundTimeSeconds: roundTime,
+                totalRounds: questionSource === 'user' ? selectedUserQuestions.length : roundCount,
+                enableAiHost: enableAIHost,
+                questionSource,
+                ...(questionSource === 'user' && { customQuestionIds: selectedUserQuestions })
+            }).unwrap();
 
             Alert.alert('Success', 'Quiz challenge created successfully!', [
                 {
                     text: 'Start Game Now',
                     onPress: () => {
-                        // Create params with proper type safety
-                        const navigationParams = {
-                            teamName,
-                            teamMembers,
-                            difficulty,
-                            roundTime,
-                            roundCount: Math.min(roundCount, questionsToUse.length),
-                            enableAIHost,
-                            challengeId: result.id,
-                            questionSource: questionSource as 'app' | 'user',
-                            userQuestions: questionsToUse
-                        };
-
-                        // Navigate with properly typed params
-                        navigation.navigate('WWWGamePlay', navigationParams);
+                        navigation.navigate('WWWGamePlay', {
+                            sessionId: sessionResult.id,
+                            challengeId: challengeResult.id
+                        });
                     }
                 },
                 {
@@ -246,10 +210,12 @@ const CreateWWWQuestScreen: React.FC = () => {
                 }
             ]);
         } catch (error) {
-            console.error('Failed to create challenge:', error);
+            console.error('Failed to create quiz:', error);
             Alert.alert('Error', 'Failed to create quiz challenge. Please try again.');
         }
     };
+
+    const isLoading = isCreatingChallenge || isStartingSession;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -304,71 +270,115 @@ const CreateWWWQuestScreen: React.FC = () => {
                         {/* Question Source Section */}
                         <View style={styles.formSection}>
                             <Text style={styles.sectionTitle}>Question Source</Text>
-                            <QuestionSourceSelector
-                                source={questionSource}
-                                onSelectSource={setQuestionSource}
-                            />
+
+                            <View style={styles.sourceButtons}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.sourceButton,
+                                        questionSource === 'app' && styles.selectedSource
+                                    ]}
+                                    onPress={() => setQuestionSource('app')}
+                                >
+                                    <Text style={[
+                                        styles.sourceButtonText,
+                                        questionSource === 'app' && styles.selectedSourceText
+                                    ]}>
+                                        App Questions
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[
+                                        styles.sourceButton,
+                                        questionSource === 'user' && styles.selectedSource
+                                    ]}
+                                    onPress={() => setQuestionSource('user')}
+                                >
+                                    <Text style={[
+                                        styles.sourceButtonText,
+                                        questionSource === 'user' && styles.selectedSourceText
+                                    ]}>
+                                        My Questions
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+
                             {questionSource === 'app' && (
                                 <View style={styles.appQuestionsInfo}>
-                                    {loadingQuestions ? (
+                                    {isLoadingAppQuestions ? (
                                         <View style={styles.loadingContainer}>
                                             <ActivityIndicator size="small" color="#4CAF50" />
-                                            <Text style={styles.loadingText}>Loading questions from db.chgk.info...</Text>
+                                            <Text style={styles.loadingText}>Loading questions...</Text>
                                         </View>
-                                    ) : (
-                                        <>
-                                            {questionFetchError ? (
-                                                <Text style={styles.errorText}>{questionFetchError}</Text>
-                                            ) : (
-                                                <>
-                                                    <Text style={styles.infoText}>
-                                                        {appQuestions.length > 0
-                                                            ? `${appQuestions.length} questions loaded with ${difficulty} difficulty`
-                                                            : 'No questions loaded yet'}
-                                                    </Text>
-
-                                                    {/* Question preview */}
-                                                    {appQuestions.length > 0 && (
-                                                        <View style={styles.questionPreview}>
-                                                            <Text style={styles.previewTitle}>Sample Question:</Text>
-                                                            <Text style={styles.previewQuestion}>
-                                                                {appQuestions[0].question.substring(0, 100)}
-                                                                {appQuestions[0].question.length > 100 ? '...' : ''}
-                                                            </Text>
-                                                            <Text style={styles.previewLanguage}>
-                                                                Language: {QuestionService.getTextLanguage(appQuestions[0].question) === 'ru' ? 'Russian' : 'English'}
-                                                            </Text>
-                                                        </View>
-                                                    )}
-                                                </>
-                                            )}
-
+                                    ) : appQuestionsError ? (
+                                        <View>
+                                            <Text style={styles.errorText}>Failed to load questions</Text>
                                             <TouchableOpacity
                                                 style={styles.refreshButton}
-                                                onPress={() => handleDifficultyChange(difficulty)}
-                                                disabled={loadingQuestions}
+                                                onPress={() => refetchAppQuestions()}
                                             >
                                                 <MaterialCommunityIcons name="refresh" size={16} color="#4CAF50" />
-                                                <Text style={styles.refreshButtonText}>Refresh Questions</Text>
+                                                <Text style={styles.refreshButtonText}>Retry</Text>
                                             </TouchableOpacity>
-                                        </>
+                                        </View>
+                                    ) : (
+                                        <Text style={styles.infoText}>
+                                            {appQuestions.length} questions available for {difficulty} difficulty
+                                        </Text>
                                     )}
                                 </View>
                             )}
-                            {questionSource === 'user' && (
-                                <TouchableOpacity
-                                    style={styles.manageQuestionsButton}
-                                    onPress={() => navigation.navigate('UserQuestions')}
-                                >
-                                    <MaterialCommunityIcons name="playlist-edit" size={18} color="#4CAF50"/>
-                                    <Text style={styles.manageQuestionsText}>Manage My Questions</Text>
-                                </TouchableOpacity>
-                            )}
 
-                            {questionSource === 'user' && userQuestions.length > 0 && (
-                                <Text style={styles.infoText}>
-                                    You have {userQuestions.length} custom questions available
-                                </Text>
+                            {questionSource === 'user' && (
+                                <View style={styles.userQuestionsInfo}>
+                                    {isLoadingUserQuestions ? (
+                                        <View style={styles.loadingContainer}>
+                                            <ActivityIndicator size="small" color="#4CAF50" />
+                                            <Text style={styles.loadingText}>Loading your questions...</Text>
+                                        </View>
+                                    ) : (
+                                        <>
+                                            <TouchableOpacity
+                                                style={styles.manageQuestionsButton}
+                                                onPress={() => navigation.navigate('UserQuestions')}
+                                            >
+                                                <MaterialCommunityIcons name="playlist-edit" size={18} color="#4CAF50"/>
+                                                <Text style={styles.manageQuestionsText}>Manage My Questions</Text>
+                                            </TouchableOpacity>
+
+                                            {userQuestions.length > 0 ? (
+                                                <View style={styles.questionSelection}>
+                                                    <Text style={styles.selectionTitle}>
+                                                        Select Questions ({selectedUserQuestions.length}/{userQuestions.length})
+                                                    </Text>
+                                                    <ScrollView style={styles.questionsContainer} nestedScrollEnabled>
+                                                        {userQuestions.map((question) => (
+                                                            <TouchableOpacity
+                                                                key={question.id}
+                                                                style={[
+                                                                    styles.questionItem,
+                                                                    selectedUserQuestions.includes(question.id) && styles.selectedQuestion
+                                                                ]}
+                                                                onPress={() => toggleQuestionSelection(question.id)}
+                                                            >
+                                                                <Text style={styles.questionText} numberOfLines={2}>
+                                                                    {question.question}
+                                                                </Text>
+                                                                <Text style={styles.questionDifficulty}>
+                                                                    {question.difficulty}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        ))}
+                                                    </ScrollView>
+                                                </View>
+                                            ) : (
+                                                <Text style={styles.infoText}>
+                                                    You haven't created any questions yet. Create some questions to use them in your quiz.
+                                                </Text>
+                                            )}
+                                        </>
+                                    )}
+                                </View>
                             )}
                         </View>
 
@@ -426,7 +436,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                             <View style={styles.settingItem}>
                                 <Text style={styles.settingLabel}>Difficulty</Text>
                                 <View style={styles.difficultyButtons}>
-                                    {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
+                                    {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
                                         <TouchableOpacity
                                             key={level}
                                             style={[
@@ -538,19 +548,26 @@ const CreateWWWQuestScreen: React.FC = () => {
                         <TouchableOpacity
                             style={[
                                 styles.createButton,
-                                (isLoading || (questionSource === 'user' && userQuestions.length === 0)) && styles.disabledButton
+                                (isLoading ||
+                                    (questionSource === 'user' && selectedUserQuestions.length === 0) ||
+                                    (questionSource === 'app' && appQuestions.length === 0)
+                                ) && styles.disabledButton
                             ]}
                             onPress={handleCreateQuest}
-                            disabled={isLoading || (questionSource === 'user' && userQuestions.length === 0)}
+                            disabled={
+                                isLoading ||
+                                (questionSource === 'user' && selectedUserQuestions.length === 0) ||
+                                (questionSource === 'app' && appQuestions.length === 0)
+                            }
                         >
                             <Text style={styles.createButtonText}>
                                 {isLoading ? 'Creating...' : 'Create Quiz Challenge'}
                             </Text>
                         </TouchableOpacity>
 
-                        {questionSource === 'user' && userQuestions.length === 0 && (
+                        {questionSource === 'user' && selectedUserQuestions.length === 0 && (
                             <Text style={styles.errorText}>
-                                Please create and select some questions first
+                                Please select at least one question to continue
                             </Text>
                         )}
                     </View>
@@ -605,28 +622,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         color: '#333',
     },
-    manageQuestionsButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        marginTop: 12,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
-    },
-    manageQuestionsText: {
-        marginLeft: 6,
-        color: '#4CAF50',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    infoText: {
-        fontSize: 14,
-        color: '#666',
-        fontStyle: 'italic',
-        marginTop: 12,
-        textAlign: 'center',
-    },
     formGroup: {
         marginBottom: 16,
     },
@@ -648,6 +643,127 @@ const styles = StyleSheet.create({
     textArea: {
         minHeight: 100,
         textAlignVertical: 'top',
+    },
+    sourceButtons: {
+        flexDirection: 'row',
+        marginBottom: 16,
+    },
+    sourceButton: {
+        flex: 1,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: '#f0f0f0',
+        marginRight: 8,
+        alignItems: 'center',
+    },
+    selectedSource: {
+        backgroundColor: '#4CAF50',
+    },
+    sourceButtonText: {
+        fontSize: 14,
+        color: '#555',
+        fontWeight: '500',
+    },
+    selectedSourceText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    appQuestionsInfo: {
+        backgroundColor: '#f5f5f5',
+        padding: 12,
+        borderRadius: 8,
+    },
+    userQuestionsInfo: {
+        backgroundColor: '#f5f5f5',
+        padding: 12,
+        borderRadius: 8,
+    },
+    questionSelection: {
+        marginTop: 12,
+    },
+    selectionTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        color: '#333',
+    },
+    questionsContainer: {
+        maxHeight: 200,
+    },
+    questionItem: {
+        backgroundColor: 'white',
+        padding: 12,
+        borderRadius: 6,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    selectedQuestion: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#f0fff0',
+    },
+    questionText: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 4,
+    },
+    questionDifficulty: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: '500',
+    },
+    loadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+    },
+    loadingText: {
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#666',
+    },
+    infoText: {
+        fontSize: 14,
+        color: '#666',
+        fontStyle: 'italic',
+        textAlign: 'center',
+    },
+    errorText: {
+        color: '#F44336',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 8,
+    },
+    refreshButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 8,
+        padding: 8,
+        backgroundColor: '#e8f5e9',
+        borderRadius: 4,
+    },
+    refreshButtonText: {
+        color: '#4CAF50',
+        marginLeft: 4,
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    manageQuestionsButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        backgroundColor: '#e8f5e9',
+        borderRadius: 8,
+    },
+    manageQuestionsText: {
+        marginLeft: 6,
+        color: '#4CAF50',
+        fontSize: 14,
+        fontWeight: '500',
     },
     teamMembersContainer: {
         backgroundColor: '#f9f9f9',
@@ -830,12 +946,6 @@ const styles = StyleSheet.create({
         fontStyle: 'italic',
         marginTop: 8,
     },
-    errorText: {
-        color: '#F44336',
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: 8,
-    },
     createButton: {
         backgroundColor: '#4CAF50',
         padding: 16,
@@ -851,64 +961,7 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.7,
-    },
-    appQuestionsInfo: {
-        marginTop: 12,
-        backgroundColor: '#f5f5f5',
-        padding: 12,
-        borderRadius: 8,
-    },
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 8,
-    },
-    loadingText: {
-        marginLeft: 8,
-        fontSize: 14,
-        color: '#666',
-    },
-    refreshButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 8,
-        padding: 8,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 4,
-    },
-    refreshButtonText: {
-        color: '#4CAF50',
-        marginLeft: 4,
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    questionPreview: {
-        marginTop: 12,
-        padding: 12,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 6,
-        borderLeftWidth: 3,
-        borderLeftColor: '#4CAF50',
-    },
-    previewTitle: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#666',
-        marginBottom: 4,
-    },
-    previewQuestion: {
-        fontSize: 14,
-        color: '#333',
-        lineHeight: 20,
-        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-    },
-    previewLanguage: {
-        fontSize: 12,
-        color: '#666',
-        fontStyle: 'italic',
-        marginTop: 4,
+        backgroundColor: '#A5D6A7',
     },
 });
 
