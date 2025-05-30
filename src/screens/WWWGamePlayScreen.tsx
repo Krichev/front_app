@@ -26,22 +26,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 
-type RootStackParamList = {
-    WWWGameSetup: undefined;
-    WWWGamePlay: {
-        sessionId: string;
-        challengeId?: string;
-    };
-    WWWGameResults: {
-        sessionId: string;
-        challengeId?: string;
-        teamName: string;
-        score: number;
-        totalRounds: number;
-        gameStartTime?: string;
-        gameDuration?: number;
-    };
-};
+import {RootStackParamList} from '../navigation/AppNavigator';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -50,7 +35,14 @@ const WWWGamePlayScreen: React.FC = () => {
     const route = useRoute<WWWGamePlayRouteProp>();
     const navigation = useNavigation<WWWGamePlayNavigationProp>();
 
-    const { sessionId, challengeId } = route.params;
+    const params = route.params;
+    const sessionId = params?.sessionId;
+    const challengeId = params?.challengeId;
+
+    // Support both old GameSettings format and new sessionId format
+    const gameSettings = params as any;
+
+    // const { sessionId, challengeId } = route.params;
 
     // API hooks
     const { data: session, isLoading: isLoadingSession } = useGetQuizSessionQuery(sessionId);
@@ -263,18 +255,20 @@ const WWWGamePlayScreen: React.FC = () => {
             ? Math.floor((gameEndTime.getTime() - gameStartTime.getTime()) / 1000)
             : 0;
 
-        const navigationParams: RootStackParamList['WWWGameResults'] = {
-            sessionId,
-            challengeId,
-            teamName: session.teamName,
-            score: session.correctAnswers,
-            totalRounds: session.totalRounds,
-            gameStartTime: gameStartTime?.toISOString() || gameEndTime.toISOString(),
-            gameDuration
-        };
+        const navigateToResults = () => {
+            const navigationParams: RootStackParamList['WWWGameResults'] = {
+                teamName: gameSettings?.teamName || 'Team',
+                score: 0,
+                totalRounds: gameSettings?.roundCount || 10,
+                roundsData: [],
+                challengeId,
+                sessionId,
+                gameStartTime: new Date().toISOString(),
+                gameDuration: 0
+            };
 
-        navigation.navigate('WWWGameResults', navigationParams);
-    };
+            navigation.navigate('WWWGameResults', navigationParams);
+        };
 
     // Get current round data
     const getCurrentRound = (): QuizRound | null => {

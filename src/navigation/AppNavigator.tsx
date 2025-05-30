@@ -1,47 +1,40 @@
-// Updated AppNavigator.tsx with fixed types
+// src/navigation/AppNavigator.tsx - UPDATED with consistent types
 import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
-// Import screens
-// Auth screens
+// Import screens (same as before)
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
-
-// Main screens
 import HomeScreen from '../screens/HomeScreen';
 import ChallengesScreen from '../screens/ChallengeScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
 import GroupsScreen from '../screens/GroupsScreen';
-// Challenge screens
 import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen';
 import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen';
 import CreateChallengeScreen from '../screens/CreateChallengeScreen';
 import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen';
 import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
 import LocationVerificationScreen from '../screens/LocationVerificationScreen';
-
-// WWW Game screens
 import WWWGameSetupScreen from '../screens/WWWGameSetupScreen';
 import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
 import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
+import EditProfileScreen from "../screens/EditProfileScreen.tsx";
+import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
+import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
 
-// Other imports
 import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import EditProfileScreen from "../screens/EditProfileScreen.tsx";
 import {QuestionData, UserQuestion} from "../services/wwwGame/questionService.ts";
-import UserQuestionsScreen from "../screens/UserQuestionsScreen.tsx";
-import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
 import {StateChallenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
 import {AuthNavigationHandler} from "../entities/AuthState/ui/AuthNavigationHandler.tsx";
 import {GameSettings} from "../services/wwwGame";
 
-// FIXED: Updated navigation types with proper parameters
+// FIXED: Consolidated and consistent navigation types
 export type RootStackParamList = {
     Main: { screen?: keyof MainTabParamList; params?: any };
     Home: undefined;
@@ -55,17 +48,25 @@ export type RootStackParamList = {
     CreateWWWQuest: undefined;
     UserProfile: { userId: string };
     EditProfile: { userId: string };
-    // WWW Game Screens
-    WWWGamePlay: GameSettings;
-    // FIXED: Updated WWWGameResults with all required parameters
+
+    // UPDATED: Consistent WWW Game Screens with both old and new API support
+    WWWGameSetup: {
+        selectedQuestions?: QuestionData[];
+        challengeId?: string; // Added to support challenge-based flow
+    };
+    WWWGamePlay: GameSettings & {
+        sessionId?: string; // Added to support new Quiz API
+        challengeId?: string;
+    };
     WWWGameResults: {
         teamName: string;
         score: number;
         totalRounds: number;
         roundsData: any[];
-        challengeId?: string; // Optional to track completion
-        gameStartTime?: string; // FIXED: Added optional gameStartTime
-        gameDuration?: number; // FIXED: Added optional gameDuration
+        challengeId?: string;
+        gameStartTime?: string;
+        gameDuration?: number;
+        sessionId?: string; // Added to support new Quiz API
     };
     QuizResults: {
         challengeId: string;
@@ -74,7 +75,8 @@ export type RootStackParamList = {
         teamName: string;
         roundsData: any[];
     };
-    WWWGameSetup: { selectedQuestions?: QuestionData[] };
+
+    // Question Management
     QuestionManagement: undefined;
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
@@ -91,10 +93,17 @@ export type MainTabParamList = {
     Profile: undefined;
 };
 
+// ADDED: Global type declaration to make React Navigation aware of our types
+declare global {
+    namespace ReactNavigation {
+        interface RootParamList extends RootStackParamList {}
+    }
+}
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Bottom tab navigator
+// Rest of the component remains the same...
 const MainTabNavigator = ({
                               route
                           }: {
@@ -104,7 +113,7 @@ const MainTabNavigator = ({
 
     return (
         <Tab.Navigator
-            initialRouteName={screen || 'Home'} // Set initial tab based on params
+            initialRouteName={screen || 'Home'}
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ focused, color, size }) => {
                     let iconName = 'help-circle-outline';
@@ -141,9 +150,7 @@ const MainTabNavigator = ({
     );
 };
 
-// Main navigator
 const AppNavigation = () => {
-    // Get auth state from Redux
     const isAuthenticated = useSelector((state: RootState) => state.auth.accessToken);
 
     return (
@@ -161,16 +168,12 @@ const AppNavigation = () => {
                 }}
             >
                 {isAuthenticated ? (
-                    // Authenticated user stack
                     <>
-                        {/* Main Tab Navigator */}
                         <Stack.Screen
                             name="Main"
                             component={MainTabNavigator}
                             options={{ headerShown: false }}
                         />
-
-                        {/* Challenge Screens */}
                         <Stack.Screen
                             name="ChallengeDetails"
                             component={ChallengeDetailsScreen}
@@ -201,8 +204,6 @@ const AppNavigation = () => {
                             component={CreateWWWQuestScreen}
                             options={{ title: 'Create Quiz Challenge' }}
                         />
-
-                        {/* User Screens */}
                         <Stack.Screen
                             name="UserProfile"
                             component={UserProfileScreen}
@@ -213,8 +214,6 @@ const AppNavigation = () => {
                             component={EditProfileScreen}
                             options={{ title: 'Edit Profile' }}
                         />
-
-                        {/* WWW Game screens */}
                         <Stack.Screen
                             name="WWWGameSetup"
                             component={WWWGameSetupScreen}
@@ -252,7 +251,6 @@ const AppNavigation = () => {
                         />
                     </>
                 ) : (
-                    // Unauthenticated user stack
                     <>
                         <Stack.Screen
                             name="Login"
@@ -264,7 +262,6 @@ const AppNavigation = () => {
                             component={SignupScreen}
                             options={{ headerShown: false }}
                         />
-                        {/* Home is included here to handle cases where a deep link might bring an unauthenticated user */}
                         <Stack.Screen
                             name="Home"
                             component={HomeScreen}
