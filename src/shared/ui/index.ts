@@ -16,7 +16,7 @@ export { CustomTimer } from './Timer/CustomTimer.tsx'
 
 // Game-specific Components
 export { QuestionCard } from './QuestionCard/QuestionCard'
-export type { QuestionCardData } from './QuestionCard/QuestionCard'
+export type { QuestionCardProps } from './QuestionCard/QuestionCard'
 export { GamePhaseContainer } from './GamePhaseContainer/GamePhaseContainer'
 export type { GamePhase } from './GamePhaseContainer/GamePhaseContainer'
 export { ScoreDisplay } from './ScoreDisplay/ScoreDisplay'

@@ -9,6 +9,7 @@ import {CustomCard} from '../Card/CustomCard.tsx';
 import {CustomSourceSelector, SourceType} from "../SourceSelector/CustomSourceSelector.tsx";
 import {CustomInput} from "../Input/CustomInput.tsx";
 import {Difficulty} from "../../lib";
+import {CustomButton} from "../Button/CustomButton.tsx";
 
 export interface GameSettings {
     teamName: string;
@@ -109,7 +110,7 @@ export const GameSettingsForm: React.FC<GameSettingsFormProps> = ({
                     <Text style={styles.label}>Discussion Time (seconds)</Text>
                     <View style={styles.buttonGrid}>
                         {[30, 60, 90, 120].map((time) => (
-                            <Button
+                            <CustomButton
                                 key={time}
                                 variant={settings.roundTime === time ? 'primary' : 'outline'}
                                 size="sm"
@@ -118,7 +119,7 @@ export const GameSettingsForm: React.FC<GameSettingsFormProps> = ({
                                 disabled={disabled}
                             >
                                 {time.toString()}
-                            </Button>
+                            </CustomButton>
                         ))}
                     </View>
                 </View>
@@ -127,7 +128,7 @@ export const GameSettingsForm: React.FC<GameSettingsFormProps> = ({
                     <Text style={styles.label}>Number of Questions</Text>
                     <View style={styles.buttonGrid}>
                         {[5, 10, 15, 20].map((count) => (
-                            <Button
+                            <CustomButton
                                 key={count}
                                 variant={settings.roundCount === count ? 'primary' : 'outline'}
                                 size="sm"
@@ -136,7 +137,7 @@ export const GameSettingsForm: React.FC<GameSettingsFormProps> = ({
                                 disabled={disabled}
                             >
                                 {count.toString()}
-                            </Button>
+                            </CustomButton>
                         ))}
                     </View>
                 </View>
