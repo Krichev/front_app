@@ -3,7 +3,7 @@ import React from 'react'
 import {StyleSheet, Text, View} from 'react-native'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import {theme} from "../../styles/theme.ts";
-import {Button} from "../Button/Button.tsx";
+import {CustomButton} from "../Button/CustomButton.tsx";
 
 interface ErrorStateProps {
     title?: string
@@ -12,7 +12,7 @@ interface ErrorStateProps {
     retryText?: string
 }
 
-export const ErrorState: React.FC<ErrorStateProps> = ({
+export const CustomErrorState: React.FC<ErrorStateProps> = ({
                                                           title = 'Something went wrong',
                                                           message,
                                                           onRetry,
@@ -28,13 +28,13 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.message}>{message}</Text>
             {onRetry && (
-                <Button
+                <CustomButton
                     variant="outline"
                     onPress={onRetry}
                     style={styles.retryButton}
                 >
                     {retryText}
-                </Button>
+                </CustomButton>
             )}
         </View>
     )

@@ -11,7 +11,7 @@ interface ToggleProps {
     disabled?: boolean
 }
 
-export const Toggle: React.FC<ToggleProps> = ({
+export const CustomToggle: React.FC<ToggleProps> = ({
                                                   value,
                                                   onValueChange,
                                                   label,

@@ -11,7 +11,7 @@ interface InputProps extends TextInputProps {
     hint?: string
 }
 
-export const Input: React.FC<InputProps> = ({
+export const CustomInput: React.FC<InputProps> = ({
                                                 label,
                                                 error,
                                                 required,

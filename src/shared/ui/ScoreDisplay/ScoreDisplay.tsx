@@ -2,7 +2,7 @@
 import React from 'react'
 import {StyleSheet, Text, View, ViewStyle} from 'react-native'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import {ProgressBar} from '../ProgressBar/ProgressBar'
+import {CustomProgressBar} from '../ProgressBar/CustomProgressBar.tsx'
 import {theme} from '../../styles/theme'
 
 interface ScoreDisplayProps {
@@ -84,7 +84,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             </View>
 
             {showProgress && (
-                <ProgressBar
+                <CustomProgressBar
                     progress={progress}
                     color={getScoreColor()}
                     style={styles.progressBar}

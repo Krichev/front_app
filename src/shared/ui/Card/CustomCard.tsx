@@ -10,7 +10,7 @@ interface CardProps {
     shadow?: 'small' | 'medium' | 'large'
 }
 
-export const Card: React.FC<CardProps> = ({
+export const CustomCard: React.FC<CardProps> = ({
                                               children,
                                               padding = 'lg',
                                               margin = 'lg',

@@ -13,7 +13,7 @@ interface ProgressBarProps {
     backgroundColor?: string
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({
+export const CustomProgressBar: React.FC<ProgressBarProps> = ({
                                                             progress,
                                                             style,
                                                             showLabel = false,

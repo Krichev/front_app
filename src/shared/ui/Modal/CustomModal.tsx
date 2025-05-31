@@ -15,7 +15,7 @@ interface ModalProps {
     style?: ViewStyle
 }
 
-export const Modal: React.FC<ModalProps> = ({
+export const CustomModal: React.FC<ModalProps> = ({
                                                 visible,
                                                 onClose,
                                                 title,

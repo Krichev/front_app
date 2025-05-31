@@ -36,7 +36,7 @@ const defaultOptions: SourceOption[] = [
     }
 ]
 
-export const SourceSelector: React.FC<SourceSelectorProps> = ({
+export const CustomSourceSelector: React.FC<SourceSelectorProps> = ({
                                                                   value,
                                                                   onValueChange,
                                                                   style,

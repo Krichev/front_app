@@ -18,7 +18,7 @@ interface ButtonProps {
     fullWidth?: boolean
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const CustomButton: React.FC<ButtonProps> = ({
                                                   variant = 'primary',
                                                   size = 'md',
                                                   disabled = false,

@@ -2,7 +2,7 @@
 import React from 'react'
 import {FlatList, StyleSheet, Text, View, ViewStyle} from 'react-native'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import {Card} from '../Card/Card'
+import {CustomCard} from '../Card/CustomCard.tsx'
 import {Badge} from '../Badge/Badge'
 import {ScoreDisplay} from '../ScoreDisplay/ScoreDisplay'
 import {theme} from '../../styles/theme'
@@ -48,7 +48,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({
                                                                   style
                                                               }) => {
     const renderPlayerPerformance = () => (
-        <Card style={styles.section}>
+        <CustomCard style={styles.section}>
             <Text style={styles.sectionTitle}>Player Performance</Text>
             {playerPerformances.length > 0 ? (
                 playerPerformances.map((performance, index) => (
@@ -72,7 +72,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({
             ) : (
                 <Text style={styles.noDataText}>No player performance data available</Text>
             )}
-        </Card>
+        </CustomCard>
     )
 
     const renderRoundResult = ({ item }: { item: RoundResult }) => (
@@ -115,7 +115,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({
     )
 
     const renderQuestionResults = () => (
-        <Card style={styles.section}>
+        <CustomCard style={styles.section}>
             <Text style={styles.sectionTitle}>Question Results</Text>
             <FlatList
                 data={roundResults}
@@ -124,14 +124,14 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({
                 scrollEnabled={false}
                 showsVerticalScrollIndicator={false}
             />
-        </Card>
+        </CustomCard>
     )
 
     const renderFeedback = () => {
         if (!feedback) return null
 
         return (
-            <Card style={styles.section}>
+            <CustomCard style={styles.section}>
                 <View style={styles.feedbackHeader}>
                     <MaterialCommunityIcons
                         name="comment-text"
@@ -141,7 +141,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({
                     <Text style={styles.sectionTitle}>Game Analysis</Text>
                 </View>
                 <Text style={styles.feedbackText}>{feedback}</Text>
-            </Card>
+            </CustomCard>
         )
     }
 

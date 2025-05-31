@@ -11,7 +11,7 @@ interface TimerProps {
     size?: 'sm' | 'md' | 'lg'
 }
 
-export const Timer: React.FC<TimerProps> = ({
+export const CustomTimer: React.FC<TimerProps> = ({
                                                 timeRemaining,
                                                 totalTime,
                                                 style,

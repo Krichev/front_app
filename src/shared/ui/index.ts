@@ -1,18 +1,18 @@
 // src/shared/ui/index.ts
 
 // Core UI Components
-export { Button } from './Button/Button'
-export { Input } from './Input/Input'
-export { Card } from './Card/Card'
+export { CustomButton } from './Button/CustomButton.tsx'
+export { CustomInput } from './Input/CustomInput.tsx'
+export { CustomCard } from './Card/CustomCard.tsx'
 export { Badge } from './Badge/Badge'
-export { Modal } from './Modal/Modal'
-export { LoadingState } from './LoadingState/LoadingState'
-export { ErrorState } from './ErrorState/ErrorState'
+export { CustomModal } from './Modal/CustomModal.tsx'
+export { CustomLoadingState } from './LoadingState/CustomLoadingState.tsx'
+export { CustomErrorState } from './ErrorState/CustomErrorState.tsx'
 
 // Enhanced UI Components
-export { ProgressBar } from './ProgressBar/ProgressBar'
-export { Toggle } from './Toggle/Toggle'
-export { Timer } from './Timer/Timer'
+export { CustomProgressBar } from './ProgressBar/CustomProgressBar.tsx'
+export { CustomToggle } from './Toggle/CustomToggle.tsx'
+export { CustomTimer } from './Timer/CustomTimer.tsx'
 
 // Game-specific Components
 export { QuestionCard } from './QuestionCard/QuestionCard'
@@ -28,7 +28,7 @@ export type { PlayerPerformance, RoundResult } from './ResultsSummary/ResultsSum
 // Form Components
 export { DifficultySelector } from './DifficultySelector/DifficultySelector'
 export type { Difficulty } from './DifficultySelector/DifficultySelector'
-export { PlayerSelector } from './PlayerSelector/PlayerSelector'
+export { CustomPlayerSelector } from './PlayerSelector/CustomPlayerSelector.tsx'
 export { TeamMemberList } from './TeamMemberList/TeamMemberList'
-export { SourceSelector } from './SourceSelector/SourceSelector'
-export type { SourceType } from './SourceSelector/SourceSelector'
+export { CustomSourceSelector } from './SourceSelector/CustomSourceSelector.tsx'
+export type { SourceType } from './SourceSelector/CustomSourceSelector.tsx'

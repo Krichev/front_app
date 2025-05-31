@@ -13,7 +13,7 @@ interface PlayerSelectorProps {
     horizontal?: boolean
 }
 
-export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
+export const CustomPlayerSelector: React.FC<PlayerSelectorProps> = ({
                                                                   players,
                                                                   selectedPlayer,
                                                                   onSelectPlayer,

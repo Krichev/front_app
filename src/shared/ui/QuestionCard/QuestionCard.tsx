@@ -2,7 +2,7 @@
 import React from 'react'
 import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import {Card} from "../Card/Card.tsx";
+import {CustomCard} from "../Card/CustomCard.tsx";
 import {Badge} from "../Badge/Badge.tsx";
 import {theme} from "../../styles";
 
@@ -73,7 +73,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     )
 
     const CardContent = () => (
-        <Card
+        <CustomCard
             style={cardStyle}
             padding="md"
             shadow="small"
@@ -172,7 +172,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     </Text>
                 )}
             </View>
-        </Card>
+        </CustomCard>
     )
 
     if (onPress && selectable) {

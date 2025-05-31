@@ -8,7 +8,7 @@ interface LoadingStateProps {
     size?: 'small' | 'large'
 }
 
-export const LoadingState: React.FC<LoadingStateProps> = ({
+export const CustomLoadingState: React.FC<LoadingStateProps> = ({
                                                               text = 'Loading...',
                                                               size = 'large'
                                                           }) => {
