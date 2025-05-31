@@ -57,23 +57,50 @@ export const theme = {
         small: {
             elevation: 1,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 1 },
+            shadowOffset: {width: 0, height: 1},
             shadowOpacity: 0.1,
             shadowRadius: 2,
         },
         medium: {
             elevation: 2,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
+            shadowOffset: {width: 0, height: 2},
             shadowOpacity: 0.1,
             shadowRadius: 4,
         },
         large: {
             elevation: 6,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
+            shadowOffset: {width: 0, height: 3},
             shadowOpacity: 0.3,
             shadowRadius: 4,
         }
-    }
+    },
+    // Add common game colors
+    gameColors: {
+        correct: '#4CAF50',
+        incorrect: '#F44336',
+        warning: '#FF9800',
+        info: '#2196F3',
+        timerDanger: '#F44336',
+        timerWarning: '#FF9800',
+        timerSafe: '#4CAF50',
+    },
+
+    // Add common transitions
+    transitions: {
+        fast: 150,
+        normal: 300,
+        slow: 500,
+    },
+
+    // Add common z-indices
+    zIndex: {
+        dropdown: 1000,
+        sticky: 1020,
+        fixed: 1030,
+        modal: 1040,
+        popover: 1050,
+        tooltip: 1060,
+    },
 } as const
