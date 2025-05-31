@@ -1,146 +1,123 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {
-    Animated,
-    BackHandler,
-    Easing,
-    GestureResponderEvent,
-    Keyboard,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
-import {styles} from './Modal.style.js';
-import {useTheme} from "../../../app/providers/ThemeProvider"; // Import styles
-import {Portal} from '../Portal/Portal.js';
-
-const ANIMATION_DELAY = 300; // Animation duration in milliseconds
+// src/shared/ui/Modal/Modal.tsx
+import React from 'react'
+import {Modal as RNModal, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View, ViewStyle,} from 'react-native'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import {theme} from '../../styles/theme'
 
 interface ModalProps {
-    children?: React.ReactNode;
-    isOpen?: boolean;
-    onClose?: () => void;
+    visible: boolean
+    onClose: () => void
+    title?: string
+    children: React.ReactNode
+    actions?: React.ReactNode
+    size?: 'sm' | 'md' | 'lg' | 'full'
+    showCloseButton?: boolean
+    style?: ViewStyle
 }
 
-export const Modal = (props: ModalProps) => {
-    const {children, isOpen, onClose} = props;
-
-    const [isClosing, setIsClosing] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const {theme} = useTheme(); // Get the current theme
-    const animation = useRef(new Animated.Value(0)).current;
-
-    // Close handler
-    const closeHandler = useCallback(() => {
-        if (onClose) {
-            setIsClosing(true);
-            timerRef.current = setTimeout(() => {
-                onClose();
-                setIsClosing(false);
-            }, ANIMATION_DELAY);
-        }
-    }, [onClose]);
-
-    // Handle back button press (Android)
-    useEffect(() => {
-        const backAction = () => {
-            if (isOpen) {
-                closeHandler();
-                return true; // Prevent default back action
-            }
-            return false;
-        };
-
-        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-
-        return () => backHandler.remove();
-    }, [isOpen, closeHandler]);
-
-    // Handle keyboard events (Escape key equivalent)
-    useEffect(() => {
-        const handleKeyDown = () => {
-            closeHandler();
-        };
-
-        if (isOpen) {
-            const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', handleKeyDown);
-
-            return () => {
-                keyboardDidHideListener.remove(); // Remove the listener when the component unmounts
-            };
-        }
-    }, [isOpen, closeHandler]);
-
-    // Animation logic
-    useEffect(() => {
-        if (isOpen) {
-            Animated.timing(animation, {
-                toValue: 1,
-                duration: ANIMATION_DELAY,
-                easing: Easing.ease,
-                useNativeDriver: true,
-            }).start();
-        } else if (isClosing) {
-            Animated.timing(animation, {
-                toValue: 0,
-                duration: ANIMATION_DELAY,
-                easing: Easing.ease,
-                useNativeDriver: true,
-            }).start(() => {
-                if (onClose) onClose();
-            });
-        }
-    }, [isOpen, isClosing, animation, onClose]);
-
-    // Interpolate animation values
-    const opacity = animation.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 1],
-    });
-
-    const scale = animation.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.5, 1],
-    });
-
-    const bgColor = theme === 'dark' ? '#090949' : '#fff';
-    const textColor = theme === 'dark' ? '#04ff04' : '#000';
-
+export const Modal: React.FC<ModalProps> = ({
+                                                visible,
+                                                onClose,
+                                                title,
+                                                children,
+                                                actions,
+                                                size = 'md',
+                                                showCloseButton = true,
+                                                style
+                                            }) => {
     return (
-        <Portal>
-            <Animated.View
-                style={[
-                    styles.modal,
-                    isOpen && styles.opened,
-                    isClosing && styles.isClosing,
-                    {opacity},
-                ]}
-            >
-                {/* Overlay */}
-                <View
-                    style={styles.overlay}
-                    onStartShouldSetResponder={(event: GestureResponderEvent) => {
-                        closeHandler();
-                        return true; // Allow the overlay to handle the touch event
-                    }}
-                >
-                    {/* Modal Content */}
-                    <Animated.View
-                        style={[
-                            styles.content,
-                            {backgroundColor: bgColor, transform: [{scale}]},
-                        ]}
-                        onStartShouldSetResponder={(event: GestureResponderEvent) => {
-                            // Prevent the overlay from handling touch events inside the modal content
-                            return false;
-                        }}
-                    >
+        <RNModal
+            visible={visible}
+            transparent
+            animationType="fade"
+            statusBarTranslucent={Platform.OS === 'android'}
+        >
+            <StatusBar backgroundColor="rgba(0,0,0,0.5)" />
+            <View style={styles.overlay}>
+                <View style={[styles.modal, styles[size], style]}>
+                    {(title || showCloseButton) && (
+                        <View style={styles.header}>
+                            {title && <Text style={styles.title}>{title}</Text>}
+                            {showCloseButton && (
+                                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                                    <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.secondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    )}
+
+                    <View style={styles.content}>
                         {children}
-                        <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
-                            <Text style={[styles.closeButtonText, {color: textColor}]}>Close</Text>
-                        </TouchableOpacity>
-                    </Animated.View>
+                    </View>
+
+                    {actions && (
+                        <View style={styles.actions}>
+                            {actions}
+                        </View>
+                    )}
                 </View>
-            </Animated.View>
-        </Portal>
-    );
-};
+            </View>
+        </RNModal>
+    )
+}
+
+const styles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: theme.colors.overlay,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: theme.spacing.lg,
+    },
+    modal: {
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.borderRadius.lg,
+        ...theme.shadow.large,
+    },
+
+    // Sizes
+    sm: {
+        width: '70%',
+        maxWidth: 300,
+    },
+    md: {
+        width: '85%',
+        maxWidth: 400,
+    },
+    lg: {
+        width: '95%',
+        maxWidth: 600,
+    },
+    full: {
+        width: '95%',
+        height: '90%',
+    },
+
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: theme.spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.borderLight,
+    },
+    title: {
+        fontSize: theme.fontSize.lg,
+        fontWeight: theme.fontWeight.bold,
+        color: theme.colors.text.primary,
+        flex: 1,
+    },
+    closeButton: {
+        padding: theme.spacing.xs,
+    },
+    content: {
+        padding: theme.spacing.lg,
+    },
+    actions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        padding: theme.spacing.lg,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.borderLight,
+    },
+})

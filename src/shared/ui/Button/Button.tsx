@@ -1,45 +1,214 @@
-import React from 'react';
-import {Text, TouchableOpacity} from 'react-native';
-import {getButtonStyle} from "./Button.styles.ts";
-
-export enum ButtonTheme {
-    CLEAR = 'clear',
-    CLEAR_INVERTED = 'clearInverted',
-    OUTLINE = 'outline',
-    BACKGROUND = 'background',
-    BACKGROUND_INVERTED = 'backgroundInverted',
-}
-
-export enum ButtonSize {
-    M = 'size_m',
-    L = 'size_l',
-    XL = 'size_xl',
-}
+// src/shared/ui/Button/Button.tsx
+import React from 'react'
+import {ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle} from 'react-native'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import {theme} from '../../styles/theme'
 
 interface ButtonProps {
-    children: React.ReactNode;
-    theme?: ButtonTheme;
-    square?: boolean;
-    size?: ButtonSize;
-    onPress?: () => void;
-    style?: any; // Additional styles
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
+    size?: 'sm' | 'md' | 'lg'
+    disabled?: boolean
+    loading?: boolean
+    icon?: string
+    iconPosition?: 'left' | 'right'
+    onPress: () => void
+    children: React.ReactNode
+    style?: ViewStyle
+    textStyle?: TextStyle
+    fullWidth?: boolean
 }
 
 export const Button: React.FC<ButtonProps> = ({
-                                                  children,
-                                                  theme = ButtonTheme.BACKGROUND,
-                                                  square = false,
-                                                  size = ButtonSize.M,
+                                                  variant = 'primary',
+                                                  size = 'md',
+                                                  disabled = false,
+                                                  loading = false,
+                                                  icon,
+                                                  iconPosition = 'left',
                                                   onPress,
+                                                  children,
                                                   style,
+                                                  textStyle,
+                                                  fullWidth = false,
+                                                  ...props
                                               }) => {
-    const buttonStyle = getButtonStyle(theme, size, square);
+    const buttonStyle = [
+        styles.base,
+        styles[variant],
+        styles[size],
+        fullWidth && styles.fullWidth,
+        (disabled || loading) && styles.disabled,
+        style
+    ]
+
+    const textStyleCombined = [
+        styles.text,
+        styles[`${variant}Text`],
+        styles[`${size}Text`],
+        textStyle
+    ]
+
+    const iconSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20
+    const iconColor = variant === 'outline' || variant === 'ghost'
+        ? theme.colors.primary
+        : 'white'
+
+    const renderIcon = () => {
+        if (!icon) return null
+        return (
+            <MaterialCommunityIcons
+                name={icon}
+                size={iconSize}
+                color={iconColor}
+                style={iconPosition === 'right' ? styles.iconRight : styles.iconLeft}
+            />
+        )
+    }
+
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator
+                        size="small"
+                        color={variant === 'outline' || variant === 'ghost' ? theme.colors.primary : 'white'}
+                    />
+                    {typeof children === 'string' && (
+                        <Text style={[textStyleCombined, styles.loadingText]}>
+                            {children}
+                        </Text>
+                    )}
+                </View>
+            )
+        }
+
+        return (
+            <>
+                {iconPosition === 'left' && renderIcon()}
+                <Text style={textStyleCombined}>{children}</Text>
+                {iconPosition === 'right' && renderIcon()}
+            </>
+        )
+    }
 
     return (
-        <TouchableOpacity style={[buttonStyle, style]} onPress={onPress}>
-            <Text style={{ color: theme === ButtonTheme.BACKGROUND_INVERTED ? '#000000' : '#FFFFFF' }}>
-                {children}
-            </Text>
+        <TouchableOpacity
+            style={buttonStyle}
+            onPress={onPress}
+            disabled={disabled || loading}
+            activeOpacity={0.7}
+            {...props}
+        >
+            {renderContent()}
         </TouchableOpacity>
-    );
-};
+    )
+}
+
+const styles = StyleSheet.create({
+    base: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.borderRadius.md,
+        ...theme.shadow.small,
+    },
+
+    // Variants
+    primary: {
+        backgroundColor: theme.colors.primary,
+    },
+    secondary: {
+        backgroundColor: theme.colors.secondary,
+    },
+    outline: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+    },
+    ghost: {
+        backgroundColor: 'transparent',
+    },
+    danger: {
+        backgroundColor: theme.colors.error,
+    },
+
+    // Sizes
+    sm: {
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        minHeight: 32,
+    },
+    md: {
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.md,
+        minHeight: 44,
+    },
+    lg: {
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.lg,
+        minHeight: 52,
+    },
+
+    // Text styles
+    text: {
+        fontWeight: theme.fontWeight.semibold,
+        textAlign: 'center',
+    },
+    primaryText: {
+        color: theme.colors.text.inverse,
+        fontSize: theme.fontSize.md,
+    },
+    secondaryText: {
+        color: theme.colors.text.inverse,
+        fontSize: theme.fontSize.md,
+    },
+    outlineText: {
+        color: theme.colors.primary,
+        fontSize: theme.fontSize.md,
+    },
+    ghostText: {
+        color: theme.colors.primary,
+        fontSize: theme.fontSize.md,
+    },
+    dangerText: {
+        color: theme.colors.text.inverse,
+        fontSize: theme.fontSize.md,
+    },
+
+    // Size text
+    smText: {
+        fontSize: theme.fontSize.sm,
+    },
+    mdText: {
+        fontSize: theme.fontSize.md,
+    },
+    lgText: {
+        fontSize: theme.fontSize.lg,
+    },
+
+    // States
+    disabled: {
+        backgroundColor: theme.colors.disabled,
+        opacity: 0.7,
+    },
+    fullWidth: {
+        width: '100%',
+    },
+
+    // Icons
+    iconLeft: {
+        marginRight: theme.spacing.sm,
+    },
+    iconRight: {
+        marginLeft: theme.spacing.sm,
+    },
+
+    // Loading
+    loadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    loadingText: {
+        marginLeft: theme.spacing.sm,
+    },
+})
