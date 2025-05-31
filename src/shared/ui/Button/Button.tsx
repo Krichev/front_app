@@ -1,19 +1,19 @@
-// src/shared/ui/Button/Button.tsx
+// src/shared/ui/Button/Button.tsx - RECOMMENDED FIX
 import React from 'react'
 import {ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle} from 'react-native'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import {theme} from '../../styles/theme'
 
 interface ButtonProps {
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
-    size?: 'sm' | 'md' | 'lg'
+    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | string // Allow any string
+    size?: 'sm' | 'md' | 'lg' | string // Allow any string
     disabled?: boolean
     loading?: boolean
     icon?: string
     iconPosition?: 'left' | 'right'
     onPress: () => void
     children: React.ReactNode
-    style?: ViewStyle
+    style?: ViewStyle | ViewStyle[] | (ViewStyle | false | undefined)[] // Accept style arrays
     textStyle?: TextStyle
     fullWidth?: boolean
 }
@@ -32,19 +32,34 @@ export const Button: React.FC<ButtonProps> = ({
                                                   fullWidth = false,
                                                   ...props
                                               }) => {
+    // Process style arrays safely
+    const processedStyle = React.useMemo(() => {
+        if (!style) return undefined
+        if (Array.isArray(style)) {
+            const validStyles = style.filter(Boolean) as ViewStyle[]
+            return StyleSheet.flatten(validStyles)
+        }
+        return style
+    }, [style])
+
+    // Safe style getter that handles unknown variants
+    const getVariantStyle = (styleName: keyof typeof styles) => {
+        return styles[styleName] || styles.primary
+    }
+
     const buttonStyle = [
         styles.base,
-        styles[variant],
-        styles[size],
+        getVariantStyle(variant as keyof typeof styles),
+        getVariantStyle(size as keyof typeof styles),
         fullWidth && styles.fullWidth,
         (disabled || loading) && styles.disabled,
-        style
+        processedStyle
     ]
 
     const textStyleCombined = [
         styles.text,
-        styles[`${variant}Text`],
-        styles[`${size}Text`],
+        getVariantStyle(`${variant}Text` as keyof typeof styles),
+        getVariantStyle(`${size}Text` as keyof typeof styles),
         textStyle
     ]
 
