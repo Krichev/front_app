@@ -9,7 +9,7 @@ import {CustomCard} from '../Card/CustomCard.tsx';
 import {CustomSourceSelector, SourceType} from "../SourceSelector/CustomSourceSelector.tsx";
 import {CustomInput} from "../Input/CustomInput.tsx";
 import {Difficulty} from "../../lib";
-import {CustomButton} from "../Button/CustomButton.tsx";
+import {CustomButton} from '../index.ts';
 
 export interface GameSettings {
     teamName: string;

@@ -1,4 +1,4 @@
-// src/shared/ui/Input/Input.tsx
+// src/shared/ui/Input/Input.tsx - Fixed version
 import React from 'react'
 import {StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle,} from 'react-native'
 import {theme} from '../../styles/theme'
@@ -9,21 +9,23 @@ interface InputProps extends TextInputProps {
     required?: boolean
     containerStyle?: ViewStyle
     hint?: string
+    disabled?: boolean // Explicitly add disabled prop
 }
 
-export const CustomInput: React.FC<InputProps> = ({
+export const Input: React.FC<InputProps> = ({
                                                 label,
                                                 error,
                                                 required,
                                                 containerStyle,
                                                 hint,
                                                 style,
+                                                disabled = false,
                                                 ...props
                                             }) => {
     return (
         <View style={[styles.container, containerStyle]}>
             {label && (
-                <Text style={styles.label}>
+                <Text style={[styles.label, disabled && styles.labelDisabled]}>
                     {label}
                     {required && <Text style={styles.required}> *</Text>}
                 </Text>
@@ -33,15 +35,20 @@ export const CustomInput: React.FC<InputProps> = ({
                 style={[
                     styles.input,
                     error && styles.inputError,
+                    disabled && styles.inputDisabled,
                     props.multiline && styles.textArea,
                     style
-                ]}
-                placeholderTextColor={theme.colors.text.disabled}
+                ].filter(Boolean)}
+                placeholderTextColor={disabled ? theme.colors.text.disabled : theme.colors.text.disabled}
+                editable={!disabled} // React Native uses editable instead of disabled
+                selectTextOnFocus={!disabled}
                 {...props}
             />
 
             {hint && !error && (
-                <Text style={styles.hint}>{hint}</Text>
+                <Text style={[styles.hint, disabled && styles.hintDisabled]}>
+                    {hint}
+                </Text>
             )}
 
             {error && (
@@ -61,6 +68,9 @@ const styles = StyleSheet.create({
         color: theme.colors.text.secondary,
         marginBottom: theme.spacing.sm,
     },
+    labelDisabled: {
+        color: theme.colors.text.disabled,
+    },
     required: {
         color: theme.colors.error,
     },
@@ -76,6 +86,11 @@ const styles = StyleSheet.create({
     inputError: {
         borderColor: theme.colors.error,
     },
+    inputDisabled: {
+        backgroundColor: theme.colors.background,
+        color: theme.colors.text.disabled,
+        opacity: 0.6,
+    },
     textArea: {
         minHeight: 100,
         textAlignVertical: 'top',
@@ -84,6 +99,9 @@ const styles = StyleSheet.create({
         fontSize: theme.fontSize.sm,
         color: theme.colors.text.light,
         marginTop: theme.spacing.xs,
+    },
+    hintDisabled: {
+        color: theme.colors.text.disabled,
     },
     error: {
         fontSize: theme.fontSize.sm,

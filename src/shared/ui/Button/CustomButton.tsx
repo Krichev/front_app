@@ -1,110 +1,46 @@
-// src/shared/ui/Button/Button.tsx - RECOMMENDED FIX
-import React from 'react'
-import {ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, View, ViewStyle} from 'react-native'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import {theme} from '../../styles/theme'
+// components/CustomButton.tsx - Fixed version
 
-interface ButtonProps {
-    variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | string // Allow any string
-    size?: 'sm' | 'md' | 'lg' | string // Allow any string
-    disabled?: boolean
-    loading?: boolean
-    icon?: string
-    iconPosition?: 'left' | 'right'
-    onPress: () => void
-    children: React.ReactNode
-    style?: ViewStyle | ViewStyle[] | (ViewStyle | false | undefined)[] // Accept style arrays
-    textStyle?: TextStyle
-    fullWidth?: boolean
+import React from 'react';
+import {StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle} from 'react-native';
+
+interface Props {
+    title: string;
+    onPress: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+    style?: StyleProp<ViewStyle>;
+    textStyle?: StyleProp<TextStyle>;
+    variant?: 'primary' | 'secondary' | 'outline';
+    size?: 'small' | 'medium' | 'large';
 }
 
-export const CustomButton: React.FC<ButtonProps> = ({
-                                                  variant = 'primary',
-                                                  size = 'md',
-                                                  disabled = false,
-                                                  loading = false,
-                                                  icon,
-                                                  iconPosition = 'left',
-                                                  onPress,
-                                                  children,
-                                                  style,
-                                                  textStyle,
-                                                  fullWidth = false,
-                                                  ...props
-                                              }) => {
-    // Process style arrays safely
-    const processedStyle = React.useMemo(() => {
-        if (!style) return undefined
-        if (Array.isArray(style)) {
-            const validStyles = style.filter(Boolean) as ViewStyle[]
-            return StyleSheet.flatten(validStyles)
-        }
-        return style
-    }, [style])
-
-    // Safe style getter that handles unknown variants
-    const getVariantStyle = (styleName: keyof typeof styles) => {
-        return styles[styleName] || styles.primary
-    }
-
+const CustomButton: React.FC<Props> = ({
+                                           title,
+                                           onPress,
+                                           disabled = false,
+                                           loading = false,
+                                           style,
+                                           textStyle,
+                                           variant = 'primary',
+                                           size = 'medium',
+                                           ...props
+                                       }) => {
+    // Solution 1: Filter out falsy values
     const buttonStyle = [
-        styles.base,
-        getVariantStyle(variant as keyof typeof styles),
-        getVariantStyle(size as keyof typeof styles),
-        fullWidth && styles.fullWidth,
-        (disabled || loading) && styles.disabled,
-        processedStyle
-    ]
+        styles.button,
+        styles[variant],
+        styles[size],
+        disabled && styles.disabled,
+        loading && styles.loading,
+        style
+    ].filter(Boolean);
 
-    const textStyleCombined = [
+    const combinedTextStyle = [
         styles.text,
-        getVariantStyle(`${variant}Text` as keyof typeof styles),
-        getVariantStyle(`${size}Text` as keyof typeof styles),
+        styles[`${variant}Text` as keyof typeof styles],
+        disabled && styles.disabledText,
         textStyle
-    ]
-
-    const iconSize = size === 'sm' ? 16 : size === 'lg' ? 24 : 20
-    const iconColor = variant === 'outline' || variant === 'ghost'
-        ? theme.colors.primary
-        : 'white'
-
-    const renderIcon = () => {
-        if (!icon) return null
-        return (
-            <MaterialCommunityIcons
-                name={icon}
-                size={iconSize}
-                color={iconColor}
-                style={iconPosition === 'right' ? styles.iconRight : styles.iconLeft}
-            />
-        )
-    }
-
-    const renderContent = () => {
-        if (loading) {
-            return (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator
-                        size="small"
-                        color={variant === 'outline' || variant === 'ghost' ? theme.colors.primary : 'white'}
-                    />
-                    {typeof children === 'string' && (
-                        <Text style={[textStyleCombined, styles.loadingText]}>
-                            {children}
-                        </Text>
-                    )}
-                </View>
-            )
-        }
-
-        return (
-            <>
-                {iconPosition === 'left' && renderIcon()}
-                <Text style={textStyleCombined}>{children}</Text>
-                {iconPosition === 'right' && renderIcon()}
-            </>
-        )
-    }
+    ].filter(Boolean);
 
     return (
         <TouchableOpacity
@@ -114,116 +50,79 @@ export const CustomButton: React.FC<ButtonProps> = ({
             activeOpacity={0.7}
             {...props}
         >
-            {renderContent()}
+            <Text style={combinedTextStyle}>
+                {loading ? 'Loading...' : title}
+            </Text>
         </TouchableOpacity>
-    )
-}
+    );
+};
 
 const styles = StyleSheet.create({
-    base: {
-        flexDirection: 'row',
+    button: {
+        paddingVertical: 15,
+        paddingHorizontal: 25,
+        borderRadius: 25,
         alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: theme.borderRadius.md,
-        ...theme.shadow.small,
+        marginVertical: 15,
     },
 
     // Variants
     primary: {
-        backgroundColor: theme.colors.primary,
+        backgroundColor: '#1E90FF',
     },
     secondary: {
-        backgroundColor: theme.colors.secondary,
+        backgroundColor: '#6C757D',
     },
     outline: {
         backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: theme.colors.primary,
-    },
-    ghost: {
-        backgroundColor: 'transparent',
-    },
-    danger: {
-        backgroundColor: theme.colors.error,
+        borderWidth: 2,
+        borderColor: '#1E90FF',
     },
 
     // Sizes
-    sm: {
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
+    small: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         minHeight: 32,
     },
-    md: {
-        paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.md,
+    medium: {
+        paddingVertical: 12,
+        paddingHorizontal: 20,
         minHeight: 44,
     },
-    lg: {
-        paddingHorizontal: theme.spacing.xl,
-        paddingVertical: theme.spacing.lg,
+    large: {
+        paddingVertical: 16,
+        paddingHorizontal: 24,
         minHeight: 52,
-    },
-
-    // Text styles
-    text: {
-        fontWeight: theme.fontWeight.semibold,
-        textAlign: 'center',
-    },
-    primaryText: {
-        color: theme.colors.text.inverse,
-        fontSize: theme.fontSize.md,
-    },
-    secondaryText: {
-        color: theme.colors.text.inverse,
-        fontSize: theme.fontSize.md,
-    },
-    outlineText: {
-        color: theme.colors.primary,
-        fontSize: theme.fontSize.md,
-    },
-    ghostText: {
-        color: theme.colors.primary,
-        fontSize: theme.fontSize.md,
-    },
-    dangerText: {
-        color: theme.colors.text.inverse,
-        fontSize: theme.fontSize.md,
-    },
-
-    // Size text
-    smText: {
-        fontSize: theme.fontSize.sm,
-    },
-    mdText: {
-        fontSize: theme.fontSize.md,
-    },
-    lgText: {
-        fontSize: theme.fontSize.lg,
     },
 
     // States
     disabled: {
-        backgroundColor: theme.colors.disabled,
+        backgroundColor: '#CCCCCC',
+        opacity: 0.6,
+    },
+    loading: {
         opacity: 0.7,
     },
-    fullWidth: {
-        width: '100%',
-    },
 
-    // Icons
-    iconLeft: {
-        marginRight: theme.spacing.sm,
+    // Text styles
+    text: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
     },
-    iconRight: {
-        marginLeft: theme.spacing.sm,
+    primaryText: {
+        color: '#FFFFFF',
     },
+    secondaryText: {
+        color: '#FFFFFF',
+    },
+    outlineText: {
+        color: '#1E90FF',
+    },
+    disabledText: {
+        color: '#999999',
+    },
+});
 
-    // Loading
-    loadingContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    loadingText: {
-        marginLeft: theme.spacing.sm,
-    },
-})
+export default CustomButton;
