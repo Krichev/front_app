@@ -1,18 +1,17 @@
-// src/shared/ui/index.ts
-
+// src/shared/ui/index.ts - Fixed exports
 // Core UI Components
-export { CustomButton } from './Button/CustomButton.tsx'
-export { CustomInput } from './Input/CustomInput.tsx'
-export { CustomCard } from './Card/CustomCard.tsx'
+export { CustomButton } from './Button/CustomButton'
+export { CustomInput } from './Input/CustomInput'
+export { CustomCard } from './Card/CustomCard'
 export { Badge } from './Badge/Badge'
-export { CustomModal } from './Modal/CustomModal.tsx'
-export { CustomLoadingState } from './LoadingState/CustomLoadingState.tsx'
-export { CustomErrorState } from './ErrorState/CustomErrorState.tsx'
+export { CustomModal } from './Modal/CustomModal'
+export { CustomLoadingState } from './LoadingState/CustomLoadingState'
+export { CustomErrorState } from './ErrorState/CustomErrorState'
 
 // Enhanced UI Components
-export { CustomProgressBar } from './ProgressBar/CustomProgressBar.tsx'
-export { CustomToggle } from './Toggle/CustomToggle.tsx'
-export { CustomTimer } from './Timer/CustomTimer.tsx'
+export { CustomProgressBar } from './ProgressBar/CustomProgressBar'
+export { CustomToggle } from './Toggle/CustomToggle'
+export { CustomTimer } from './Timer/CustomTimer'
 
 // Game-specific Components
 export { QuestionCard } from './QuestionCard/QuestionCard'
@@ -28,7 +27,7 @@ export type { PlayerPerformance, RoundResult } from './ResultsSummary/ResultsSum
 // Form Components
 export { DifficultySelector } from './DifficultySelector/DifficultySelector'
 export type { Difficulty } from './DifficultySelector/DifficultySelector'
-export { CustomPlayerSelector } from './PlayerSelector/CustomPlayerSelector.tsx'
+export { CustomPlayerSelector } from './PlayerSelector/CustomPlayerSelector'
 export { TeamMemberList } from './TeamMemberList/TeamMemberList'
-export { CustomSourceSelector } from './SourceSelector/CustomSourceSelector.tsx'
-export type { SourceType } from './SourceSelector/CustomSourceSelector.tsx'
+export { CustomSourceSelector } from './SourceSelector/CustomSourceSelector'
+export type { SourceType } from './SourceSelector/CustomSourceSelector'

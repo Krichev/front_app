@@ -6,22 +6,20 @@ interface CardProps {
     children: React.ReactNode
     padding?: keyof typeof theme.spacing
     margin?: keyof typeof theme.spacing
-    style?: ViewStyle | ViewStyle[] | (ViewStyle | false | undefined)[] // Accept arrays with conditional values
+    style?: ViewStyle | ViewStyle[] | (ViewStyle | false | undefined)[]
     shadow?: 'small' | 'medium' | 'large'
 }
 
 export const CustomCard: React.FC<CardProps> = ({
-                                              children,
-                                              padding = 'lg',
-                                              margin = 'lg',
-                                              style,
-                                              shadow = 'medium'
-                                          }) => {
-    // Filter out falsy values and flatten the array
+                                                    children,
+                                                    padding = 'lg',
+                                                    margin = 'lg',
+                                                    style,
+                                                    shadow = 'medium'
+                                                }) => {
     const processedStyle = React.useMemo(() => {
         if (!style) return undefined
         if (Array.isArray(style)) {
-            // Filter out false, undefined, null values and flatten
             const validStyles = style.filter(Boolean) as ViewStyle[]
             return StyleSheet.flatten(validStyles)
         }

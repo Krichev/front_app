@@ -1,31 +1,34 @@
-// components/CustomButton.tsx - Fixed version
-
+// src/shared/ui/Button/CustomButton.tsx - Fixed imports
+// src/shared/ui/Card/CustomCard.tsx - Fixed imports
+// src/shared/ui/Badge/Badge.tsx - Fixed imports
 import React from 'react';
 import {StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle} from 'react-native';
+import {theme} from '../../config';
 
 interface Props {
-    title: string;
+    title?: string;
+    children?: React.ReactNode;
     onPress: () => void;
     disabled?: boolean;
     loading?: boolean;
     style?: StyleProp<ViewStyle>;
     textStyle?: StyleProp<TextStyle>;
     variant?: 'primary' | 'secondary' | 'outline';
-    size?: 'small' | 'medium' | 'large';
+    size?: 'sm' | 'md' | 'lg';
 }
 
-const CustomButton: React.FC<Props> = ({
-                                           title,
-                                           onPress,
-                                           disabled = false,
-                                           loading = false,
-                                           style,
-                                           textStyle,
-                                           variant = 'primary',
-                                           size = 'medium',
-                                           ...props
-                                       }) => {
-    // Solution 1: Filter out falsy values
+export const CustomButton: React.FC<Props> = ({
+                                                  title,
+                                                  children,
+                                                  onPress,
+                                                  disabled = false,
+                                                  loading = false,
+                                                  style,
+                                                  textStyle,
+                                                  variant = 'primary',
+                                                  size = 'md',
+                                                  ...props
+                                              }) => {
     const buttonStyle = [
         styles.button,
         styles[variant],
@@ -51,7 +54,7 @@ const CustomButton: React.FC<Props> = ({
             {...props}
         >
             <Text style={combinedTextStyle}>
-                {loading ? 'Loading...' : title}
+                {loading ? 'Loading...' : title || children}
             </Text>
         </TouchableOpacity>
     );
@@ -59,46 +62,49 @@ const CustomButton: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
     button: {
-        paddingVertical: 15,
-        paddingHorizontal: 25,
-        borderRadius: 25,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing.lg,
+        borderRadius: theme.borderRadius.md,
         alignItems: 'center',
-        marginVertical: 15,
+        justifyContent: 'center',
+        flexDirection: 'row',
+        minHeight: 44,
+        ...theme.shadow.small,
     },
 
     // Variants
     primary: {
-        backgroundColor: '#1E90FF',
+        backgroundColor: theme.colors.primary,
     },
     secondary: {
-        backgroundColor: '#6C757D',
+        backgroundColor: theme.colors.secondary,
     },
     outline: {
         backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderColor: '#1E90FF',
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
     },
 
     // Sizes
-    small: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
+    sm: {
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
         minHeight: 32,
     },
-    medium: {
-        paddingVertical: 12,
-        paddingHorizontal: 20,
+    md: {
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing.lg,
         minHeight: 44,
     },
-    large: {
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+    lg: {
+        paddingVertical: theme.spacing.lg,
+        paddingHorizontal: theme.spacing.xl,
         minHeight: 52,
     },
 
     // States
     disabled: {
-        backgroundColor: '#CCCCCC',
+        backgroundColor: theme.colors.disabled,
         opacity: 0.6,
     },
     loading: {
@@ -107,22 +113,23 @@ const styles = StyleSheet.create({
 
     // Text styles
     text: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
+        fontSize: theme.fontSize.md,
+        fontWeight: theme.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     primaryText: {
-        color: '#FFFFFF',
+        color: theme.colors.text.inverse,
     },
     secondaryText: {
-        color: '#FFFFFF',
+        color: theme.colors.text.inverse,
     },
     outlineText: {
-        color: '#1E90FF',
+        color: theme.colors.primary,
     },
     disabledText: {
-        color: '#999999',
+        color: theme.colors.text.disabled,
     },
 });
 
-export default CustomButton;
+
+

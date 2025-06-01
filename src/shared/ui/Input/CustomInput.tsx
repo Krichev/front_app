@@ -12,7 +12,7 @@ interface InputProps extends TextInputProps {
     disabled?: boolean // Explicitly add disabled prop
 }
 
-export const Input: React.FC<InputProps> = ({
+export const CustomInput: React.FC<InputProps> = ({
                                                 label,
                                                 error,
                                                 required,

@@ -3,6 +3,7 @@ import React from 'react'
 import {StyleSheet, Text, View, ViewStyle} from 'react-native'
 import {theme} from '../../styles/theme'
 
+
 interface BadgeProps {
     text: string
     variant?: 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'neutral'
