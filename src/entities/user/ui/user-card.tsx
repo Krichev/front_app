@@ -1,11 +1,10 @@
 // src/entities/user/ui/user-card.tsx
-// src/entities/user/ui/user-avatar.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {CustomCard} from '../../../shared/ui';
+import {theme} from '../../../shared/config';
 import {UserAvatar} from './user-avatar';
 import type {User} from '../model/types';
-import {theme} from "../../../shared/styles";
 
 interface UserCardProps {
     user: User;
@@ -93,4 +92,3 @@ const styles = StyleSheet.create({
         color: theme.colors.text.light,
     },
 });
-

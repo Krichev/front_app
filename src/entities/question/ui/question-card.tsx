@@ -1,20 +1,20 @@
 // src/entities/question/ui/question-card.tsx
-import React from 'react';
-import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {Badge, CustomCard} from '../../../shared/ui';
-import {theme} from '../../../shared/styles';
-import type {Question} from '../model/types';
+import React from 'react'
+import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native'
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import {Badge, CustomCard} from "../../../shared/ui";
+import {theme} from "../../../shared/config";
+import type {Question} from "../model/types";
 
-interface QuestionCardProps {
-    question: Question;
-    isSelected?: boolean;
-    onPress?: () => void;
-    onEdit?: () => void;
-    onDelete?: () => void;
-    showAnswer?: boolean;
-    selectable?: boolean;
-    style?: ViewStyle;
+export interface QuestionCardProps {
+    question: Question
+    isSelected?: boolean
+    onPress?: () => void
+    onEdit?: () => void
+    onDelete?: () => void
+    showAnswer?: boolean
+    style?: ViewStyle
+    selectable?: boolean
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -24,32 +24,48 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                                               onEdit,
                                                               onDelete,
                                                               showAnswer = false,
-                                                              selectable = false,
                                                               style,
+                                                              selectable = false
                                                           }) => {
-    const getDifficultyVariant = () => {
-        switch (question.difficulty) {
-            case 'EASY': return 'success';
-            case 'MEDIUM': return 'warning';
-            case 'HARD': return 'error';
-            default: return 'neutral';
+    const handlePress = () => {
+        if (onPress) {
+            onPress()
         }
-    };
+    }
+
+    const getDifficultyBadgeVariant = () => {
+        switch (question.difficulty) {
+            case 'Easy':
+                return 'success'
+            case 'Medium':
+                return 'warning'
+            case 'Hard':
+                return 'error'
+            default:
+                return 'neutral'
+        }
+    }
+
+    // Combine styles safely
+    const cardStyle: ViewStyle[] = [
+        styles.card,
+        isSelected && styles.selectedCard,
+        selectable && styles.selectableCard,
+        style
+    ].filter(Boolean) as ViewStyle[]
 
     const CardContent = () => (
         <CustomCard
-            style={[
-                styles.card,
-                isSelected && styles.selectedCard,
-                style
-            ]}
+            style={cardStyle}
+            padding="md"
+            shadow="small"
         >
-            {/* Header */}
+            {/* Header with difficulty badge and actions */}
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
                     <Badge
                         text={question.difficulty}
-                        variant={getDifficultyVariant()}
+                        variant={getDifficultyBadgeVariant()}
                         size="sm"
                     />
                     {question.isUserCreated && (
@@ -68,12 +84,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                             name="check-circle"
                             size={20}
                             color={theme.colors.success}
+                            style={styles.selectedIcon}
                         />
                     )}
+
                     {(onEdit || onDelete) && (
                         <View style={styles.actions}>
                             {onEdit && (
-                                <TouchableOpacity onPress={onEdit} style={styles.actionButton}>
+                                <TouchableOpacity
+                                    onPress={onEdit}
+                                    style={styles.actionButton}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
                                     <MaterialCommunityIcons
                                         name="pencil"
                                         size={18}
@@ -81,8 +103,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                     />
                                 </TouchableOpacity>
                             )}
+
                             {onDelete && (
-                                <TouchableOpacity onPress={onDelete} style={styles.actionButton}>
+                                <TouchableOpacity
+                                    onPress={onDelete}
+                                    style={styles.actionButton}
+                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
                                     <MaterialCommunityIcons
                                         name="delete"
                                         size={18}
@@ -95,13 +122,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 </View>
             </View>
 
-            {/* Question */}
+            {/* Question text */}
             <Text style={styles.questionText} numberOfLines={showAnswer ? undefined : 3}>
                 {question.question}
             </Text>
 
-            {/* Answer */}
-            {showAnswer && (
+            {/* Answer (if shown) */}
+            {showAnswer && question.answer && (
                 <View style={styles.answerContainer}>
                     <Text style={styles.answerLabel}>Answer:</Text>
                     <Text style={styles.answerText}>{question.answer}</Text>
@@ -113,11 +140,14 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <Text style={styles.topicText}>Topic: {question.topic}</Text>
             )}
 
-            {/* Footer */}
+            {/* Footer with creation date */}
             <View style={styles.footer}>
-                <Text style={styles.dateText}>
-                    Created: {new Date(question.createdAt).toLocaleDateString()}
-                </Text>
+                {question.createdAt && (
+                    <Text style={styles.dateText}>
+                        Created: {new Date(question.createdAt).toLocaleDateString()}
+                    </Text>
+                )}
+
                 {selectable && (
                     <Text style={styles.selectHint}>
                         {isSelected ? 'Selected' : 'Tap to select'}
@@ -125,18 +155,18 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 )}
             </View>
         </CustomCard>
-    );
+    )
 
     if (onPress && selectable) {
         return (
-            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+            <TouchableOpacity onPress={handlePress} activeOpacity={0.7}>
                 <CardContent />
             </TouchableOpacity>
-        );
+        )
     }
 
-    return <CardContent />;
-};
+    return <CardContent />
+}
 
 const styles = StyleSheet.create({
     card: {
@@ -146,6 +176,10 @@ const styles = StyleSheet.create({
         borderColor: theme.colors.success,
         borderWidth: 2,
         backgroundColor: theme.colors.successLight,
+    },
+    selectableCard: {
+        borderColor: theme.colors.border,
+        borderWidth: 1,
     },
     header: {
         flexDirection: 'row',
@@ -164,6 +198,9 @@ const styles = StyleSheet.create({
     },
     customBadge: {
         marginLeft: theme.spacing.xs,
+    },
+    selectedIcon: {
+        marginRight: theme.spacing.sm,
     },
     actions: {
         flexDirection: 'row',
@@ -217,4 +254,4 @@ const styles = StyleSheet.create({
         color: theme.colors.text.light,
         fontStyle: 'italic',
     },
-});
+})

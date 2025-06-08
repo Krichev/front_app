@@ -1,7 +1,8 @@
-import type {User} from "../model/types.ts";
-import React from "react";
-import {Image, StyleSheet, Text, View} from "react-native";
-import {theme} from "../../../shared/styles";
+// src/entities/user/ui/user-avatar.tsx
+import React from 'react';
+import {Image, StyleSheet, Text, View} from 'react-native';
+import {theme} from '../../../shared/config';
+import type {User} from '../model/types';
 
 interface UserAvatarProps {
     user: User;
@@ -28,14 +29,14 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
     return (
         <View style={styles.container}>
-            <View style={[styles.avatar, {width: avatarSize, height: avatarSize}]}>
+            <View style={[styles.avatar, { width: avatarSize, height: avatarSize }]}>
                 {user.avatar ? (
                     <Image
-                        source={{uri: user.avatar}}
-                        style={[styles.avatarImage, {width: avatarSize, height: avatarSize}]}
+                        source={{ uri: user.avatar }}
+                        style={[styles.avatarImage, { width: avatarSize, height: avatarSize }]}
                     />
                 ) : (
-                    <Text style={[styles.initials, {fontSize: avatarSize / 2.5}]}>
+                    <Text style={[styles.initials, { fontSize: avatarSize / 2.5 }]}>
                         {initials}
                     </Text>
                 )}
@@ -50,7 +51,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
     );
 };
 
-const avatarStyles = StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
         alignItems: 'center',
     },
@@ -75,6 +76,3 @@ const avatarStyles = StyleSheet.create({
         textAlign: 'center',
     },
 });
-
-// Merge styles
-const styles = {...avatarStyles};

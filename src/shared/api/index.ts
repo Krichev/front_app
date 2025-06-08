@@ -1,4 +1,23 @@
 
 // src/shared/api/index.ts
-export { baseQuery } from './base-query';
-export type { BaseQueryFn } from '@reduxjs/toolkit/query';
+export { baseQuery, baseQueryWithReauth } from './base';
+
+// Common API types
+export interface PaginatedResponse<T> {
+    data: T[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
+export interface ApiError {
+    message: string;
+    code?: string;
+    details?: any;
+}
+
+export interface ApiResponse<T> {
+    success: boolean;
+    data?: T;
+    error?: ApiError;
+}

@@ -2,9 +2,9 @@
 import React from 'react';
 
 import {StoreProvider} from './store-provider';
-import {ThemeProvider} from './theme-provider';
-import {WWWGameProvider} from './game-provider';
 import {AuthProvider} from './auth-provider';
+import {ThemeProvider} from './ThemeProvider';
+import {WWWGameProvider} from './WWWGameProvider';
 
 interface AppProvidersProps {
     children: React.ReactNode;
