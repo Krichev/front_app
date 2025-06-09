@@ -1,6 +1,5 @@
-// src/shared/lib/hooks/index.ts
-export { useGameTimer } from './useGameTimer'
-export { useGameState } from './useGameState'
-export { usePlayerManager } from './usePlayerManager'
-export { useQuestionManager } from './useQuestionManager'
-export { useVoiceRecording } from './useVoiceRecording'
+/ src/shared/lib/hooks/index.ts
+export { useDebounce } from './useDebounce';
+export { useTimer } from './useTimer';
+export { useFileHandler } from './useFileHandler';
+export { useAsyncState } from './useAsyncState';

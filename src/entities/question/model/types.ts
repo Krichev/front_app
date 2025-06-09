@@ -1,53 +1,67 @@
 // src/entities/question/model/types.ts
-
 export type QuestionDifficulty = 'Easy' | 'Medium' | 'Hard';
 
-export interface Question {
+export interface QuestionData {
     id: string;
     question: string;
     answer: string;
-    difficulty: QuestionDifficulty;
-    topic?: string;
     source?: string;
     additionalInfo?: string;
-    isUserCreated: boolean;
-    creatorId?: string;
-    externalId?: string;
-    usageCount: number;
-    createdAt: string;
-    lastUsed?: string;
+    topic?: string;
+    difficulty?: QuestionDifficulty;
+    category?: string;
+    hints?: string[];
+    alternativeAnswers?: string[];
 }
 
-export interface UserQuestion extends Question {
-    isUserCreated: true;
-    creatorId: string;
-}
-
-export interface CreateQuestionRequest {
+export interface ParsedQuestion {
+    id: string;
     question: string;
     answer: string;
-    difficulty: QuestionDifficulty;
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
+    source: string;
+    additionalInfo: string;
+    topic: string;
 }
 
-export interface UpdateQuestionRequest {
+export interface QuestionSource {
     id: string;
-    question?: string;
-    answer?: string;
-    difficulty?: QuestionDifficulty;
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
+    name: string;
+    url: string;
+    format: 'xml' | 'json' | 'api';
+    category: string;
+    isActive: boolean;
 }
 
-export interface QuestionFilters {
-    difficulty?: QuestionDifficulty;
-    topic?: string;
-    isUserCreated?: boolean;
-    creatorId?: string;
-    search?: string;
-    limit?: number;
-    offset?: number;
+export interface QuestionCategory {
+    id: string;
+    name: string;
+    description: string;
+    color: string;
+    icon: string;
+}
+
+export interface QuestionState {
+    questions: QuestionData[];
+    currentQuestion: QuestionData | null;
+    isLoading: boolean;
+    error: string | null;
+    sources: QuestionSource[];
+    categories: QuestionCategory[];
+    difficulty: QuestionDifficulty | null;
+    selectedCategory: string | null;
+}
+
+export interface AnswerValidationResult {
+    isCorrect: boolean;
+    similarity: number;
+    normalizedUserAnswer: string;
+    normalizedCorrectAnswer: string;
+    feedback?: string;
+}
+
+export interface QuestionAnalysis {
+    mentionedCorrectAnswer: boolean;
+    potentialAnswers: string[];
+    confidence: number;
+    suggestions: string[];
 }

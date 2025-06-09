@@ -1,15 +1,35 @@
 // src/entities/question/index.ts
-export { questionApi } from './api';
-export { questionSlice, questionActions } from './model';
-export type { Question, UserQuestion, QuestionDifficulty } from './model/types';
-export { QuestionCard, QuestionList } from './ui';
+export type {
+    QuestionData,
+    ParsedQuestion,
+    QuestionDifficulty,
+    QuestionSource,
+    QuestionCategory,
+    QuestionState,
+    AnswerValidationResult,
+    QuestionAnalysis,
+} from './model/types';
 
-// Re-export API hooks
+export { questionSlice, questionActions } from './model/slice';
+export { questionSelectors } from './model/selectors';
+
 export {
-    useGetQuestionsQuery,
-    useCreateQuestionMutation,
-    useUpdateQuestionMutation,
-    useDeleteQuestionMutation,
-    useGetUserQuestionsQuery,
-    useSearchQuestionsQuery,
-} from './api';
+    parseXMLQuestion,
+    fetchQuestionsFromSource,
+    getFallbackQuestions,
+    validateAnswer,
+    analyzeDiscussionNotes,
+} from './lib/questionService';
+
+export {
+    classifyQuestionDifficulty,
+    calculateAnswerSimilarity,
+    extractPotentialAnswers,
+} from './lib/difficultyClassifier';
+
+export {
+    normalizeAnswer,
+    cleanQuestionText,
+    formatQuestionForDisplay,
+    isValidQuestion,
+} from './lib/utils';
