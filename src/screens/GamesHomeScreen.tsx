@@ -5,8 +5,9 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // Define navigation parameter type
 type GamesHomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -66,7 +67,7 @@ const GamesHomeScreen: React.FC = () => {
             disabled={game.comingSoon}
         >
             <View style={[styles.iconContainer, { backgroundColor: game.color }]}>
-                <MaterialCommunityIcons name={game.icon} size={36} color="white" />
+                <CustomIcon name={game.icon} size={36} color="white" />
             </View>
             <View style={styles.gameInfo}>
                 <Text style={styles.gameTitle}>{game.title}</Text>
@@ -132,7 +133,7 @@ const GamesHomeScreen: React.FC = () => {
                                 'These tools allow you to manage game content and settings.'
                             )}
                         >
-                            <MaterialCommunityIcons name="information-outline" size={20} color="#666" />
+                            <CustomIcon name="information-outline" size={20} color="#666" />
                         </TouchableOpacity>
                     </View>
 
@@ -144,7 +145,7 @@ const GamesHomeScreen: React.FC = () => {
                     <Text style={styles.sectionTitle}>Recent Activity</Text>
                     {/* Display a message when no activity is available */}
                     <View style={styles.emptyStateContainer}>
-                        <MaterialCommunityIcons name="gamepad-variant" size={60} color="#e0e0e0" />
+                        <CustomIcon name="gamepad-variant" size={60} color="#e0e0e0" />
                         <Text style={styles.emptyStateText}>
                             No recent games played. Start a new game to see your activity here!
                         </Text>

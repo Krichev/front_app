@@ -19,8 +19,9 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {useGetUserProfileQuery, useUpdateUserProfileMutation} from '../entities/UserState/model/slice/userApi';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import {ImagePickerResponse, launchCamera, launchImageLibrary} from 'react-native-image-picker';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -238,7 +239,7 @@ const EditProfileScreen: React.FC = () => {
     if (profileError) {
         return (
             <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F44336" />
+                <CustomIcon name="alert-circle-outline" size={48} color="#F44336" />
                 <Text style={styles.errorText}>Failed to load profile information.</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
                     <Text style={styles.retryButtonText}>Go Back</Text>
@@ -271,7 +272,7 @@ const EditProfileScreen: React.FC = () => {
                                 </View>
                             )}
                             <View style={styles.editIconContainer}>
-                                <MaterialCommunityIcons name="camera" size={16} color="white" />
+                                <CustomIcon name="camera" size={16} color="white" />
                             </View>
                         </TouchableOpacity>
                         <Text style={styles.changePhotoText}>Tap to change profile picture</Text>

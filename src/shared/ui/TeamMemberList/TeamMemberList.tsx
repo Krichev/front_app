@@ -46,7 +46,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                                 onPress={() => onRemoveMember(index)}
                                 style={styles.removeButton}
                             >
-                                <MaterialCommunityIcons
+                                <CustomIcon
                                     name="close"
                                     size={16}
                                     color="white"
@@ -71,7 +71,7 @@ export const TeamMemberList: React.FC<TeamMemberListProps> = ({
                         style={styles.addButton}
                         disabled={!newMemberValue.trim()}
                     >
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name="plus"
                             size={20}
                             color="white"

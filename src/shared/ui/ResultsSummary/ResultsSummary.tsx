@@ -133,7 +133,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({
         return (
             <CustomCard style={styles.section}>
                 <View style={styles.feedbackHeader}>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="comment-text"
                         size={20}
                         color={theme.colors.secondary}

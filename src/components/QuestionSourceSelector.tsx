@@ -1,7 +1,6 @@
 // src/components/QuestionSourceSelector.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface QuestionSourceSelectorProps {
     source: 'app' | 'user';
@@ -23,7 +22,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                     ]}
                     onPress={() => onSelectSource('app')}
                 >
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="brain"
                         size={20}
                         color={source === 'app' ? 'white' : '#666'}
@@ -45,7 +44,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                     ]}
                     onPress={() => onSelectSource('user')}
                 >
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="account-edit"
                         size={20}
                         color={source === 'user' ? 'white' : '#666'}

@@ -1,11 +1,11 @@
 // src/entities/challenge/ui/challenge-card.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Badge, CustomCard} from '../../../shared/ui';
 import {theme} from '../../../shared/config';
 import {ChallengeStatusBadge} from './challenge-status-badge';
 import {Challenge} from "../model/type.ts";
+import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface ChallengeCardProps {
     challenge: Challenge;
@@ -50,7 +50,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
         <CustomCard style={styles.card}>
             <View style={styles.header}>
                 <View style={[styles.iconContainer, { backgroundColor: `${getTypeColor()}20` }]}>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name={getTypeIcon()}
                         size={24}
                         color={getTypeColor()}
@@ -90,7 +90,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
                 <ChallengeStatusBadge status={challenge.status} />
 
                 <View style={styles.participants}>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="account-group"
                         size={16}
                         color={theme.colors.text.light}
@@ -105,7 +105,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
 
             {challenge.reward && (
                 <View style={styles.reward}>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="gift"
                         size={16}
                         color={theme.colors.warning}

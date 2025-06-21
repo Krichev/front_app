@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import AudioRecord from 'react-native-audio-record';
 import RNFS from 'react-native-fs';
 import {FileService} from "../services/speech/FileService.ts";
@@ -323,10 +323,10 @@ const VoiceRecorderWithFile: React.FC<VoiceRecorderWithFileProps> = ({
                             transform: [{ scale: pulseAnimation }],
                         }}
                     >
-                        <MaterialCommunityIcons name="stop" size={36} color="white" />
+                        <CustomIcon name="stop" size={36} color="white" />
                     </Animated.View>
                 ) : (
-                    <MaterialCommunityIcons name="microphone" size={36} color="white" />
+                    <CustomIcon name="microphone" size={36} color="white" />
                 )}
             </TouchableOpacity>
 
@@ -350,10 +350,10 @@ const VoiceRecorderWithFile: React.FC<VoiceRecorderWithFileProps> = ({
             {/* Error Display */}
             {error && (
                 <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={20} color="#F44336" />
+                    <CustomIcon name="alert-circle" size={20} color="#F44336" />
                     <Text style={styles.errorText}>{error}</Text>
                     <TouchableOpacity onPress={() => setError(null)}>
-                        <MaterialCommunityIcons name="close" size={20} color="#F44336" />
+                        <CustomIcon name="close" size={20} color="#F44336" />
                     </TouchableOpacity>
                 </View>
             )}

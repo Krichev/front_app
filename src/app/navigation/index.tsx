@@ -3,7 +3,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 
 // Pages imports
 import {LoginPage} from '../../pages/auth/login';
@@ -24,6 +24,7 @@ import {AuthGuard} from '../../features/auth';
 
 // Types
 import {MainTabParamList, RootStackParamList} from './types';
+import {CustomIcon} from "../../shared/components/Icon/CustomIcon.tsx";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -42,7 +43,7 @@ const MainTabNavigator = () => {
                     };
 
                     return (
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={icons[route.name as keyof typeof icons] || 'help-circle-outline'}
                             size={size}
                             color={color}

@@ -1,7 +1,6 @@
 // src/entities/ChallengeState/ui/QuizChallengeCard.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useNavigation} from '@react-navigation/native';
 import {FormatterService} from '../../../services/verification/ui/Services';
 import {ApiChallenge} from "../model/slice/challengeApi.ts";
@@ -87,7 +86,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
         if (challenge.userIsCreator) {
             return (
                 <View style={styles.creatorBadge}>
-                    <MaterialCommunityIcons name="crown" size={12} color="#FFD700" />
+                    <CustomIcon name="crown" size={12} color="#FFD700" />
                     <Text style={styles.creatorBadgeText}>Creator</Text>
                 </View>
             );
@@ -98,7 +97,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
     return (
         <TouchableOpacity style={styles.container} onPress={onPress}>
             <View style={styles.iconContainer}>
-                <MaterialCommunityIcons
+                <CustomIcon
                     name={getQuizIcon()}
                     size={28}
                     color="#4CAF50"
@@ -110,7 +109,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
                     <Text style={styles.title}>{challenge.title}</Text>
                     {challenge.userIsCreator && (
                         <View style={styles.creatorBadge}>
-                            <MaterialCommunityIcons name="crown" size={12} color="#FFD700" />
+                            <CustomIcon name="crown" size={12} color="#FFD700" />
                             <Text style={styles.creatorBadgeText}>Creator</Text>
                         </View>
                     )}

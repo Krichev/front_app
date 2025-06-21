@@ -1,8 +1,8 @@
 // src/shared/ui/GamePhaseContainer/GamePhaseContainer.tsx
 import React from 'react'
 import {StyleSheet, Text, View, ViewStyle} from 'react-native'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import {theme} from '../../styles/theme'
+import {CustomIcon} from "../../components/Icon/CustomIcon.tsx";
 
 export type GamePhase = 'waiting' | 'question' | 'discussion' | 'answer' | 'feedback' | 'results'
 
@@ -77,7 +77,7 @@ export const GamePhaseContainer: React.FC<GamePhaseContainerProps> = ({
             {(title || subtitle || icon) && (
                 <View style={[styles.header, { backgroundColor: config.backgroundColor }]}>
                     {config.icon && (
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={config.icon}
                             size={24}
                             color={config.color}

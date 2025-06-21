@@ -1,8 +1,8 @@
 // src/features/www-game-discussion/ui/DiscussionAnalysis.tsx
 import React from 'react';
 import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {MaterialCommunityIcons} from '@expo/vector-icons';
 import type {DiscussionAnalysisResult} from '../model/types';
+import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface DiscussionAnalysisProps {
     result: DiscussionAnalysisResult | null;
@@ -41,7 +41,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 <Text style={styles.title}>Discussion Analysis</Text>
                 {onClose && (
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <MaterialCommunityIcons name="close" size={24} color="#666" />
+                        <CustomIcon name="close" size={24} color="#666" />
                     </TouchableOpacity>
                 )}
             </View>
@@ -50,7 +50,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 {/* Answer Status */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={result.correctAnswerMentioned ? 'check-circle' : 'alert-circle'}
                             size={20}
                             color={result.correctAnswerMentioned ? '#51cf66' : '#ff6b6b'}
@@ -68,7 +68,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 {/* Confidence */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <MaterialCommunityIcons name="gauge" size={20} color="#4dabf7" />
+                        <CustomIcon name="gauge" size={20} color="#4dabf7" />
                         <Text style={styles.sectionTitle}>Team Confidence</Text>
                     </View>
                     <View style={styles.confidenceContainer}>
@@ -93,7 +93,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 {result.bestGuesses.length > 0 && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <MaterialCommunityIcons name="lightbulb" size={20} color="#ffd43b" />
+                            <CustomIcon name="lightbulb" size={20} color="#ffd43b" />
                             <Text style={styles.sectionTitle}>Team Guesses</Text>
                         </View>
                         <View style={styles.guessesList}>
@@ -102,7 +102,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                                     <Text style={styles.guessNumber}>{index + 1}</Text>
                                     <Text style={styles.guessText}>{guess}</Text>
                                     {guess.toLowerCase().includes(correctAnswer.toLowerCase()) && (
-                                        <MaterialCommunityIcons name="check" size={16} color="#51cf66" />
+                                        <CustomIcon name="check" size={16} color="#51cf66" />
                                     )}
                                 </View>
                             ))}
@@ -114,7 +114,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 {result.keyTopics.length > 0 && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <MaterialCommunityIcons name="tag-multiple" size={20} color="#9c88ff" />
+                            <CustomIcon name="tag-multiple" size={20} color="#9c88ff" />
                             <Text style={styles.sectionTitle}>Key Topics Discussed</Text>
                         </View>
                         <View style={styles.topicsContainer}>
@@ -130,7 +130,7 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 {/* Analysis Text */}
                 <View style={styles.section}>
                     <View style={styles.sectionHeader}>
-                        <MaterialCommunityIcons name="text-box" size={20} color="#4dabf7" />
+                        <CustomIcon name="text-box" size={20} color="#4dabf7" />
                         <Text style={styles.sectionTitle}>Analysis</Text>
                     </View>
                     <Text style={styles.analysisText}>{result.analysis}</Text>
@@ -140,13 +140,13 @@ export const DiscussionAnalysis: React.FC<DiscussionAnalysisProps> = ({
                 {result.suggestions.length > 0 && (
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
-                            <MaterialCommunityIcons name="comment-text" size={20} color="#51cf66" />
+                            <CustomIcon name="comment-text" size={20} color="#51cf66" />
                             <Text style={styles.sectionTitle}>Suggestions for Next Time</Text>
                         </View>
                         <View style={styles.suggestionsList}>
                             {result.suggestions.map((suggestion, index) => (
                                 <View key={index} style={styles.suggestionItem}>
-                                    <MaterialCommunityIcons name="chevron-right" size={16} color="#51cf66" />
+                                    <CustomIcon name="chevron-right" size={16} color="#51cf66" />
                                     <Text style={styles.suggestionText}>{suggestion}</Text>
                                 </View>
                             ))}

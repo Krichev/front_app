@@ -40,9 +40,9 @@ export const VerificationProgress: React.FC<VerificationProgressProps> = ({
                             step.error && styles.errorStep,
                         ]}>
                             {step.isCompleted ? (
-                                <MaterialCommunityIcons name="check" size={12} color="white" />
+                                <CustomIcon name="check" size={12} color="white" />
                             ) : step.error ? (
-                                <MaterialCommunityIcons name="close" size={12} color="white" />
+                                <CustomIcon name="close" size={12} color="white" />
                             ) : (
                                 <Text style={styles.stepNumber}>{index + 1}</Text>
                             )}

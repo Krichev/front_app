@@ -1,9 +1,9 @@
 // src/shared/ui/ErrorState/ErrorState.tsx
 import React from 'react'
 import {StyleSheet, Text, View} from 'react-native'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import {theme} from "../../styles/theme.ts";
 import {CustomButton} from "../Button/CustomButton.tsx";
+import {CustomIcon} from "../../components/Icon/CustomIcon.tsx";
 
 interface ErrorStateProps {
     title?: string
@@ -20,7 +20,7 @@ export const CustomErrorState: React.FC<ErrorStateProps> = ({
                                                       }) => {
     return (
         <View style={styles.container}>
-            <MaterialCommunityIcons
+            <CustomIcon
                 name="alert-circle-outline"
                 size={64}
                 color={theme.colors.error}

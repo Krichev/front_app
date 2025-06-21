@@ -1,10 +1,11 @@
 // src/entities/group/ui/group-card.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import {Badge, CustomCard} from '../../../shared/ui';
 import {theme} from '../../../shared/styles';
 import type {Group} from '../model/types';
+import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface GroupCardProps {
     group: Group;
@@ -55,7 +56,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.iconContainer}>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name={getTypeIcon()}
                         size={24}
                         color={theme.colors.primary}
@@ -66,7 +67,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                         {group.name}
                     </Text>
                     <View style={styles.metadata}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={getPrivacyIcon()}
                             size={16}
                             color={theme.colors.text.light}

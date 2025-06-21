@@ -8,8 +8,8 @@ import {StackNavigationProp} from "@react-navigation/stack";
 import {MainTabParamList, RootStackParamList} from "../navigation/AppNavigator.tsx";
 import * as Keychain from "react-native-keychain"; // RTK Query hook for fetching challenges
 import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.tsx";
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
@@ -125,7 +125,7 @@ const HomeScreen: React.FC = () => {
                     ) : wwwQuizzes.length > 0 ? (
                         <View>
                             <View style={styles.featuredQuizHeader}>
-                                <MaterialCommunityIcons name="brain" size={20} color="#4CAF50"/>
+                                <CustomIcon name="brain" size={20} color="#4CAF50"/>
                                 <Text style={styles.featuredQuizTitle}>What? Where? When? Quizzes</Text>
                             </View>
 
@@ -141,7 +141,7 @@ const HomeScreen: React.FC = () => {
                                 style={styles.createQuizButton}
                                 onPress={() => navigation.navigate('CreateWWWQuest')}
                             >
-                                <MaterialCommunityIcons name="plus" size={16} color="white"/>
+                                <CustomIcon name="plus" size={16} color="white"/>
                                 <Text style={styles.createQuizText}>Create Quiz</Text>
                             </TouchableOpacity>
                         </View>
@@ -152,7 +152,7 @@ const HomeScreen: React.FC = () => {
                                 style={styles.createQuizButton}
                                 onPress={() => navigation.navigate('CreateWWWQuest')}
                             >
-                                <MaterialCommunityIcons name="plus" size={16} color="white"/>
+                                <CustomIcon name="plus" size={16} color="white"/>
                                 <Text style={styles.createQuizText}>Create What? Where? When? Quiz</Text>
                             </TouchableOpacity>
                         </View>

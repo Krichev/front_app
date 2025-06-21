@@ -1,9 +1,9 @@
 // src/features/www-game-discussion/ui/DiscussionNotes.tsx
 import React, {useState} from 'react';
 import {Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
-import {MaterialCommunityIcons} from '@expo/vector-icons';
 import {useWWWDiscussion} from '../lib/hooks';
 import type {DiscussionPhase} from '../model/types';
+import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface DiscussionNotesProps {
     notes: string;
@@ -74,7 +74,7 @@ export const DiscussionNotes: React.FC<DiscussionNotesProps> = ({
                             style={styles.answerButton}
                             onPress={() => setIsAnswerMode(true)}
                         >
-                            <MaterialCommunityIcons name="check-circle" size={20} color="white" />
+                            <CustomIcon name="check-circle" size={20} color="white" />
                             <Text style={styles.answerButtonText}>Answer</Text>
                         </TouchableOpacity>
                     )}
@@ -129,7 +129,7 @@ export const DiscussionNotes: React.FC<DiscussionNotesProps> = ({
                             onPress={handleSubmitAnswer}
                             disabled={!finalAnswer.trim()}
                         >
-                            <MaterialCommunityIcons name="send" size={20} color="white" />
+                            <CustomIcon name="send" size={20} color="white" />
                         </TouchableOpacity>
                     </View>
                     <TouchableOpacity

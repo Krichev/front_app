@@ -1,9 +1,9 @@
 // src/components/VoiceRecorder.tsx
 import React, {useEffect, useRef, useState} from 'react';
 import {ActivityIndicator, PermissionsAndroid, Platform, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AudioRecord from 'react-native-audio-record';
 import {Buffer} from 'buffer';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 interface VoiceRecorderProps {
     onTranscription: (text: string) => void;
@@ -241,7 +241,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
                 {isProcessing ? (
                     <ActivityIndicator size="large" color="white" />
                 ) : (
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name={isRecording ? 'stop' : 'microphone'}
                         size={36}
                         color="white"
@@ -259,7 +259,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
 
             {error && (
                 <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={20} color="#F44336" />
+                    <CustomIcon name="alert-circle" size={20} color="#F44336" />
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
             )}

@@ -1,8 +1,8 @@
 // src/widgets/game-session/ui/GameFooter.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {MaterialCommunityIcons} from '@expo/vector-icons';
 import type {GameSession} from '../../../entities/game-session';
+import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface GameFooterProps {
     session: GameSession;
@@ -27,7 +27,7 @@ export const GameFooter: React.FC<GameFooterProps> = ({
                     style={styles.secondaryButton}
                     onPress={onEndGame}
                 >
-                    <MaterialCommunityIcons name="stop" size={20} color="#666" />
+                    <CustomIcon name="stop" size={20} color="#666" />
                     <Text style={styles.secondaryButtonText}>End Game</Text>
                 </TouchableOpacity>
 
@@ -45,7 +45,7 @@ export const GameFooter: React.FC<GameFooterProps> = ({
                     ]}>
                         {isLastRound ? 'Finish Game' : 'Next Round'}
                     </Text>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name={isLastRound ? 'flag-checkered' : 'arrow-right'}
                         size={20}
                         color={canContinue ? 'white' : '#ccc'}

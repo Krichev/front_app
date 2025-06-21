@@ -60,7 +60,7 @@ export const SpeechButton: React.FC<SpeechButtonProps> = ({
             disabled={disabled}
             activeOpacity={0.7}
         >
-            <MaterialCommunityIcons
+            <CustomIcon
                 name={getIconName()}
                 size={size * 0.4}
                 color="white"

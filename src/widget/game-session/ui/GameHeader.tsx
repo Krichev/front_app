@@ -31,7 +31,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                 <View style={styles.indicators}>
                     {speechIndicator && <SpeechIndicator compact />}
                     <View style={styles.scoreContainer}>
-                        <MaterialCommunityIcons name="star" size={16} color="#ffd700" />
+                        <CustomIcon name="star" size={16} color="#ffd700" />
                         <Text style={styles.scoreText}>{session.score}</Text>
                     </View>
                 </View>
@@ -47,14 +47,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             {currentRound && (
                 <View style={styles.roundStatus}>
                     <View style={styles.statusItem}>
-                        <MaterialCommunityIcons name="clock" size={16} color="#666" />
+                        <CustomIcon name="clock" size={16} color="#666" />
                         <Text style={styles.statusText}>
                             {Math.floor(currentRound.timeSpent / 60)}:{(currentRound.timeSpent % 60).toString().padStart(2, '0')}
                         </Text>
                     </View>
 
                     <View style={styles.statusItem}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={currentRound.phase === 'discussion' ? 'account-group' : 'help-circle'}
                             size={16}
                             color="#666"

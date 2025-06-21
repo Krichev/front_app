@@ -1,7 +1,8 @@
 // src/screens/components/ChallengeFilters.tsx
 import React from 'react';
 import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {CustomIcon} from "../../shared/components/Icon/CustomIcon.tsx";
+
 
 interface FilterOption {
     id: string;
@@ -57,7 +58,7 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
                         ]}
                         onPress={() => onSelectType(filter.id === 'ALL' ? null : filter.id)}
                     >
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={filter.icon}
                             size={20}
                             color={filter.color}
@@ -83,7 +84,7 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
                 ]}
                 onPress={() => onSelectType(selectedType === wwwFilter.id ? null : wwwFilter.id)}
             >
-                <MaterialCommunityIcons
+                <CustomIcon
                     name={wwwFilter.icon}
                     size={20}
                     color={wwwFilter.color}

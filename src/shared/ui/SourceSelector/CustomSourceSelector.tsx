@@ -61,7 +61,7 @@ export const CustomSourceSelector: React.FC<SourceSelectorProps> = ({
                         onPress={() => !disabled && onValueChange(option.value)}
                         disabled={disabled}
                     >
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={option.icon}
                             size={20}
                             color={value === option.value ? theme.colors.text.inverse : theme.colors.text.secondary}

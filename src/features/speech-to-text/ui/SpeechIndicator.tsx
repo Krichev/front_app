@@ -63,7 +63,7 @@ export const SpeechIndicator: React.FC<SpeechIndicatorProps> = ({
     return (
         <View style={[styles.container, compact && styles.compact, style]}>
             <Animated.View style={[{ transform: [{ scale: pulseAnim }] }]}>
-                <MaterialCommunityIcons
+                <CustomIcon
                     name={hasError ? 'microphone-off' : 'microphone'}
                     size={compact ? 16 : 20}
                     color={getStatusColor()}

@@ -14,12 +14,12 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {useUpdateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {DeepSeekHostService} from '../services/wwwGame/deepseekHostService';
 import {navigateToTab} from "../utils/navigation.ts";
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -156,7 +156,7 @@ const QuizResultsScreen: React.FC = () => {
                 {/* AI Feedback */}
                 <View style={styles.feedbackContainer}>
                     <View style={styles.feedbackHeader}>
-                        <MaterialCommunityIcons name="comment-text" size={20} color="#4CAF50"/>
+                        <CustomIcon name="comment-text" size={20} color="#4CAF50"/>
                         <Text style={styles.feedbackTitle}>Quiz Analysis</Text>
                     </View>
 
@@ -219,7 +219,7 @@ const QuizResultsScreen: React.FC = () => {
                         style={styles.shareButton}
                         onPress={shareResults}
                     >
-                        <MaterialCommunityIcons name="share" size={18} color="white"/>
+                        <CustomIcon name="share" size={18} color="white"/>
                         <Text style={styles.buttonText}>Share Results</Text>
                     </TouchableOpacity>
 
@@ -232,7 +232,7 @@ const QuizResultsScreen: React.FC = () => {
                             <ActivityIndicator size="small" color="white"/>
                         ) : (
                             <>
-                                <MaterialCommunityIcons name="check-circle" size={18} color="white"/>
+                                <CustomIcon name="check-circle" size={18} color="white"/>
                                 <Text style={styles.buttonText}>Mark Completed</Text>
                             </>
                         )}
@@ -242,7 +242,7 @@ const QuizResultsScreen: React.FC = () => {
                         style={styles.backButton}
                         onPress={() => navigation.navigate('ChallengeDetails', {challengeId})}
                     >
-                        <MaterialCommunityIcons name="arrow-left" size={18} color="#555"/>
+                        <CustomIcon name="arrow-left" size={18} color="#555"/>
                         <Text style={styles.backButtonText}>Back to Challenge</Text>
                     </TouchableOpacity>
                 </View>

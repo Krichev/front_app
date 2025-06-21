@@ -19,10 +19,10 @@ import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice
 import {useGetUserQuestionsQuery, useStartQuizSessionMutation} from '../entities/QuizState/model/slice/quizApi';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {navigateToTab} from "../utils/navigation.ts";
 // Import the old QuestionService
 import {QuestionData, QuestionService} from '../services/wwwGame/questionService';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 type RootStackParamList = {
     Challenges: undefined;
@@ -343,7 +343,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                 style={styles.refreshButton}
                                                 onPress={refetchAppQuestions}
                                             >
-                                                <MaterialCommunityIcons name="refresh" size={16} color="#4CAF50" />
+                                                <CustomIcon name="refresh" size={16} color="#4CAF50" />
                                                 <Text style={styles.refreshButtonText}>Retry</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -368,7 +368,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                 style={styles.manageQuestionsButton}
                                                 onPress={() => navigation.navigate('UserQuestions')}
                                             >
-                                                <MaterialCommunityIcons name="playlist-edit" size={18} color="#4CAF50"/>
+                                                <CustomIcon name="playlist-edit" size={18} color="#4CAF50"/>
                                                 <Text style={styles.manageQuestionsText}>Manage My Questions</Text>
                                             </TouchableOpacity>
 

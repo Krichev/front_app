@@ -28,11 +28,11 @@ import CreateUserQuestionScreen from "../screens/CreateUserQuestionScreen.tsx";
 
 import {useSelector} from 'react-redux';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {QuestionData, UserQuestion} from "../services/wwwGame/questionService.ts";
 import {StateChallenge} from "../entities/ChallengeState/model/slice/challengeSlice.ts";
 import {AuthNavigationHandler} from "../entities/AuthState/ui/AuthNavigationHandler.tsx";
 import {GameSettings} from "../services/wwwGame";
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // FIXED: Consolidated and consistent navigation types
 export type RootStackParamList = {
@@ -126,7 +126,7 @@ const MainTabNavigator = ({
                         Profile: focused ? 'account' : 'account-outline',
                     };
 
-                    return <MaterialCommunityIcons
+                    return <CustomIcon
                         name={icons[route.name as keyof typeof icons] || iconName}
                         size={size}
                         color={color}

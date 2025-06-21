@@ -112,7 +112,7 @@ export const DiscussionTimer: React.FC<DiscussionTimerProps> = ({
             </Animated.View>
 
             <TouchableOpacity style={styles.controlButton} onPress={handleToggle}>
-                <MaterialCommunityIcons
+                <CustomIcon
                     name={
                         timeRemaining === totalTime
                             ? 'play'

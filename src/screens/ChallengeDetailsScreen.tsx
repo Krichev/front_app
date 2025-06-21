@@ -17,12 +17,12 @@ import {
     useSubmitChallengeCompletionMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
 import {navigateToTab} from "../utils/navigation.ts";
 import {QuestionService} from "../services/wwwGame";
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -226,7 +226,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     style={styles.prominentPlayButton}
                                     onPress={() => startWWWGame(quizConfig)}
                                 >
-                                    <MaterialCommunityIcons name="play-circle" size={24} color="white" />
+                                    <CustomIcon name="play-circle" size={24} color="white" />
                                     <Text style={styles.prominentPlayButtonText}>Start Quiz Game</Text>
                                 </TouchableOpacity>
                             </>
@@ -235,7 +235,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                 <Text style={styles.quizType}>Standard Quiz</Text>
                                 {/* Render standard quiz details */}
                                 <TouchableOpacity style={styles.prominentPlayButton}>
-                                    <MaterialCommunityIcons name="play-circle" size={24} color="white" />
+                                    <CustomIcon name="play-circle" size={24} color="white" />
                                     <Text style={styles.prominentPlayButtonText}>Start Quiz</Text>
                                 </TouchableOpacity>
                             </>
@@ -588,7 +588,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     });
                                 }}
                             >
-                                <MaterialCommunityIcons name="play-circle" size={24} color="white" />
+                                <CustomIcon name="play-circle" size={24} color="white" />
                                 <Text style={styles.startQuizButtonText}>Start Quiz Game</Text>
                             </TouchableOpacity>
                         ) : (
@@ -612,7 +612,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                         style={styles.verifyButton}
                                         onPress={navigateToVerification}
                                     >
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
+                                        <CustomIcon name="check-circle" size={20} color="white"/>
                                         <Text style={styles.buttonText}>Daily Check-In</Text>
                                     </TouchableOpacity>
                                 ) : proofSubmitted ? (
@@ -629,7 +629,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                             <ActivityIndicator size="small" color="white"/>
                                         ) : (
                                             <>
-                                                <MaterialCommunityIcons name="check" size={20} color="white"/>
+                                                <CustomIcon name="check" size={20} color="white"/>
                                                 <Text style={styles.buttonText}>Submit Completion</Text>
                                             </>
                                         )}

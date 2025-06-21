@@ -49,7 +49,7 @@ export const VerificationMethodSelector: React.FC<VerificationMethodSelectorProp
     return (
         <View style={[styles.container, { borderLeftColor: getStatusColor() }]}>
             <View style={styles.iconContainer}>
-                <MaterialCommunityIcons
+                <CustomIcon
                     name={getMethodIcon(step.method)}
                     size={24}
                     color={getStatusColor()}
@@ -67,14 +67,14 @@ export const VerificationMethodSelector: React.FC<VerificationMethodSelectorProp
 
             <View style={styles.actions}>
                 {step.isCompleted ? (
-                    <MaterialCommunityIcons name="check-circle" size={24} color="#51cf66" />
+                    <CustomIcon name="check-circle" size={24} color="#51cf66" />
                 ) : step.error ? (
                     <TouchableOpacity
                         style={styles.retryButton}
                         onPress={onRetry}
                         disabled={isProcessing}
                     >
-                        <MaterialCommunityIcons name="refresh" size={20} color="#4dabf7" />
+                        <CustomIcon name="refresh" size={20} color="#4dabf7" />
                         <Text style={styles.retryText}>Retry</Text>
                     </TouchableOpacity>
                 ) : isActive && isProcessing ? (
@@ -94,7 +94,7 @@ export const VerificationMethodSelector: React.FC<VerificationMethodSelectorProp
                         ]}>
                             {isActive ? 'Start' : 'Waiting'}
                         </Text>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={getStatusIcon() || 'chevron-right'}
                             size={16}
                             color={isActive ? '#4dabf7' : '#ccc'}

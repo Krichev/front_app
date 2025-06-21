@@ -1,8 +1,8 @@
 // src/shared/ui/Modal/Modal.tsx
 import React from 'react'
 import {Modal as RNModal, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View, ViewStyle,} from 'react-native'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 import {theme} from '../../styles/theme'
+import {CustomIcon} from "../../components/Icon/CustomIcon.tsx";
 
 interface ModalProps {
     visible: boolean
@@ -40,7 +40,7 @@ export const CustomModal: React.FC<ModalProps> = ({
                             {title && <Text style={styles.title}>{title}</Text>}
                             {showCloseButton && (
                                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                    <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.secondary} />
+                                    <CustomIcon name="close" size={24} color={theme.colors.text.secondary} />
                                 </TouchableOpacity>
                             )}
                         </View>

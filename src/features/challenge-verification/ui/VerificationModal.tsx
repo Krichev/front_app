@@ -59,7 +59,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                         <Text style={styles.subtitle}>{challengeTitle}</Text>
                     </View>
                     <TouchableOpacity onPress={hideModal} style={styles.closeButton}>
-                        <MaterialCommunityIcons name="close" size={24} color="#666" />
+                        <CustomIcon name="close" size={24} color="#666" />
                     </TouchableOpacity>
                 </View>
 
@@ -72,10 +72,10 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                 <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                     {error && (
                         <View style={styles.errorContainer}>
-                            <MaterialCommunityIcons name="alert-circle" size={20} color="#ff4444" />
+                            <CustomIcon name="alert-circle" size={20} color="#ff4444" />
                             <Text style={styles.errorText}>{error}</Text>
                             <TouchableOpacity onPress={clearError} style={styles.errorCloseButton}>
-                                <MaterialCommunityIcons name="close" size={16} color="#ff4444" />
+                                <CustomIcon name="close" size={16} color="#ff4444" />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -97,7 +97,7 @@ export const VerificationModal: React.FC<VerificationModalProps> = ({
                             onPress={handleComplete}
                             disabled={isProcessing}
                         >
-                            <MaterialCommunityIcons name="check-circle" size={20} color="white" />
+                            <CustomIcon name="check-circle" size={20} color="white" />
                             <Text style={styles.completeButtonText}>Complete Verification</Text>
                         </TouchableOpacity>
                     )}

@@ -12,12 +12,12 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {ApiChallenge, useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChallengeFilters from './components/ChallengeFilters';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -117,7 +117,7 @@ const ChallengesScreen: React.FC = () => {
 
                 <View style={styles.challengeFooter}>
                     <View style={styles.challengeType}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={getChallengeTypeIcon(item.type)}
                             size={16}
                             color="#4CAF50"
@@ -204,7 +204,7 @@ const ChallengesScreen: React.FC = () => {
                     style={styles.refreshButton}
                     onPress={() => refetch()}
                 >
-                    <MaterialCommunityIcons name="refresh" size={24} color="white"/>
+                    <CustomIcon name="refresh" size={24} color="white"/>
                 </TouchableOpacity>
             </View>
 
@@ -222,7 +222,7 @@ const ChallengesScreen: React.FC = () => {
                     >
                         <View style={[styles.checkbox, showParticipating && styles.checkboxChecked]}>
                             {showParticipating && (
-                                <MaterialCommunityIcons name="check" size={16} color="white" />
+                                <CustomIcon name="check" size={16} color="white" />
                             )}
                         </View>
                         <Text style={styles.checkboxLabel}>Participant</Text>
@@ -234,7 +234,7 @@ const ChallengesScreen: React.FC = () => {
                     >
                         <View style={[styles.checkbox, showCreated && styles.checkboxChecked]}>
                             {showCreated && (
-                                <MaterialCommunityIcons name="check" size={16} color="white" />
+                                <CustomIcon name="check" size={16} color="white" />
                             )}
                         </View>
                         <Text style={styles.checkboxLabel}>Creator</Text>
@@ -251,7 +251,7 @@ const ChallengesScreen: React.FC = () => {
                     </View>
                 ) : error ? (
                     <View style={styles.errorContainer}>
-                        <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
+                        <CustomIcon name="alert-circle" size={48} color="#F44336"/>
                         <Text style={styles.errorText}>Failed to load challenges.</Text>
                         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
                             <Text style={styles.retryButtonText}>Retry</Text>
@@ -267,7 +267,7 @@ const ChallengesScreen: React.FC = () => {
                     />
                 ) : (
                     <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons name="bulletin-board" size={60} color="#e0e0e0"/>
+                        <CustomIcon name="bulletin-board" size={60} color="#e0e0e0"/>
                         <Text style={styles.noDataText}>
                             {selectedType ?
                                 `No ${selectedType === 'WWW_QUIZ' ? 'What? Where? When?' : selectedType} challenges found.` :

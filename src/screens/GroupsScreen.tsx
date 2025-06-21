@@ -16,10 +16,10 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {FormatterService} from '../services/verification/ui/Services';
 // Import the RTK Query hooks
 import {Group, useGetUserGroupsQuery, useJoinGroupMutation} from '../entities/GroupState/model/slice/groupApi';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -140,7 +140,7 @@ const GroupsScreen: React.FC = () => {
                 {/* Group Header */}
                 <View style={styles.groupHeader}>
                     <View style={styles.groupTypeContainer}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={getTypeIcon(item.type)}
                             size={16}
                             color="#4CAF50"
@@ -149,7 +149,7 @@ const GroupsScreen: React.FC = () => {
                     </View>
 
                     <View style={styles.privacyContainer}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={getPrivacyIcon(item.privacy_setting)}
                             size={16}
                             color="#757575"
@@ -169,7 +169,7 @@ const GroupsScreen: React.FC = () => {
                 {/* Group Footer */}
                 <View style={styles.groupFooter}>
                     <View style={styles.memberInfo}>
-                        <MaterialCommunityIcons name="account-multiple" size={16} color="#757575" />
+                        <CustomIcon name="account-multiple" size={16} color="#757575" />
                         <Text style={styles.memberCount}>{item.member_count} members</Text>
                     </View>
 
@@ -202,7 +202,7 @@ const GroupsScreen: React.FC = () => {
     if (error) {
         return (
             <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336" />
+                <CustomIcon name="alert-circle" size={48} color="#F44336" />
                 <Text style={styles.errorText}>Failed to load groups.</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
                     <Text style={styles.retryButtonText}>Retry</Text>
@@ -220,14 +220,14 @@ const GroupsScreen: React.FC = () => {
                     style={styles.refreshButton}
                     onPress={() => refetch()}
                 >
-                    <MaterialCommunityIcons name="refresh" size={24} color="white" />
+                    <CustomIcon name="refresh" size={24} color="white" />
                 </TouchableOpacity>
             </View>
 
             {/* Search Bar */}
             <View style={styles.searchContainer}>
                 <View style={styles.searchInputContainer}>
-                    <MaterialCommunityIcons name="magnify" size={20} color="#757575" style={styles.searchIcon} />
+                    <CustomIcon name="magnify" size={20} color="#757575" style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search groups..."
@@ -253,14 +253,14 @@ const GroupsScreen: React.FC = () => {
                             style={[styles.filterButton, filterType === 'CHALLENGE' && styles.activeFilter]}
                             onPress={() => setFilterType('CHALLENGE')}
                         >
-                            <MaterialCommunityIcons name="trophy" size={16} color={filterType === 'CHALLENGE' ? 'white' : '#4CAF50'} />
+                            <CustomIcon name="trophy" size={16} color={filterType === 'CHALLENGE' ? 'white' : '#4CAF50'} />
                             <Text style={[styles.filterText, filterType === 'CHALLENGE' && styles.activeFilterText]}>Challenges</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.filterButton, filterType === 'SOCIAL' && styles.activeFilter]}
                             onPress={() => setFilterType('SOCIAL')}
                         >
-                            <MaterialCommunityIcons name="account-group" size={16} color={filterType === 'SOCIAL' ? 'white' : '#4CAF50'} />
+                            <CustomIcon name="account-group" size={16} color={filterType === 'SOCIAL' ? 'white' : '#4CAF50'} />
                             <Text style={[styles.filterText, filterType === 'SOCIAL' && styles.activeFilterText]}>Social</Text>
                         </TouchableOpacity>
                     </View>
@@ -299,7 +299,7 @@ const GroupsScreen: React.FC = () => {
                 />
             ) : (
                 <View style={styles.emptyContainer}>
-                    <MaterialCommunityIcons name="account-group" size={60} color="#e0e0e0" />
+                    <CustomIcon name="account-group" size={60} color="#e0e0e0" />
                     <Text style={styles.emptyText}>
                         {searchTerm || filterType !== 'ALL' || filterRole !== 'ALL'
                             ? 'No groups match your filters'

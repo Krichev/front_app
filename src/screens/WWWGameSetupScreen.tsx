@@ -157,7 +157,7 @@ const WWWGameSetupScreen: React.FC = () => {
                                 style={styles.manageQuestionsButton}
                                 onPress={() => navigation.navigate('UserQuestions')}
                             >
-                                <MaterialCommunityIcons name="playlist-edit" size={18} color="#4CAF50"/>
+                                <CustomIcon name="playlist-edit" size={18} color="#4CAF50"/>
                                 <Text style={styles.manageQuestionsText}>Manage My Questions</Text>
                             </TouchableOpacity>
                         )}

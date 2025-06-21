@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 import {ApiChallenge, useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import {UserProfile, useSearchUsersQuery} from '../entities/UserState/model/slice/userApi';
 import {RootStackParamList} from '../navigation/AppNavigator';
@@ -163,7 +163,7 @@ const SearchScreen: React.FC = () => {
 
                 <View style={styles.challengeFooter}>
                     <View style={styles.challengeType}>
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name={getChallengeTypeIcon(item.type)}
                             size={16}
                             color="#4CAF50"
@@ -247,7 +247,7 @@ const SearchScreen: React.FC = () => {
             {/* Search Header */}
             <View style={styles.searchHeader}>
                 <View style={styles.searchBar}>
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="magnify"
                         size={24}
                         color="#888"
@@ -262,7 +262,7 @@ const SearchScreen: React.FC = () => {
                     />
                     {searchQuery.length > 0 && (
                         <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                            <MaterialCommunityIcons name="close" size={18} color="#888"/>
+                            <CustomIcon name="close" size={18} color="#888"/>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -274,7 +274,7 @@ const SearchScreen: React.FC = () => {
                     style={[styles.categoryTab, category === 'challenges' && styles.activeTab]}
                     onPress={() => setCategory('challenges')}
                 >
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="trophy-outline"
                         size={20}
                         color={category === 'challenges' ? '#4CAF50' : '#888'}
@@ -293,7 +293,7 @@ const SearchScreen: React.FC = () => {
                     style={[styles.categoryTab, category === 'users' && styles.activeTab]}
                     onPress={() => setCategory('users')}
                 >
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="account-search-outline"
                         size={20}
                         color={category === 'users' ? '#4CAF50' : '#888'}
@@ -312,7 +312,7 @@ const SearchScreen: React.FC = () => {
                     style={[styles.categoryTab, category === 'quizzes' && styles.activeTab]}
                     onPress={() => setCategory('quizzes')}
                 >
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name="brain"
                         size={20}
                         color={category === 'quizzes' ? '#4CAF50' : '#888'}
@@ -338,7 +338,7 @@ const SearchScreen: React.FC = () => {
                             style={styles.recentSearchItem}
                             onPress={() => setSearchQuery(term)}
                         >
-                            <MaterialCommunityIcons name="history" size={16} color="#888"/>
+                            <CustomIcon name="history" size={16} color="#888"/>
                             <Text style={styles.recentSearchText}>{term}</Text>
                         </TouchableOpacity>
                     ))}
@@ -351,7 +351,7 @@ const SearchScreen: React.FC = () => {
                     <View style={styles.placeholderContainer}>
                         {debouncedQuery.length === 0 ? (
                             <>
-                                <MaterialCommunityIcons name="magnify" size={64} color="#e0e0e0"/>
+                                <CustomIcon name="magnify" size={64} color="#e0e0e0"/>
                                 <Text style={styles.placeholderText}>Search for challenges, users or quizzes</Text>
                             </>
                         ) : (
@@ -376,7 +376,7 @@ const SearchScreen: React.FC = () => {
                                     />
                                 ) : (
                                     <View style={styles.emptyResultsContainer}>
-                                        <MaterialCommunityIcons name="trophy-broken" size={64} color="#e0e0e0"/>
+                                        <CustomIcon name="trophy-broken" size={64} color="#e0e0e0"/>
                                         <Text style={styles.emptyResultsText}>
                                             No challenges found matching "{debouncedQuery}"
                                         </Text>
@@ -401,7 +401,7 @@ const SearchScreen: React.FC = () => {
                                     />
                                 ) : (
                                     <View style={styles.emptyResultsContainer}>
-                                        <MaterialCommunityIcons name="account-question" size={64} color="#e0e0e0"/>
+                                        <CustomIcon name="account-question" size={64} color="#e0e0e0"/>
                                         <Text style={styles.emptyResultsText}>
                                             No users found matching "{debouncedQuery}"
                                         </Text>
@@ -426,7 +426,7 @@ const SearchScreen: React.FC = () => {
                                     />
                                 ) : (
                                     <View style={styles.emptyResultsContainer}>
-                                        <MaterialCommunityIcons name="help-circle" size={64} color="#e0e0e0"/>
+                                        <CustomIcon name="help-circle" size={64} color="#e0e0e0"/>
                                         <Text style={styles.emptyResultsText}>
                                             No quizzes found matching "{debouncedQuery}"
                                         </Text>

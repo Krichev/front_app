@@ -1,8 +1,8 @@
 // src/features/www-game-discussion/ui/AIHostPanel.tsx
 import React, {useState} from 'react';
 import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {MaterialCommunityIcons} from '@expo/vector-icons';
 import type {AIHostConfig, DiscussionQuestion, DiscussionState} from '../model/types';
+import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface AIHostPanelProps {
     question: DiscussionQuestion;
@@ -109,10 +109,10 @@ export const AIHostPanel: React.FC<AIHostPanelProps> = ({
                         style={styles.settingsButton}
                         onPress={() => setShowSettings(true)}
                     >
-                        <MaterialCommunityIcons name="cog" size={20} color="#666" />
+                        <CustomIcon name="cog" size={20} color="#666" />
                     </TouchableOpacity>
 
-                    <MaterialCommunityIcons
+                    <CustomIcon
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={24}
                         color="#666"
@@ -171,7 +171,7 @@ export const AIHostPanel: React.FC<AIHostPanelProps> = ({
                         <View style={styles.settingsHeader}>
                             <Text style={styles.settingsTitle}>AI Host Settings</Text>
                             <TouchableOpacity onPress={() => setShowSettings(false)}>
-                                <MaterialCommunityIcons name="close" size={24} color="#666" />
+                                <CustomIcon name="close" size={24} color="#666" />
                             </TouchableOpacity>
                         </View>
 

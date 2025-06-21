@@ -59,7 +59,7 @@ export const ScoreDisplay: React.FC<ScoreDisplayProps> = ({
             )}
 
             <View style={styles.scoreContainer}>
-                <MaterialCommunityIcons
+                <CustomIcon
                     name={getScoreIcon()}
                     size={size === 'lg' ? 48 : size === 'md' ? 36 : 24}
                     color={getScoreColor()}

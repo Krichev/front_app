@@ -13,7 +13,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {QuestionService, UserQuestion} from '../services/wwwGame/questionService';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {CustomIcon} from "../shared/components/Icon/CustomIcon.tsx";
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -117,7 +117,7 @@ const UserQuestionsScreen: React.FC = () => {
                         onPress={() => handleEditQuestion(item)}
                         style={styles.editButton}
                     >
-                        <MaterialCommunityIcons name="pencil" size={20} color="#555"/>
+                        <CustomIcon name="pencil" size={20} color="#555"/>
                     </TouchableOpacity>
                 </View>
 
@@ -136,7 +136,7 @@ const UserQuestionsScreen: React.FC = () => {
                         onPress={() => handleDeleteQuestion(item.id)}
                         style={styles.deleteButton}
                     >
-                        <MaterialCommunityIcons name="delete" size={20} color="#F44336"/>
+                        <CustomIcon name="delete" size={20} color="#F44336"/>
                     </TouchableOpacity>
                 </View>
             </TouchableOpacity>
@@ -159,7 +159,7 @@ const UserQuestionsScreen: React.FC = () => {
                 </View>
             ) : questions.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <MaterialCommunityIcons name="help-circle-outline" size={60} color="#e0e0e0"/>
+                    <CustomIcon name="help-circle-outline" size={60} color="#e0e0e0"/>
                     <Text style={styles.emptyText}>
                         You haven't created any questions yet
                     </Text>
@@ -184,7 +184,7 @@ const UserQuestionsScreen: React.FC = () => {
                     style={styles.createButton}
                     onPress={handleCreateQuestion}
                 >
-                    <MaterialCommunityIcons name="plus" size={20} color="white"/>
+                    <CustomIcon name="plus" size={20} color="white"/>
                     <Text style={styles.buttonText}>Create New Question</Text>
                 </TouchableOpacity>
 
@@ -197,7 +197,7 @@ const UserQuestionsScreen: React.FC = () => {
                         onPress={handleUseSelected}
                         disabled={selectedQuestions.length === 0}
                     >
-                        <MaterialCommunityIcons name="check" size={20} color="white"/>
+                        <CustomIcon name="check" size={20} color="white"/>
                         <Text style={styles.buttonText}>Use Selected Questions</Text>
                     </TouchableOpacity>
                 )}

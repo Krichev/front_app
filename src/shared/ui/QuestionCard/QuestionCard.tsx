@@ -98,7 +98,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
                 <View style={styles.headerRight}>
                     {isSelected && selectable && (
-                        <MaterialCommunityIcons
+                        <CustomIcon
                             name="check-circle"
                             size={20}
                             color={theme.colors.success}
@@ -114,7 +114,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                     style={styles.actionButton}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                    <MaterialCommunityIcons
+                                    <CustomIcon
                                         name="pencil"
                                         size={18}
                                         color={theme.colors.text.secondary}
@@ -128,7 +128,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                                     style={styles.actionButton}
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                    <MaterialCommunityIcons
+                                    <CustomIcon
                                         name="delete"
                                         size={18}
                                         color={theme.colors.error}

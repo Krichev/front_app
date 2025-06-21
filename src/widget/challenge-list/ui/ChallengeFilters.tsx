@@ -38,7 +38,7 @@ export const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
         <View style={styles.container}>
             {/* Search Bar */}
             <View style={styles.searchContainer}>
-                <MaterialCommunityIcons name="magnify" size={20} color="#666" />
+                <CustomIcon name="magnify" size={20} color="#666" />
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Search challenges..."
@@ -47,7 +47,7 @@ export const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
                 />
                 {searchQuery.length > 0 && (
                     <TouchableOpacity onPress={() => onSearch('')}>
-                        <MaterialCommunityIcons name="close" size={20} color="#666" />
+                        <CustomIcon name="close" size={20} color="#666" />
                     </TouchableOpacity>
                 )}
             </View>
@@ -69,7 +69,7 @@ export const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
                                 ]}
                                 onPress={() => onSelectType(selectedType === type.id ? null : type.id)}
                             >
-                                <MaterialCommunityIcons
+                                <CustomIcon
                                     name={type.icon}
                                     size={16}
                                     color={selectedType === type.id ? type.color : '#666'}

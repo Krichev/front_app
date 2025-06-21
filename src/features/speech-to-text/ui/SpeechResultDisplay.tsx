@@ -34,7 +34,7 @@ export const SpeechResultDisplay: React.FC<SpeechResultDisplayProps> = ({
             <View style={styles.header}>
                 <Text style={styles.title}>Speech Results</Text>
                 <TouchableOpacity onPress={clearResults} style={styles.clearButton}>
-                    <MaterialCommunityIcons name="close" size={20} color="#666" />
+                    <CustomIcon name="close" size={20} color="#666" />
                 </TouchableOpacity>
             </View>
 
@@ -52,7 +52,7 @@ export const SpeechResultDisplay: React.FC<SpeechResultDisplayProps> = ({
                             )}
                         </Text>
                         {finalResult && (
-                            <MaterialCommunityIcons name="check" size={16} color="#51cf66" />
+                            <CustomIcon name="check" size={16} color="#51cf66" />
                         )}
                     </TouchableOpacity>
                 )}
@@ -207,7 +207,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                 <Text style={styles.title}>Speech Settings</Text>
                 {onClose && (
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <MaterialCommunityIcons name="close" size={24} color="#666" />
+                        <CustomIcon name="close" size={24} color="#666" />
                     </TouchableOpacity>
                 )}
             </View>
@@ -225,7 +225,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                                 ]}
                                 onPress={() => setMode(mode.key)}
                             >
-                                <MaterialCommunityIcons
+                                <CustomIcon
                                     name={mode.icon}
                                     size={24}
                                     color={config.mode === mode.key ? '#4dabf7' : '#666'}
@@ -269,7 +269,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                                     {lang.label}
                                 </Text>
                                 {config.language === lang.key && (
-                                    <MaterialCommunityIcons name="check" size={20} color="#4dabf7" />
+                                    <CustomIcon name="check" size={20} color="#4dabf7" />
                                 )}
                             </TouchableOpacity>
                         ))}
