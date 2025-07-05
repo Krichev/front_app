@@ -4,7 +4,7 @@ import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Badge, CustomCard} from '../../../shared/ui';
 import {theme} from '../../../shared/config';
 import {ChallengeStatusBadge} from './challenge-status-badge';
-import {Challenge} from "../model/type.ts";
+import {Challenge} from "../model/types.ts";
 import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 
 interface ChallengeCardProps {

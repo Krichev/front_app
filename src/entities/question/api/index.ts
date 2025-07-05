@@ -1,118 +1,93 @@
 // src/entities/question/api/index.ts
-import {createApi} from '@reduxjs/toolkit/query/react';
-import {baseQuery} from '../../../shared/api';
-import type {CreateQuestionRequest, Question, QuestionFilters, UpdateQuestionRequest,} from '../model/types';
+import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
+import type {QuestionData, QuestionDifficulty} from '../model/types';
+import {QuestionApiService} from '../../../shared/api/question/service';
 
 export const questionApi = createApi({
     reducerPath: 'questionApi',
-    baseQuery: baseQuery,
+    baseQuery: fetchBaseQuery({
+        baseUrl: '/api/questions/', // Base URL for your API
+    }),
     tagTypes: ['Question'],
     endpoints: (builder) => ({
-        // Get questions with filters
-        getQuestions: builder.query<Question[], QuestionFilters>({
-            query: (filters) => ({
-                url: '/questions',
-                params: filters,
-            }),
-            providesTags: (result) =>
-                result
-                    ? [
-                        ...result.map(({ id }) => ({ type: 'Question' as const, id })),
-                        { type: 'Question', id: 'LIST' },
-                    ]
-                    : [{ type: 'Question', id: 'LIST' }],
-        }),
-
-        // Get user's questions
-        getUserQuestions: builder.query<Question[], void>({
-            query: () => '/questions/me',
-            providesTags: (result) =>
-                result
-                    ? [
-                        ...result.map(({ id }) => ({ type: 'Question' as const, id })),
-                        { type: 'Question', id: 'USER_LIST' },
-                    ]
-                    : [{ type: 'Question', id: 'USER_LIST' }],
-        }),
-
-        // Get questions by difficulty
-        getQuestionsByDifficulty: builder.query<Question[], {
-            difficulty: 'Easy' | 'Medium' | 'Hard';
+        // Fetch random questions using the shared service
+        fetchRandomQuestions: builder.query<QuestionData[], {
             count?: number;
+            difficulty?: QuestionDifficulty;
         }>({
-            query: ({ difficulty, count = 10 }) => ({
-                url: `/questions/difficulty/${difficulty}`,
-                params: { count },
-            }),
-            providesTags: (result, error, { difficulty }) => [
-                { type: 'Question', id: `DIFFICULTY_${difficulty}` }
-            ],
+            queryFn: async ({ count = 10, difficulty }) => {
+                try {
+                    const questions = await QuestionApiService.fetchRandomQuestions(count, difficulty);
+                    return { data: questions };
+                } catch (error) {
+                    return {
+                        error: {
+                            status: 500,
+                            data: error instanceof Error ? error.message : 'Unknown error',
+                        },
+                    };
+                }
+            },
+            providesTags: ['Question'],
         }),
 
-        // Search questions
-        searchQuestions: builder.query<Question[], { keyword: string; limit?: number }>({
-            query: ({ keyword, limit = 20 }) => ({
-                url: '/questions/search',
-                params: { keyword, limit },
-            }),
-            providesTags: [{ type: 'Question', id: 'SEARCH' }],
+        // Search questions using the shared service
+        searchQuestions: builder.query<QuestionData[], {
+            keyword: string;
+            count?: number;
+            difficulty?: QuestionDifficulty;
+        }>({
+            queryFn: async ({ keyword, count = 10, difficulty }) => {
+                try {
+                    const questions = await QuestionApiService.searchQuestions(keyword, count, difficulty);
+                    return { data: questions };
+                } catch (error) {
+                    return {
+                        error: {
+                            status: 500,
+                            data: error instanceof Error ? error.message : 'Unknown error',
+                        },
+                    };
+                }
+            },
+            providesTags: ['Question'],
         }),
 
-        // Create question
-        createQuestion: builder.mutation<Question, CreateQuestionRequest>({
-            query: (body) => ({
-                url: '/questions',
+        // Create custom question (if you have a backend)
+        createQuestion: builder.mutation<QuestionData, Omit<QuestionData, 'id'>>({
+            query: (questionData) => ({
+                url: '',
                 method: 'POST',
-                body,
+                body: questionData,
             }),
-            invalidatesTags: [
-                { type: 'Question', id: 'LIST' },
-                { type: 'Question', id: 'USER_LIST' },
-            ],
+            invalidatesTags: ['Question'],
         }),
 
         // Update question
-        updateQuestion: builder.mutation<Question, UpdateQuestionRequest>({
-            query: ({ id, ...body }) => ({
-                url: `/questions/${id}`,
+        updateQuestion: builder.mutation<QuestionData, { id: string; updates: Partial<QuestionData> }>({
+            query: ({ id, updates }) => ({
+                url: id,
                 method: 'PATCH',
-                body,
+                body: updates,
             }),
-            invalidatesTags: (result, error, { id }) => [
-                { type: 'Question', id },
-                { type: 'Question', id: 'LIST' },
-                { type: 'Question', id: 'USER_LIST' },
-            ],
+            invalidatesTags: ['Question'],
         }),
 
         // Delete question
-        deleteQuestion: builder.mutation<{ message: string }, string>({
+        deleteQuestion: builder.mutation<void, string>({
             query: (id) => ({
-                url: `/questions/${id}`,
+                url: id,
                 method: 'DELETE',
             }),
-            invalidatesTags: (result, error, id) => [
-                { type: 'Question', id },
-                { type: 'Question', id: 'LIST' },
-                { type: 'Question', id: 'USER_LIST' },
-            ],
-        }),
-
-        // Get single question
-        getQuestionById: builder.query<Question, string>({
-            query: (id) => `/questions/${id}`,
-            providesTags: (result, error, id) => [{ type: 'Question', id }],
+            invalidatesTags: ['Question'],
         }),
     }),
 });
 
 export const {
-    useGetQuestionsQuery,
-    useGetUserQuestionsQuery,
-    useGetQuestionsByDifficultyQuery,
+    useFetchRandomQuestionsQuery,
     useSearchQuestionsQuery,
     useCreateQuestionMutation,
     useUpdateQuestionMutation,
     useDeleteQuestionMutation,
-    useGetQuestionByIdQuery,
 } = questionApi;

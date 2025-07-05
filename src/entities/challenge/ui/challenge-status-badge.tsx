@@ -1,7 +1,7 @@
 // src/entities/challenge/ui/challenge-status-badge.tsx
 import React from 'react';
 import {Badge} from '../../../shared/ui';
-import {ChallengeStatus} from "../model/type.ts";
+import {ChallengeStatus} from "../model/types.ts";
 
 interface ChallengeStatusBadgeProps {
     status: ChallengeStatus;

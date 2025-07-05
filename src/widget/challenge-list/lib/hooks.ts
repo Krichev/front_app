@@ -3,7 +3,7 @@ import {useCallback, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {challengeActions, challengeSelectors} from '../../../entities/challenge';
 import {useChallengeVerification} from '../../../features/challenge-verification';
-import {ChallengeFilters} from "../../../entities/challenge/model/type.ts";
+import {ChallengeFilters} from "../../../entities/challenge/model/types.ts";
 
 export const useChallengeListWidget = () => {
     const dispatch = useDispatch();

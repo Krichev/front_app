@@ -1,39 +1,104 @@
 // src/entities/question/model/selectors.ts
+import {createSelector} from '@reduxjs/toolkit';
 import type {RootState} from '../../../app/store';
+import type {QuestionDifficulty} from './types';
 
-export const questionSelectors = {
-    selectQuestions: (state: RootState) => state.question.questions,
-    selectCurrentQuestion: (state: RootState) => state.question.currentQuestion,
-    selectIsLoading: (state: RootState) => state.question.isLoading,
-    selectError: (state: RootState) => state.question.error,
-    selectSources: (state: RootState) => state.question.sources,
-    selectCategories: (state: RootState) => state.question.categories,
-    selectDifficulty: (state: RootState) => state.question.difficulty,
-    selectSelectedCategory: (state: RootState) => state.question.selectedCategory,
+// Base selectors
+export const selectQuestionState = (state: RootState) => state.question;
 
-    selectQuestionsByDifficulty: (difficulty: string) => (state: RootState) =>
-        state.question.questions.filter(q => q.difficulty === difficulty),
+export const selectQuestions = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.questions
+);
 
-    selectQuestionsByCategory: (category: string) => (state: RootState) =>
-        state.question.questions.filter(q => q.category === category),
+export const selectCurrentQuestion = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.currentQuestion
+);
 
-    selectFilteredQuestions: (state: RootState) => {
-        let filtered = state.question.questions;
+export const selectIsLoading = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.isLoading
+);
 
-        if (state.question.difficulty) {
-            filtered = filtered.filter(q => q.difficulty === state.question.difficulty);
-        }
+export const selectError = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.error
+);
 
-        if (state.question.selectedCategory) {
-            filtered = filtered.filter(q => q.category === state.question.selectedCategory);
-        }
+export const selectCategories = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.categories
+);
 
-        return filtered;
-    },
+export const selectSources = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.sources
+);
 
-    selectActiveSources: (state: RootState) =>
-        state.question.sources.filter(source => source.isActive),
+export const selectDifficulty = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.difficulty
+);
 
-    selectHasQuestions: (state: RootState) => state.question.questions.length > 0,
-    selectHasError: (state: RootState) => state.question.error !== null,
-};
+export const selectSelectedCategory = createSelector(
+    [selectQuestionState],
+    (questionState) => questionState.selectedCategory
+);
+
+// Computed selectors
+export const selectQuestionsByDifficulty = createSelector(
+    [selectQuestions, (state: RootState, difficulty: QuestionDifficulty) => difficulty],
+    (questions, difficulty) => questions.filter(q => q.difficulty === difficulty)
+);
+
+export const selectQuestionsByCategory = createSelector(
+    [selectQuestions, (state: RootState, category: string) => category],
+    (questions, category) => questions.filter(q => q.category === category)
+);
+
+export const selectAnsweredQuestions = createSelector(
+    [selectQuestions],
+    (questions) => questions.filter(q => q.isAnswered)
+);
+
+export const selectUnansweredQuestions = createSelector(
+    [selectQuestions],
+    (questions) => questions.filter(q => !q.isAnswered)
+);
+
+export const selectQuestionStats = createSelector(
+    [selectQuestions],
+    (questions) => {
+        const total = questions.length;
+        const answered = questions.filter(q => q.isAnswered).length;
+        const byDifficulty = questions.reduce((acc, q) => {
+            acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
+            return acc;
+        }, {} as Record<QuestionDifficulty, number>);
+
+        return {
+            total,
+            answered,
+            unanswered: total - answered,
+            byDifficulty,
+            completionRate: total > 0 ? (answered / total) * 100 : 0,
+        };
+    }
+);
+
+export const selectFilteredQuestions = createSelector(
+    [selectQuestions, selectSelectedCategory, selectDifficulty],
+    (questions, selectedCategory, difficulty) => {
+        return questions.filter(question => {
+            const categoryMatch = !selectedCategory || question.category === selectedCategory;
+            const difficultyMatch = !difficulty || question.difficulty === difficulty;
+            return categoryMatch && difficultyMatch;
+        });
+    }
+);
+
+export const selectQuestionById = createSelector(
+    [selectQuestions, (state: RootState, questionId: string) => questionId],
+    (questions, questionId) => questions.find(q => q.id === questionId)
+);

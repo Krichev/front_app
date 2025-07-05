@@ -1,22 +1,23 @@
 // src/entities/challenge/index.ts
-export {challengeApi} from './api';
-export {challengeSlice, challengeActions} from './model';
+// Public API for the challenge entity
+
+// Re-export types
 export type {
     Challenge,
-    ChallengeType,
     ChallengeStatus,
-    VerificationMethod,
+    ChallengeType,
+    ChallengeReward,
     QuizConfig,
+    ChallengeParticipant,
+    ChallengeState,
 } from './model/types';
-export {ChallengeCard} from './ui/challenge-card';
-export {ChallengeStatusBadge} from './ui/challenge-status-badge';
 
-// Re-export API hooks
-export {
-    useGetChallengesQuery,
-    useGetChallengeByIdQuery,
-    useCreateChallengeMutation,
-    useUpdateChallengeMutation,
-    useDeleteChallengeMutation,
-    useJoinChallengeMutation,
-} from './api';
+// Re-export slice actions and reducer
+export { challengeSlice, challengeActions } from './model/slice';
+
+// Re-export selectors
+export * from './model/selectors';
+
+// Re-export API
+export { challengeApi } from './api';
+export * from './api';

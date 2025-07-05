@@ -1,61 +1,116 @@
 // src/app/store/index.ts
 import {configureStore} from '@reduxjs/toolkit';
 import {setupListeners} from '@reduxjs/toolkit/query';
+import {FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE,} from 'redux-persist';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Entity reducers
-import {gameSessionSlice} from '../../entities/game-session';
-import {challengeSlice} from '../../entities/challenge';
-import {speechRecognitionSlice} from '../../entities/speech-recognition';
-import {fileSlice} from '../../entities/file';
-import {questionSlice} from '../../entities/question';
-import {verificationSlice} from '../../entities/verification';
+// Entity APIs and slices
+import {userApi, userSlice} from '../../entities/user';
+import {challengeApi, challengeSlice} from '../../entities/challenge';
+import {questionApi, questionSlice} from '../../entities/question';
+import {groupApi} from '../../entities/group';
 
-// Feature reducers
-import {speechToTextSlice} from '../../features/speech-to-text/model/slice';
-import {wwwDiscussionSlice} from '../../features/www-game-discussion/model/slice';
-import {challengeVerificationSlice} from '../../features/challenge-verification/model/slice';
+// Feature slices
+import {authSlice} from '../../features/auth';
+import {challengeVerificationSlice} from '../../features/challenge-verification';
+import {gameSessionSlice} from '../../features/game-session';
 
-// API slices (if using RTK Query)
-// src/app/store/hooks.ts
-import {TypedUseSelectorHook, useDispatch, useSelector} from 'react-redux';
-import type {AppDispatch, RootState} from './index';
+// ============================================================================
+// Persist configurations
+const authPersistConfig = {
+    key: 'auth',
+    storage: AsyncStorage,
+    whitelist: ['isAuthenticated', 'user', 'token'], // Only persist essential auth data
+};
 
+const userPersistConfig = {
+    key: 'user',
+    storage: AsyncStorage,
+    whitelist: ['preferences'], // Only persist user preferences
+};
+
+// ============================================================================
+// Root reducer configuration
+const rootReducer = {
+    // === FEATURES ===
+    // Authentication feature
+    auth: persistReducer(authPersistConfig, authSlice.reducer),
+
+    // Challenge verification feature
+    challengeVerification: challengeVerificationSlice.reducer,
+
+    // Game session feature
+    gameSession: gameSessionSlice.reducer,
+
+    // === ENTITIES ===
+    // User entity
+    user: persistReducer(userPersistConfig, userSlice.reducer),
+
+    // Challenge entity
+    challenge: challengeSlice.reducer,
+
+    // Question entity
+    question: questionSlice.reducer,
+
+    // === ENTITY APIs ===
+    [userApi.reducerPath]: userApi.reducer,
+    [challengeApi.reducerPath]: challengeApi.reducer,
+    [questionApi.reducerPath]: questionApi.reducer,
+    [groupApi.reducerPath]: groupApi.reducer,
+};
+
+// ============================================================================
+// Store configuration
 export const store = configureStore({
-    reducer: {
-        // Entities
-        gameSession: gameSessionSlice.reducer,
-        challenge: challengeSlice.reducer,
-        speechRecognition: speechRecognitionSlice.reducer,
-        file: fileSlice.reducer,
-        question: questionSlice.reducer,
-        verification: verificationSlice.reducer,
-
-        // Features
-        speechToText: speechToTextSlice.reducer,
-        wwwDiscussion: wwwDiscussionSlice.reducer,
-        challengeVerification: challengeVerificationSlice.reducer,
-
-        // Add other slices here (auth, user, etc.)
-    },
+    reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
             serializableCheck: {
-                ignoredActions: [
-                    // Add any actions that include non-serializable data
-                ],
+                ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+                // Additional ignored paths for better performance
+                ignoredActionsPaths: ['meta.arg', 'payload.timestamp'],
+                ignoredPaths: ['items.dates'],
             },
-        }),
+        })
+            // Entity API middlewares
+            .concat(userApi.middleware)
+            .concat(challengeApi.middleware)
+            .concat(questionApi.middleware)
+            .concat(groupApi.middleware),
+
+    // Enable Redux DevTools in development
     devTools: __DEV__,
 });
 
-// Enable listener behavior for the store
+// ============================================================================
+// Persistor setup
+export const persistor = persistStore(store);
+
+// Setup listeners for refetch on focus/reconnect
 setupListeners(store.dispatch);
 
+// ============================================================================
+// Type definitions
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 
-// Export typed hooks
-export { useAppDispatch, useAppSelector } from './hooks';
+// ============================================================================
+// Store utilities
+export const clearPersistedState = async () => {
+    try {
+        await AsyncStorage.multiRemove(['persist:auth', 'persist:user']);
+        console.log('Persisted state cleared successfully');
+    } catch (error) {
+        console.error('Error clearing persisted state:', error);
+    }
+};
 
-export const useAppDispatch = () => useDispatch<AppDispatch>();
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+export const getStoreSnapshot = () => {
+    return {
+        auth: store.getState().auth,
+        user: store.getState().user,
+        challenge: store.getState().challenge,
+        question: store.getState().question,
+        gameSession: store.getState().gameSession,
+    };
+};
