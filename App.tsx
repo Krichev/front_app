@@ -1,21 +1,22 @@
-// Updated App.tsx with GestureHandlerRootView
+// App.tsx - Updated with proper StoreProvider integration
 import 'react-native-gesture-handler';
 import React from 'react';
-import {Provider} from "react-redux";
-import {store} from "./src/app/providers/StoreProvider/store.ts";
-import AppNavigation from "./src/navigation/AppNavigator.tsx";
-import {WWWGameProvider} from "./src/app/providers/WWWGameProvider.tsx";
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {StyleSheet} from 'react-native';
+import {StatusBar, StyleSheet} from 'react-native';
+import {AppProviders} from './src/app/providers';
+import AppNavigation from './src/navigation/AppNavigator';
 
 const App: React.FC = () => {
     return (
         <GestureHandlerRootView style={styles.container}>
-            <Provider store={store}>
-                <WWWGameProvider>
-                    <AppNavigation />
-                </WWWGameProvider>
-            </Provider>
+            <StatusBar
+                barStyle="dark-content"
+                backgroundColor="transparent"
+                translucent={true}
+            />
+            <AppProviders>
+                <AppNavigation />
+            </AppProviders>
         </GestureHandlerRootView>
     );
 };
