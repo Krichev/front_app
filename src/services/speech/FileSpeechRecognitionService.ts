@@ -1,114 +1,81 @@
 // src/services/speech/FileSpeechRecognitionService.ts
-import {PermissionsAndroid, Platform} from 'react-native';
 import AudioRecord from 'react-native-audio-record';
 import RNFS from 'react-native-fs';
-
-export interface FileSpeechConfig {
-    serverUrl: string;
-    language?: string;
-    sampleRate?: number;
-    quality?: 'low' | 'medium' | 'high';
-}
-
-export interface RecognitionResult {
-    success: boolean;
-    recognizedText?: string;
-    errorMessage?: string;
-}
+import {PermissionsAndroid, Platform} from 'react-native';
+import {SpeechRecognitionConfig, SpeechRecognitionResult} from '../../entities/speech-recognition/model/types';
 
 export class FileSpeechRecognitionService {
-    private config: FileSpeechConfig;
     private isInitialized: boolean = false;
     private isRecording: boolean = false;
-    private currentRecordingPath: string | null = null;
     private hasPermission: boolean = false;
+    private currentRecordingPath: string | null = null;
+    private config: SpeechRecognitionConfig;
 
-    constructor(config: FileSpeechConfig) {
-        this.config = {
-            language: 'en-US',
-            sampleRate: 16000,
-            quality: 'medium',
-            ...config
-        };
+    constructor(config: SpeechRecognitionConfig) {
+        this.config = config;
     }
 
     /**
-     * Request microphone permissions
+     * Initialize the speech recognition service
      */
-    async requestPermissions(): Promise<boolean> {
-        if (this.hasPermission) return true;
+    async initialize(): Promise<void> {
+        try {
+            // Request microphone permission
+            this.hasPermission = await this.requestMicrophonePermission();
 
+            if (!this.hasPermission) {
+                throw new Error('Microphone permission denied');
+            }
+
+            // Configure audio recording
+            const audioConfig = {
+                sampleRate: this.config.audio?.sampleRate || 16000,
+                channels: 1,
+                bitsPerSample: 16,
+                audioEncoding: 'wav',
+                includeBase64: false,
+                audioEncodingBitRate: 32000,
+            };
+
+            AudioRecord.init(audioConfig);
+            this.isInitialized = true;
+        } catch (error) {
+            console.error('Failed to initialize FileSpeechRecognitionService:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Request microphone permission
+     */
+    private async requestMicrophonePermission(): Promise<boolean> {
         if (Platform.OS === 'android') {
             try {
                 const granted = await PermissionsAndroid.request(
                     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
                     {
                         title: 'Microphone Permission',
-                        message: 'App needs access to your microphone for speech recognition',
+                        message: 'This app needs access to your microphone to record audio.',
                         buttonNeutral: 'Ask Me Later',
                         buttonNegative: 'Cancel',
                         buttonPositive: 'OK',
                     }
                 );
-                this.hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
-                return this.hasPermission;
-            } catch (err) {
-                console.error('Failed to request permission:', err);
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (error) {
+                console.error('Error requesting microphone permission:', error);
                 return false;
             }
-        } else {
-            // For iOS, permissions are handled through info.plist
-            this.hasPermission = true;
-            return true;
         }
+        return true; // iOS permissions are handled in Info.plist
     }
 
     /**
-     * Initialize the audio recording system
-     */
-    async initialize(): Promise<boolean> {
-        if (this.isInitialized) return true;
-
-        const hasAudioPermission = await this.requestPermissions();
-        if (!hasAudioPermission) {
-            throw new Error('Microphone permission denied');
-        }
-
-        // Configure audio recording
-        const audioConfig = {
-            sampleRate: this.config.sampleRate || 16000,
-            channels: 1,
-            bitsPerSample: 16,
-            audioSource: 6, // MIC source
-            // Record to a temporary file
-            wavFile: this.generateRecordingPath(),
-        };
-
-        try {
-            await AudioRecord.init(audioConfig);
-            this.isInitialized = true;
-            return true;
-        } catch (error) {
-            console.error('Failed to initialize audio recording:', error);
-            throw new Error('Failed to initialize audio recording');
-        }
-    }
-
-    /**
-     * Generate a unique file path for recording
-     */
-    private generateRecordingPath(): string {
-        const timestamp = Date.now();
-        const filename = `recording_${timestamp}.wav`;
-        return `${RNFS.CachesDirectoryPath}/${filename}`;
-    }
-
-    /**
-     * Start recording audio
+     * Start recording
      */
     async startRecording(): Promise<string> {
         if (!this.isInitialized) {
-            await this.initialize();
+            throw new Error('Service not initialized');
         }
 
         if (this.isRecording) {
@@ -116,129 +83,99 @@ export class FileSpeechRecognitionService {
         }
 
         try {
-            this.currentRecordingPath = this.generateRecordingPath();
+            // Generate unique filename
+            const timestamp = Date.now();
+            const filename = `recording_${timestamp}.wav`;
+            this.currentRecordingPath = `${RNFS.CachesDirectoryPath}/${filename}`;
 
-            // Update audio config with new file path
-            const audioConfig = {
-                sampleRate: this.config.sampleRate || 16000,
-                channels: 1,
-                bitsPerSample: 16,
-                audioSource: 6,
-                wavFile: this.currentRecordingPath,
-            };
-
-            await AudioRecord.init(audioConfig);
-            await AudioRecord.start();
+            // Start recording
+            AudioRecord.start();
             this.isRecording = true;
 
             console.log('Started recording to:', this.currentRecordingPath);
             return this.currentRecordingPath;
         } catch (error) {
             console.error('Failed to start recording:', error);
-            throw new Error('Failed to start recording');
+            throw error;
         }
     }
 
     /**
-     * Stop recording and return the file path
+     * Stop recording and return file path
      */
-    async stopRecording(): Promise<string | null> {
+    async stopRecording(): Promise<string> {
         if (!this.isRecording) {
-            console.warn('Not currently recording');
-            return null;
+            throw new Error('Not currently recording');
         }
 
         try {
-            await AudioRecord.stop();
+            const audioFile = await AudioRecord.stop();
             this.isRecording = false;
 
-            const recordingPath = this.currentRecordingPath;
-            this.currentRecordingPath = null;
-
-            console.log('Stopped recording. File saved to:', recordingPath);
-            return recordingPath;
+            if (this.currentRecordingPath && audioFile) {
+                // Move the recorded file to our desired location
+                await RNFS.moveFile(audioFile, this.currentRecordingPath);
+                console.log('Recording saved to:', this.currentRecordingPath);
+                return this.currentRecordingPath;
+            } else {
+                throw new Error('Failed to save recording');
+            }
         } catch (error) {
             console.error('Failed to stop recording:', error);
-            throw new Error('Failed to stop recording');
+            this.isRecording = false;
+            throw error;
         }
     }
 
     /**
-     * Send audio file to server for recognition
+     * Process audio file for speech recognition
      */
-    async recognizeAudioFile(filePath: string): Promise<RecognitionResult> {
+    async processAudioFile(filePath: string): Promise<SpeechRecognitionResult> {
         try {
             // Check if file exists
             const fileExists = await RNFS.exists(filePath);
             if (!fileExists) {
-                throw new Error('Audio file does not exist');
+                throw new Error('Audio file not found');
             }
 
-            // Get file stats
+            // Get file info
             const fileStats = await RNFS.stat(filePath);
-            console.log('Sending audio file:', filePath, 'Size:', fileStats.size, 'bytes');
-
-            // Create FormData
-            const formData = new FormData();
-            formData.append('audio', {
-                uri: Platform.OS === 'android' ? `file://${filePath}` : filePath,
-                type: 'audio/wav',
-                name: 'recording.wav',
-            } as any);
-
-            // Send to server
-            const response = await fetch(this.config.serverUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-                body: formData,
+            console.log('Processing audio file:', {
+                path: filePath,
+                size: fileStats.size,
+                duration: this.estimateAudioDuration(fileStats.size)
             });
 
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status} ${response.statusText}`);
-            }
+            // Here you would typically send the audio file to a speech recognition service
+            // For now, return a mock result
+            const mockResult: SpeechRecognitionResult = {
+                text: 'Mock transcription result',
+                confidence: 0.85,
+                isFinal: true,
+                alternatives: [
+                    { text: 'Alternative transcription', confidence: 0.75 }
+                ]
+            };
 
-            const result: RecognitionResult = await response.json();
-            console.log('Recognition result:', result);
-
-            // Clean up the file after sending
-            this.cleanupFile(filePath);
-
-            return result;
+            return mockResult;
         } catch (error) {
-            console.error('Error recognizing audio file:', error);
+            console.error('Error processing audio file:', error);
             return {
-                success: false,
-                errorMessage: error instanceof Error ? error.message : 'Unknown error'
+                text: '',
+                confidence: 0,
+                isFinal: true,
+                error: error instanceof Error ? error.message : 'Unknown error'
             };
         }
     }
 
     /**
-     * Record and recognize in one step
+     * Estimate audio duration based on file size
      */
-    async recordAndRecognize(maxDurationMs: number = 10000): Promise<RecognitionResult> {
-        try {
-            // Start recording
-            const filePath = await this.startRecording();
-
-            // Stop recording after max duration or when manually stopped
-            await new Promise(resolve => setTimeout(resolve, maxDurationMs));
-
-            if (this.isRecording) {
-                await this.stopRecording();
-            }
-
-            // Send for recognition
-            return await this.recognizeAudioFile(filePath);
-        } catch (error) {
-            console.error('Error in recordAndRecognize:', error);
-            return {
-                success: false,
-                errorMessage: error instanceof Error ? error.message : 'Unknown error'
-            };
-        }
+    private estimateAudioDuration(fileSize: number): number {
+        // Rough estimation: 16kHz, 16-bit, mono = 32KB per second
+        const bytesPerSecond = (this.config.audio?.sampleRate || 16000) * 2;
+        return Math.round(fileSize / bytesPerSecond);
     }
 
     /**

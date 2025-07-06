@@ -1,24 +1,24 @@
-// src/shared/ui/LoadingState/LoadingState.tsx
-import React from 'react'
-import {ActivityIndicator, StyleSheet, Text, View} from 'react-native'
-import {theme} from '../../styles/theme'
+// src/shared/ui/LoadingState/CustomLoadingState.tsx
+import React from 'react';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
+import {theme} from '../../styles/theme';
 
-interface LoadingStateProps {
-    text?: string
-    size?: 'small' | 'large'
+interface CustomLoadingStateProps {
+    text?: string;
+    size?: 'small' | 'large';
 }
 
-export const CustomLoadingState: React.FC<LoadingStateProps> = ({
-                                                              text = 'Loading...',
-                                                              size = 'large'
-                                                          }) => {
+export const CustomLoadingState: React.FC<CustomLoadingStateProps> = ({
+                                                                          text = 'Loading...',
+                                                                          size = 'large'
+                                                                      }) => {
     return (
         <View style={styles.container}>
             <ActivityIndicator size={size} color={theme.colors.primary} />
             <Text style={styles.text}>{text}</Text>
         </View>
-    )
-}
+    );
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -28,9 +28,9 @@ const styles = StyleSheet.create({
         padding: theme.spacing.xl,
     },
     text: {
-        marginTop: theme.spacing.md,
         fontSize: theme.fontSize.md,
         color: theme.colors.text.secondary,
+        marginTop: theme.spacing.md,
         textAlign: 'center',
     },
-})
+});

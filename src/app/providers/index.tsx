@@ -1,6 +1,6 @@
-// src/app/providers/index.tsx - Updated with fixed StoreProvider
+// src/app/providers/index.tsx
 import React from 'react';
-import {StoreProvider} from './StoreProvider';
+import {StoreProvider} from './store-provider';
 import {AuthProvider} from './auth-provider';
 import {ThemeProvider} from './ThemeProvider';
 import {WWWGameProvider} from './WWWGameProvider';
@@ -9,7 +9,7 @@ interface AppProvidersProps {
     children: React.ReactNode;
 }
 
-export const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
+export const AppProviders: React.FC<AppProvidersProps> = ({children}) => {
     return (
         <StoreProvider>
             <ThemeProvider>
