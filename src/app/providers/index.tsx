@@ -1,9 +1,9 @@
 // src/app/providers/index.tsx
 import React from 'react';
-import {StoreProvider} from './store-provider';
 import {AuthProvider} from './auth-provider';
 import {ThemeProvider} from './ThemeProvider';
 import {WWWGameProvider} from './WWWGameProvider';
+import StoreProvider from './StoreProvider';
 
 interface AppProvidersProps {
     children: React.ReactNode;
