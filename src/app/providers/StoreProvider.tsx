@@ -1,137 +1,132 @@
 // src/app/providers/StoreProvider.tsx
-import React from 'react';
+import React, {ErrorInfo, ReactNode, Suspense} from 'react';
 import {Provider} from 'react-redux';
 import {PersistGate} from 'redux-persist/integration/react';
-import {configureStore} from '@reduxjs/toolkit';
-import {setupListeners} from '@reduxjs/toolkit/query';
-import {FLUSH, PAUSE, PERSIST, persistReducer, persistStore, PURGE, REGISTER, REHYDRATE} from 'redux-persist';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {CustomLoadingState} from '../../shared/ui';
+import {ErrorBoundary} from 'react-error-boundary';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
+import {persistor, store} from '../store';
 
-// Import all API slices
-import {authApi} from '../../entities/AuthState/model/slice/authApi';
-import {userApi} from '../../entities/UserState/model/slice/userApi';
-import {challengeApi} from '../../entities/ChallengeState/model/slice/challengeApi';
-import {groupApi} from '../../entities/GroupState/model/slice/groupApi';
-import {quizApi} from '../../entities/QuizState/model/slice/quizApi';
-
-// Import reducers
-import authReducer from '../../entities/AuthState/model/slice/authSlice';
-import {gameSessionSlice} from '../../entities/game-session';
-import {challengeSlice} from '../../entities/challenge';
-import {speechRecognitionSlice} from '../../entities/speech-recognition';
-import {fileSlice} from '../../entities/file';
-import {questionSlice} from '../../entities/question';
-import {verificationSlice} from '../../entities/verification';
-
-// Feature reducers
-import {speechToTextSlice} from '../../features/speech-to-text/model/slice';
-import {wwwDiscussionSlice} from '../../features/www-game-discussion/model/slice';
-import {challengeVerificationSlice} from '../../features/challenge-verification/model/slice';
-
-// Persist configuration
-const persistConfig = {
-    key: 'root',
-    storage: AsyncStorage,
-    whitelist: ['auth', 'gameSession'], // Persist only necessary state
-    blacklist: [
-        authApi.reducerPath,
-        userApi.reducerPath,
-        challengeApi.reducerPath,
-        groupApi.reducerPath,
-        quizApi.reducerPath,
-    ], // Don't persist API cache
-};
-
-// Root reducer
-const rootReducer = {
-    // Persistent auth state
-    auth: persistReducer(persistConfig, authReducer),
-
-    // Entity reducers
-    gameSession: gameSessionSlice.reducer,
-    challenge: challengeSlice.reducer,
-    speechRecognition: speechRecognitionSlice.reducer,
-    file: fileSlice.reducer,
-    question: questionSlice.reducer,
-    verification: verificationSlice.reducer,
-
-    // Feature reducers
-    speechToText: speechToTextSlice.reducer,
-    wwwDiscussion: wwwDiscussionSlice.reducer,
-    challengeVerification: challengeVerificationSlice.reducer,
-
-    // API slices
-    [authApi.reducerPath]: authApi.reducer,
-    [userApi.reducerPath]: userApi.reducer,
-    [challengeApi.reducerPath]: challengeApi.reducer,
-    [groupApi.reducerPath]: groupApi.reducer,
-    [quizApi.reducerPath]: quizApi.reducer,
-};
-
-// Configure store
-export const store = configureStore({
-    reducer: rootReducer,
-    middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware({
-            serializableCheck: {
-                ignoredActions: [
-                    FLUSH,
-                    REHYDRATE,
-                    PAUSE,
-                    PERSIST,
-                    PURGE,
-                    REGISTER,
-                    // Add any other non-serializable actions here
-                ],
-                ignoredActionsPaths: [
-                    'meta.arg',
-                    'payload.timestamp',
-                ],
-                ignoredPaths: [
-                    'items.dates',
-                ],
-            },
-        })
-            .concat(authApi.middleware)
-            .concat(userApi.middleware)
-            .concat(challengeApi.middleware)
-            .concat(groupApi.middleware)
-            .concat(quizApi.middleware),
-    devTools: __DEV__,
-});
-
-// Setup persistor
-export const persistor = persistStore(store);
-
-// Setup listeners for refetch on focus/reconnect
-setupListeners(store.dispatch);
-
-// Export types
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
-// StoreProvider Props
+// Types
 interface StoreProviderProps {
-    children: React.ReactNode;
+    children: ReactNode;
 }
 
-// Main StoreProvider component
+interface ErrorFallbackProps {
+    error: Error;
+    resetErrorBoundary: () => void;
+}
+
+// Error Fallback Component
+const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetErrorBoundary }) => (
+    <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>
+            {error.message || 'An unexpected error occurred'}
+        </Text>
+        <Text style={styles.retryButton} onPress={resetErrorBoundary}>
+            Try Again
+        </Text>
+    </View>
+);
+
+// Loading Component for PersistGate
+const PersistLoading: React.FC = () => (
+    <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading app...</Text>
+    </View>
+);
+
+// Main Store Provider Component
 export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
+    const handleError = (error: Error, errorInfo: ErrorInfo) => {
+        // Log error to crash reporting service (e.g., Crashlytics, Sentry)
+        console.error('Store Provider Error:', error);
+        console.error('Error Info:', errorInfo);
+        console.error('Component Stack:', errorInfo.componentStack || 'No component stack available');
+
+        // You can add crash reporting here
+        // crashlytics().recordError(error);
+        // Sentry.captureException(error, {
+        //   extra: { componentStack: errorInfo.componentStack }
+        // });
+    };
+
     return (
-        <Provider store={store}>
-            <PersistGate
-                loading={<CustomLoadingState text="Loading app..." />}
-                persistor={persistor}
-            >
-                {children}
-            </PersistGate>
-        </Provider>
+        <ErrorBoundary
+            FallbackComponent={ErrorFallback}
+            onError={handleError}
+            onReset={() => {
+                // Optional: Reset any application state if needed
+                console.log('Resetting store provider error boundary');
+            }}
+        >
+            <Provider store={store}>
+                <PersistGate
+                    loading={<PersistLoading />}
+                    persistor={persistor}
+                    onBeforeLift={() => {
+                        // Optional: Add any logic before the persisted state is loaded
+                        console.log('Loading persisted state...');
+                    }}
+                >
+                    <Suspense fallback={<PersistLoading />}>
+                        {children}
+                    </Suspense>
+                </PersistGate>
+            </Provider>
+        </ErrorBoundary>
     );
 };
 
-// Export store hooks (typed)
-export { useAppDispatch, useAppSelector } from './hooks';
+// Styles
+const styles = StyleSheet.create({
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f8f9fa',
+        padding: 20,
+    },
+    errorTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#dc3545',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    errorMessage: {
+        fontSize: 16,
+        color: '#6c757d',
+        textAlign: 'center',
+        marginBottom: 20,
+        lineHeight: 24,
+    },
+    retryButton: {
+        fontSize: 16,
+        color: '#007AFF',
+        fontWeight: '600',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        borderRadius: 8,
+        textAlign: 'center',
+        backgroundColor: 'transparent',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#ffffff',
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#6c757d',
+        fontWeight: '500',
+    },
+});
 
-// Default export
-export default StoreProvider;
+// Export types for convenience
+export type { StoreProviderProps };

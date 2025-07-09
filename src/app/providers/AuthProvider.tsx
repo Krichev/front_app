@@ -246,14 +246,19 @@ export const useAuth = () => {
 };
 
 // Auth Guard component
-export const AuthGuard: React.FC<{ children: ReactNode; fallback?: ReactNode }> = ({
-                                                                                       children,
-                                                                                       fallback = null
-                                                                                   }) => {
+interface AuthGuardProps {
+    children: ReactNode;
+    fallback?: ReactNode;
+}
+
+export const AuthGuard: React.FC<AuthGuardProps> = ({
+                                                        children,
+                                                        fallback = null
+                                                    }) => {
     const { isAuthenticated, isLoading } = useAuth();
 
     if (isLoading) {
-        return fallback;
+        return <>{fallback}</>;
     }
 
     return isAuthenticated ? <>{children}</> : <>{fallback}</>;
