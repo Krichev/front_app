@@ -1,4 +1,4 @@
-// src/entities/group/model/slice.ts
+// src/entities/group/model/Slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import type {Group, GroupMember} from './types';
 

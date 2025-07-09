@@ -1,4 +1,4 @@
-// src/features/speech-to-text/model/slice.ts
+// src/features/speech-to-text/model/Slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {SpeechToTextConfig, SpeechToTextMode} from './types';
 

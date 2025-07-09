@@ -1,1 +1,1 @@
-// src/entities/game-session/model/slice.ts
+// src/entities/game-session/model/Slice.ts

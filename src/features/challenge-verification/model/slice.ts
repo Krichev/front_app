@@ -1,4 +1,4 @@
-// src/features/challenge-verification/model/slice.ts
+// src/features/challenge-verification/model/Slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {VerificationFlow, VerificationStep} from './types';
 

@@ -1,4 +1,4 @@
-// src/features/www-game-discussion/model/slice.ts
+// src/features/www-game-discussion/model/Slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {AIHostConfig, DiscussionAnalysisResult, DiscussionPhase, DiscussionState} from './types';
 

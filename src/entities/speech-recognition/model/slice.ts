@@ -1,4 +1,4 @@
-// src/entities/speech-recognition/model/slice.ts
+// src/entities/speech-recognition/model/Slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {SpeechRecognitionResult, SpeechRecognitionState} from './types';
 

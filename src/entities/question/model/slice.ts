@@ -1,4 +1,4 @@
-// src/entities/question/model/slice.ts
+// src/entities/question/model/Slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {QuestionData, QuestionDifficulty, QuestionState} from './types';
 
