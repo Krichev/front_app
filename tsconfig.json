@@ -4,6 +4,15 @@
     "module": "esnext", // Enable ES module syntax
     "moduleResolution": "node", // Use Node.js-style module resolution
     "target": "es2020", // Optional: Match your React Native version
-    "esModuleInterop": true // Recommended for compatibility
+    "esModuleInterop": true, // Recommended for compatibility
+    "baseUrl": "./src",
+    "paths": {
+      "app/*": ["app/*"],
+      "pages/*": ["pages/*"],
+      "widgets/*": ["widgets/*"],
+      "features/*": ["features/*"],
+      "entities/*": ["entities/*"],
+      "shared/*": ["shared/*"]
+    }
   }
 }

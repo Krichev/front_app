@@ -1,4 +1,4 @@
-// src/features/game-session/model/Slice.ts
+// src/features/game-session/model/slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import type {GameSession, GameSessionConfig, GameSessionState} from './types';
 import type {QuestionData} from '../../../entities/question';

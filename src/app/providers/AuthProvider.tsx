@@ -1,265 +1,295 @@
-// src/app/providers/AuthProvider.tsx
-import React, {createContext, ReactNode, useContext, useEffect, useState} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
-import {RootState} from '../store';
-import {authActions} from '../../features/auth/model';
-import * as Keychain from 'react-native-keychain';
+// src/features/auth/model/slice.ts
+import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import {User} from '../../../entities/user/model/types';
+import {AuthResponse, AuthState, LoginCredentials,} from './types';
 
-// Types
-interface User {
-    id: string;
-    username: string;
-    email: string;
-    avatar?: string;
-}
+const initialState: AuthState = {
+    accessToken: null,
+    refreshToken: null,
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+};
 
-interface AuthContextType {
-    user: User | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    login: (credentials: { username: string; password: string }) => Promise<void>;
-    logout: () => Promise<void>;
-    refreshAuth: () => Promise<void>;
-}
+export const authSlice = createSlice({
+    name: 'auth',
+    initialState,
+    reducers: {
+        // Login actions
+        loginStart: (state) => {
+            state.isLoading = true;
+            state.error = null;
+        },
 
-// Create context
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+        loginSuccess: (state, action: PayloadAction<AuthResponse>) => {
+            const { accessToken, refreshToken, user } = action.payload;
+            state.accessToken = accessToken;
+            state.refreshToken = refreshToken;
+            state.user = user;
+            state.isAuthenticated = true;
+            state.isLoading = false;
+            state.error = null;
+        },
 
-// Auth Provider Props
-interface AuthProviderProps {
-    children: ReactNode;
-}
+        loginFailure: (state, action: PayloadAction<string>) => {
+            state.isLoading = false;
+            state.error = action.payload;
+            state.isAuthenticated = false;
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.user = null;
+        },
 
-// Auth Provider Component
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-    const dispatch = useDispatch();
-    const { user, accessToken, refreshToken, isLoading } = useSelector((state: RootState) => state.auth);
-    const [isInitializing, setIsInitializing] = useState(true);
+        // Logout action
+        logout: (state) => {
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.user = null;
+            state.isAuthenticated = false;
+            state.isLoading = false;
+            state.error = null;
+        },
 
-    // Initialize auth state from keychain
-    useEffect(() => {
-        initializeAuth();
-    }, []);
+        // Token management
+        setTokens: (state, action: PayloadAction<{
+            accessToken: string;
+            refreshToken: string;
+            user: User;
+        }>) => {
+            const { accessToken, refreshToken, user } = action.payload;
+            state.accessToken = accessToken;
+            state.refreshToken = refreshToken;
+            state.user = user;
+            state.isAuthenticated = true;
+            state.isLoading = false;
+            state.error = null;
+        },
 
-    const initializeAuth = async () => {
-        try {
-            setIsInitializing(true);
+        refreshTokenStart: (state) => {
+            state.isLoading = true;
+            state.error = null;
+        },
 
-            // Check if we have stored tokens
-            const credentials = await Keychain.getGenericPassword();
+        refreshTokenSuccess: (state, action: PayloadAction<{
+            accessToken: string;
+            refreshToken: string;
+        }>) => {
+            const { accessToken, refreshToken } = action.payload;
+            state.accessToken = accessToken;
+            state.refreshToken = refreshToken;
+            state.isLoading = false;
+            state.error = null;
+        },
 
-            if (credentials && credentials.password) {
-                const storedTokens = JSON.parse(credentials.password);
+        refreshTokenFailure: (state, action: PayloadAction<string>) => {
+            state.isLoading = false;
+            state.error = action.payload;
+            // Don't logout on refresh failure, let the component handle it
+        },
 
-                if (storedTokens.accessToken && storedTokens.refreshToken) {
-                    // Restore auth state
-                    dispatch(authActions.setTokens({
-                        accessToken: storedTokens.accessToken,
-                        refreshToken: storedTokens.refreshToken
-                    }));
-
-                    // Verify token is still valid
-                    await verifyToken(storedTokens.accessToken);
-                }
+        // User management
+        updateUser: (state, action: PayloadAction<Partial<User>>) => {
+            if (state.user) {
+                state.user = { ...state.user, ...action.payload };
             }
+        },
+
+        setUser: (state, action: PayloadAction<User>) => {
+            state.user = action.payload;
+        },
+
+        // Error and loading management
+        clearError: (state) => {
+            state.error = null;
+        },
+
+        setLoading: (state, action: PayloadAction<boolean>) => {
+            state.isLoading = action.payload;
+        },
+
+        setError: (state, action: PayloadAction<string>) => {
+            state.error = action.payload;
+            state.isLoading = false;
+        },
+
+        // Authentication status
+        setAuthenticated: (state, action: PayloadAction<boolean>) => {
+            state.isAuthenticated = action.payload;
+            if (!action.payload) {
+                state.accessToken = null;
+                state.refreshToken = null;
+                state.user = null;
+            }
+        },
+
+        // Session management
+        sessionExpired: (state) => {
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.user = null;
+            state.isAuthenticated = false;
+            state.error = 'Session expired. Please log in again.';
+        },
+
+        // Password reset
+        passwordResetStart: (state) => {
+            state.isLoading = true;
+            state.error = null;
+        },
+
+        passwordResetSuccess: (state) => {
+            state.isLoading = false;
+            state.error = null;
+        },
+
+        passwordResetFailure: (state, action: PayloadAction<string>) => {
+            state.isLoading = false;
+            state.error = action.payload;
+        },
+
+        // Email verification
+        emailVerificationStart: (state) => {
+            state.isLoading = true;
+            state.error = null;
+        },
+
+        emailVerificationSuccess: (state) => {
+            state.isLoading = false;
+            state.error = null;
+            if (state.user) {
+                state.user.emailVerified = true;
+            }
+        },
+
+        emailVerificationFailure: (state, action: PayloadAction<string>) => {
+            state.isLoading = false;
+            state.error = action.payload;
+        },
+
+        // Signup actions
+        signupStart: (state) => {
+            state.isLoading = true;
+            state.error = null;
+        },
+
+        signupSuccess: (state, action: PayloadAction<AuthResponse>) => {
+            const { accessToken, refreshToken, user } = action.payload;
+            state.accessToken = accessToken;
+            state.refreshToken = refreshToken;
+            state.user = user;
+            state.isAuthenticated = true;
+            state.isLoading = false;
+            state.error = null;
+        },
+
+        signupFailure: (state, action: PayloadAction<string>) => {
+            state.isLoading = false;
+            state.error = action.payload;
+            state.isAuthenticated = false;
+        },
+
+        // Reset entire state
+        resetAuthState: () => initialState,
+
+        // Hydrate state (for persistence)
+        hydrateAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
+            return { ...state, ...action.payload };
+        },
+    },
+});
+
+// Export actions
+export const authActions = authSlice.actions;
+
+// Export reducer
+export const authReducer = authSlice.reducer;
+
+// Selectors
+export const authSelectors = {
+    // Basic selectors
+    selectUser: (state: { auth: AuthState }) => state.auth.user,
+    selectIsAuthenticated: (state: { auth: AuthState }) => state.auth.isAuthenticated,
+    selectIsLoading: (state: { auth: AuthState }) => state.auth.isLoading,
+    selectError: (state: { auth: AuthState }) => state.auth.error,
+    selectAccessToken: (state: { auth: AuthState }) => state.auth.accessToken,
+    selectRefreshToken: (state: { auth: AuthState }) => state.auth.refreshToken,
+
+    // Derived selectors
+    selectUserId: (state: { auth: AuthState }) => state.auth.user?.id,
+    selectUsername: (state: { auth: AuthState }) => state.auth.user?.username,
+    selectUserEmail: (state: { auth: AuthState }) => state.auth.user?.email,
+    selectUserAvatar: (state: { auth: AuthState }) => state.auth.user?.avatar,
+
+    // Status selectors
+    selectAuthStatus: (state: { auth: AuthState }) => {
+        if (state.auth.isLoading) return 'loading';
+        if (state.auth.error) return 'error';
+        if (state.auth.isAuthenticated) return 'authenticated';
+        return 'unauthenticated';
+    },
+
+    selectHasValidSession: (state: { auth: AuthState }) =>
+        state.auth.isAuthenticated &&
+        state.auth.accessToken &&
+        state.auth.user,
+
+    selectNeedsReauthentication: (state: { auth: AuthState }) =>
+        !state.auth.isAuthenticated && state.auth.refreshToken,
+};
+
+// Action creators for complex operations
+export const createAuthActionCreators = (dispatch: any) => ({
+    // Login with credentials
+    loginWithCredentials: async (credentials: LoginCredentials) => {
+        dispatch(authActions.loginStart());
+        try {
+            // This would be handled by the AuthProvider or API middleware
+            // Just dispatching the start action here
         } catch (error) {
-            console.error('Failed to initialize auth:', error);
-            // Clear any invalid stored data
-            await Keychain.resetGenericPassword();
+            dispatch(authActions.loginFailure(error instanceof Error ? error.message : 'Login failed'));
+        }
+    },
+
+    // Logout with cleanup
+    logoutWithCleanup: async () => {
+        try {
+            // Clear any additional data before logout
             dispatch(authActions.logout());
-        } finally {
-            setIsInitializing(false);
-        }
-    };
-
-    const verifyToken = async (token: string) => {
-        try {
-            const response = await fetch(`${process.env.API_BASE_URL}/auth/verify`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error('Token verification failed');
-            }
-
-            const data = await response.json();
-
-            if (data.user) {
-                dispatch(authActions.setUser(data.user));
-            }
-        } catch (error) {
-            console.error('Token verification failed:', error);
-            await logout();
-        }
-    };
-
-    const login = async (credentials: { username: string; password: string }) => {
-        try {
-            dispatch(authActions.setLoading(true));
-
-            const response = await fetch(`${process.env.API_BASE_URL}/auth/signin`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(credentials),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Login failed');
-            }
-
-            const data = await response.json();
-
-            // Store tokens in Redux
-            dispatch(authActions.setTokens({
-                accessToken: data.accessToken,
-                refreshToken: data.refreshToken
-            }));
-
-            // Store user data
-            if (data.user) {
-                dispatch(authActions.setUser(data.user));
-            }
-
-            // Store tokens securely
-            await Keychain.setGenericPassword(
-                'authTokens',
-                JSON.stringify({
-                    accessToken: data.accessToken,
-                    refreshToken: data.refreshToken
-                })
-            );
-
-        } catch (error) {
-            console.error('Login error:', error);
-            dispatch(authActions.setError(error instanceof Error ? error.message : 'Login failed'));
-            throw error;
-        } finally {
-            dispatch(authActions.setLoading(false));
-        }
-    };
-
-    const logout = async () => {
-        try {
-            dispatch(authActions.setLoading(true));
-
-            // Call logout endpoint if we have a token
-            if (accessToken) {
-                try {
-                    await fetch(`${process.env.API_BASE_URL}/auth/logout`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json',
-                        },
-                    });
-                } catch (error) {
-                    console.error('Logout API call failed:', error);
-                    // Continue with local logout even if API call fails
-                }
-            }
-
-            // Clear stored credentials
-            await Keychain.resetGenericPassword();
-
-            // Clear Redux state
-            dispatch(authActions.logout());
-
         } catch (error) {
             console.error('Logout error:', error);
-        } finally {
-            dispatch(authActions.setLoading(false));
+            // Still logout even if cleanup fails
+            dispatch(authActions.logout());
         }
-    };
+    },
 
-    const refreshAuth = async () => {
-        try {
-            if (!refreshToken) {
-                throw new Error('No refresh token available');
+    // Refresh token with retry
+    refreshTokenWithRetry: async (maxRetries: number = 3) => {
+        let attempts = 0;
+
+        while (attempts < maxRetries) {
+            try {
+                dispatch(authActions.refreshTokenStart());
+                // This would be handled by the AuthProvider or API middleware
+                return;
+            } catch (error) {
+                attempts++;
+                if (attempts >= maxRetries) {
+                    dispatch(authActions.refreshTokenFailure('Failed to refresh token'));
+                    dispatch(authActions.sessionExpired());
+                }
             }
-
-            const response = await fetch(`${process.env.API_BASE_URL}/auth/refresh-token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ refreshToken }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Token refresh failed');
-            }
-
-            const data = await response.json();
-
-            // Update tokens
-            dispatch(authActions.setTokens({
-                accessToken: data.accessToken,
-                refreshToken: data.refreshToken
-            }));
-
-            // Update stored tokens
-            await Keychain.setGenericPassword(
-                'authTokens',
-                JSON.stringify({
-                    accessToken: data.accessToken,
-                    refreshToken: data.refreshToken
-                })
-            );
-
-        } catch (error) {
-            console.error('Token refresh error:', error);
-            await logout();
-            throw error;
         }
-    };
+    },
 
-    const contextValue: AuthContextType = {
-        user,
-        isAuthenticated: !!accessToken && !!user,
-        isLoading: isLoading || isInitializing,
-        login,
-        logout,
-        refreshAuth,
-    };
+    // Update user profile
+    updateUserProfile: (userData: Partial<User>) => {
+        dispatch(authActions.updateUser(userData));
+    },
+});
 
-    return (
-        <AuthContext.Provider value={contextValue}>
-            {children}
-        </AuthContext.Provider>
-    );
-};
+// Type for the auth slice state
+export type { AuthState };
 
-// Custom hook to use auth context
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
-};
-
-// Auth Guard component
-interface AuthGuardProps {
-    children: ReactNode;
-    fallback?: ReactNode;
-}
-
-export const AuthGuard: React.FC<AuthGuardProps> = ({
-                                                        children,
-                                                        fallback = null
-                                                    }) => {
-    const { isAuthenticated, isLoading } = useAuth();
-
-    if (isLoading) {
-        return <>{fallback}</>;
-    }
-
-    return isAuthenticated ? <>{children}</> : <>{fallback}</>;
-};
+// Export default
+export default authSlice;

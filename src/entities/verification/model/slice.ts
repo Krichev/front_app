@@ -1,4 +1,4 @@
-// src/entities/verification/model/Slice.ts
+// src/entities/verification/model/slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {PermissionState, VerificationConfig, VerificationMethod, VerificationResult, VerificationState} from './types';
 

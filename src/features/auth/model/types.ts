@@ -1,4 +1,4 @@
-// src/features/auth/model/Types.ts
+// src/features/auth/model/types.ts
 
 export interface User {
     id: string;

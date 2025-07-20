@@ -1,4 +1,4 @@
-// src/entities/challenge/model/Slice.ts
+// src/entities/challenge/model/slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import type {Challenge, ChallengeParticipant, ChallengeState} from './types';
 

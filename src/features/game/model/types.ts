@@ -1,4 +1,22 @@
 // src/features/game/model/types.ts
+
+export interface GameSettings {
+    questionSource: 'app' | 'user' | 'external';
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    roundCount: number;
+    timePerQuestion: number;
+}
+
+export type GamePhase = 'setup' | 'question' | 'discussion' | 'answer' | 'result';
+
+export interface GameState {
+    settings: GameSettings | null;
+    currentPhase: GamePhase;
+    isActive: boolean;
+    timeRemaining: number;
+    score: number;
+}
+
 export interface GameSession {
     id: string
     teamName: string

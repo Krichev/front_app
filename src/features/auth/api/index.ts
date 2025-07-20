@@ -1,7 +1,7 @@
 // src/features/auth/api/index.ts
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {baseQuery} from '../../../shared/api';
-import type {AuthResponse, LoginCredentials, RefreshTokenRequest, SignupData,} from '../model/types';
+import type {AuthResponse, LoginCredentials, RefreshTokenRequest, SignupData,} from '../model/types.ts';
 
 export const authApi = createApi({
     reducerPath: 'authApi',

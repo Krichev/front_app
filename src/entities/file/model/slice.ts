@@ -1,4 +1,4 @@
-// src/entities/file/model/Slice.ts
+// src/entities/file/model/slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import {FileState, FileUploadResult, ProcessedFileInfo} from './types';
 

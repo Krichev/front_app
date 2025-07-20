@@ -2,7 +2,7 @@
 import {useDispatch, useSelector} from 'react-redux';
 import type {RootState} from '../../../../app/store';
 import {authActions} from '../../model';
-import type {LoginCredentials, User} from '../../model/Types';
+import type {LoginCredentials, User} from '../../model/types.ts';
 
 // Hook that combines Redux state with any context if needed
 export const useAuth = () => {

@@ -1,6 +1,6 @@
 // src/features/auth/model/index.ts
 
-export { authSlice, authActions, authReducer } from './Slice';
+export { authSlice, authActions, authReducer } from './slice.ts';
 export type {
     AuthState,
     User,
@@ -17,4 +17,4 @@ export type {
     RefreshTokenResponse,
     TokenVerificationResponse,
     LogoutResponse
-} from './Types';
+} from './types.ts';

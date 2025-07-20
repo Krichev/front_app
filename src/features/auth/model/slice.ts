@@ -1,6 +1,6 @@
-// src/features/auth/model/Slice.ts
+// src/features/auth/model/slice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
-import type {AuthResponse, AuthState, User} from './Types';
+import type {AuthResponse, AuthState, User} from './types.ts';
 
 const initialState: AuthState = {
     accessToken: null,
