@@ -1,8 +1,8 @@
-// Updated navigation in SignupScreen.tsx
+// ================================================================
+// src/screens/SignupScreen.tsx
 import React, {useState} from 'react';
 import {
     Alert,
-    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -13,11 +13,12 @@ import {
     View,
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
-import {useDispatch} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import * as Keychain from 'react-native-keychain';
-import {useSignupMutation} from "../entities/AuthState/model/slice/authApi.ts";
-import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
-import {RootStackParamList} from "../navigation/AppNavigator.tsx";
+import {useSignupMutation} from '../entities/AuthState/model/slice/authApi';
+import {loginFailure, loginStart, loginSuccess} from '../entities/AuthState/model/slice/authSlice';
+import {RootState} from '../app/providers/StoreProvider/store';
+import {RootStackParamList} from '../navigation/AppNavigator';
 
 type SignupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Signup'>;
 
@@ -25,7 +26,6 @@ interface SignupScreenProps {
     navigation: SignupScreenNavigationProp;
 }
 
-// Define interface for form state
 interface FormData {
     username: string;
     email: string;
@@ -33,15 +33,18 @@ interface FormData {
     confirmPassword: string;
 }
 
-const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
+const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
     const [formData, setFormData] = useState<FormData>({
         username: '',
         email: '',
         password: '',
         confirmPassword: '',
     });
-    const [signup, {isLoading}] = useSignupMutation();
+    const [signup, { isLoading: apiLoading, error: apiError }] = useSignupMutation();
     const dispatch = useDispatch();
+
+    // Now these selectors work correctly
+    const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
     const handleInputChange = (field: keyof FormData, value: string): void => {
         setFormData({
@@ -51,7 +54,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
     };
 
     const handleSignup = async (): Promise<void> => {
-        const {username, email, password, confirmPassword} = formData;
+        const { username, email, password, confirmPassword } = formData;
 
         // Input Validation
         if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -72,213 +75,177 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
         }
 
         try {
-            // Attempt Signup
-            const result = await signup({username, email, password}).unwrap();
-            const {accessToken, refreshToken, user} = result;
+            dispatch(loginStart());
+            const response = await signup({ username, email, password }).unwrap();
 
-            // Securely Store Tokens
-            await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken, user}));
+            const authData = {
+                accessToken: response.token,
+                refreshToken: response.token, // Adjust based on your API response
+                user: response.user,
+            };
 
-            // Update Auth State
-            dispatch(setTokens({accessToken, refreshToken, user}));
+            // Store tokens in Keychain
+            await Keychain.setGenericPassword(
+                'authData',
+                JSON.stringify(authData)
+            );
+
+            dispatch(loginSuccess(authData));
+
             navigation.reset({
                 index: 0,
                 routes: [{ name: 'Main' }],
             });
-            // Remove this navigation line - let Redux state change handle navigation
-            // navigation.navigate('Main', { screen: 'Home' });
-
-            // Reset Form (Optional)
-            setFormData({
-                username: '',
-                email: '',
-                password: '',
-                confirmPassword: '',
-            });
         } catch (err: any) {
-            const errorMessage = err.data?.message || 'An error occurred during signup';
+            console.error('Signup error:', err);
+            const errorMessage = err?.data?.message || err?.message || 'Signup failed';
+            dispatch(loginFailure(errorMessage));
             Alert.alert('Signup Failed', errorMessage);
         }
     };
 
     return (
         <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-            >
-                {/* App Logo */}
-                <View style={styles.logoContainer}>
-                    <Image
-                        source={require('../../assets/logo.png')}
-                        style={styles.logo}
-                        resizeMode="contain"
-                    />
-                    <Text style={styles.appName}>TaskBuddy</Text>
-                </View>
-
-                {/* Signup Form */}
-                <View style={styles.formContainer}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.content}>
                     <Text style={styles.title}>Create Account</Text>
+                    <Text style={styles.subtitle}>Sign up to get started</Text>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Full Name</Text>
+                    <View style={styles.form}>
                         <TextInput
                             style={styles.input}
-                            placeholder="Enter your full name"
+                            placeholder="Username"
                             value={formData.username}
                             onChangeText={(value) => handleInputChange('username', value)}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
-                    </View>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Email</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Enter your email"
-                            keyboardType="email-address"
-                            autoCapitalize="none"
+                            placeholder="Email"
                             value={formData.email}
                             onChangeText={(value) => handleInputChange('email', value)}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
-                    </View>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Password</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Enter your password"
-                            secureTextEntry
+                            placeholder="Password"
                             value={formData.password}
                             onChangeText={(value) => handleInputChange('password', value)}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
-                    </View>
 
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Confirm Password</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Confirm your password"
-                            secureTextEntry
+                            placeholder="Confirm Password"
                             value={formData.confirmPassword}
                             onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
+
+                        {error && (
+                            <Text style={styles.errorText}>{error}</Text>
+                        )}
+
+                        <TouchableOpacity
+                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            onPress={handleSignup}
+                            disabled={isLoading}
+                        >
+                            <Text style={styles.buttonText}>
+                                {isLoading ? 'Creating Account...' : 'Sign Up'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.linkButton}
+                            onPress={() => navigation.navigate('Login')}
+                        >
+                            <Text style={styles.linkText}>
+                                Already have an account? Sign In
+                            </Text>
+                        </TouchableOpacity>
                     </View>
-
-                    <TouchableOpacity
-                        style={[styles.signupButton, isLoading && styles.disabledButton]}
-                        onPress={handleSignup}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.signupButtonText}>
-                            {isLoading ? 'Creating Account...' : 'Sign Up'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Login Option */}
-                <View style={styles.loginContainer}>
-                    <Text style={styles.loginText}>Already have an account? </Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                        <Text style={styles.loginLink}>Log In</Text>
-                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
     );
 };
 
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f9f9f9',
+        backgroundColor: '#f5f5f5',
     },
     scrollContent: {
         flexGrow: 1,
         justifyContent: 'center',
+    },
+    content: {
         padding: 20,
-    },
-    logoContainer: {
-        alignItems: 'center',
-        marginBottom: 30,
-    },
-    logo: {
-        width: 90,
-        height: 90,
-    },
-    appName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginTop: 10,
-        color: '#5271ff',
-    },
-    formContainer: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
     },
     title: {
-        fontSize: 22,
+        fontSize: 32,
         fontWeight: 'bold',
-        marginBottom: 20,
         textAlign: 'center',
+        marginBottom: 8,
         color: '#333',
     },
-    inputContainer: {
-        marginBottom: 15,
+    subtitle: {
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 40,
+        color: '#666',
     },
-    label: {
-        fontSize: 14,
-        marginBottom: 5,
-        color: '#555',
+    form: {
+        gap: 16,
     },
     input: {
+        backgroundColor: 'white',
+        padding: 16,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: '#ddd',
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
         fontSize: 16,
-        backgroundColor: '#f9f9f9',
     },
-    signupButton: {
-        backgroundColor: '#5271ff',
-        paddingVertical: 14,
+    button: {
+        backgroundColor: '#4CAF50',
+        padding: 16,
         borderRadius: 8,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 16,
     },
-    signupButtonText: {
+    buttonDisabled: {
+        backgroundColor: '#ccc',
+    },
+    buttonText: {
         color: 'white',
         fontSize: 16,
         fontWeight: 'bold',
     },
-    loginContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 25,
+    linkButton: {
+        alignItems: 'center',
+        marginTop: 16,
     },
-    loginText: {
-        color: '#555',
-        fontSize: 14,
+    linkText: {
+        color: '#4CAF50',
+        fontSize: 16,
     },
-    loginLink: {
-        color: '#5271ff',
-        fontSize: 14,
-        fontWeight: 'bold',
-    },
-    disabledButton: {
-        backgroundColor: '#80bdff',
-        opacity: 0.7,
+    errorText: {
+        color: 'red',
+        textAlign: 'center',
+        marginTop: 8,
     },
 });
 
