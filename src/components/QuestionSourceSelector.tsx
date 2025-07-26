@@ -1,6 +1,7 @@
 // src/components/QuestionSourceSelector.tsx
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {CustomIcon} from "shared/components/Icon/CustomIcon.tsx";
 
 interface QuestionSourceSelectorProps {
     source: 'app' | 'user';

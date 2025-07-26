@@ -1,4 +1,3 @@
-// ================================================================
 // src/screens/SignupScreen.tsx
 import React, {useState} from 'react';
 import {
@@ -19,6 +18,7 @@ import {useSignupMutation} from '../entities/AuthState/model/slice/authApi';
 import {loginFailure, loginStart, loginSuccess} from '../entities/AuthState/model/slice/authSlice';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {isApiSignupResponse, UserMapper, UserMappingError} from '../utils/userMapping';
 
 type SignupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Signup'>;
 
@@ -40,10 +40,11 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
         password: '',
         confirmPassword: '',
     });
-    const [signup, { isLoading: apiLoading, error: apiError }] = useSignupMutation();
+
+    const [signup, { isLoading: apiLoading }] = useSignupMutation();
     const dispatch = useDispatch();
 
-    // Now these selectors work correctly
+    // Get loading and error state from Redux
     const { isLoading, error } = useSelector((state: RootState) => state.auth);
 
     const handleInputChange = (field: keyof FormData, value: string): void => {
@@ -53,55 +54,143 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
         });
     };
 
-    const handleSignup = async (): Promise<void> => {
+    const validateInput = (): string | null => {
         const { username, email, password, confirmPassword } = formData;
 
-        // Input Validation
+        // Check if all fields are filled
         if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-            Alert.alert('Error', 'Please fill in all fields');
-            return;
+            return 'Please fill in all fields';
+        }
+
+        // Username validation
+        if (username.trim().length < 3) {
+            return 'Username must be at least 3 characters long';
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username.trim())) {
+            return 'Username can only contain letters, numbers, and underscores';
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            return 'Please enter a valid email address';
+        }
+
+        // Password validation
+        if (password.length < 6) {
+            return 'Password must be at least 6 characters long';
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            return 'Passwords do not match';
+        }
+
+        // Strong password check (optional)
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumbers = /\d/.test(password);
+
+        if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+            return 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+        }
+
+        return null; // No validation errors
+    };
+
+    const handleSignup = async (): Promise<void> => {
+        // Validate input
+        const validationError = validateInput();
+        if (validationError) {
+            Alert.alert('Validation Error', validationError);
             return;
         }
 
-        // Basic email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            Alert.alert('Error', 'Please enter a valid email address');
-            return;
-        }
+        const { username, email, password } = formData;
 
         try {
             dispatch(loginStart());
-            const response = await signup({ username, email, password }).unwrap();
 
-            const authData = {
-                accessToken: response.token,
-                refreshToken: response.token, // Adjust based on your API response
-                user: response.user,
-            };
+            // Make API call
+            const apiResponse = await signup({
+                username,  // Some APIs might expect 'name' instead of 'username'
+                email,
+                password
+            }).unwrap();
 
-            // Store tokens in Keychain
+            console.log('Signup API Response:', apiResponse);
+
+            // Validate API response format
+            if (!isApiSignupResponse(apiResponse)) {
+                console.error('Invalid signup response format:', apiResponse);
+                throw new UserMappingError('Invalid signup response format', apiResponse);
+            }
+
+            // Map API response to our internal User type
+            const authData = UserMapper.mapApiSignupResponse(apiResponse);
+
+            console.log('Mapped auth data:', authData);
+
+            // Additional validation of mapped data
+            if (!authData.user.username || !authData.user.createdAt) {
+                console.error('Mapped user data is incomplete:', authData.user);
+                throw new UserMappingError('Mapped user data is incomplete', authData.user);
+            }
+
+            // Store authentication data in Keychain
             await Keychain.setGenericPassword(
                 'authData',
                 JSON.stringify(authData)
             );
 
+            // Update Redux state with properly typed data
             dispatch(loginSuccess(authData));
 
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'Main' }],
-            });
+            // Show success message
+            Alert.alert(
+                'Account Created Successfully!',
+                `Welcome ${authData.user.username}! Your account has been created.`,
+                [
+                    {
+                        text: 'Continue',
+                        onPress: () => {
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: 'Main' }],
+                            });
+                        }
+                    }
+                ]
+            );
+
         } catch (err: any) {
             console.error('Signup error:', err);
-            const errorMessage = err?.data?.message || err?.message || 'Signup failed';
+
+            let errorMessage = 'Signup failed';
+
+            if (err instanceof UserMappingError) {
+                errorMessage = 'Invalid response from server. Please try again.';
+                console.error('User mapping error details:', err.originalData);
+            } else if (err?.data?.message) {
+                errorMessage = err.data.message;
+            } else if (err?.message) {
+                errorMessage = err.message;
+            } else if (err?.data?.error) {
+                errorMessage = err.data.error;
+            }
+
             dispatch(loginFailure(errorMessage));
+
             Alert.alert('Signup Failed', errorMessage);
         }
+    };
+
+    const isFormValid = (): boolean => {
+        const { username, email, password, confirmPassword } = formData;
+        return username.trim().length > 0 &&
+            email.trim().length > 0 &&
+            password.length > 0 &&
+            confirmPassword.length > 0;
     };
 
     return (
@@ -109,7 +198,10 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
                 <View style={styles.content}>
                     <Text style={styles.title}>Create Account</Text>
                     <Text style={styles.subtitle}>Sign up to get started</Text>
@@ -122,16 +214,19 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
                             onChangeText={(value) => handleInputChange('username', value)}
                             autoCapitalize="none"
                             autoCorrect={false}
+                            autoComplete="username"
+                            maxLength={30}
                         />
 
                         <TextInput
                             style={styles.input}
-                            placeholder="Email"
+                            placeholder="Email Address"
                             value={formData.email}
                             onChangeText={(value) => handleInputChange('email', value)}
                             keyboardType="email-address"
                             autoCapitalize="none"
                             autoCorrect={false}
+                            autoComplete="email"
                         />
 
                         <TextInput
@@ -142,6 +237,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
                             secureTextEntry
                             autoCapitalize="none"
                             autoCorrect={false}
+                            autoComplete="password-new"
                         />
 
                         <TextInput
@@ -152,16 +248,26 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
                             secureTextEntry
                             autoCapitalize="none"
                             autoCorrect={false}
+                            autoComplete="password-new"
                         />
 
+                        <Text style={styles.passwordRequirements}>
+                            Password must be at least 6 characters with uppercase, lowercase, and numbers
+                        </Text>
+
                         {error && (
-                            <Text style={styles.errorText}>{error}</Text>
+                            <View style={styles.errorContainer}>
+                                <Text style={styles.errorText}>{error}</Text>
+                            </View>
                         )}
 
                         <TouchableOpacity
-                            style={[styles.button, isLoading && styles.buttonDisabled]}
+                            style={[
+                                styles.button,
+                                (!isFormValid() || isLoading) && styles.buttonDisabled
+                            ]}
                             onPress={handleSignup}
-                            disabled={isLoading}
+                            disabled={!isFormValid() || isLoading}
                         >
                             <Text style={styles.buttonText}>
                                 {isLoading ? 'Creating Account...' : 'Sign Up'}
@@ -171,6 +277,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ navigation }) => {
                         <TouchableOpacity
                             style={styles.linkButton}
                             onPress={() => navigation.navigate('Login')}
+                            disabled={isLoading}
                         >
                             <Text style={styles.linkText}>
                                 Already have an account? Sign In
@@ -218,6 +325,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#ddd',
         fontSize: 16,
+        color: '#333',
+    },
+    passwordRequirements: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+        marginTop: -8,
+        marginBottom: 8,
     },
     button: {
         backgroundColor: '#4CAF50',
@@ -242,10 +357,17 @@ const styles = StyleSheet.create({
         color: '#4CAF50',
         fontSize: 16,
     },
+    errorContainer: {
+        backgroundColor: '#ffebee',
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ffcdd2',
+    },
     errorText: {
-        color: 'red',
+        color: '#c62828',
         textAlign: 'center',
-        marginTop: 8,
+        fontSize: 14,
     },
 });
 
