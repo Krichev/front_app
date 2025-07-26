@@ -20,6 +20,7 @@ import {UserProfile, useSearchUsersQuery} from '../entities/UserState/model/slic
 import {RootStackParamList} from '../navigation/AppNavigator';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
 import {FormatterService} from '../services/verification/ui/Services';
+import {CustomIcon} from "shared/components/Icon/CustomIcon.tsx";
 
 // Define types
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;

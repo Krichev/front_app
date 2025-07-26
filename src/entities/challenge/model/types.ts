@@ -1,53 +1,58 @@
-// src/entities/challenge/model/types.ts
-export type ChallengeStatus = 'active' | 'completed' | 'failed' | 'pending';
-export type ChallengeType = 'QUEST' | 'QUIZ' | 'ACTIVITY_PARTNER' | 'FITNESS_TRACKING' | 'HABIT_BUILDING';
+// Add this to a types file (e.g., src/entities/ChallengeState/model/types.ts)
 
-export interface ChallengeReward {
-    type: 'points' | 'badge' | 'item';
-    value: number | string;
-    description?: string;
+/**
+ * Type definition for What? Where? When? quiz configuration
+ */
+export interface WWWQuizConfig {
+    /** The game type identifier */
+    gameType: 'WWW';
+    /** The team name */
+    teamName: string;
+    /** List of team member names */
+    teamMembers: string[];
+    /** Difficulty level of quiz questions */
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    /** Time allowed for discussion in seconds */
+    roundTime: number;
+    /** Number of questions in the quiz */
+    roundCount: number;
+    /** Whether AI host features are enabled */
+    enableAIHost: boolean;
+    /** Whether the quiz is team-based (optional) */
+    teamBased?: boolean;
 }
 
-export interface QuizConfig {
-    questionCount: number;
-    timeLimit?: number;
-    difficulty?: 'easy' | 'medium' | 'hard';
-    categories?: string[];
-    passingScore?: number;
+/**
+ * Union type to support different quiz types in the future
+ */
+export type QuizConfig = WWWQuizConfig | OtherQuizConfig;
+
+/**
+ * Placeholder for other quiz types we might add in the future
+ */
+interface OtherQuizConfig {
+    gameType: string;
+    [key: string]: any;
 }
 
-export interface Challenge {
-    id: string;
-    title: string;
-    description: string;
-    creatorId: string;
-    participants: string[];
-    rewards: ChallengeReward[];
-    status: ChallengeStatus;
-    type: ChallengeType;
-    visibility: 'public' | 'private' | 'friends';
-    createdAt: string;
-    updatedAt: string;
-    startDate?: string;
-    endDate?: string;
-    verificationMethod?: string;
-    quizConfig?: QuizConfig;
-    metadata?: Record<string, any>;
+/**
+ * Helper function to parse quiz configuration from JSON string
+ */
+export function parseQuizConfig(quizConfigJson: string | undefined): QuizConfig | null {
+    if (!quizConfigJson) return null;
+
+    try {
+        const config = JSON.parse(quizConfigJson);
+        return config;
+    } catch (e) {
+        console.error('Error parsing quiz config:', e);
+        return null;
+    }
 }
 
-export interface ChallengeParticipant {
-    userId: string;
-    challengeId: string;
-    joinedAt: string;
-    status: 'active' | 'completed' | 'dropped';
-    progress?: number;
-    score?: number;
-}
-
-export interface ChallengeState {
-    challenges: Challenge[];
-    currentChallenge: Challenge | null;
-    myParticipations: ChallengeParticipant[];
-    isLoading: boolean;
-    error: string | null;
+/**
+ * Type guard to check if a quiz config is a WWW quiz
+ */
+export function isWWWQuiz(config: QuizConfig | null): config is WWWQuizConfig {
+    return !!config && config.gameType === 'WWW';
 }

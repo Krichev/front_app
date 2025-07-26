@@ -21,7 +21,7 @@ import {GameSettings, initializeWWWGameServices} from '../services/wwwGame';
 import {useWWWGame} from '../app/providers/WWWGameProvider';
 import {QuestionService, UserQuestion} from "../services/wwwGame/questionService";
 import QuestionSourceSelector from "../components/QuestionSourceSelector";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import {CustomIcon} from "shared/components/Icon/CustomIcon.tsx";
 
 const WWWGameSetupScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
