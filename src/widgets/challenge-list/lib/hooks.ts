@@ -1,6 +1,6 @@
 // src/widgets/challenge-list/lib/hooks.ts
 import {useCallback, useState} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
+import {useSelector} from 'react-redux';
 import {challengeActions} from '../../../entities/challenge';
 import {
     selectError,
@@ -11,8 +11,14 @@ import {
 import {useChallengeVerification} from '../../../features/challenge-verification';
 import type {ChallengeFilters} from '../../../entities/challenge/model/types';
 
+// Import the properly typed dispatch hook
+import {useAppDispatch} from '../../../app/providers/hooks';
+// Alternative import if hooks.ts is in a different location:
+// import { useAppDispatch } from '../../../app/store/hooks';
+
 export const useChallengeListWidget = () => {
-    const dispatch = useDispatch();
+    // Use the typed dispatch that can handle async thunks
+    const dispatch = useAppDispatch();
 
     // Get filters from Redux state
     const storeFilters = useSelector(selectFilters);
@@ -28,6 +34,7 @@ export const useChallengeListWidget = () => {
 
     // Actions
     const refreshChallenges = useCallback(() => {
+        // This will now work because dispatch is properly typed for async thunks
         dispatch(challengeActions.fetchChallenges(localFilters));
     }, [dispatch, localFilters]);
 

@@ -1,7 +1,11 @@
 // src/entities/challenge/model/selectors.ts
 import {createSelector} from '@reduxjs/toolkit';
 import type {ChallengeFilters, ChallengeStatus, ChallengeType} from './types';
-import {RootState} from "app/providers/StoreProvider/store.ts";
+
+// Update the RootState import path to match your store configuration
+import type {RootState} from '../../../app/providers/StoreProvider/store';
+// Alternative import if you have an app/store.ts file:
+// import type { RootState } from '../../../app/store';
 
 // Base selectors
 export const selectChallengeState = (state: RootState) => state.challenge;
