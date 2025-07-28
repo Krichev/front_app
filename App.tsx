@@ -4,7 +4,7 @@ import React from 'react';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {StyleSheet} from 'react-native';
 import {AppProviders} from './src/app/providers';
-import {AppNavigator} from './src/app/navigation/AppNavigator';
+import {AppNavigator} from './src/navigation/AppNavigator';
 
 const App: React.FC = () => {
     return (
