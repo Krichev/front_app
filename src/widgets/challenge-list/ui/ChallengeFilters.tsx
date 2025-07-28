@@ -1,7 +1,7 @@
 // src/widgets/challenge-list/ui/ChallengeFilters.tsx
 import React from 'react';
 import {ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
-import {MaterialCommunityIcons} from '@expo/vector-icons';
+import {CustomIcon} from "shared/components/Icon/CustomIcon.tsx";
 
 interface ChallengeFiltersProps {
     selectedType?: string | null;

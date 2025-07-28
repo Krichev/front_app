@@ -1,6 +1,6 @@
 // src/entities/challenge/model/slice.ts
-import {createSlice, PayloadAction} from '@reduxjs/toolkit';
-import type {Challenge, ChallengeParticipant, ChallengeState} from './types';
+import {createAsyncThunk, createSlice, PayloadAction} from '@reduxjs/toolkit';
+import type {Challenge, ChallengeFilters, ChallengeParticipant, ChallengeState} from './types';
 
 const initialState: ChallengeState = {
     challenges: [],
@@ -8,7 +8,49 @@ const initialState: ChallengeState = {
     myParticipations: [],
     isLoading: false,
     error: null,
+    filters: {}, // Add filters to initial state
 };
+
+// Async thunks for API calls
+export const fetchChallenges = createAsyncThunk(
+    'challenge/fetchChallenges',
+    async (filters?: ChallengeFilters) => {
+        // Replace with actual API call
+        // For now, return mock data or throw an error if API is not implemented
+        const response = await fetch('/api/challenges', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(filters),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch challenges');
+        }
+
+        return response.json();
+    }
+);
+
+export const createChallenge = createAsyncThunk(
+    'challenge/createChallenge',
+    async (challengeData: Omit<Challenge, 'id' | 'createdAt' | 'updatedAt'>) => {
+        const response = await fetch('/api/challenges', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(challengeData),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to create challenge');
+        }
+
+        return response.json();
+    }
+);
 
 export const challengeSlice = createSlice({
     name: 'challenge',
@@ -106,6 +148,21 @@ export const challengeSlice = createSlice({
             }
         },
 
+        // Add missing setFilters action
+        setFilters: (state, action: PayloadAction<ChallengeFilters>) => {
+            state.filters = action.payload;
+        },
+
+        // Add updateFilters action for partial filter updates
+        updateFilters: (state, action: PayloadAction<Partial<ChallengeFilters>>) => {
+            state.filters = { ...state.filters, ...action.payload };
+        },
+
+        // Add clearFilters action
+        clearFilters: (state) => {
+            state.filters = {};
+        },
+
         setError: (state, action: PayloadAction<string>) => {
             state.error = action.payload;
             state.isLoading = false;
@@ -117,6 +174,41 @@ export const challengeSlice = createSlice({
 
         reset: () => initialState,
     },
+    extraReducers: (builder) => {
+        builder
+            // fetchChallenges
+            .addCase(fetchChallenges.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(fetchChallenges.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.challenges = action.payload;
+                state.error = null;
+            })
+            .addCase(fetchChallenges.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.error.message || 'Failed to fetch challenges';
+            })
+            // createChallenge
+            .addCase(createChallenge.pending, (state) => {
+                state.isLoading = true;
+                state.error = null;
+            })
+            .addCase(createChallenge.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.challenges.push(action.payload);
+                state.error = null;
+            })
+            .addCase(createChallenge.rejected, (state, action) => {
+                state.isLoading = false;
+                state.error = action.error.message || 'Failed to create challenge';
+            });
+    },
 });
 
-export const challengeActions = challengeSlice.actions;
+export const challengeActions = {
+    ...challengeSlice.actions,
+    fetchChallenges,
+    createChallenge,
+};

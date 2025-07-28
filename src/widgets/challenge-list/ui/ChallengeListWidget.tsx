@@ -1,11 +1,11 @@
 // src/widgets/challenge-list/ui/ChallengeListWidget.tsx
 import React from 'react';
 import {FlatList, RefreshControl, StyleSheet, View} from 'react-native';
-import {ChallengeCard} from '../../../entities/challenge/ui';
-import {ChallengeFilters} from './ChallengeFilters';
-import {VerificationModal} from '../../../features/challenge-verification';
-import {useChallengeListWidget} from '../lib/hooks';
-import type {Challenge} from '../../../entities/challenge';
+import {ChallengeCard} from 'entities/challenge/ui';
+import {ChallengeFilters} from './ChallengeFilters.tsx';
+import {VerificationModal} from 'features/challenge-verification';
+import {useChallengeListWidget} from '../lib/hooks.ts';
+import type {Challenge} from 'entities/challenge';
 
 interface ChallengeListWidgetProps {
     onChallengePress?: (challenge: Challenge) => void;

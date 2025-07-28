@@ -1,8 +1,7 @@
-// ============================================================================
 // src/entities/challenge/model/selectors.ts
 import {createSelector} from '@reduxjs/toolkit';
-import type {RootState} from '../../../app/store';
-import type {ChallengeStatus, ChallengeType} from './types';
+import type {ChallengeFilters, ChallengeStatus, ChallengeType} from './types';
+import {RootState} from "app/providers/StoreProvider/store.ts";
 
 // Base selectors
 export const selectChallengeState = (state: RootState) => state.challenge;
@@ -30,6 +29,63 @@ export const selectIsLoading = createSelector(
 export const selectError = createSelector(
     [selectChallengeState],
     (challengeState) => challengeState.error
+);
+
+// Add missing filters selector
+export const selectFilters = createSelector(
+    [selectChallengeState],
+    (challengeState) => challengeState.filters || {}
+);
+
+// Add the missing selectFilteredChallenges selector
+export const selectFilteredChallenges = createSelector(
+    [selectChallenges, selectFilters],
+    (challenges, filters: ChallengeFilters) => {
+        if (!challenges) return [];
+
+        return challenges.filter(challenge => {
+            // Filter by type
+            if (filters.type && challenge.type !== filters.type) {
+                return false;
+            }
+
+            // Filter by status
+            if (filters.status && challenge.status !== filters.status) {
+                return false;
+            }
+
+            // Filter by search query
+            if (filters.search) {
+                const searchLower = filters.search.toLowerCase();
+                const matchesTitle = challenge.title.toLowerCase().includes(searchLower);
+                const matchesDescription = challenge.description.toLowerCase().includes(searchLower);
+                if (!matchesTitle && !matchesDescription) {
+                    return false;
+                }
+            }
+
+            // Filter by visibility
+            if (filters.visibility && challenge.visibility !== filters.visibility) {
+                return false;
+            }
+
+            // Filter by creator
+            if (filters.creatorId && challenge.creatorId !== filters.creatorId) {
+                return false;
+            }
+
+            // Filter by date range
+            if (filters.startDate && challenge.createdAt < filters.startDate) {
+                return false;
+            }
+
+            if (filters.endDate && challenge.createdAt > filters.endDate) {
+                return false;
+            }
+
+            return true;
+        });
+    }
 );
 
 // Computed selectors
@@ -60,30 +116,18 @@ export const selectJoinedChallenges = createSelector(
     )
 );
 
+// Additional helpful selectors
 export const selectChallengeById = createSelector(
     [selectChallenges, (state: RootState, challengeId: string) => challengeId],
     (challenges, challengeId) => challenges.find(c => c.id === challengeId)
 );
 
-export const selectChallengeStats = createSelector(
-    [selectChallenges],
-    (challenges) => {
-        const total = challenges.length;
-        const byStatus = challenges.reduce((acc, c) => {
-            acc[c.status] = (acc[c.status] || 0) + 1;
-            return acc;
-        }, {} as Record<ChallengeStatus, number>);
-
-        const byType = challenges.reduce((acc, c) => {
-            acc[c.type] = (acc[c.type] || 0) + 1;
-            return acc;
-        }, {} as Record<ChallengeType, number>);
-
-        return { total, byStatus, byType };
-    }
+export const selectChallengeCount = createSelector(
+    [selectFilteredChallenges],
+    (challenges) => challenges.length
 );
 
-export const selectMyParticipationStatus = createSelector(
-    [selectMyParticipations, (state: RootState, challengeId: string) => challengeId],
-    (participations, challengeId) => participations.find(p => p.challengeId === challengeId)
+export const selectHasActiveFilters = createSelector(
+    [selectFilters],
+    (filters) => Object.keys(filters).some(key => filters[key as keyof ChallengeFilters])
 );

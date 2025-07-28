@@ -44,10 +44,22 @@ export interface ChallengeParticipant {
     score?: number;
 }
 
+// Add the missing ChallengeFilters interface
+export interface ChallengeFilters {
+    type?: string | null;
+    status?: string | null;
+    search?: string;
+    visibility?: 'public' | 'private' | 'friends';
+    creatorId?: string;
+    startDate?: string;
+    endDate?: string;
+}
+
 export interface ChallengeState {
     challenges: Challenge[];
     currentChallenge: Challenge | null;
     myParticipations: ChallengeParticipant[];
     isLoading: boolean;
     error: string | null;
+    filters: ChallengeFilters; // Add filters to state
 }
