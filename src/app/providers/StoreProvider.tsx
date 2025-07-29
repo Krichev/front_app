@@ -3,8 +3,8 @@ import React, {ErrorInfo, ReactNode, Suspense} from 'react';
 import {Provider} from 'react-redux';
 import {PersistGate} from 'redux-persist/integration/react';
 import {ErrorBoundary} from 'react-error-boundary';
-import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
-import {persistor, store} from '../store';
+import {ActivityIndicator, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {persistor, store} from './StoreProvider/store'; // Updated import path
 
 // Types
 interface StoreProviderProps {
@@ -23,9 +23,9 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({ error, resetErrorBoundary
         <Text style={styles.errorMessage}>
             {error.message || 'An unexpected error occurred'}
         </Text>
-        <Text style={styles.retryButton} onPress={resetErrorBoundary}>
-            Try Again
-        </Text>
+        <TouchableOpacity style={styles.retryButton} onPress={resetErrorBoundary}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
     </View>
 );
 
@@ -68,6 +68,8 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
                     onBeforeLift={() => {
                         // Optional: Add any logic before the persisted state is loaded
                         console.log('Loading persisted state...');
+                        // You can return a promise here if you need async initialization
+                        return Promise.resolve();
                     }}
                 >
                     <Suspense fallback={<PersistLoading />}>
@@ -103,16 +105,18 @@ const styles = StyleSheet.create({
         lineHeight: 24,
     },
     retryButton: {
-        fontSize: 16,
-        color: '#007AFF',
-        fontWeight: '600',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 24,
         borderWidth: 1,
         borderColor: '#007AFF',
         borderRadius: 8,
-        textAlign: 'center',
         backgroundColor: 'transparent',
+    },
+    retryButtonText: {
+        fontSize: 16,
+        color: '#007AFF',
+        fontWeight: '600',
+        textAlign: 'center',
     },
     loadingContainer: {
         flex: 1,

@@ -12,7 +12,19 @@
       "widgets/*": ["widgets/*"],
       "features/*": ["features/*"],
       "entities/*": ["entities/*"],
-      "shared/*": ["shared/*"]
+      "shared/*": ["shared/*"],
+      "typeRoots": [
+        "node_modules/@types",
+        "src/types"
+      ],
+      "types": [
+        "react-native",
+        "redux-persist"
+      ]
     }
-  }
+  },
+  "include": [
+    "src/**/*",
+    "src/types/**/*"
+  ]
 }
