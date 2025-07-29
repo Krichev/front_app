@@ -30,9 +30,11 @@ export interface Challenge {
     updatedAt: string;
     startDate?: string;
     endDate?: string;
-    verificationMethod?: string;
+    verificationMethod?: string; // JSON string of VerificationMethod[]
     quizConfig?: QuizConfig;
     metadata?: Record<string, any>;
+    userIsCreator?: boolean; // Add this property
+    userRole?: string; // Optional field to store the user's role
 }
 
 export interface ChallengeParticipant {
@@ -44,7 +46,6 @@ export interface ChallengeParticipant {
     score?: number;
 }
 
-// Add the missing ChallengeFilters interface
 export interface ChallengeFilters {
     type?: string | null;
     status?: string | null;
@@ -61,5 +62,5 @@ export interface ChallengeState {
     myParticipations: ChallengeParticipant[];
     isLoading: boolean;
     error: string | null;
-    filters: ChallengeFilters; // Add filters to state
+    filters: ChallengeFilters;
 }

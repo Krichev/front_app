@@ -14,6 +14,7 @@ export const theme = {
         text: {
             primary: '#333333',
             secondary: '#555555',
+            tertiary: '#888888',     // ADD THIS - tertiary text color
             disabled: '#999999',
             light: '#666666',
             inverse: '#ffffff'
@@ -78,5 +79,3 @@ export const theme = {
         }
     }
 } as const;
-
-

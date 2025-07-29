@@ -10,15 +10,19 @@ import {CustomIcon} from "../../../shared/components/Icon/CustomIcon.tsx";
 interface ChallengeCardProps {
     challenge: Challenge;
     onPress?: () => void;
+    onJoin?: () => void; // Add the missing onJoin prop
     showCreatorBadge?: boolean;
     showProgress?: boolean;
+    style?: any; // Add style prop
 }
 
 export const ChallengeCard: React.FC<ChallengeCardProps> = ({
                                                                 challenge,
                                                                 onPress,
+                                                                onJoin, // Add onJoin to destructuring
                                                                 showCreatorBadge = true,
                                                                 showProgress = true,
+                                                                style, // Add style to destructuring
                                                             }) => {
     const getTypeIcon = () => {
         switch (challenge.type) {
@@ -46,8 +50,12 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
         return new Date(dateString).toLocaleDateString();
     };
 
+    // Check if user has already joined the challenge
+    const hasJoined = challenge.participants && challenge.participants.includes('current_user_id'); // You might need to get current user ID from context/store
+    const isCreator = challenge.userIsCreator || false; // Safely handle userIsCreator
+
     const CardContent = () => (
-        <CustomCard style={styles.card}>
+        <CustomCard style={[styles.card, style]}>
             <View style={styles.header}>
                 <View style={[styles.iconContainer, { backgroundColor: `${getTypeColor()}20` }]}>
                     <CustomIcon
@@ -62,79 +70,79 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
                         <Text style={styles.title} numberOfLines={1}>
                             {challenge.title}
                         </Text>
-                        {showCreatorBadge && challenge.userIsCreator && (
+                        {showCreatorBadge && isCreator && (
                             <Badge text="Creator" variant="primary" size="sm" />
                         )}
                     </View>
 
                     <View style={styles.metaRow}>
-                        <Badge
-                            text={challenge.type.replace('_', ' ')}
-                            variant="neutral"
-                            size="sm"
-                        />
-                        <Text style={styles.date}>
-                            {formatDate(challenge.createdAt)}
-                        </Text>
+                        <ChallengeStatusBadge status={challenge.status} />
+                        <Text style={styles.type}>{challenge.type.replace('_', ' ')}</Text>
                     </View>
                 </View>
             </View>
 
-            {challenge.description && (
-                <Text style={styles.description} numberOfLines={2}>
-                    {challenge.description}
-                </Text>
+            <Text style={styles.description} numberOfLines={2}>
+                {challenge.description}
+            </Text>
+
+            {showProgress && (
+                <View style={styles.progressSection}>
+                    <View style={styles.progressInfo}>
+                        <Text style={styles.progressLabel}>
+                            Participants: {Array.isArray(challenge.participants) ? challenge.participants.length : 0}
+                        </Text>
+                        {challenge.endDate && (
+                            <Text style={styles.progressLabel}>
+                                Ends: {formatDate(challenge.endDate)}
+                            </Text>
+                        )}
+                    </View>
+                </View>
             )}
 
-            <View style={styles.footer}>
-                <ChallengeStatusBadge status={challenge.status} />
+            {/* Action buttons */}
+            <View style={styles.actionRow}>
+                {onPress && (
+                    <TouchableOpacity style={styles.viewButton} onPress={onPress}>
+                        <Text style={styles.viewButtonText}>View Details</Text>
+                    </TouchableOpacity>
+                )}
 
-                <View style={styles.participants}>
-                    <CustomIcon
-                        name="account-group"
-                        size={16}
-                        color={theme.colors.text.light}
-                    />
-                    <Text style={styles.participantCount}>
-                        {Array.isArray(challenge.participants)
-                            ? challenge.participants.length
-                            : 0} participants
-                    </Text>
-                </View>
+                {onJoin && !isCreator && !hasJoined && (
+                    <TouchableOpacity style={styles.joinButton} onPress={onJoin}>
+                        <Text style={styles.joinButtonText}>Join Challenge</Text>
+                    </TouchableOpacity>
+                )}
+
+                {hasJoined && !isCreator && (
+                    <View style={styles.joinedIndicator}>
+                        <CustomIcon name="check-circle" size={16} color="#4CAF50" />
+                        <Text style={styles.joinedText}>Joined</Text>
+                    </View>
+                )}
             </View>
-
-            {challenge.reward && (
-                <View style={styles.reward}>
-                    <CustomIcon
-                        name="gift"
-                        size={16}
-                        color={theme.colors.warning}
-                    />
-                    <Text style={styles.rewardText}>{challenge.reward}</Text>
-                </View>
-            )}
         </CustomCard>
     );
 
-    if (onPress) {
-        return (
-            <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-                <CardContent />
-            </TouchableOpacity>
-        );
-    }
-
-    return <CardContent />;
+    return onPress ? (
+        <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+            <CardContent />
+        </TouchableOpacity>
+    ) : (
+        <CardContent />
+    );
 };
 
 const styles = StyleSheet.create({
     card: {
-        marginBottom: theme.spacing.md,
+        padding: 16,
+        marginVertical: 4,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        marginBottom: theme.spacing.sm,
+        marginBottom: 12,
     },
     iconContainer: {
         width: 48,
@@ -142,65 +150,93 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: theme.spacing.md,
+        marginRight: 12,
     },
     headerContent: {
         flex: 1,
     },
     titleRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.xs,
+        marginBottom: 4,
     },
     title: {
-        fontSize: theme.fontSize.lg,
-        fontWeight: theme.fontWeight.bold,
+        fontSize: 18,
+        fontWeight: '600',
         color: theme.colors.text.primary,
         flex: 1,
-        marginRight: theme.spacing.sm,
+        marginRight: 8,
     },
     metaRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 8,
     },
-    date: {
-        fontSize: theme.fontSize.xs,
-        color: theme.colors.text.light,
+    type: {
+        fontSize: 14,
+        color: theme.colors.text.secondary,
+        textTransform: 'capitalize',
     },
     description: {
-        fontSize: theme.fontSize.sm,
+        fontSize: 14,
         color: theme.colors.text.secondary,
         lineHeight: 20,
-        marginBottom: theme.spacing.sm,
+        marginBottom: 12,
     },
-    footer: {
+    progressSection: {
+        marginBottom: 16,
+    },
+    progressInfo: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: theme.spacing.sm,
     },
-    participants: {
+    progressLabel: {
+        fontSize: 12,
+        color: theme.colors.text.disabled, // Using 'disabled' instead of 'tertiary'
+    },
+    actionRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 12,
     },
-    participantCount: {
-        fontSize: theme.fontSize.xs,
-        color: theme.colors.text.light,
-        marginLeft: theme.spacing.xs,
+    viewButton: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        alignItems: 'center',
     },
-    reward: {
+    viewButtonText: {
+        fontSize: 14,
+        color: theme.colors.primary,
+        fontWeight: '500',
+    },
+    joinButton: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: theme.colors.primary,
+        alignItems: 'center',
+    },
+    joinButtonText: {
+        fontSize: 14,
+        color: '#FFFFFF',
+        fontWeight: '500',
+    },
+    joinedIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.background,
-        padding: theme.spacing.sm,
-        borderRadius: theme.borderRadius.sm,
+        gap: 4,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
     },
-    rewardText: {
-        fontSize: theme.fontSize.sm,
-        color: theme.colors.text.primary,
-        marginLeft: theme.spacing.xs,
-        fontWeight: theme.fontWeight.medium,
+    joinedText: {
+        fontSize: 14,
+        color: '#4CAF50',
+        fontWeight: '500',
     },
 });

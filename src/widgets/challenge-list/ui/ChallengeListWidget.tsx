@@ -5,6 +5,7 @@ import {ChallengeCard} from 'entities/challenge/ui';
 import {ChallengeFilters} from './ChallengeFilters.tsx';
 import {VerificationModal} from 'features/challenge-verification';
 import {useChallengeListWidget} from '../lib/hooks.ts';
+import {ChallengeUtils} from '../../../entities/challenge/lib/utils'; // Correct import path
 import type {Challenge} from 'entities/challenge';
 
 interface ChallengeListWidgetProps {
@@ -38,8 +39,13 @@ export const ChallengeListWidget: React.FC<ChallengeListWidgetProps> = ({
     };
 
     const handleJoinChallenge = (challenge: Challenge) => {
-        if (challenge.verificationMethod && challenge.verificationMethod.length > 0) {
-            startVerification(challenge.id, challenge.verificationMethod);
+        // Use ChallengeUtils to properly parse verification methods
+        const verificationMethods = ChallengeUtils.getVerificationMethods(challenge);
+
+        if (verificationMethods && verificationMethods.length > 0) {
+            // Convert VerificationMethod[] to string[] for startVerification
+            const methodTypes = verificationMethods.map(method => method.type);
+            startVerification(challenge.id, methodTypes);
         } else {
             joinChallenge(challenge.id);
         }

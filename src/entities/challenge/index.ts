@@ -7,7 +7,7 @@ export type {
     ChallengeStatus,
     ChallengeType,
     ChallengeReward,
-    ChallengeFilters, // Add the missing export
+    ChallengeFilters,
     QuizConfig,
     ChallengeParticipant,
     ChallengeState,
@@ -25,7 +25,7 @@ export {
     selectIsLoading,
     selectError,
     selectFilters,
-    selectFilteredChallenges, // Add the missing export
+    selectFilteredChallenges,
     selectChallengesByStatus,
     selectChallengesByType,
     selectActiveChallenges,
@@ -39,6 +39,10 @@ export {
 // Re-export API
 export { challengeApi } from './api';
 export * from './api';
+
+// Re-export lib utilities (ADD THIS)
+export { ChallengeUtils } from './lib';
+export * from './lib';
 
 // Create a namespace export for selectors (backward compatibility)
 import * as challengeSelectors from './model/selectors';
