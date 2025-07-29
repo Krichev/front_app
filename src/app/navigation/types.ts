@@ -26,6 +26,7 @@ export type RootStackParamList = {
     // Challenges
     ChallengeDetails: {challengeId: string};
     CreateChallenge: undefined;
+    CreateWWWQuest: undefined; // ← ADDED THIS MISSING ENTRY
     ChallengeVerification: {challengeId: string};
     PhotoVerification: {challengeId: string; prompt?: string};
     LocationVerification: {challengeId: string};

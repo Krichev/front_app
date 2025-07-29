@@ -2,6 +2,7 @@
 import axios from 'axios';
 import {parseStringPromise} from 'xml2js';
 import type {QuestionData, QuestionDifficulty} from '../../../entities/question';
+import {classifyQuestionDifficulty} from '../../../entities/question/lib/difficultyClassifier';
 
 interface XMLQuestionFields {
     Question?: string[];
@@ -50,50 +51,65 @@ export class QuestionApiService {
                 ignoreAttrs: true,
             });
 
-            let questions: QuestionData[];
+            let questions: QuestionData[] = [];
 
             if (result.search?.question) {
                 const questionArray = Array.isArray(result.search.question)
                     ? result.search.question
                     : [result.search.question];
 
-                console.log(`Found ${questionArray.length} questions at root level`);
+                console.log(`Found ${questionArray.length} questions in search response`);
 
-                questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields) => {
-                    const questionData = this.parseQuestionFromXml(q);
+                questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields): Promise<QuestionData> => {
+                    const baseQuestionData = this.parseQuestionFromXml(q);
 
-                    // Assign difficulty
-                    if (difficulty) {
-                        questionData.difficulty = difficulty;
-                    } else {
-                        questionData.difficulty = await this.classifyQuestionDifficulty(
-                            questionData.question,
-                            questionData.answer
-                        );
-                    }
+                    // Create the complete QuestionData object with difficulty
+                    const questionData: QuestionData = {
+                        ...baseQuestionData,
+                        difficulty: difficulty || await classifyQuestionDifficulty(
+                            baseQuestionData.question,
+                            baseQuestionData.answer
+                        )
+                    };
+
+                    return questionData;
+                }));
+            } else if (result && (result as any).question) {
+                // Single question or array of questions at root level
+                const questionArray = Array.isArray((result as any).question)
+                    ? (result as any).question
+                    : [(result as any).question];
+
+                console.log(`Found ${questionArray.length} questions in root response`);
+
+                questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields): Promise<QuestionData> => {
+                    const baseQuestionData = this.parseQuestionFromXml(q);
+
+                    const questionData: QuestionData = {
+                        ...baseQuestionData,
+                        difficulty: difficulty || await classifyQuestionDifficulty(
+                            baseQuestionData.question,
+                            baseQuestionData.answer
+                        )
+                    };
 
                     return questionData;
                 }));
             } else {
-                console.log("Unexpected XML structure:", JSON.stringify(result, null, 2));
-                throw new Error('Unexpected XML response structure');
+                throw new Error('No questions found in API response');
             }
 
-            // Filter invalid questions
-            questions = this.filterValidQuestions(questions);
+            // Filter out any invalid questions
+            questions = questions.filter(q => q.question && q.answer);
 
-            // Limit to requested count
-            questions = questions.slice(0, count);
-            console.log(`Returning ${questions.length} filtered questions`);
+            if (questions.length === 0) {
+                throw new Error('No valid questions found in API response');
+            }
 
-            return questions;
+            return questions.slice(0, count);
         } catch (error) {
-            console.error('Error fetching questions from db.chgk.info:', error);
-            this.logAxiosError(error);
-
-            // Fallback to local questions
-            console.log('Using fallback questions due to API failure');
-            return this.getFallbackQuestions(count, difficulty);
+            console.error('Error fetching questions from API:', error);
+            throw error;
         }
     }
 
@@ -123,18 +139,40 @@ export class QuestionApiService {
                 ignoreAttrs: true,
             });
 
-            // Implementation similar to fetchRandomQuestions
-            // ... (parse and process search results)
+            let questions: QuestionData[] = [];
 
-            return this.getFallbackQuestions(count, difficulty); // Temporary fallback
+            if (result.search?.question) {
+                const questionArray = Array.isArray(result.search.question)
+                    ? result.search.question
+                    : [result.search.question];
+
+                questions = await Promise.all(questionArray.map(async (q: XMLQuestionFields): Promise<QuestionData> => {
+                    const baseQuestionData = this.parseQuestionFromXml(q);
+
+                    const questionData: QuestionData = {
+                        ...baseQuestionData,
+                        difficulty: difficulty || await classifyQuestionDifficulty(
+                            baseQuestionData.question,
+                            baseQuestionData.answer
+                        )
+                    };
+
+                    return questionData;
+                }));
+            } else {
+                throw new Error(`No questions found for keyword: ${keyword}`);
+            }
+
+            return questions.slice(0, count);
         } catch (error) {
             console.error('Error searching questions:', error);
-            return this.getFallbackQuestions(count, difficulty);
+            throw error;
         }
     }
 
     /**
      * Parse question data from XML format
+     * Now returns the base question data without difficulty
      */
     private static parseQuestionFromXml(xmlQuestion: XMLQuestionFields): Omit<QuestionData, 'difficulty'> {
         const question = Array.isArray(xmlQuestion.Question)
@@ -146,106 +184,106 @@ export class QuestionApiService {
             : xmlQuestion.Answer || '';
 
         const comments = Array.isArray(xmlQuestion.Comments)
-            ? xmlQuestion.Comments[0]
+            ? xmlQuestion.Comments.join(' ')
             : xmlQuestion.Comments || '';
 
+        const authors = Array.isArray(xmlQuestion.Authors)
+            ? xmlQuestion.Authors.join(', ')
+            : xmlQuestion.Authors || '';
+
+        const sources = Array.isArray(xmlQuestion.Sources)
+            ? xmlQuestion.Sources.join(', ')
+            : xmlQuestion.Sources || '';
+
         return {
-            id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            id: `xml_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             question: this.cleanText(question),
             answer: this.cleanText(answer),
-            comments: this.cleanText(comments),
-            source: 'db.chgk.info',
-            category: 'general',
-            isAnswered: false,
-            userAnswer: '',
+            topic: this.extractTopic(question),
+            source: sources || 'db.chgk.info',
+            additionalInfo: comments,
+            isUserCreated: false,
+            creatorId: undefined,
+            externalId: undefined,
+            usageCount: 0,
+            createdAt: new Date().toISOString(),
+            lastUsed: undefined,
+            updatedAt: new Date().toISOString(),
+            category: 'General',
+            hints: comments ? [comments] : undefined,
+            alternativeAnswers: undefined,
+            tags: authors ? authors.split(', ') : undefined,
+            imageUrl: undefined,
+            audioUrl: undefined,
+            explanation: undefined,
+            references: sources ? sources.split(', ') : undefined,
+            estimatedTime: undefined,
+            points: undefined,
+            isActive: true,
         };
     }
 
     /**
-     * Classify question difficulty using simple heuristics
-     */
-    private static async classifyQuestionDifficulty(
-        question: string,
-        answer: string
-    ): Promise<QuestionDifficulty> {
-        const questionLength = question.length;
-        const answerLength = answer.length;
-
-        // Simple heuristic based on text complexity
-        if (questionLength > 200 || answerLength > 50) {
-            return 'hard';
-        } else if (questionLength > 100 || answerLength > 20) {
-            return 'medium';
-        } else {
-            return 'easy';
-        }
-    }
-
-    /**
-     * Filter out invalid questions
-     */
-    private static filterValidQuestions(questions: QuestionData[]): QuestionData[] {
-        return questions.filter(q =>
-            q.question && q.question.length > 10 &&
-            q.answer && q.answer.length > 0
-        );
-    }
-
-    /**
-     * Clean and format text
+     * Clean text content by removing HTML tags and extra whitespace
      */
     private static cleanText(text: string): string {
+        if (!text) return '';
+
         return text
             .replace(/<[^>]*>/g, '') // Remove HTML tags
-            .replace(/\s+/g, ' ')     // Normalize whitespace
+            .replace(/&[^;]+;/g, ' ') // Remove HTML entities
+            .replace(/\s+/g, ' ') // Replace multiple spaces with single space
             .trim();
     }
 
     /**
-     * Log axios error details
+     * Extract topic from question text
      */
-    private static logAxiosError(error: any): void {
-        if (axios.isAxiosError(error)) {
-            console.error('Axios error details:', {
-                message: error.message,
-                code: error.code,
-                status: error.response?.status,
-                statusText: error.response?.statusText,
-                data: error.response?.data ? String(error.response.data).substring(0, 200) : 'No data'
-            });
+    private static extractTopic(question: string): string {
+        // Simple topic extraction based on keywords
+        const topics = [
+            { keywords: ['история', 'history', 'historical'], topic: 'History' },
+            { keywords: ['география', 'geography', 'country', 'capital'], topic: 'Geography' },
+            { keywords: ['литература', 'literature', 'author', 'book'], topic: 'Literature' },
+            { keywords: ['наука', 'science', 'physics', 'chemistry'], topic: 'Science' },
+            { keywords: ['спорт', 'sport', 'football', 'olympic'], topic: 'Sports' },
+            { keywords: ['искусство', 'art', 'painting', 'music'], topic: 'Arts' },
+        ];
+
+        const questionLower = question.toLowerCase();
+
+        for (const topicGroup of topics) {
+            if (topicGroup.keywords.some(keyword => questionLower.includes(keyword))) {
+                return topicGroup.topic;
+            }
         }
+
+        return 'General';
     }
 
     /**
-     * Get fallback questions when API fails
+     * Get questions by category
      */
-    private static getFallbackQuestions(count: number, difficulty?: QuestionDifficulty): QuestionData[] {
-        const fallbackQuestions: QuestionData[] = [
-            {
-                id: 'fallback_1',
-                question: 'What is the capital of France?',
-                answer: 'Paris',
-                comments: 'Basic geography question',
-                source: 'fallback',
-                category: 'geography',
-                difficulty: difficulty || 'easy',
-                isAnswered: false,
-                userAnswer: '',
-            },
-            {
-                id: 'fallback_2',
-                question: 'Who wrote "Romeo and Juliet"?',
-                answer: 'William Shakespeare',
-                comments: 'Classic literature question',
-                source: 'fallback',
-                category: 'literature',
-                difficulty: difficulty || 'medium',
-                isAnswered: false,
-                userAnswer: '',
-            },
-            // Add more fallback questions as needed
-        ];
+    static async getQuestionsByCategory(
+        category: string,
+        count: number = 10,
+        difficulty?: QuestionDifficulty
+    ): Promise<QuestionData[]> {
+        // Use search with category as keyword
+        return this.searchQuestions(category, count, difficulty);
+    }
 
-        return fallbackQuestions.slice(0, count);
+    /**
+     * Validate question data
+     */
+    static validateQuestionData(question: QuestionData): boolean {
+        return !!(
+            question.id &&
+            question.question &&
+            question.answer &&
+            question.difficulty &&
+            typeof question.isUserCreated === 'boolean' &&
+            question.createdAt
+        );
     }
 }
