@@ -1,4 +1,4 @@
-// src/screens/WWWGamePlayScreen.tsx - Updated to use Quiz Session API
+// src/screens/WWWGamePlayScreen.tsx - Complete and Fixed Version
 import React, {useEffect, useRef, useState} from 'react';
 import {
     Alert,
@@ -16,7 +16,6 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {
-    QuizRound,
     useBeginQuizSessionMutation,
     useCompleteQuizSessionMutation,
     useGetQuizRoundsQuery,
@@ -25,7 +24,6 @@ import {
 } from '../entities/QuizState/model/slice/quizApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
-
 import {RootStackParamList} from '../navigation/AppNavigator';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
@@ -42,11 +40,13 @@ const WWWGamePlayScreen: React.FC = () => {
     // Support both old GameSettings format and new sessionId format
     const gameSettings = params as any;
 
-    // const { sessionId, challengeId } = route.params;
-
-    // API hooks
-    const { data: session, isLoading: isLoadingSession } = useGetQuizSessionQuery(sessionId);
-    const { data: rounds = [], isLoading: isLoadingRounds, refetch: refetchRounds } = useGetQuizRoundsQuery(sessionId);
+    // API hooks - with proper type guards
+    const { data: session, isLoading: isLoadingSession } = useGetQuizSessionQuery(sessionId!, {
+        skip: !sessionId
+    });
+    const { data: rounds = [], isLoading: isLoadingRounds, refetch: refetchRounds } = useGetQuizRoundsQuery(sessionId!, {
+        skip: !sessionId
+    });
     const [beginQuizSession] = useBeginQuizSessionMutation();
     const [submitRoundAnswer] = useSubmitRoundAnswerMutation();
     const [completeQuizSession] = useCompleteQuizSessionMutation();
@@ -73,6 +73,9 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Modal visibility
     const [showEndGameModal, setShowEndGameModal] = useState(false);
+
+    // Current round data
+    const currentRoundData = rounds[currentRound];
 
     // Initialize game when session and rounds are loaded
     useEffect(() => {
@@ -143,7 +146,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Start the game session
     const startGame = async () => {
-        if (!session) return;
+        if (!session || !sessionId) return;
 
         try {
             await beginQuizSession(sessionId).unwrap();
@@ -167,171 +170,123 @@ const WWWGamePlayScreen: React.FC = () => {
     // Handle voice transcription updates
     const handleVoiceTranscription = (text: string) => {
         if (gamePhase === 'discussion') {
-            setDiscussionNotes(prev => prev ? `${prev}\n${text}` : text);
-            setVoiceTranscription(text);
-        } else if (gamePhase === 'answer' && isRecordingVoiceAnswer) {
-            setTeamAnswer(text);
-            setVoiceTranscription(text);
+            setDiscussionNotes(prev => prev ? `${prev} ${text}` : text);
+        } else if (gamePhase === 'answer') {
+            setTeamAnswer(prev => prev ? `${prev} ${text}` : text);
         }
+        setVoiceTranscription(text);
     };
 
-    // Toggle voice answer recording
-    const toggleVoiceAnswer = () => {
-        setIsRecordingVoiceAnswer(!isRecordingVoiceAnswer);
-        if (!isRecordingVoiceAnswer) {
-            setTeamAnswer('');
-        }
-    };
-
-    // Submit team answer
+    // Submit round answer
     const submitAnswer = async () => {
-        if (!teamAnswer.trim()) {
-            Alert.alert('Error', 'Please enter or record an answer');
-            return;
-        }
-
-        if (!selectedPlayer) {
-            Alert.alert('Error', 'Please select a player who is answering');
+        if (!currentRoundData || !teamAnswer.trim() || !sessionId) {
+            Alert.alert('Error', 'Please provide an answer');
             return;
         }
 
         try {
-            await submitRoundAnswer({
-                sessionId,
-                request: {
-                    roundNumber: currentRound + 1,
-                    teamAnswer,
-                    playerWhoAnswered: selectedPlayer,
-                    discussionNotes,
-                    hintUsed: showHint,
-                    voiceRecordingUsed: isRecordingVoiceAnswer,
-                }
-            }).unwrap();
+            const request = {
+                roundNumber: currentRound + 1, // roundNumber is 1-based
+                teamAnswer: teamAnswer.trim(),
+                playerWhoAnswered: selectedPlayer || 'Team', // Default to 'Team' if no player selected
+                discussionNotes: discussionNotes.trim(),
+                hintUsed: showHint,
+                voiceRecordingUsed: isVoiceRecordingEnabled && (voiceTranscription.length > 0),
+            };
 
-            // Refetch rounds to get updated data
-            refetchRounds();
+            await submitRoundAnswer({ sessionId, request }).unwrap();
 
             // Move to feedback phase
             setGamePhase('feedback');
-            setIsRecordingVoiceAnswer(false);
+
+            // Refresh rounds data
+            refetchRounds();
         } catch (error) {
             console.error('Failed to submit answer:', error);
-            Alert.alert('Error', 'Failed to submit answer. Please try again.');
+            Alert.alert('Error', 'Failed to submit answer');
         }
     };
 
-    // Move to next round
-    const nextRound = () => {
-        // Check if game is over
-        if (currentRound + 1 >= (session?.totalRounds || 0)) {
-            setShowEndGameModal(true);
-            return;
+    // Continue to next round
+    const continueToNextRound = () => {
+        if (currentRound + 1 >= rounds.length) {
+            // Game completed
+            completeGame();
+        } else {
+            // Reset for next round
+            setCurrentRound(prev => prev + 1);
+            setGamePhase('question');
+            setDiscussionNotes('');
+            setTeamAnswer('');
+            setSelectedPlayer('');
+            setShowHint(false);
+            setVoiceTranscription('');
         }
-
-        // Reset round state
-        setCurrentRound(prevRound => prevRound + 1);
-        setGamePhase('question');
-        setTeamAnswer('');
-        setDiscussionNotes('');
-        setSelectedPlayer('');
-        setShowHint(false);
-        setVoiceTranscription('');
     };
 
-    // End game and navigate to results
-    const endGame = async () => {
-        if (!session) return;
+    // Complete the game
+    const completeGame = async () => {
+        if (!sessionId) return;
 
         try {
             await completeQuizSession(sessionId).unwrap();
+            setShowEndGameModal(true);
         } catch (error) {
-            console.error('Failed to complete quiz session:', error);
+            console.error('Failed to complete game:', error);
+            Alert.alert('Error', 'Failed to complete the game');
         }
+    };
+
+    // Navigate to results
+    const goToResults = () => {
+        if (!sessionId || !session) return;
 
         setShowEndGameModal(false);
 
-        const gameEndTime = new Date();
-        const gameDuration = gameStartTime
-            ? Math.floor((gameEndTime.getTime() - gameStartTime.getTime()) / 1000)
-            : 0;
+        // Prepare the results data in the format expected by WWWGameResults
+        const roundsData = rounds.map(round => ({
+            question: round.question.question,
+            correctAnswer: round.question.answer,
+            teamAnswer: round.teamAnswer || '',
+            isCorrect: round.isCorrect,
+            playerWhoAnswered: round.playerWhoAnswered || '',
+            discussionNotes: round.discussionNotes || ''
+        }));
 
-        const navigateToResults = () => {
-            const navigationParams: RootStackParamList['WWWGameResults'] = {
-                teamName: gameSettings?.teamName || 'Team',
-                score: 0,
-                totalRounds: gameSettings?.roundCount || 10,
-                roundsData: [],
-                challengeId,
-                sessionId,
-                gameStartTime: new Date().toISOString(),
-                gameDuration: 0
-            };
-
-            navigation.navigate('WWWGameResults', navigationParams);
-        };
-
-    // Get current round data
-    const getCurrentRound = (): QuizRound | null => {
-        return rounds[currentRound] || null;
+        navigation.navigate('WWWGameResults', {
+            teamName: session.teamName,
+            score: session.correctAnswers,
+            totalRounds: session.totalRounds,
+            roundsData: roundsData,
+            challengeId: challengeId,
+            sessionId: sessionId,
+            gameStartTime: session.startedAt,
+            gameDuration: session.totalDurationSeconds
+        });
     };
 
-    // Generate hint
-    const generateHint = (correctAnswer: string): string => {
-        if (!correctAnswer) return 'No hint available';
-
-        const words = correctAnswer.split(' ');
-        const difficulty = session?.difficulty || 'MEDIUM';
-
-        switch (difficulty) {
-            case 'EASY':
-                const firstLetters = words.map(w => w[0]).join(' ');
-                return `Starts with: ${firstLetters} (${words.length} word${words.length !== 1 ? 's' : ''})`;
-            case 'MEDIUM':
-                return `${correctAnswer.length} characters, ${words.length} word${words.length !== 1 ? 's' : ''}`;
-            case 'HARD':
-                return words.length > 1 ? `${words.length}-word answer` : `Single word, ${correctAnswer.length} letters`;
-            default:
-                return `${correctAnswer.length} characters total`;
-        }
+    // Handle voice recording for answers
+    const toggleVoiceAnswer = () => {
+        setIsRecordingVoiceAnswer(!isRecordingVoiceAnswer);
     };
 
-    if (isLoadingSession || isLoadingRounds) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.loadingContainer}>
-                    <Text style={styles.loadingText}>Loading quiz session...</Text>
-                </View>
-            </SafeAreaView>
-        );
-    }
-
-    if (!session) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Quiz session not found</Text>
-                    <TouchableOpacity
-                        style={styles.errorButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.errorButtonText}>Go Back</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
-
-    const currentRoundData = getCurrentRound();
-
-    // Render game UI based on phase
-    const renderGamePhase = () => {
+    // Render different phases
+    const renderPhaseContent = () => {
         switch (gamePhase) {
             case 'waiting':
                 return (
                     <View style={styles.phaseContainer}>
+                        <MaterialCommunityIcons
+                            name="play-circle-outline"
+                            size={80}
+                            color="#4CAF50"
+                            style={styles.icon}
+                        />
                         <Text style={styles.waitingTitle}>Ready to Start?</Text>
-                        <Text style={styles.waitingDescription}>
-                            Your quiz session is ready. When you're ready to begin, press the button below.
+                        <Text style={styles.waitingText}>
+                            Welcome to What? Where? When? Quiz!{'\n\n'}
+                            You'll have {session?.roundTimeSeconds || 60} seconds to discuss each question with your team.{'\n\n'}
+                            When you're ready to begin, press the button below.
                         </Text>
                         <TouchableOpacity
                             style={styles.primaryButton}
@@ -348,7 +303,7 @@ const WWWGamePlayScreen: React.FC = () => {
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.questionNumber}>
-                            Question {currentRound + 1} of {session.totalRounds}
+                            Question {currentRound + 1} of {session?.totalRounds || rounds.length}
                         </Text>
                         <Text style={styles.question}>{currentRoundData.question.question}</Text>
 
@@ -392,36 +347,32 @@ const WWWGamePlayScreen: React.FC = () => {
                                     onTranscription={handleVoiceTranscription}
                                     isActive={gamePhase === 'discussion'}
                                 />
-                                {voiceTranscription ? (
+                                {voiceTranscription && (
                                     <View style={styles.transcriptionContainer}>
-                                        <Text style={styles.transcriptionLabel}>Last Transcription:</Text>
+                                        <Text style={styles.transcriptionLabel}>Latest Transcription:</Text>
                                         <Text style={styles.transcriptionText}>{voiceTranscription}</Text>
                                     </View>
-                                ) : null}
+                                )}
                             </View>
                         )}
 
                         <View style={styles.notesContainer}>
-                            <Text style={styles.notesLabel}>
-                                Discussion Notes {isVoiceRecordingEnabled ? '(Voice transcriptions will appear here)' : ''}
-                            </Text>
+                            <Text style={styles.notesLabel}>Discussion Notes:</Text>
                             <TextInput
                                 style={styles.notesInput}
-                                multiline
                                 value={discussionNotes}
                                 onChangeText={setDiscussionNotes}
-                                placeholder="Take notes on your team's discussion..."
+                                placeholder="Record your team's discussion..."
+                                multiline
+                                textAlignVertical="top"
                             />
                         </View>
 
                         <TouchableOpacity
-                            style={styles.secondaryButton}
-                            onPress={() => {
-                                setIsTimerRunning(false);
-                                setGamePhase('answer');
-                            }}
+                            style={styles.primaryButton}
+                            onPress={() => setGamePhase('answer')}
                         >
-                            <Text style={styles.buttonText}>End Discussion Early</Text>
+                            <Text style={styles.buttonText}>Submit Answer</Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -434,93 +385,100 @@ const WWWGamePlayScreen: React.FC = () => {
                         <Text style={styles.answerTitle}>Submit Your Answer</Text>
                         <Text style={styles.question}>{currentRoundData.question.question}</Text>
 
-                        <View style={styles.formGroup}>
-                            <Text style={styles.formLabel}>Select Player Answering:</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                style={styles.playersScroll}
-                            >
-                                {session.teamMembers.map((player, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={[
-                                            styles.playerButton,
-                                            selectedPlayer === player && styles.selectedPlayerButton
-                                        ]}
-                                        onPress={() => setSelectedPlayer(player)}
-                                    >
-                                        <Text
+                        {/* Hint section */}
+                        {currentRoundData.question.additionalInfo && (
+                            <View>
+                                <TouchableOpacity
+                                    style={styles.hintButton}
+                                    onPress={() => setShowHint(!showHint)}
+                                >
+                                    <Text style={styles.hintButtonText}>
+                                        {showHint ? 'Hide Hint' : 'Show Hint'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {showHint && (
+                                    <View style={styles.hintContainer}>
+                                        <Text style={styles.hintText}>{currentRoundData.question.additionalInfo}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Voice answer recording */}
+                        {isVoiceRecordingEnabled && (
+                            <View style={styles.voiceAnswerContainer}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.voiceAnswerButton,
+                                        isRecordingVoiceAnswer && styles.voiceAnswerButtonActive
+                                    ]}
+                                    onPress={toggleVoiceAnswer}
+                                >
+                                    <MaterialCommunityIcons
+                                        name={isRecordingVoiceAnswer ? "stop" : "microphone"}
+                                        size={20}
+                                        color="white"
+                                    />
+                                    <Text style={styles.voiceAnswerButtonText}>
+                                        {isRecordingVoiceAnswer ? 'Stop Recording Answer' : 'Record Voice Answer'}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                {isRecordingVoiceAnswer && (
+                                    <VoiceRecorder
+                                        onTranscription={handleVoiceTranscription}
+                                        isActive={isRecordingVoiceAnswer}
+                                    />
+                                )}
+                            </View>
+                        )}
+
+                        {/* Player selection */}
+                        {gameSettings?.players && gameSettings.players.length > 0 && (
+                            <View style={styles.formGroup}>
+                                <Text style={styles.formLabel}>Who is answering?</Text>
+                                <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    style={styles.playersScroll}
+                                >
+                                    {gameSettings.players.map((player: string) => (
+                                        <TouchableOpacity
+                                            key={player}
                                             style={[
+                                                styles.playerButton,
+                                                selectedPlayer === player && styles.selectedPlayerButton
+                                            ]}
+                                            onPress={() => setSelectedPlayer(player)}
+                                        >
+                                            <Text style={[
                                                 styles.playerButtonText,
                                                 selectedPlayer === player && styles.selectedPlayerText
-                                            ]}
-                                        >
-                                            {player}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
+                                            ]}>
+                                                {player}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
 
+                        {/* Answer input */}
                         <View style={styles.formGroup}>
                             <Text style={styles.formLabel}>Team Answer:</Text>
                             <TextInput
                                 style={styles.answerInput}
                                 value={teamAnswer}
                                 onChangeText={setTeamAnswer}
-                                placeholder="Enter your team's final answer"
+                                placeholder="Enter your team's answer..."
+                                multiline
                             />
                         </View>
 
-                        <View style={styles.voiceAnswerContainer}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.voiceAnswerButton,
-                                    isRecordingVoiceAnswer && styles.voiceAnswerButtonActive
-                                ]}
-                                onPress={toggleVoiceAnswer}
-                            >
-                                <MaterialCommunityIcons
-                                    name={isRecordingVoiceAnswer ? "stop" : "microphone"}
-                                    size={24}
-                                    color="white"
-                                />
-                                <Text style={styles.voiceAnswerButtonText}>
-                                    {isRecordingVoiceAnswer ? "Stop Recording" : "Record Answer"}
-                                </Text>
-                            </TouchableOpacity>
-
-                            {isRecordingVoiceAnswer && (
-                                <VoiceRecorder
-                                    onTranscription={handleVoiceTranscription}
-                                    isActive={isRecordingVoiceAnswer}
-                                />
-                            )}
-                        </View>
-
-                        {session.enableAiHost && (
-                            <TouchableOpacity
-                                style={styles.hintButton}
-                                onPress={() => setShowHint(!showHint)}
-                            >
-                                <Text style={styles.hintButtonText}>
-                                    {showHint ? 'Hide Hint' : 'Get Hint from AI Host'}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-
-                        {showHint && (
-                            <View style={styles.hintContainer}>
-                                <Text style={styles.hintText}>
-                                    {generateHint(currentRoundData.question.answer)}
-                                </Text>
-                            </View>
-                        )}
-
                         <TouchableOpacity
-                            style={styles.primaryButton}
+                            style={[styles.primaryButton, !teamAnswer.trim() && styles.disabledButton]}
                             onPress={submitAnswer}
+                            disabled={!teamAnswer.trim()}
                         >
                             <Text style={styles.buttonText}>Submit Answer</Text>
                         </TouchableOpacity>
@@ -530,32 +488,33 @@ const WWWGamePlayScreen: React.FC = () => {
             case 'feedback':
                 if (!currentRoundData) return null;
 
+                const isCorrect = currentRoundData.isCorrect;
+
                 return (
                     <View style={styles.phaseContainer}>
-                        <Text style={styles.feedbackTitle}>Answer Feedback</Text>
+                        <Text style={styles.feedbackTitle}>Round Results</Text>
 
                         <View style={styles.resultContainer}>
+                            <Text style={styles.resultLabel}>Question:</Text>
+                            <Text style={styles.resultValue}>{currentRoundData.question.question}</Text>
+
                             <Text style={styles.resultLabel}>Your Answer:</Text>
-                            <Text style={styles.resultValue}>{currentRoundData.teamAnswer || teamAnswer}</Text>
+                            <Text style={styles.resultValue}>{currentRoundData.teamAnswer}</Text>
 
                             <Text style={styles.resultLabel}>Correct Answer:</Text>
                             <Text style={styles.resultValue}>{currentRoundData.question.answer}</Text>
 
-                            <Text style={styles.resultLabel}>Result:</Text>
                             <View style={[
                                 styles.resultBadge,
-                                currentRoundData.isCorrect ? styles.correctBadge : styles.incorrectBadge
+                                isCorrect ? styles.correctBadge : styles.incorrectBadge
                             ]}>
                                 <Text style={styles.resultBadgeText}>
-                                    {currentRoundData.isCorrect ? 'CORRECT' : 'INCORRECT'}
+                                    {isCorrect ? 'CORRECT' : 'INCORRECT'}
                                 </Text>
                             </View>
-
-                            <Text style={styles.resultLabel}>Answered By:</Text>
-                            <Text style={styles.resultValue}>{currentRoundData.playerWhoAnswered || selectedPlayer}</Text>
                         </View>
 
-                        {session.enableAiHost && currentRoundData.aiFeedback && (
+                        {currentRoundData.aiFeedback && (
                             <View style={styles.aiFeedbackContainer}>
                                 <Text style={styles.aiFeedbackTitle}>AI Host Feedback:</Text>
                                 <Text style={styles.aiFeedbackText}>{currentRoundData.aiFeedback}</Text>
@@ -564,10 +523,10 @@ const WWWGamePlayScreen: React.FC = () => {
 
                         <TouchableOpacity
                             style={styles.primaryButton}
-                            onPress={nextRound}
+                            onPress={continueToNextRound}
                         >
                             <Text style={styles.buttonText}>
-                                {currentRound + 1 >= session.totalRounds ? 'See Final Results' : 'Next Question'}
+                                {currentRound + 1 >= rounds.length ? 'Finish Game' : 'Next Question'}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -578,30 +537,40 @@ const WWWGamePlayScreen: React.FC = () => {
         }
     };
 
+    // Loading state
+    if (isLoadingSession || isLoadingRounds) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <MaterialCommunityIcons name="loading" size={40} color="#4CAF50" />
+                    <Text style={styles.loadingText}>Loading quiz...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    // Error state
+    if (!session || !sessionId) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={40} color="#F44336" />
+                    <Text style={styles.errorText}>Quiz session not found</Text>
+                    <TouchableOpacity
+                        style={styles.primaryButton}
+                        onPress={() => navigation.goBack()}
+                    >
+                        <Text style={styles.buttonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    <Text style={styles.teamName}>{session.teamName}</Text>
-                    <Text style={styles.scoreText}>Score: {session.correctAnswers}/{session.totalRounds}</Text>
-                </View>
-                <View style={styles.progressBar}>
-                    <View
-                        style={[
-                            styles.progressFill,
-                            {width: `${(currentRound / session.totalRounds) * 100}%`}
-                        ]}
-                    />
-                </View>
-                {gameStartTime && (
-                    <Text style={styles.gameTimeText}>
-                        Started: {gameStartTime.toLocaleTimeString()}
-                    </Text>
-                )}
-            </View>
-
-            <ScrollView contentContainerStyle={styles.content}>
-                {renderGamePhase()}
+            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                {renderPhaseContent()}
             </ScrollView>
 
             {/* End Game Modal */}
@@ -612,23 +581,24 @@ const WWWGamePlayScreen: React.FC = () => {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Game Over!</Text>
+                        <MaterialCommunityIcons
+                            name="trophy"
+                            size={60}
+                            color="#4CAF50"
+                            style={styles.modalIcon}
+                        />
+                        <Text style={styles.modalTitle}>Quiz Complete!</Text>
                         <Text style={styles.modalText}>
-                            Your team scored {session.correctAnswers} out of {session.totalRounds} questions.
+                            Congratulations! You've completed the quiz.
                         </Text>
                         <Text style={styles.modalScore}>
-                            {session.correctAnswers === session.totalRounds
-                                ? 'Perfect score! Incredible!'
-                                : session.correctAnswers > session.totalRounds / 2
-                                    ? 'Well done!'
-                                    : 'Better luck next time!'}
+                            Final Score: {session.correctAnswers || 0}/{session.totalRounds || rounds.length}
                         </Text>
-
                         <TouchableOpacity
                             style={styles.modalButton}
-                            onPress={endGame}
+                            onPress={goToResults}
                         >
-                            <Text style={styles.modalButtonText}>See Detailed Results</Text>
+                            <Text style={styles.modalButtonText}>View Results</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -642,45 +612,8 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
-    header: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
-    },
-    headerTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    teamName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    scoreText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    progressBar: {
-        height: 6,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        backgroundColor: 'white',
-    },
-    gameTimeText: {
-        fontSize: 12,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginTop: 4,
-        textAlign: 'center',
-    },
     content: {
-        padding: 16,
-        flexGrow: 1,
+        flex: 1,
     },
     loadingContainer: {
         flex: 1,
@@ -688,6 +621,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
+        marginTop: 16,
         fontSize: 16,
         color: '#666',
     },
@@ -695,60 +629,49 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: 24,
     },
     errorText: {
-        fontSize: 18,
-        color: '#F44336',
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    errorButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
-    },
-    errorButtonText: {
-        color: 'white',
+        marginTop: 16,
         fontSize: 16,
-        fontWeight: 'bold',
+        color: '#F44336',
+        textAlign: 'center',
+        marginBottom: 24,
     },
     phaseContainer: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        flex: 1,
+        padding: 24,
+    },
+    icon: {
+        alignSelf: 'center',
+        marginBottom: 24,
     },
     waitingTitle: {
         fontSize: 24,
         fontWeight: 'bold',
+        textAlign: 'center',
         color: '#333',
         marginBottom: 16,
-        textAlign: 'center',
     },
-    waitingDescription: {
+    waitingText: {
         fontSize: 16,
-        color: '#666',
-        marginBottom: 24,
         textAlign: 'center',
-        lineHeight: 22,
+        color: '#666',
+        lineHeight: 24,
+        marginBottom: 32,
     },
     questionNumber: {
         fontSize: 14,
         color: '#666',
+        textAlign: 'center',
         marginBottom: 8,
     },
     question: {
         fontSize: 20,
-        fontWeight: 'bold',
+        fontWeight: '600',
         color: '#333',
-        marginBottom: 24,
+        textAlign: 'center',
+        marginBottom: 32,
         lineHeight: 28,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
     },
@@ -765,6 +688,10 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         borderRadius: 8,
         alignItems: 'center',
+    },
+    disabledButton: {
+        opacity: 0.7,
+        backgroundColor: '#A5D6A7',
     },
     buttonText: {
         color: 'white',
@@ -854,6 +781,8 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
+        minHeight: 80,
+        textAlignVertical: 'top',
     },
     hintButton: {
         alignSelf: 'center',
@@ -942,6 +871,9 @@ const styles = StyleSheet.create({
         padding: 24,
         width: '80%',
         alignItems: 'center',
+    },
+    modalIcon: {
+        marginBottom: 16,
     },
     modalTitle: {
         fontSize: 22,
