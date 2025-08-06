@@ -34,9 +34,13 @@ const baseQuery = fetchBaseQuery({
     prepareHeaders: async (headers, { getState }) => {
         const token = (getState() as RootState).auth.accessToken;
 
+        // Add Bearer token to Authorization header
         if (token) {
             headers.set('Authorization', `Bearer ${token}`);
         }
+
+        // Set content type
+        headers.set('Content-Type', 'application/json');
 
         return headers;
     },
@@ -63,16 +67,26 @@ const baseQueryWithReauth: BaseQueryFn = async (args, api, extraOptions) => {
             );
 
             if (refreshResult.data) {
-                const { accessToken, refreshToken, user } = refreshResult.data as LoginResponse;
+                const { accessToken, refreshToken: newRefreshToken, user } = refreshResult.data as LoginResponse;
 
-                // Store the new tokens
-                await Keychain.setGenericPassword('authTokens', JSON.stringify({ accessToken, refreshToken, user }));
+                // Store the new tokens in Keychain
+                await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                    accessToken,
+                    refreshToken: newRefreshToken,
+                    user
+                }));
 
                 // Update the Redux state with the new tokens
-                api.dispatch(setTokens({ accessToken, refreshToken, user }));
+                api.dispatch(setTokens({
+                    accessToken,
+                    refreshToken: newRefreshToken,
+                    user
+                }));
 
-                // Retry the original query with the new access token
+                // Retry the original query with the new access token (Bearer will be added automatically)
                 result = await baseQuery(args, api, extraOptions);
+
+                console.log('Token refreshed successfully');
             } else {
                 // Refresh token failed, log out the user
                 api.dispatch(logout());
@@ -93,6 +107,7 @@ const baseQueryWithReauth: BaseQueryFn = async (args, api, extraOptions) => {
 export const authApi = createApi({
     reducerPath: 'authApi',
     baseQuery: baseQueryWithReauth,
+    tagTypes: ['Auth'],
     endpoints: (builder) => ({
         login: builder.mutation<LoginResponse, { username: string; password: string }>({
             query: (credentials) => ({
@@ -100,15 +115,105 @@ export const authApi = createApi({
                 method: 'POST',
                 body: credentials,
             }),
+            invalidatesTags: ['Auth'],
+            onQueryStarted: async (args, { dispatch, queryFulfilled }) => {
+                try {
+                    const { data } = await queryFulfilled;
+
+                    // Store tokens in Keychain
+                    await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                        accessToken: data.accessToken,
+                        refreshToken: data.refreshToken,
+                        user: data.user
+                    }));
+
+                    // Update Redux state
+                    dispatch(setTokens({
+                        accessToken: data.accessToken,
+                        refreshToken: data.refreshToken,
+                        user: data.user
+                    }));
+
+                    console.log('Login successful, Bearer token will be added automatically to future requests');
+                } catch (error) {
+                    console.error('Login failed:', error);
+                }
+            },
         }),
+
         signup: builder.mutation<SignupResponse, { username: string; email: string; password: string }>({
             query: (user) => ({
                 url: 'auth/signup',
                 method: 'POST',
                 body: user,
             }),
+            invalidatesTags: ['Auth'],
+            onQueryStarted: async (args, { dispatch, queryFulfilled }) => {
+                try {
+                    const { data } = await queryFulfilled;
+
+                    // Store tokens in Keychain
+                    await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                        accessToken: data.accessToken,
+                        refreshToken: data.refreshToken,
+                        user: data.user
+                    }));
+
+                    // Update Redux state
+                    dispatch(setTokens({
+                        accessToken: data.accessToken,
+                        refreshToken: data.refreshToken,
+                        user: data.user
+                    }));
+
+                    console.log('Signup successful, Bearer token will be added automatically to future requests');
+                } catch (error) {
+                    console.error('Signup failed:', error);
+                }
+            },
+        }),
+
+        // Refresh token endpoint
+        refreshToken: builder.mutation<LoginResponse, { refreshToken: string }>({
+            query: (body) => ({
+                url: 'auth/refresh-token',
+                method: 'POST',
+                body,
+            }),
+        }),
+
+        // Logout endpoint
+        logoutUser: builder.mutation<{ message: string }, void>({
+            query: () => ({
+                url: 'auth/logout',
+                method: 'POST',
+            }),
+            onQueryStarted: async (args, { dispatch, queryFulfilled }) => {
+                try {
+                    await queryFulfilled;
+
+                    // Clear tokens from Keychain
+                    await Keychain.resetGenericPassword();
+
+                    // Clear Redux state
+                    dispatch(logout());
+
+                    console.log('Logout successful, Bearer token cleared');
+                } catch (error) {
+                    console.error('Logout failed:', error);
+
+                    // Even if server logout fails, clear local tokens
+                    await Keychain.resetGenericPassword();
+                    dispatch(logout());
+                }
+            },
         }),
     }),
 });
 
-export const { useLoginMutation, useSignupMutation } = authApi;
+export const {
+    useLoginMutation,
+    useSignupMutation,
+    useRefreshTokenMutation,
+    useLogoutUserMutation
+} = authApi;

@@ -1,6 +1,7 @@
 // src/entities/ChallengeState/model/slice/challengeApi.ts
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 import {RootState} from "../../../../app/providers/StoreProvider/store";
+import {CreateQuizQuestionRequest, QuizQuestion} from "../../../QuizState/model/slice/quizApi.ts";
 
 // Update the Challenge interface with proper participants typing
 export interface ApiChallenge {
@@ -226,6 +227,50 @@ export const challengeApi = createApi({
             }),
             providesTags: (_, __, {challengeId}) => [{type: 'Verification', id: challengeId}],
         }),
+    }),
+});
+
+export const enhancedChallengeApi = challengeApi.injectEndpoints({
+    endpoints: (builder) => ({
+
+        // Create quiz challenge with question saving
+        createQuizChallenge: builder.mutation<ApiChallenge, CreateQuizChallengeRequest>({
+            query: (request) => ({
+                url: '/challenges/quiz',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: [{type: 'Challenge', id: 'LIST'}],
+        }),
+
+        // Save quiz questions for reuse
+        saveQuizQuestionsForChallenge: builder.mutation<QuizQuestion[], {
+            challengeId: string;
+            questions: CreateQuizQuestionRequest[];
+        }>({
+            query: ({challengeId, questions}) => ({
+                url: `/challenges/${challengeId}/questions`,
+                method: 'POST',
+                body: {questions},
+            }),
+            invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}],
+        }),
+
+        // Get saved questions for a challenge
+        getQuestionsForChallenge: builder.query<QuizQuestion[], {
+            challengeId: string;
+            difficulty?: string;
+            count?: number;
+        }>({
+            query: ({challengeId, difficulty, count = 10}) => ({
+                url: `/challenges/${challengeId}/questions`,
+                params: {difficulty, count},
+            }),
+            providesTags: (result, error, {challengeId}) => [
+                {type: 'QuizQuestion', id: `CHALLENGE_${challengeId}`}
+            ],
+        }),
+
     }),
 });
 

@@ -1,5 +1,5 @@
-// src/entities/AuthState/ui/AuthNavigationHandler.tsx
-import React, {useEffect} from 'react';
+// src/entities/AuthState/ui/AuthNavigationHandler.tsx - IMPROVED VERSION
+import React, {useEffect, useRef} from 'react';
 import {useSelector} from 'react-redux';
 import {CommonActions, useNavigation} from '@react-navigation/native';
 import {RootState} from '../../../app/providers/StoreProvider/store';
@@ -15,24 +15,40 @@ type AuthNavigationProp = StackNavigationProp<RootStackParamList>;
 export const AuthNavigationHandler: React.FC = () => {
     const navigation = useNavigation<AuthNavigationProp>();
     const { accessToken } = useSelector((state: RootState) => state.auth);
+    const previousAuthState = useRef<boolean | null>(null);
 
     useEffect(() => {
-        // When auth state changes, trigger navigation
-        if (accessToken) {
-            // User is authenticated, navigate to Main screen
-            navigation.dispatch(
-                CommonActions.navigate({
-                    name: 'Main',
-                    params: { screen: 'Home' },
-                })
-            );
-        } else if (navigation.canGoBack()) {
-            // User is not authenticated, navigate to Login screen
-            navigation.dispatch(
-                CommonActions.navigate({
-                    name: 'Login',
-                })
-            );
+        const isAuthenticated = !!accessToken;
+
+        // Only navigate if the auth state actually changed
+        if (previousAuthState.current !== isAuthenticated) {
+            if (isAuthenticated) {
+                // User just became authenticated, navigate to Main screen
+                console.log('User authenticated, navigating to Main screen');
+                navigation.dispatch(
+                    CommonActions.reset({
+                        index: 0,
+                        routes: [
+                            {
+                                name: 'Main',
+                                params: { screen: 'Home' },
+                            },
+                        ],
+                    })
+                );
+            } else if (previousAuthState.current === true) {
+                // User was authenticated but now isn't (logged out)
+                console.log('User logged out, navigating to Login screen');
+                navigation.dispatch(
+                    CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                    })
+                );
+            }
+
+            // Update the previous state reference
+            previousAuthState.current = isAuthenticated;
         }
     }, [accessToken, navigation]);
 
@@ -51,8 +67,9 @@ export const useAuthGuard = () => {
     useEffect(() => {
         if (!accessToken) {
             navigation.dispatch(
-                CommonActions.navigate({
-                    name: 'Login',
+                CommonActions.reset({
+                    index: 0,
+                    routes: [{ name: 'Login' }],
                 })
             );
         }

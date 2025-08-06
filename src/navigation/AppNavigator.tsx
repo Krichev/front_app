@@ -1,10 +1,10 @@
-// src/navigation/AppNavigator.tsx - UPDATED with consistent types
+// src/navigation/AppNavigator.tsx - COMPLETE FIXED VERSION
 import React from 'react';
 import {NavigationContainer, RouteProp} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
-// Import screens (same as before)
+// Import screens
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import HomeScreen from '../screens/HomeScreen';
@@ -34,10 +34,9 @@ import {StateChallenge} from "../entities/ChallengeState/model/slice/challengeSl
 import {AuthNavigationHandler} from "../entities/AuthState/ui/AuthNavigationHandler.tsx";
 import {GameSettings} from "../services/wwwGame";
 
-// FIXED: Consolidated and consistent navigation types
+// Navigation types
 export type RootStackParamList = {
     Main: { screen?: keyof MainTabParamList; params?: any };
-    Home: undefined;
     Login: undefined;
     Signup: undefined;
     ChallengeDetails: { challengeId: string };
@@ -49,13 +48,13 @@ export type RootStackParamList = {
     UserProfile: { userId: string };
     EditProfile: { userId: string };
 
-    // UPDATED: Consistent WWW Game Screens with both old and new API support
+    // WWW Game Screens
     WWWGameSetup: {
         selectedQuestions?: QuestionData[];
-        challengeId?: string; // Added to support challenge-based flow
+        challengeId?: string;
     };
     WWWGamePlay: GameSettings & {
-        sessionId?: string; // Added to support new Quiz API
+        sessionId?: string;
         challengeId?: string;
     };
     WWWGameResults: {
@@ -66,7 +65,7 @@ export type RootStackParamList = {
         challengeId?: string;
         gameStartTime?: string;
         gameDuration?: number;
-        sessionId?: string; // Added to support new Quiz API
+        sessionId?: string;
     };
     QuizResults: {
         challengeId: string;
@@ -93,7 +92,7 @@ export type MainTabParamList = {
     Profile: undefined;
 };
 
-// ADDED: Global type declaration to make React Navigation aware of our types
+// Global type declaration
 declare global {
     namespace ReactNavigation {
         interface RootParamList extends RootStackParamList {}
@@ -103,7 +102,7 @@ declare global {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Rest of the component remains the same...
+// Main Tab Navigator
 const MainTabNavigator = ({
                               route
                           }: {
@@ -116,8 +115,6 @@ const MainTabNavigator = ({
             initialRouteName={screen || 'Home'}
             screenOptions={({ route }) => ({
                 tabBarIcon: ({ focused, color, size }) => {
-                    let iconName = 'help-circle-outline';
-
                     const icons = {
                         Home: focused ? 'home' : 'home-outline',
                         Challenges: focused ? 'trophy' : 'trophy-outline',
@@ -127,7 +124,7 @@ const MainTabNavigator = ({
                     };
 
                     return <MaterialCommunityIcons
-                        name={icons[route.name as keyof typeof icons] || iconName}
+                        name={icons[route.name as keyof typeof icons] || 'help-circle-outline'}
                         size={size}
                         color={color}
                     />;
@@ -150,6 +147,7 @@ const MainTabNavigator = ({
     );
 };
 
+// Main App Navigation
 const AppNavigation = () => {
     const isAuthenticated = useSelector((state: RootState) => state.auth.accessToken);
 
@@ -260,11 +258,6 @@ const AppNavigation = () => {
                         <Stack.Screen
                             name="Signup"
                             component={SignupScreen}
-                            options={{ headerShown: false }}
-                        />
-                        <Stack.Screen
-                            name="Home"
-                            component={HomeScreen}
                             options={{ headerShown: false }}
                         />
                     </>

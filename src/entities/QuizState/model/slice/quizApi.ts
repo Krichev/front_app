@@ -2,6 +2,36 @@
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 import {RootState} from "../../../../app/providers/StoreProvider/store";
 
+export interface CreateQuizChallengeRequest {
+    title: string;
+    description?: string;
+    type: 'QUIZ';
+    visibility: 'PUBLIC' | 'PRIVATE';
+    startDate?: Date;
+    endDate?: Date;
+    frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
+    quizConfig: QuizConfig;
+    userQuestions?: CreateQuizQuestionRequest[];
+}
+
+export interface CreateQuizQuestionRequest {
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    source?: string;
+    additionalInfo?: string;
+}
+
+export interface QuizConfig {
+    gameType: 'WWW';
+    teamName: string;
+    teamMembers: string[];
+    difficulty: 'Easy' | 'Medium' | 'Hard';
+    roundTime: number;
+    roundCount: number;
+    enableAIHost: boolean;
+}
 // Quiz Question types
 export interface QuizQuestion {
     id: string;

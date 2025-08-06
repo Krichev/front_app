@@ -1,3 +1,4 @@
+// src/screens/LoginScreen.tsx - FIXED VERSION
 import React, {useEffect, useState} from 'react';
 import {
     Alert,
@@ -33,16 +34,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             try {
                 const credentials = await Keychain.getGenericPassword();
                 if (credentials) {
-                    console.log(credentials)
+                    console.log(credentials);
                     const {accessToken, refreshToken, user} = JSON.parse(credentials.password);
                     dispatch(setTokens({accessToken, refreshToken, user}));
-                    navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Main' }],
-                    });
 
-                    // Navigate to Main with Home tab
-                    // navigation.navigate('Main', { screen: 'Home' });
+                    // REMOVED: Manual navigation - let AuthNavigationHandler handle it
+                    // navigation.reset({
+                    //     index: 0,
+                    //     routes: [{ name: 'Main' }],
+                    // });
                 }
             } catch (err) {
                 console.log('Error checking stored tokens:', err);
@@ -61,27 +61,35 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     const handleLogin = async (): Promise<void> => {
         const {username, password} = formData;
 
-        // Input Validation
         if (!username.trim() || !password.trim()) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
         try {
-            // Attempt Login
             const result = await login({username, password}).unwrap();
             const {accessToken, refreshToken, user} = result;
 
-            // Securely Store Tokens and User Info
+            // Store tokens securely
             await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken, user}));
 
-            // Update Auth State
+            // Update Redux state - AuthNavigationHandler will handle navigation
             dispatch(setTokens({accessToken, refreshToken, user}));
 
+            // REMOVED: Manual navigation - let AuthNavigationHandler handle it
+            // navigation.reset({
+            //     index: 0,
+            //     routes: [{ name: 'Main' }],
+            // });
+
+            // Reset form
+            setFormData({username: '', password: ''});
+
+            console.log('Login successful, Bearer token will be added automatically to future requests');
+
         } catch (err: any) {
-            const errorMessage = err.data?.message || 'An error occurred';
-            Alert.alert('Error', errorMessage);
-            console.log(err.data);
+            const errorMessage = err.data?.message || 'Invalid credentials';
+            Alert.alert('Login Failed', errorMessage);
         }
     };
 
@@ -90,22 +98,28 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.container}
         >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* App Logo */}
                 <View style={styles.logoContainer}>
                     <Text style={styles.appName}>TaskBuddy</Text>
                 </View>
 
+                {/* Login Form */}
                 <View style={styles.formContainer}>
-                    <Text style={styles.title}>Log In</Text>
+                    <Text style={styles.title}>Welcome Back</Text>
 
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>username</Text>
+                        <Text style={styles.label}>Username</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your username"
-                            autoCapitalize="none"
                             value={formData.username}
                             onChangeText={(value) => handleInputChange('username', value)}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
@@ -114,9 +128,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your password"
-                            secureTextEntry
                             value={formData.password}
                             onChangeText={(value) => handleInputChange('password', value)}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
@@ -142,8 +158,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     );
 };
 
-// Updated styles
-// Styles
 const styles = StyleSheet.create({
     container: {
         flex: 1,

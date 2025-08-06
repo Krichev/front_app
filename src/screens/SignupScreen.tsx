@@ -1,4 +1,4 @@
-// Updated navigation in SignupScreen.tsx
+// src/screens/SignupScreen.tsx - FIXED VERSION
 import React, {useState} from 'react';
 import {
     Alert,
@@ -25,7 +25,6 @@ interface SignupScreenProps {
     navigation: SignupScreenNavigationProp;
 }
 
-// Define interface for form state
 interface FormData {
     username: string;
     email: string;
@@ -79,14 +78,14 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
             // Securely Store Tokens
             await Keychain.setGenericPassword('authTokens', JSON.stringify({accessToken, refreshToken, user}));
 
-            // Update Auth State
+            // Update Auth State - AuthNavigationHandler will handle navigation
             dispatch(setTokens({accessToken, refreshToken, user}));
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'Main' }],
-            });
-            // Remove this navigation line - let Redux state change handle navigation
-            // navigation.navigate('Main', { screen: 'Home' });
+
+            // REMOVED: Manual navigation - let AuthNavigationHandler handle it
+            // navigation.reset({
+            //     index: 0,
+            //     routes: [{ name: 'Main' }],
+            // });
 
             // Reset Form (Optional)
             setFormData({
@@ -95,6 +94,9 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                 password: '',
                 confirmPassword: '',
             });
+
+            console.log('Signup successful, Bearer token will be added automatically to future requests');
+
         } catch (err: any) {
             const errorMessage = err.data?.message || 'An error occurred during signup';
             Alert.alert('Signup Failed', errorMessage);
@@ -131,18 +133,21 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                             placeholder="Enter your full name"
                             value={formData.username}
                             onChangeText={(value) => handleInputChange('username', value)}
+                            autoCapitalize="words"
+                            autoCorrect={false}
                         />
                     </View>
 
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Email</Text>
+                        <Text style={styles.label}>Email Address</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your email"
-                            keyboardType="email-address"
-                            autoCapitalize="none"
                             value={formData.email}
                             onChangeText={(value) => handleInputChange('email', value)}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
@@ -151,9 +156,11 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your password"
-                            secureTextEntry
                             value={formData.password}
                             onChangeText={(value) => handleInputChange('password', value)}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
@@ -162,9 +169,11 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                         <TextInput
                             style={styles.input}
                             placeholder="Confirm your password"
-                            secureTextEntry
                             value={formData.confirmPassword}
                             onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                            secureTextEntry
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                     </View>
 
@@ -179,7 +188,6 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Login Option */}
                 <View style={styles.loginContainer}>
                     <Text style={styles.loginText}>Already have an account? </Text>
                     <TouchableOpacity onPress={() => navigation.navigate('Login')}>
@@ -191,11 +199,10 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
     );
 };
 
-
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f9f9f9',
+        backgroundColor: '#fff',
     },
     scrollContent: {
         flexGrow: 1,
@@ -207,73 +214,63 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     logo: {
-        width: 90,
-        height: 90,
+        width: 100,
+        height: 100,
+        marginBottom: 10,
     },
     appName: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
-        marginTop: 10,
-        color: '#5271ff',
+        color: '#333',
     },
     formContainer: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        marginBottom: 20,
     },
     title: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 20,
         textAlign: 'center',
-        color: '#333',
     },
     inputContainer: {
         marginBottom: 15,
     },
     label: {
-        fontSize: 14,
+        fontSize: 16,
         marginBottom: 5,
         color: '#555',
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
+        borderColor: '#ccc',
+        borderRadius: 5,
+        padding: 10,
         fontSize: 16,
-        backgroundColor: '#f9f9f9',
     },
     signupButton: {
-        backgroundColor: '#5271ff',
-        paddingVertical: 14,
-        borderRadius: 8,
+        backgroundColor: '#007bff',
+        padding: 15,
+        borderRadius: 5,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 20,
     },
     signupButtonText: {
-        color: 'white',
-        fontSize: 16,
+        color: '#fff',
+        fontSize: 18,
         fontWeight: 'bold',
     },
     loginContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 25,
+        marginTop: 20,
     },
     loginText: {
+        fontSize: 16,
         color: '#555',
-        fontSize: 14,
     },
     loginLink: {
-        color: '#5271ff',
-        fontSize: 14,
+        fontSize: 16,
+        color: '#007bff',
         fontWeight: 'bold',
     },
     disabledButton: {

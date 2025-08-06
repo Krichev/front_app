@@ -1,5 +1,5 @@
-// src/screens/CreateWWWQuestScreen.tsx - Fixed to use QuestionService directly
-import React, {useEffect, useState} from 'react';
+// src/screens/CreateWWWQuestScreen.tsx - FIXED: Type errors and API compatibility
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -15,14 +15,23 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
+import {CreateChallengeRequest, useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {useGetUserQuestionsQuery, useStartQuizSessionMutation} from '../entities/QuizState/model/slice/quizApi';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import {navigateToTab} from "../utils/navigation.ts";
-// Import the old QuestionService
 import {QuestionData, QuestionService} from '../services/wwwGame/questionService';
+import {ChallengeStatus, ChallengeVisibility} from '../app/types';
+
+// FIXED: API Difficulty type mapping
+type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
+type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+
+const DIFFICULTY_MAPPING: Record<UIDifficulty, APIDifficulty> = {
+    'Easy': 'EASY',
+    'Medium': 'MEDIUM',
+    'Hard': 'HARD'
+};
 
 type RootStackParamList = {
     Challenges: undefined;
@@ -59,35 +68,28 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [isLoadingAppQuestions, setIsLoadingAppQuestions] = useState(false);
     const [appQuestionsError, setAppQuestionsError] = useState<string | null>(null);
 
-    // Form state
+    // Form state - FIXED: Using UI-friendly difficulty type
     const [title, setTitle] = useState('What? Where? When? Quiz');
     const [description, setDescription] = useState('Test your knowledge in this team-based quiz game.');
     const [reward, setReward] = useState('100 points');
     const [teamName, setTeamName] = useState('Team Intellect');
-    const [teamMembers, setTeamMembers] = useState<string[]>([user?.name || 'Player 1']);
+    const [teamMembers, setTeamMembers] = useState<string[]>(() => [user?.name || 'Player 1']);
     const [newMember, setNewMember] = useState('');
-    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
+    const [difficulty, setDifficulty] = useState<UIDifficulty>('Medium'); // FIXED: UI type
     const [roundTime, setRoundTime] = useState(60);
     const [roundCount, setRoundCount] = useState(10);
     const [enableAIHost, setEnableAIHost] = useState<boolean>(true);
     const [selectedUserQuestions, setSelectedUserQuestions] = useState<string[]>([]);
 
-    // Load app questions when difficulty changes and source is 'app'
-    useEffect(() => {
-        if (questionSource === 'app') {
-            loadAppQuestions();
-        }
-    }, [questionSource, difficulty, roundCount]);
-
-    // Load app questions using old QuestionService
-    const loadAppQuestions = async () => {
+    // FIXED: Memoized function to load app questions with proper difficulty mapping
+    const loadAppQuestions = useCallback(async () => {
         setIsLoadingAppQuestions(true);
         setAppQuestionsError(null);
 
         try {
             console.log(`Loading ${difficulty} questions for ${roundCount} rounds...`);
             const questions = await QuestionService.getQuestionsByDifficulty(
-                difficulty,
+                difficulty, // Use UI difficulty for QuestionService (if it accepts UI format)
                 roundCount * 2 // Get more questions than needed
             );
             console.log(`Loaded ${questions.length} questions successfully`);
@@ -99,28 +101,42 @@ const CreateWWWQuestScreen: React.FC = () => {
         } finally {
             setIsLoadingAppQuestions(false);
         }
-    };
+    }, [difficulty, roundCount]);
 
-    // Retry loading app questions
-    const refetchAppQuestions = () => {
-        loadAppQuestions();
-    };
+    // Load app questions when difficulty changes and source is 'app'
+    useEffect(() => {
+        if (questionSource === 'app') {
+            loadAppQuestions();
+        }
+    }, [questionSource, loadAppQuestions]);
 
-    // Auto-select user questions when source changes
+    // Auto-select user questions when source changes - prevent infinite loops
     useEffect(() => {
         if (questionSource === 'user' && userQuestions.length > 0) {
             // Auto-select up to roundCount questions
             const autoSelected = userQuestions
                 .slice(0, roundCount)
                 .map(q => q.id);
-            setSelectedUserQuestions(autoSelected);
-        } else {
-            setSelectedUserQuestions([]);
+
+            // Only update if selection actually changed
+            setSelectedUserQuestions(prev => {
+                const newSelection = JSON.stringify(autoSelected.sort());
+                const prevSelection = JSON.stringify(prev.sort());
+                return newSelection !== prevSelection ? autoSelected : prev;
+            });
+        } else if (questionSource !== 'user') {
+            // Only clear if not empty
+            setSelectedUserQuestions(prev => prev.length > 0 ? [] : prev);
         }
     }, [questionSource, userQuestions, roundCount]);
 
-    // Add team member
-    const addTeamMember = () => {
+    // Memoized retry function
+    const refetchAppQuestions = useCallback(() => {
+        loadAppQuestions();
+    }, [loadAppQuestions]);
+
+    // Memoized team member functions
+    const addTeamMember = useCallback(() => {
         if (newMember.trim() === '') {
             Alert.alert('Error', 'Please enter a team member name');
             return;
@@ -131,24 +147,25 @@ const CreateWWWQuestScreen: React.FC = () => {
             return;
         }
 
-        setTeamMembers([...teamMembers, newMember.trim()]);
+        setTeamMembers(prev => [...prev, newMember.trim()]);
         setNewMember('');
-    };
+    }, [newMember, teamMembers]);
 
-    // Remove team member
-    const removeTeamMember = (index: number) => {
+    const removeTeamMember = useCallback((index: number) => {
         if (teamMembers.length <= 1) {
             Alert.alert('Error', 'You must have at least one team member');
             return;
         }
 
-        const updatedMembers = [...teamMembers];
-        updatedMembers.splice(index, 1);
-        setTeamMembers(updatedMembers);
-    };
+        setTeamMembers(prev => {
+            const updated = [...prev];
+            updated.splice(index, 1);
+            return updated;
+        });
+    }, [teamMembers.length]);
 
-    // Toggle user question selection
-    const toggleQuestionSelection = (questionId: string) => {
+    // Memoized question selection toggle
+    const toggleQuestionSelection = useCallback((questionId: string) => {
         setSelectedUserQuestions(prev => {
             if (prev.includes(questionId)) {
                 return prev.filter(id => id !== questionId);
@@ -160,10 +177,10 @@ const CreateWWWQuestScreen: React.FC = () => {
                 return [...prev, questionId];
             }
         });
-    };
+    }, [roundCount]);
 
-    // Create the quiz
-    const handleCreateQuest = async () => {
+    // FIXED: Create quest handler with proper type mapping
+    const handleCreateQuest = useCallback(async () => {
         if (!title.trim()) {
             Alert.alert('Error', 'Please enter a title for your quiz');
             return;
@@ -196,118 +213,169 @@ const CreateWWWQuestScreen: React.FC = () => {
         }
 
         try {
-            // For now, just create a simple challenge - skip the Quiz API parts since they're not implemented
-            const challengeResult = await createChallenge({
-                title,
-                description,
-                type: 'QUIZ',
-                verificationMethod: 'QUIZ',
-                visibility: 'PUBLIC',
-                status: 'ACTIVE',
-                reward,
-                // Store the quiz configuration as JSON in the challenge
-                quizConfig: JSON.stringify({
-                    gameType: 'WWW',
-                    teamName,
-                    teamMembers,
-                    difficulty,
-                    roundTime,
-                    roundCount: questionSource === 'user' ? selectedUserQuestions.length : roundCount,
-                    enableAIHost,
-                    questionSource,
-                    ...(questionSource === 'user' && { customQuestionIds: selectedUserQuestions })
-                })
-            }).unwrap();
+            // FIXED: Create challenge with proper structure matching CreateChallengeRequest
+            const apiDifficulty = DIFFICULTY_MAPPING[difficulty]; // Convert to API format
 
-            Alert.alert('Success', 'Quiz challenge created successfully!', [
-                {
-                    text: 'Start Game Now',
-                    onPress: () => {
-                        // Navigate to the game setup screen with the challenge info
-                        // For now, we'll use the old game flow since Quiz API isn't implemented
-                        navigation.navigate('WWWGameSetup', {
-                            challengeId: challengeResult.id
-                        });
-                    }
-                },
-                {
-                    text: 'Back to Challenges',
-                    onPress: () => navigateToTab(navigation, 'Challenges')
+            // Create quiz configuration object
+            const quizConfig = {
+                gameType: 'WWW',
+                teamName: teamName.trim(),
+                teamMembers: teamMembers.map(m => m.trim()),
+                difficulty: difficulty, // Keep UI format for quiz config
+                roundTime,
+                roundCount: questionSource === 'user' ? selectedUserQuestions.length : roundCount,
+                enableAIHost,
+                teamBased: true,
+                questionSource,
+                selectedUserQuestions: questionSource === 'user' ? selectedUserQuestions : [],
+                appQuestionsDifficulty: questionSource === 'app' ? difficulty : null
+            };
+
+            const challengeData: CreateChallengeRequest = {
+                title: title.trim(),
+                description: description.trim(),
+                reward: reward.trim(),
+                type: 'QUIZ', // FIXED: Use 'QUIZ' instead of 'WWW_QUIZ'
+                visibility: 'PUBLIC' as ChallengeVisibility, // FIXED: Add required visibility field with proper type
+                status: 'OPEN' as ChallengeStatus,           // FIXED: Add required status field with proper type
+                quizConfig: JSON.stringify(quizConfig) // FIXED: Store quiz config as JSON string
+            };
+
+            const result = await createChallenge(challengeData).unwrap();
+
+            if (result?.id) {
+                // FIXED: Start quiz session with proper request format
+                const sessionRequest = {
+                    challengeId: result.id,
+                    teamName: teamName.trim(),
+                    teamMembers: teamMembers.map(m => m.trim()),
+                    difficulty: apiDifficulty, // FIXED: Use API difficulty format
+                    roundTimeSeconds: roundTime,
+                    totalRounds: questionSource === 'user' ? selectedUserQuestions.length : roundCount,
+                    enableAiHost: enableAIHost, // FIXED: Match API field name
+                    questionSource,
+                    customQuestionIds: questionSource === 'user' ? selectedUserQuestions : undefined
+                };
+
+                const sessionResult = await startQuizSession(sessionRequest).unwrap();
+
+                // FIXED: Access 'id' instead of 'sessionId' from QuizSession
+                if (sessionResult?.id) {
+                    navigation.navigate('WWWGamePlay', {
+                        sessionId: sessionResult.id, // FIXED: Use 'id' field from QuizSession
+                        challengeId: result.id
+                    });
+                } else {
+                    throw new Error('Failed to start quiz session - no session ID returned');
                 }
-            ]);
+            } else {
+                throw new Error('Failed to create challenge - no challenge ID returned');
+            }
         } catch (error) {
-            console.error('Failed to create quiz:', error);
-            Alert.alert('Error', 'Failed to create quiz challenge. Please try again.');
+            console.error('Error creating quest:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            Alert.alert('Error', `Failed to create quest: ${errorMessage}`);
         }
-    };
+    }, [
+        title,
+        description,
+        reward,
+        difficulty,
+        questionSource,
+        selectedUserQuestions,
+        teamName,
+        teamMembers,
+        roundTime,
+        roundCount,
+        enableAIHost,
+        appQuestions.length,
+        createChallenge,
+        startQuizSession,
+        navigation
+    ]);
+
+    // Memoized computed values
+    const isFormValid = useMemo(() => {
+        return title.trim() !== '' &&
+            teamMembers.length > 0 &&
+            (questionSource === 'user' ? selectedUserQuestions.length > 0 : appQuestions.length > 0);
+    }, [title, teamMembers.length, questionSource, selectedUserQuestions.length, appQuestions.length]);
 
     const isLoading = isCreatingChallenge || isStartingSession;
 
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoid}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
-                <ScrollView style={styles.scrollView}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>Create What? Where? When? Quiz</Text>
-                        <Text style={styles.headerSubtitle}>Set up a team-based quiz challenge</Text>
-                    </View>
+                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    <View style={styles.content}>
+                        {/* Header */}
+                        <View style={styles.header}>
+                            <Text style={styles.title}>Create WWW Quest</Text>
+                            <Text style={styles.subtitle}>Set up your What? Where? When? quiz challenge</Text>
+                        </View>
 
-                    <View style={styles.formContainer}>
-                        {/* Challenge Details */}
-                        <View style={styles.formSection}>
-                            <Text style={styles.sectionTitle}>Challenge Details</Text>
+                        {/* Basic Information */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Basic Information</Text>
 
-                            <View style={styles.formGroup}>
+                            <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Title</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={title}
                                     onChangeText={setTitle}
                                     placeholder="Enter quiz title"
+                                    maxLength={100}
                                 />
                             </View>
 
-                            <View style={styles.formGroup}>
+                            <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Description</Text>
                                 <TextInput
                                     style={[styles.input, styles.textArea]}
                                     value={description}
                                     onChangeText={setDescription}
-                                    placeholder="Describe your quiz challenge"
+                                    placeholder="Describe your quiz"
                                     multiline
-                                    numberOfLines={4}
+                                    numberOfLines={3}
+                                    maxLength={500}
                                 />
                             </View>
 
-                            <View style={styles.formGroup}>
+                            <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Reward</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={reward}
                                     onChangeText={setReward}
-                                    placeholder="Enter reward"
+                                    placeholder="e.g., 100 points, Badge, etc."
+                                    maxLength={50}
                                 />
                             </View>
                         </View>
 
-                        {/* Question Source Section */}
-                        <View style={styles.formSection}>
+                        {/* Question Source Selection */}
+                        <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Question Source</Text>
-
-                            <View style={styles.sourceButtons}>
+                            <View style={styles.sourceSelector}>
                                 <TouchableOpacity
                                     style={[
-                                        styles.sourceButton,
-                                        questionSource === 'app' && styles.selectedSource
+                                        styles.sourceOption,
+                                        questionSource === 'app' && styles.sourceOptionSelected
                                     ]}
                                     onPress={() => setQuestionSource('app')}
                                 >
+                                    <MaterialCommunityIcons
+                                        name="database"
+                                        size={24}
+                                        color={questionSource === 'app' ? '#4CAF50' : '#666'}
+                                    />
                                     <Text style={[
-                                        styles.sourceButtonText,
-                                        questionSource === 'app' && styles.selectedSourceText
+                                        styles.sourceText,
+                                        questionSource === 'app' && styles.sourceTextSelected
                                     ]}>
                                         App Questions
                                     </Text>
@@ -315,22 +383,51 @@ const CreateWWWQuestScreen: React.FC = () => {
 
                                 <TouchableOpacity
                                     style={[
-                                        styles.sourceButton,
-                                        questionSource === 'user' && styles.selectedSource
+                                        styles.sourceOption,
+                                        questionSource === 'user' && styles.sourceOptionSelected
                                     ]}
                                     onPress={() => setQuestionSource('user')}
                                 >
+                                    <MaterialCommunityIcons
+                                        name="account-edit"
+                                        size={24}
+                                        color={questionSource === 'user' ? '#4CAF50' : '#666'}
+                                    />
                                     <Text style={[
-                                        styles.sourceButtonText,
-                                        questionSource === 'user' && styles.selectedSourceText
+                                        styles.sourceText,
+                                        questionSource === 'user' && styles.sourceTextSelected
                                     ]}>
                                         My Questions
                                     </Text>
                                 </TouchableOpacity>
                             </View>
 
+                            {/* App Questions Info */}
                             {questionSource === 'app' && (
                                 <View style={styles.appQuestionsInfo}>
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Difficulty</Text>
+                                        <View style={styles.difficultySelector}>
+                                            {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
+                                                <TouchableOpacity
+                                                    key={level}
+                                                    style={[
+                                                        styles.difficultyOption,
+                                                        difficulty === level && styles.difficultyOptionSelected
+                                                    ]}
+                                                    onPress={() => setDifficulty(level)}
+                                                >
+                                                    <Text style={[
+                                                        styles.difficultyText,
+                                                        difficulty === level && styles.difficultyTextSelected
+                                                    ]}>
+                                                        {level}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
+
                                     {isLoadingAppQuestions ? (
                                         <View style={styles.loadingContainer}>
                                             <ActivityIndicator size="small" color="#4CAF50" />
@@ -355,6 +452,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                 </View>
                             )}
 
+                            {/* User Questions Info */}
                             {questionSource === 'user' && (
                                 <View style={styles.userQuestionsInfo}>
                                     {isLoadingUserQuestions ? (
@@ -373,34 +471,51 @@ const CreateWWWQuestScreen: React.FC = () => {
                                             </TouchableOpacity>
 
                                             {userQuestions.length > 0 ? (
-                                                <View style={styles.questionSelection}>
-                                                    <Text style={styles.selectionTitle}>
-                                                        Select Questions ({selectedUserQuestions.length}/{userQuestions.length})
+                                                <>
+                                                    <Text style={styles.infoText}>
+                                                        Select {selectedUserQuestions.length} of {userQuestions.length} questions:
                                                     </Text>
-                                                    <ScrollView style={styles.questionsContainer} nestedScrollEnabled>
+                                                    <ScrollView
+                                                        style={styles.questionsList}
+                                                        nestedScrollEnabled={true}
+                                                        showsVerticalScrollIndicator={false}
+                                                    >
                                                         {userQuestions.map((question) => (
                                                             <TouchableOpacity
                                                                 key={question.id}
                                                                 style={[
                                                                     styles.questionItem,
-                                                                    selectedUserQuestions.includes(question.id) && styles.selectedQuestion
+                                                                    selectedUserQuestions.includes(question.id) && styles.questionItemSelected
                                                                 ]}
                                                                 onPress={() => toggleQuestionSelection(question.id)}
                                                             >
-                                                                <Text style={styles.questionText} numberOfLines={2}>
+                                                                <MaterialCommunityIcons
+                                                                    name={selectedUserQuestions.includes(question.id) ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                                                                    size={20}
+                                                                    color={selectedUserQuestions.includes(question.id) ? '#4CAF50' : '#666'}
+                                                                />
+                                                                <Text style={[
+                                                                    styles.questionText,
+                                                                    selectedUserQuestions.includes(question.id) && styles.questionTextSelected
+                                                                ]}>
                                                                     {question.question}
-                                                                </Text>
-                                                                <Text style={styles.questionDifficulty}>
-                                                                    {question.difficulty}
                                                                 </Text>
                                                             </TouchableOpacity>
                                                         ))}
                                                     </ScrollView>
-                                                </View>
+                                                </>
                                             ) : (
-                                                <Text style={styles.infoText}>
-                                                    You haven't created any questions yet. Create some questions to use them in your quiz.
-                                                </Text>
+                                                <View style={styles.noQuestionsContainer}>
+                                                    <MaterialCommunityIcons name="help-circle-outline" size={48} color="#CCC" />
+                                                    <Text style={styles.noQuestionsText}>No custom questions yet</Text>
+                                                    <Text style={styles.noQuestionsSubtext}>Create some questions to use them in your quiz</Text>
+                                                    <TouchableOpacity
+                                                        style={styles.createQuestionButton}
+                                                        onPress={() => navigation.navigate('UserQuestions')}
+                                                    >
+                                                        <Text style={styles.createQuestionButtonText}>Create Questions</Text>
+                                                    </TouchableOpacity>
+                                                </View>
                                             )}
                                         </>
                                     )}
@@ -408,165 +523,118 @@ const CreateWWWQuestScreen: React.FC = () => {
                             )}
                         </View>
 
-                        {/* Team Setup */}
-                        <View style={styles.formSection}>
-                            <Text style={styles.sectionTitle}>Team Setup</Text>
+                        {/* Game Settings */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Game Settings</Text>
 
-                            <View style={styles.formGroup}>
+                            <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Team Name</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={teamName}
                                     onChangeText={setTeamName}
                                     placeholder="Enter team name"
+                                    maxLength={50}
                                 />
                             </View>
 
-                            <View style={styles.formGroup}>
+                            <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Team Members</Text>
                                 <View style={styles.teamMembersContainer}>
                                     {teamMembers.map((member, index) => (
-                                        <View key={index} style={styles.memberItem}>
-                                            <Text style={styles.memberName}>{member}</Text>
-                                            <TouchableOpacity
-                                                onPress={() => removeTeamMember(index)}
-                                                style={styles.removeButton}
-                                            >
-                                                <Text style={styles.removeButtonText}>×</Text>
-                                            </TouchableOpacity>
+                                        <View key={index} style={styles.teamMember}>
+                                            <Text style={styles.teamMemberText}>{member}</Text>
+                                            {teamMembers.length > 1 && (
+                                                <TouchableOpacity onPress={() => removeTeamMember(index)}>
+                                                    <MaterialCommunityIcons name="close" size={18} color="#FF5722" />
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
                                     ))}
-
                                     <View style={styles.addMemberContainer}>
                                         <TextInput
-                                            style={styles.memberInput}
+                                            style={styles.addMemberInput}
                                             value={newMember}
                                             onChangeText={setNewMember}
                                             placeholder="Add team member"
+                                            maxLength={30}
                                         />
-                                        <TouchableOpacity
-                                            onPress={addTeamMember}
-                                            style={styles.addButton}
-                                        >
-                                            <Text style={styles.addButtonText}>+</Text>
+                                        <TouchableOpacity style={styles.addMemberButton} onPress={addTeamMember}>
+                                            <MaterialCommunityIcons name="plus" size={20} color="#4CAF50" />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
                             </View>
-                        </View>
 
-                        {/* Game Settings */}
-                        <View style={styles.formSection}>
-                            <Text style={styles.sectionTitle}>Game Settings</Text>
-
-                            <View style={styles.settingItem}>
-                                <Text style={styles.settingLabel}>Difficulty</Text>
-                                <View style={styles.difficultyButtons}>
-                                    {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
-                                        <TouchableOpacity
-                                            key={level}
-                                            style={[
-                                                styles.difficultyButton,
-                                                difficulty === level && styles.selectedDifficulty,
-                                            ]}
-                                            onPress={() => setDifficulty(level)}
-                                        >
-                                            <Text
+                            {questionSource === 'app' && (
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Number of Rounds</Text>
+                                    <View style={styles.roundSelector}>
+                                        {[5, 10, 15, 20].map((count) => (
+                                            <TouchableOpacity
+                                                key={count}
                                                 style={[
-                                                    styles.difficultyText,
-                                                    difficulty === level && styles.selectedDifficultyText,
+                                                    styles.roundOption,
+                                                    roundCount === count && styles.roundOptionSelected
                                                 ]}
+                                                onPress={() => setRoundCount(count)}
                                             >
-                                                {level}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
+                                                <Text style={[
+                                                    styles.roundText,
+                                                    roundCount === count && styles.roundTextSelected
+                                                ]}>
+                                                    {count}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
                                 </View>
-                            </View>
+                            )}
 
-                            <View style={styles.settingItem}>
-                                <Text style={styles.settingLabel}>Discussion Time (seconds)</Text>
-                                <View style={styles.timeButtons}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Time per Round (seconds)</Text>
+                                <View style={styles.timeSelector}>
                                     {[30, 60, 90, 120].map((time) => (
                                         <TouchableOpacity
                                             key={time}
                                             style={[
-                                                styles.timeButton,
-                                                roundTime === time && styles.selectedTime,
+                                                styles.timeOption,
+                                                roundTime === time && styles.timeOptionSelected
                                             ]}
                                             onPress={() => setRoundTime(time)}
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.timeText,
-                                                    roundTime === time && styles.selectedTimeText,
-                                                ]}
-                                            >
-                                                {time}
+                                            <Text style={[
+                                                styles.timeText,
+                                                roundTime === time && styles.timeTextSelected
+                                            ]}>
+                                                {time}s
                                             </Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
                             </View>
 
-                            <View style={styles.settingItem}>
-                                <Text style={styles.settingLabel}>Number of Questions</Text>
-                                <View style={styles.countButtons}>
-                                    {[5, 10, 15].map((count) => (
-                                        <TouchableOpacity
-                                            key={count}
-                                            style={[
-                                                styles.countButton,
-                                                roundCount === count && styles.selectedCount,
-                                            ]}
-                                            onPress={() => setRoundCount(count)}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.countText,
-                                                    roundCount === count && styles.selectedCountText,
-                                                ]}
-                                            >
-                                                {count}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-
-                                {questionSource === 'user' && userQuestions.length > 0 && userQuestions.length < roundCount && (
-                                    <Text style={styles.warningText}>
-                                        Note: You only have {userQuestions.length} custom questions available.
-                                        The game will use all available questions.
-                                    </Text>
-                                )}
-                            </View>
-
-                            <View style={styles.settingItem}>
-                                <Text style={styles.settingLabel}>Enable AI Host</Text>
-                                <View style={styles.switchRow}>
+                            <View style={styles.inputGroup}>
+                                <View style={styles.toggleContainer}>
+                                    <View style={styles.toggleInfo}>
+                                        <Text style={styles.label}>AI Host</Text>
+                                        <Text style={styles.toggleDescription}>
+                                            Enable AI-powered host for enhanced experience
+                                        </Text>
+                                    </View>
                                     <TouchableOpacity
                                         style={[
-                                            styles.toggleButton,
-                                            enableAIHost ? styles.toggleActive : styles.toggleInactive,
+                                            styles.toggle,
+                                            enableAIHost && styles.toggleActive
                                         ]}
                                         onPress={() => setEnableAIHost(!enableAIHost)}
                                     >
-                                        <View
-                                            style={[
-                                                styles.toggleKnob,
-                                                enableAIHost ? styles.toggleKnobActive : styles.toggleKnobInactive,
-                                            ]}
-                                        />
+                                        <View style={[
+                                            styles.toggleSlider,
+                                            enableAIHost && styles.toggleSliderActive
+                                        ]} />
                                     </TouchableOpacity>
-                                    <Text style={styles.toggleText}>
-                                        {enableAIHost ? 'Enabled' : 'Disabled'}
-                                    </Text>
                                 </View>
-                                <Text style={styles.aiHostDescription}>
-                                    {enableAIHost ?
-                                        "AI Host will analyze team discussions and provide feedback" :
-                                        "AI Host features will be disabled"}
-                                </Text>
                             </View>
                         </View>
 
@@ -574,28 +642,20 @@ const CreateWWWQuestScreen: React.FC = () => {
                         <TouchableOpacity
                             style={[
                                 styles.createButton,
-                                (isLoading ||
-                                    (questionSource === 'user' && selectedUserQuestions.length === 0) ||
-                                    (questionSource === 'app' && appQuestions.length === 0)
-                                ) && styles.disabledButton
+                                (!isFormValid || isLoading) && styles.createButtonDisabled
                             ]}
                             onPress={handleCreateQuest}
-                            disabled={
-                                isLoading ||
-                                (questionSource === 'user' && selectedUserQuestions.length === 0) ||
-                                (questionSource === 'app' && appQuestions.length === 0)
-                            }
+                            disabled={!isFormValid || isLoading}
                         >
-                            <Text style={styles.createButtonText}>
-                                {isLoading ? 'Creating...' : 'Create Quiz Challenge'}
-                            </Text>
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color="#FFF" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="rocket-launch" size={20} color="#FFF" />
+                                    <Text style={styles.createButtonText}>Create Quest</Text>
+                                </>
+                            )}
                         </TouchableOpacity>
-
-                        {questionSource === 'user' && selectedUserQuestions.length === 0 && (
-                            <Text style={styles.errorText}>
-                                Please select at least one question to continue
-                            </Text>
-                        )}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -606,7 +666,7 @@ const CreateWWWQuestScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#F5F7FA',
     },
     keyboardAvoid: {
         flex: 1,
@@ -614,380 +674,389 @@ const styles = StyleSheet.create({
     scrollView: {
         flex: 1,
     },
+    content: {
+        padding: 20,
+        paddingBottom: 40,
+    },
     header: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
+        marginBottom: 30,
         alignItems: 'center',
     },
-    headerTitle: {
-        fontSize: 20,
+    title: {
+        fontSize: 28,
         fontWeight: 'bold',
-        color: 'white',
+        color: '#1A1A1A',
+        marginBottom: 8,
     },
-    headerSubtitle: {
-        fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginTop: 4,
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
     },
-    formContainer: {
-        padding: 16,
-    },
-    formSection: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 1,
+    section: {
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        padding: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        shadowRadius: 8,
+        elevation: 3,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#1A1A1A',
         marginBottom: 16,
-        color: '#333',
     },
-    formGroup: {
+    inputGroup: {
         marginBottom: 16,
     },
     label: {
         fontSize: 16,
         fontWeight: '500',
+        color: '#333',
         marginBottom: 8,
-        color: '#555',
     },
     input: {
-        backgroundColor: '#f9f9f9',
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#E0E0E0',
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
-        color: '#333',
+        backgroundColor: '#FAFAFA',
     },
     textArea: {
-        minHeight: 100,
+        height: 80,
         textAlignVertical: 'top',
     },
-    sourceButtons: {
+    sourceSelector: {
         flexDirection: 'row',
+        gap: 12,
         marginBottom: 16,
     },
-    sourceButton: {
+    sourceOption: {
         flex: 1,
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        backgroundColor: '#f0f0f0',
-        marginRight: 8,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderWidth: 2,
+        borderColor: '#E0E0E0',
+        borderRadius: 8,
+        backgroundColor: '#FAFAFA',
     },
-    selectedSource: {
-        backgroundColor: '#4CAF50',
+    sourceOptionSelected: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#F1F8E9',
     },
-    sourceButtonText: {
-        fontSize: 14,
-        color: '#555',
+    sourceText: {
+        fontSize: 16,
         fontWeight: '500',
+        color: '#666',
+        marginLeft: 8,
     },
-    selectedSourceText: {
-        color: 'white',
-        fontWeight: 'bold',
+    sourceTextSelected: {
+        color: '#4CAF50',
     },
     appQuestionsInfo: {
-        backgroundColor: '#f5f5f5',
-        padding: 12,
+        backgroundColor: '#F8F9FA',
+        padding: 16,
         borderRadius: 8,
-    },
-    userQuestionsInfo: {
-        backgroundColor: '#f5f5f5',
-        padding: 12,
-        borderRadius: 8,
-    },
-    questionSelection: {
         marginTop: 12,
     },
-    selectionTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginBottom: 8,
-        color: '#333',
+    userQuestionsInfo: {
+        backgroundColor: '#F8F9FA',
+        padding: 16,
+        borderRadius: 8,
+        marginTop: 12,
     },
-    questionsContainer: {
-        maxHeight: 200,
+    difficultySelector: {
+        flexDirection: 'row',
+        gap: 8,
     },
-    questionItem: {
-        backgroundColor: 'white',
+    difficultyOption: {
+        flex: 1,
         padding: 12,
-        borderRadius: 6,
-        marginBottom: 8,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: '#E0E0E0',
+        borderRadius: 6,
+        alignItems: 'center',
+        backgroundColor: '#FFF',
     },
-    selectedQuestion: {
+    difficultyOptionSelected: {
         borderColor: '#4CAF50',
-        backgroundColor: '#f0fff0',
+        backgroundColor: '#F1F8E9',
     },
-    questionText: {
+    difficultyText: {
         fontSize: 14,
-        color: '#333',
-        marginBottom: 4,
-    },
-    questionDifficulty: {
-        fontSize: 12,
-        color: '#666',
         fontWeight: '500',
+        color: '#666',
+    },
+    difficultyTextSelected: {
+        color: '#4CAF50',
     },
     loadingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 8,
+        padding: 16,
     },
     loadingText: {
+        fontSize: 14,
+        color: '#666',
         marginLeft: 8,
-        fontSize: 14,
-        color: '#666',
-    },
-    infoText: {
-        fontSize: 14,
-        color: '#666',
-        fontStyle: 'italic',
-        textAlign: 'center',
     },
     errorText: {
-        color: '#F44336',
         fontSize: 14,
+        color: '#FF5722',
         textAlign: 'center',
-        marginTop: 8,
+        marginBottom: 8,
     },
     refreshButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 8,
         padding: 8,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 4,
     },
     refreshButtonText: {
+        fontSize: 14,
         color: '#4CAF50',
         marginLeft: 4,
-        fontSize: 14,
         fontWeight: '500',
+    },
+    infoText: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        fontStyle: 'italic',
     },
     manageQuestionsButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 8,
+        padding: 12,
+        backgroundColor: '#FFF',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#4CAF50',
+        marginBottom: 12,
     },
     manageQuestionsText: {
-        marginLeft: 6,
+        fontSize: 14,
         color: '#4CAF50',
+        fontWeight: '500',
+        marginLeft: 6,
+    },
+    questionsList: {
+        maxHeight: 200,
+        marginTop: 8,
+    },
+    questionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#FFF',
+        borderRadius: 6,
+        marginBottom: 6,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    questionItemSelected: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#F1F8E9',
+    },
+    questionText: {
+        flex: 1,
+        fontSize: 14,
+        color: '#333',
+        marginLeft: 8,
+    },
+    questionTextSelected: {
+        color: '#2E7D32',
+        fontWeight: '500',
+    },
+    noQuestionsContainer: {
+        alignItems: 'center',
+        padding: 20,
+    },
+    noQuestionsText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#666',
+        marginTop: 12,
+    },
+    noQuestionsSubtext: {
+        fontSize: 14,
+        color: '#999',
+        textAlign: 'center',
+        marginTop: 4,
+        marginBottom: 16,
+    },
+    createQuestionButton: {
+        backgroundColor: '#4CAF50',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 6,
+    },
+    createQuestionButtonText: {
+        color: '#FFF',
         fontSize: 14,
         fontWeight: '500',
     },
     teamMembersContainer: {
-        backgroundColor: '#f9f9f9',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        padding: 12,
+        gap: 8,
     },
-    memberItem: {
+    teamMember: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        padding: 12,
+        backgroundColor: '#F1F8E9',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#4CAF50',
     },
-    memberName: {
-        fontSize: 16,
-        color: '#333',
-    },
-    removeButton: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#ff6b6b',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    removeButtonText: {
-        fontSize: 16,
-        color: 'white',
-        fontWeight: 'bold',
+    teamMemberText: {
+        fontSize: 14,
+        color: '#2E7D32',
+        fontWeight: '500',
     },
     addMemberContainer: {
         flexDirection: 'row',
-        marginTop: 12,
+        gap: 8,
     },
-    memberInput: {
+    addMemberInput: {
         flex: 1,
-        height: 40,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        backgroundColor: 'white',
+        borderColor: '#E0E0E0',
+        borderRadius: 6,
+        padding: 10,
+        fontSize: 14,
+        backgroundColor: '#FAFAFA',
     },
-    addButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        backgroundColor: '#4CAF50',
+    addMemberButton: {
+        padding: 10,
+        backgroundColor: '#F1F8E9',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#4CAF50',
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 8,
     },
-    addButtonText: {
-        fontSize: 20,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    settingItem: {
-        marginBottom: 16,
-    },
-    settingLabel: {
-        fontSize: 16,
-        color: '#555',
-        marginBottom: 8,
-    },
-    difficultyButtons: {
+    roundSelector: {
         flexDirection: 'row',
+        gap: 8,
     },
-    difficultyButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        marginRight: 8,
-        backgroundColor: '#f0f0f0',
+    roundOption: {
+        flex: 1,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 6,
+        alignItems: 'center',
+        backgroundColor: '#FFF',
     },
-    selectedDifficulty: {
-        backgroundColor: '#4CAF50',
+    roundOptionSelected: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#F1F8E9',
     },
-    difficultyText: {
+    roundText: {
         fontSize: 14,
-        color: '#555',
+        fontWeight: '500',
+        color: '#666',
     },
-    selectedDifficultyText: {
-        color: 'white',
-        fontWeight: 'bold',
+    roundTextSelected: {
+        color: '#4CAF50',
     },
-    timeButtons: {
+    timeSelector: {
         flexDirection: 'row',
+        gap: 8,
     },
-    timeButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        marginRight: 8,
-        backgroundColor: '#f0f0f0',
+    timeOption: {
+        flex: 1,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 6,
+        alignItems: 'center',
+        backgroundColor: '#FFF',
     },
-    selectedTime: {
-        backgroundColor: '#4CAF50',
+    timeOptionSelected: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#F1F8E9',
     },
     timeText: {
         fontSize: 14,
-        color: '#555',
+        fontWeight: '500',
+        color: '#666',
     },
-    selectedTimeText: {
-        color: 'white',
-        fontWeight: 'bold',
+    timeTextSelected: {
+        color: '#4CAF50',
     },
-    countButtons: {
-        flexDirection: 'row',
-    },
-    countButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        marginRight: 8,
-        backgroundColor: '#f0f0f0',
-    },
-    selectedCount: {
-        backgroundColor: '#4CAF50',
-    },
-    countText: {
-        fontSize: 14,
-        color: '#555',
-    },
-    selectedCountText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    warningText: {
-        color: '#FF9800',
-        fontSize: 12,
-        marginTop: 8,
-        fontStyle: 'italic',
-    },
-    switchRow: {
+    toggleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
     },
-    toggleButton: {
+    toggleInfo: {
+        flex: 1,
+    },
+    toggleDescription: {
+        fontSize: 12,
+        color: '#999',
+        marginTop: 2,
+    },
+    toggle: {
         width: 50,
         height: 28,
         borderRadius: 14,
+        backgroundColor: '#E0E0E0',
+        padding: 2,
         justifyContent: 'center',
-        paddingHorizontal: 2,
     },
     toggleActive: {
         backgroundColor: '#4CAF50',
     },
-    toggleInactive: {
-        backgroundColor: '#ccc',
-    },
-    toggleKnob: {
+    toggleSlider: {
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: 'white',
+        backgroundColor: '#FFF',
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
-        shadowRadius: 2,
+        shadowRadius: 4,
         elevation: 2,
     },
-    toggleKnobActive: {
-        alignSelf: 'flex-end',
-    },
-    toggleKnobInactive: {
-        alignSelf: 'flex-start',
-    },
-    toggleText: {
-        marginLeft: 8,
-        fontSize: 16,
-        color: '#555',
-    },
-    aiHostDescription: {
-        fontSize: 12,
-        color: '#666',
-        fontStyle: 'italic',
-        marginTop: 8,
+    toggleSliderActive: {
+        transform: [{ translateX: 22 }],
     },
     createButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#4CAF50',
         padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 16,
-        marginBottom: 32,
+        borderRadius: 12,
+        marginTop: 20,
+        shadowColor: '#4CAF50',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    createButtonDisabled: {
+        backgroundColor: '#CCC',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     createButtonText: {
-        color: 'white',
+        color: '#FFF',
         fontSize: 18,
-        fontWeight: 'bold',
-    },
-    disabledButton: {
-        opacity: 0.7,
-        backgroundColor: '#A5D6A7',
+        fontWeight: '600',
+        marginLeft: 8,
     },
 });
 
