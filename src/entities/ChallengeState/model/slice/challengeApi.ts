@@ -27,22 +27,42 @@ export interface ApiChallenge {
     userRole?: string; // Optional field to store the user's role (CREATOR, PARTICIPANT, etc.)
 }
 
-// UPDATED: Added verificationDetails field to match backend
 export interface CreateChallengeRequest {
     title: string;
     description?: string;
     type: string;
     visibility: string;
-    status?: string;
+    status: string;
     reward?: string;
     penalty?: string;
-    verificationMethod?: string; // Single verification method enum: 'PHOTO' | 'LOCATION' | 'QUIZ' | 'MANUAL' | 'FITNESS_API' | 'ACTIVITY'
-    verificationDetails?: Record<string, any>; // ADDED: Map for verification details
+    verificationMethod?: string; // JSON string of VerificationMethod[]
     targetGroup?: string;
     frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
-    startDate?: string; // Changed from Date to string to match backend LocalDateTime
-    endDate?: string;   // Changed from Date to string to match backend LocalDateTime
-    tags?: string[];    // ADDED: Support for tags
+    startDate?: Date;
+    endDate?: Date;
+    quizConfig?: string; // JSON string of QuizConfig
+}
+
+// Backend Quiz Challenge Config - matches Java QuizChallengeConfig
+export interface QuizChallengeConfig {
+    defaultDifficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    defaultRoundTimeSeconds: number;
+    defaultTotalRounds: number;
+    enableAiHost: boolean;
+    questionSource: string;
+    allowCustomQuestions: boolean;
+}
+
+// Correct CreateQuizChallengeRequest interface that matches the Java backend exactly
+export interface CreateQuizChallengeRequest {
+    title: string;
+    description: string;
+    visibility: 'PUBLIC' | 'PRIVATE';
+    startDate?: Date;
+    endDate?: Date;
+    frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONE_TIME';
+    quizConfig: QuizChallengeConfig; // Required, matches backend
+    customQuestions: CreateQuizQuestionRequest[]; // Backend expects 'customQuestions'
 }
 
 export interface GetChallengesParams {
@@ -74,12 +94,7 @@ export interface LocationVerificationRequest {
     challengeId: string;
     latitude: number;
     longitude: number;
-    timestamp: string;
-}
-
-// ADDED: Interface for quiz challenge creation
-export interface CreateQuizChallengeRequest extends CreateChallengeRequest {
-    questions: CreateQuizQuestionRequest[];
+    accuracy?: number;
 }
 
 export const challengeApi = createApi({
@@ -87,24 +102,22 @@ export const challengeApi = createApi({
     baseQuery: fetchBaseQuery({
         baseUrl: 'http://10.0.2.2:8082/challenger/api',
         prepareHeaders: (headers, {getState}) => {
-            // Get the token from the state
             const token = (getState() as RootState).auth.accessToken;
-
-            // If we have a token, add it to the headers
             if (token) {
                 headers.set('Authorization', `Bearer ${token}`);
             }
-
             return headers;
         },
     }),
     tagTypes: ['Challenge', 'Verification', 'QuizQuestion'],
     endpoints: (builder) => ({
-        // Get all challenges with filtering
         getChallenges: builder.query<ApiChallenge[], GetChallengesParams>({
             query: (params) => ({
                 url: '/challenges',
-                params,
+                params: {
+                    ...params,
+                    type: params.type === null ? undefined : params.type,
+                },
             }),
             providesTags: (result) =>
                 result
@@ -115,131 +128,126 @@ export const challengeApi = createApi({
                     : [{type: 'Challenge', id: 'LIST'}],
         }),
 
-        // Get a single challenge by ID
         getChallengeById: builder.query<ApiChallenge, string>({
-            query: (id) => {
-                if (!id) {
-                    throw new Error('Invalid challenge ID');
-                }
-                return `/challenges/${id}`;
-            },
-            providesTags: (_, __, id) => [{type: 'Challenge', id}],
+            query: (id) => `/challenges/${id}`,
+            providesTags: (result, error, id) => [{type: 'Challenge', id}],
         }),
 
-        // Create a new challenge
         createChallenge: builder.mutation<ApiChallenge, CreateChallengeRequest>({
-            query: (body) => ({
+            query: (challenge) => ({
                 url: '/challenges',
                 method: 'POST',
-                body,
+                body: challenge,
             }),
             invalidatesTags: [{type: 'Challenge', id: 'LIST'}],
         }),
 
-        // Update an existing challenge
-        updateChallenge: builder.mutation<ApiChallenge, Partial<ApiChallenge> & { id: string }>({
+        updateChallenge: builder.mutation<ApiChallenge, Partial<ApiChallenge> & Pick<ApiChallenge, 'id'>>({
             query: ({id, ...patch}) => ({
                 url: `/challenges/${id}`,
-                method: 'PATCH',
+                method: 'PUT',
                 body: patch,
             }),
-            invalidatesTags: (_, __, {id}) => [{type: 'Challenge', id}],
+            invalidatesTags: (result, error, {id}) => [{type: 'Challenge', id}],
         }),
 
-        // Delete a challenge
-        deleteChallenge: builder.mutation<void, string>({
-            query: (id) => ({
-                url: `/challenges/${id}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (_, __, id) => [{type: 'Challenge', id}],
+        deleteChallenge: builder.mutation<{success: boolean; id: number}, number>({
+            query(id) {
+                return {
+                    url: `/challenges/${id}`,
+                    method: 'DELETE',
+                };
+            },
+            invalidatesTags: (result, error, id) => [{type: 'Challenge', id}],
         }),
 
-        // Join a challenge
-        joinChallenge: builder.mutation<void, string>({
-            query: (id) => ({
-                url: `/challenges/${id}/join`,
+        joinChallenge: builder.mutation<{success: boolean; message: string}, string>({
+            query: (challengeId) => ({
+                url: `/challenges/${challengeId}/join`,
                 method: 'POST',
             }),
-            invalidatesTags: (_, __, id) => [{type: 'Challenge', id}],
-        }),
-
-        // Complete a challenge or submit verification
-        submitChallengeCompletion: builder.mutation<void, { id: string; proof?: any; notes?: string }>({
-            query: ({id, proof, notes}) => ({
-                url: `/challenges/${id}/complete`,
-                method: 'POST',
-                body: {
-                    verificationData: proof,
-                    notes,
-                },
-            }),
-            invalidatesTags: (_, __, {id}) => [{type: 'Challenge', id}, {type: 'Verification', id}],
-        }),
-
-        // Verify challenge completion (admin/creator only)
-        verifyChallengeCompletion: builder.mutation<void, {
-            challengeId: string;
-            userId: string;
-            approved: boolean
-        }>({
-            query: ({challengeId, userId, approved}) => ({
-                url: `/challenges/${challengeId}/verify`,
-                method: 'POST',
-                body: {
-                    userId,
-                    approved,
-                },
-            }),
-            invalidatesTags: (_, __, {challengeId}) => [
+            invalidatesTags: (result, error, challengeId) => [
                 {type: 'Challenge', id: challengeId},
-                {type: 'Verification', id: challengeId}
+                {type: 'Challenge', id: 'LIST'},
             ],
         }),
 
-        // Search challenges
-        searchChallenges: builder.query<ApiChallenge[], { q: string }>({
-            query: ({q}) => ({
+        submitChallengeCompletion: builder.mutation<{success: boolean; message: string}, {
+            challengeId: string;
+            teamName?: string;
+            score?: number;
+            totalRounds?: number;
+            completionData?: any;
+        }>({
+            query: ({challengeId, ...data}) => ({
+                url: `/challenges/${challengeId}/complete`,
+                method: 'POST',
+                body: data,
+            }),
+            invalidatesTags: (result, error, {challengeId}) => [
+                {type: 'Challenge', id: challengeId},
+                {type: 'Challenge', id: 'LIST'},
+            ],
+        }),
+
+        verifyChallengeCompletion: builder.mutation<VerificationResponse, {
+            challengeId: string;
+            verificationData: any;
+        }>({
+            query: ({challengeId, verificationData}) => ({
+                url: `/challenges/${challengeId}/verify`,
+                method: 'POST',
+                body: verificationData,
+            }),
+            invalidatesTags: (result, error, {challengeId}) => [
+                {type: 'Challenge', id: challengeId},
+                {type: 'Verification', id: challengeId},
+            ],
+        }),
+
+        searchChallenges: builder.query<ApiChallenge[], {keyword: string; limit?: number}>({
+            query: ({keyword, limit = 20}) => ({
                 url: '/challenges/search',
-                params: {q},
+                params: {keyword, limit},
             }),
             providesTags: [{type: 'Challenge', id: 'SEARCH'}],
         }),
 
-        // Photo verification
+        // Photo verification endpoint
         verifyPhotoChallenge: builder.mutation<VerificationResponse, PhotoVerificationRequest>({
             query: ({challengeId, image, prompt, aiPrompt}) => {
                 const formData = new FormData();
-                formData.append('challengeId', challengeId);
                 formData.append('image', image);
                 if (prompt) formData.append('prompt', prompt);
                 if (aiPrompt) formData.append('aiPrompt', aiPrompt);
 
                 return {
-                    url: '/verification/photo',
+                    url: `/challenges/${challengeId}/verify/photo`,
                     method: 'POST',
                     body: formData,
-                    formData: true,
                 };
             },
-            invalidatesTags: (_, __, {challengeId}) => [{type: 'Verification', id: challengeId}],
+            invalidatesTags: (result, error, {challengeId}) => [
+                {type: 'Challenge', id: challengeId},
+                {type: 'Verification', id: challengeId},
+            ],
         }),
 
-        // Location verification
+        // Location verification endpoint
         verifyLocationChallenge: builder.mutation<VerificationResponse, LocationVerificationRequest>({
-            query: (body) => ({
-                url: '/verification/location',
+            query: ({challengeId, latitude, longitude, accuracy}) => ({
+                url: `/challenges/${challengeId}/verify/location`,
                 method: 'POST',
-                body,
+                body: {latitude, longitude, accuracy},
             }),
-            invalidatesTags: (_, __, {challengeId}) => [{type: 'Verification', id: challengeId}],
+            invalidatesTags: (result, error, {challengeId}) => [
+                {type: 'Challenge', id: challengeId},
+                {type: 'Verification', id: challengeId},
+            ],
         }),
 
-        // Get verification history
-        getVerificationHistory: builder.query<Array<Record<string, any>>, {
-            challengeId: string;
-            userId?: string
-        }>({
+        // Get verification history for a challenge
+        getVerificationHistory: builder.query<any[], {challengeId: string; userId?: string}>({
             query: ({challengeId, userId}) => ({
                 url: `/challenges/${challengeId}/verifications`,
                 params: userId ? {userId} : undefined,
@@ -257,7 +265,7 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
             query: (request) => ({
                 url: '/challenges/quiz',
                 method: 'POST',
-                body: request,
+                body: request, // Direct pass-through since interfaces now match
             }),
             invalidatesTags: [{type: 'Challenge', id: 'LIST'}],
         }),
@@ -303,14 +311,23 @@ export const {
     useSubmitChallengeCompletionMutation,
     useVerifyChallengeCompletionMutation,
     useSearchChallengesQuery,
-    // Verification endpoints
+    // New endpoints
     useVerifyPhotoChallengeMutation,
     useVerifyLocationChallengeMutation,
     useGetVerificationHistoryQuery,
-} = challengeApi;
-
-export const {
+    // Enhanced endpoints
     useCreateQuizChallengeMutation,
     useSaveQuizQuestionsForChallengeMutation,
     useGetQuestionsForChallengeQuery,
 } = enhancedChallengeApi;
+
+// Export all interfaces and types
+export type {
+    CreateQuizChallengeRequest,
+    QuizChallengeConfig,
+    ApiChallenge,
+    CreateChallengeRequest,
+    PhotoVerificationRequest,
+    LocationVerificationRequest,
+    VerificationResponse
+};

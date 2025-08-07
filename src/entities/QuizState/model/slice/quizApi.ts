@@ -2,17 +2,8 @@
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
 import {RootState} from "../../../../app/providers/StoreProvider/store";
 
-export interface CreateQuizChallengeRequest {
-    title: string;
-    description?: string;
-    type: 'QUIZ';
-    visibility: 'PUBLIC' | 'PRIVATE';
-    startDate?: Date;
-    endDate?: Date;
-    frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
-    quizConfig: QuizConfig;
-    userQuestions?: CreateQuizQuestionRequest[];
-}
+// REMOVED: CreateQuizChallengeRequest (now only exists in ChallengeState)
+// This interface is now only in challengeApi.ts to avoid conflicts
 
 export interface CreateQuizQuestionRequest {
     question: string;
@@ -32,6 +23,7 @@ export interface QuizConfig {
     roundCount: number;
     enableAIHost: boolean;
 }
+
 // Quiz Question types
 export interface QuizQuestion {
     id: string;
@@ -47,15 +39,6 @@ export interface QuizQuestion {
     usageCount: number;
     createdAt: string;
     lastUsed?: string;
-}
-
-export interface CreateQuizQuestionRequest {
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
 }
 
 // Quiz Session types
@@ -247,9 +230,9 @@ export const quizApi = createApi({
                 result
                     ? [
                         ...result.map(({id}) => ({type: 'QuizSession' as const, id})),
-                        {type: 'QuizSession', id: 'LIST'},
+                        {type: 'QuizSession', id: 'USER_LIST'},
                     ]
-                    : [{type: 'QuizSession', id: 'LIST'}],
+                    : [{type: 'QuizSession', id: 'USER_LIST'}],
         }),
 
         getQuizRounds: builder.query<QuizRound[], string>({
@@ -258,18 +241,39 @@ export const quizApi = createApi({
                 {type: 'QuizRound', id: `SESSION_${sessionId}`}
             ],
         }),
+
+        getCurrentRound: builder.query<QuizRound, string>({
+            query: (sessionId) => `/sessions/${sessionId}/current-round`,
+            providesTags: (result, error, sessionId) => [
+                {type: 'QuizRound', id: `CURRENT_${sessionId}`}
+            ],
+        }),
+
+        updateQuizSessionConfig: builder.mutation<QuizSession, {
+            sessionId: string;
+            config: any;
+        }>({
+            query: ({sessionId, config}) => ({
+                url: `/sessions/${sessionId}/config`,
+                method: 'PUT',
+                body: config,
+            }),
+            invalidatesTags: (result, error, {sessionId}) => [
+                {type: 'QuizSession', id: sessionId}
+            ],
+        }),
     }),
 });
 
 export const {
-    // Question Management
+    // Question endpoints
     useCreateUserQuestionMutation,
     useGetUserQuestionsQuery,
     useDeleteUserQuestionMutation,
     useGetQuestionsByDifficultyQuery,
     useSearchQuestionsQuery,
 
-    // Quiz Session Management
+    // Session endpoints
     useStartQuizSessionMutation,
     useBeginQuizSessionMutation,
     useSubmitRoundAnswerMutation,
@@ -277,4 +281,6 @@ export const {
     useGetQuizSessionQuery,
     useGetUserQuizSessionsQuery,
     useGetQuizRoundsQuery,
+    useGetCurrentRoundQuery,
+    useUpdateQuizSessionConfigMutation,
 } = quizApi;
