@@ -7,6 +7,7 @@ import {
 import {useNavigation} from "@react-navigation/native";
 import {Alert, ScrollView, Text, TextInput, TouchableOpacity, View} from "react-native";
 import {styles} from "../shared/ui/Modal/Modal.style";
+import {useCreateQuizChallengeMutation} from "../entities/ChallengeState/model/slice/challengeApi.ts";
 
 export const CreateQuizChallengeScreen = () => {
     const [title, setTitle] = useState('');

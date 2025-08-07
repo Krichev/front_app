@@ -15,9 +15,9 @@ import {
     View,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
+import {CreateChallengeRequest, useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {Picker} from '@react-native-picker/picker';
-import {ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationMethod} from '../app/types';
+import {ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationType} from '../app/types';
 import Geolocation from '@react-native-community/geolocation';
 
 interface CreateChallengeFormData {
@@ -28,17 +28,37 @@ interface CreateChallengeFormData {
     reward?: string;
     penalty?: string;
     targetGroup?: string;
-    verificationMethods: VerificationMethod[];
+    verificationMethod?: VerificationType;
     frequency: ChallengeFrequency;
     startDate?: Date;
     endDate?: Date;
+    tags: string[];
+}
+
+interface PhotoDetailsState {
+    description: string;
+    requiresComparison: boolean;
+    verificationMode: 'standard' | 'selfie' | 'comparison';
+}
+
+interface LocationDetailsState {
+    latitude: number;
+    longitude: number;
+    radius: number;
+    locationName: string;
 }
 
 const CreateChallengeScreen: React.FC = () => {
     const navigation = useNavigation();
-    const [createChallenge, {isLoading}] = useCreateChallengeMutation();
+    const [createChallenge, { isLoading }] = useCreateChallengeMutation();
+
+    // Loading states
     const [locationFetching, setLocationFetching] = useState<boolean>(false);
-    const [locationAddress, setLocationAddress] = useState<string>('');
+
+    // UI state
+    const [showAdvancedOptions, setShowAdvancedOptions] = useState<boolean>(false);
+    const [showVerificationOptions, setShowVerificationOptions] = useState<boolean>(false);
+    const [showDateOptions, setShowDateOptions] = useState<boolean>(false);
 
     // Form state
     const [formData, setFormData] = useState<CreateChallengeFormData>({
@@ -49,216 +69,280 @@ const CreateChallengeScreen: React.FC = () => {
         reward: '',
         penalty: '',
         targetGroup: '',
-        verificationMethods: [
-            {
-                type: 'PHOTO',
-                enabled: false,
-                details: {
-                    photoPrompt: '',
-                    requiredItems: [],
-                    aiPrompt: '',
-                }
-            },
-            {
-                type: 'LOCATION',
-                enabled: false,
-                details: {
-                    locationData: {
-                        latitude: 0,
-                        longitude: 0,
-                        address: '',
-                        radius: 100, // Default 100 meters
-                    }
-                }
-            },
-            {
-                type: 'FITNESS_DATA',
-                enabled: false,
-                details: {}
-            },
-            {
-                type: 'MANUAL',
-                enabled: false,
-                details: {}
-            }
-        ],
-        frequency: 'DAILY',
+        verificationMethod: undefined,
+        frequency: 'ONE_TIME',
+        startDate: undefined,
+        endDate: undefined,
+        tags: [],
     });
 
-    // State for advanced options toggle
-    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-    const [showVerificationOptions, setShowVerificationOptions] = useState(false);
+    // Verification details states
+    const [photoDetails, setPhotoDetails] = useState<PhotoDetailsState>({
+        description: '',
+        requiresComparison: false,
+        verificationMode: 'standard'
+    });
 
-    // Update form data
+    const [locationDetails, setLocationDetails] = useState<LocationDetailsState>({
+        latitude: 0,
+        longitude: 0,
+        radius: 100,
+        locationName: ''
+    });
+
+    // Tags input state
+    const [tagsInput, setTagsInput] = useState<string>('');
+
+    // Form field updater
     const updateFormField = (field: keyof CreateChallengeFormData, value: any) => {
-        setFormData({...formData, [field]: value});
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
-    // Toggle verification method
-    const toggleVerificationMethod = (index: number) => {
-        const newVerificationMethods = [...formData.verificationMethods];
-        newVerificationMethods[index].enabled = !newVerificationMethods[index].enabled;
-        setFormData({...formData, verificationMethods: newVerificationMethods});
+    // Handle tags input
+    const handleTagsChange = (text: string) => {
+        setTagsInput(text);
+        // Convert comma-separated string to array
+        const tagsArray = text
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(tag => tag.length > 0);
+        updateFormField('tags', tagsArray);
     };
 
-    // Update verification method details
-    const updateVerificationDetails = (index: number, details: any) => {
-        const newVerificationMethods = [...formData.verificationMethods];
-        newVerificationMethods[index].details = {
-            ...newVerificationMethods[index].details,
-            ...details
-        };
-        setFormData({...formData, verificationMethods: newVerificationMethods});
-    };
-
-    // Request location permission for Android
-    const requestLocationPermission = async () => {
-        if (Platform.OS === 'ios') {
-            return true;
-        }
-
-        try {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                {
-                    title: "Location Permission",
-                    message: "This app needs access to your location to verify challenges.",
-                    buttonNeutral: "Ask Me Later",
-                    buttonNegative: "Cancel",
-                    buttonPositive: "OK"
-                }
+    // Get current location
+    const getCurrentLocation = async () => {
+        if (Platform.OS === 'android') {
+            const permission = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
             );
-            return granted === PermissionsAndroid.RESULTS.GRANTED;
-        } catch (err) {
-            console.warn(err);
-            return false;
-        }
-    };
-
-    // Fetch current location
-    const fetchCurrentLocation = async () => {
-        try {
-            setLocationFetching(true);
-
-            const hasPermission = await requestLocationPermission();
-
-            if (!hasPermission) {
-                Alert.alert('Permission Denied', 'Permission to access location was denied');
-                setLocationFetching(false);
+            if (permission !== PermissionsAndroid.RESULTS.GRANTED) {
+                Alert.alert('Permission Denied', 'Location permission is required');
                 return;
             }
-
-            Geolocation.getCurrentPosition(
-                (position) => {
-                    const {latitude, longitude} = position.coords;
-
-                    // Since we don't have direct reverse geocoding from react-native-geolocation-service,
-                    // we'll just use coordinates and let users know they'll need to implement geocoding
-                    const addressString = `Lat: ${latitude.toFixed(6)}, Long: ${longitude.toFixed(6)}`;
-
-                    setLocationAddress(addressString);
-
-                    // Update location in verification method
-                    const locationIndex = formData.verificationMethods.findIndex(vm => vm.type === 'LOCATION');
-                    if (locationIndex >= 0) {
-                        updateVerificationDetails(locationIndex, {
-                            locationData: {
-                                latitude,
-                                longitude,
-                                address: addressString,
-                                radius: formData.verificationMethods[locationIndex].details.locationData?.radius || 100
-                            }
-                        });
-                    }
-
-                    setLocationFetching(false);
-                },
-                (error) => {
-                    console.error('Error fetching location:', error);
-                    Alert.alert('Error', 'Failed to fetch your location: ' + error.message);
-                    setLocationFetching(false);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 10000
-                }
-            );
-        } catch (error) {
-            console.error('Error fetching location:', error);
-            Alert.alert('Error', 'Failed to fetch your location');
-            setLocationFetching(false);
         }
+
+        setLocationFetching(true);
+
+        Geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setLocationDetails(prev => ({
+                    ...prev,
+                    latitude,
+                    longitude
+                }));
+                setLocationFetching(false);
+            },
+            (error) => {
+                console.error('Location error:', error);
+                Alert.alert('Error', 'Failed to get current location');
+                setLocationFetching(false);
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        );
     };
 
-    // Handle submit
+    // Form submission
     const handleSubmit = async () => {
+        // Basic validation
         if (!formData.title.trim()) {
-            Alert.alert('Error', 'Please enter a title for your challenge');
+            Alert.alert('Error', 'Please enter a challenge title');
             return;
         }
-        for (const key in formData) {
-            if (formData.hasOwnProperty(key)) {
-                // @ts-ignore
-                console.log(`${key}: ${formData[key]}`);
-            }
-        }
-        // Format verification methods for API
-        const activeVerificationMethods = formData.verificationMethods
-            .filter(vm => vm.enabled)
-            .map(({type, details}) => ({
-                type,
-                details
-            }));
 
-        // Make sure we have at least one verification method if we're creating a daily challenge
-        if (formData.frequency === 'DAILY' && activeVerificationMethods.length === 0) {
-            Alert.alert('Error', 'Daily challenges require at least one verification method');
+        if (!formData.description.trim()) {
+            Alert.alert('Error', 'Please enter a challenge description');
             return;
+        }
+
+        // Prepare verification details based on selected method
+        let verificationDetails: Record<string, any> | undefined = undefined;
+
+        if (formData.verificationMethod === 'PHOTO') {
+            if (!photoDetails.description.trim()) {
+                Alert.alert('Error', 'Please provide a description for photo verification');
+                return;
+            }
+            verificationDetails = {
+                description: photoDetails.description,
+                requiresComparison: photoDetails.requiresComparison,
+                verificationMode: photoDetails.verificationMode
+            };
+        } else if (formData.verificationMethod === 'LOCATION') {
+            if (!locationDetails.latitude || !locationDetails.longitude) {
+                Alert.alert('Error', 'Please set location coordinates for location verification');
+                return;
+            }
+            verificationDetails = {
+                latitude: locationDetails.latitude,
+                longitude: locationDetails.longitude,
+                radius: locationDetails.radius,
+                locationName: locationDetails.locationName
+            };
         }
 
         try {
-            await createChallenge({
-                title: formData.title,
-                description: formData.description,
+            const requestData: CreateChallengeRequest = {
+                title: formData.title.trim(),
+                description: formData.description.trim(),
                 type: formData.type,
                 visibility: formData.visibility,
                 status: 'ACTIVE',
-                reward: formData.reward,
-                penalty: formData.penalty,
-                verificationMethod: JSON.stringify(activeVerificationMethods), // Correctly stringify the array
-                targetGroup: formData.targetGroup,
+                reward: formData.reward?.trim() || undefined,
+                penalty: formData.penalty?.trim() || undefined,
+                verificationMethod: formData.verificationMethod,
+                verificationDetails: verificationDetails,
+                targetGroup: formData.targetGroup?.trim() || undefined,
                 frequency: formData.frequency,
-                startDate: formData.startDate,
-                endDate: formData.endDate
-            }).unwrap();
+                startDate: formData.startDate?.toISOString(),
+                endDate: formData.endDate?.toISOString(),
+                tags: formData.tags.length > 0 ? formData.tags : undefined
+            };
 
-            Alert.alert('Success', 'Challenge created successfully', [
+            await createChallenge(requestData).unwrap();
+
+            Alert.alert('Success', 'Challenge created successfully!', [
                 {text: 'OK', onPress: () => navigation.goBack()}
             ]);
-        } catch (error) {
-            Alert.alert('Error', 'Failed to create challenge. Please try again.');
+        } catch (error: any) {
             console.error('Create challenge error:', error);
+            const errorMessage = error?.data?.message || 'Failed to create challenge. Please try again.';
+            Alert.alert('Error', errorMessage);
         }
     };
 
-    const photoVerificationIndex = formData.verificationMethods.findIndex(vm => vm.type === 'PHOTO');
-    const locationVerificationIndex = formData.verificationMethods.findIndex(vm => vm.type === 'LOCATION');
-    const photoVerification = formData.verificationMethods[photoVerificationIndex];
-    const locationVerification = formData.verificationMethods[locationVerificationIndex];
+    // Render verification method section
+    const renderVerificationMethodSection = () => (
+        <View style={styles.verificationContainer}>
+            <Text style={styles.sectionTitle}>Verification Method</Text>
+
+            <View style={styles.pickerContainer}>
+                <Picker
+                    selectedValue={formData.verificationMethod || 'NONE'}
+                    onValueChange={(value) => {
+                        if (value === 'NONE') {
+                            updateFormField('verificationMethod', undefined);
+                        } else {
+                            updateFormField('verificationMethod', value as VerificationType);
+                        }
+                    }}
+                    style={styles.picker}
+                >
+                    <Picker.Item label="No Verification" value="NONE"/>
+                    <Picker.Item label="Photo Verification" value="PHOTO"/>
+                    <Picker.Item label="Location Verification" value="LOCATION"/>
+                    <Picker.Item label="Quiz Verification" value="QUIZ"/>
+                    <Picker.Item label="Manual Verification" value="MANUAL"/>
+                    <Picker.Item label="Fitness API" value="FITNESS_API"/>
+                    <Picker.Item label="Activity Tracking" value="ACTIVITY"/>
+                </Picker>
+            </View>
+
+            {/* Photo Verification Details */}
+            {formData.verificationMethod === 'PHOTO' && (
+                <View style={styles.verificationDetailsContainer}>
+                    <Text style={styles.label}>Photo Description *</Text>
+                    <TextInput
+                        style={[styles.input, styles.textArea]}
+                        value={photoDetails.description}
+                        onChangeText={(text) => setPhotoDetails(prev => ({...prev, description: text}))}
+                        placeholder="Describe what the photo should show (e.g., 'Take a photo showing your completed workout')"
+                        multiline
+                        numberOfLines={3}
+                    />
+
+                    <View style={styles.switchContainer}>
+                        <Text style={styles.label}>Require Photo Comparison</Text>
+                        <Switch
+                            value={photoDetails.requiresComparison}
+                            onValueChange={(value) => setPhotoDetails(prev => ({...prev, requiresComparison: value}))}
+                            trackColor={{false: '#767577', true: '#81b0ff'}}
+                            thumbColor={photoDetails.requiresComparison ? '#f5dd4b' : '#f4f3f4'}
+                        />
+                    </View>
+
+                    <Text style={styles.label}>Verification Mode</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={photoDetails.verificationMode}
+                            onValueChange={(value) => setPhotoDetails(prev => ({...prev, verificationMode: value as any}))}
+                            style={styles.picker}
+                        >
+                            <Picker.Item label="Standard Photo" value="standard"/>
+                            <Picker.Item label="Selfie" value="selfie"/>
+                            <Picker.Item label="Comparison" value="comparison"/>
+                        </Picker>
+                    </View>
+                </View>
+            )}
+
+            {/* Location Verification Details */}
+            {formData.verificationMethod === 'LOCATION' && (
+                <View style={styles.verificationDetailsContainer}>
+                    <Text style={styles.label}>Location Name</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={locationDetails.locationName}
+                        onChangeText={(text) => setLocationDetails(prev => ({...prev, locationName: text}))}
+                        placeholder="e.g., Central Park Gym, Downtown Library"
+                    />
+
+                    <TouchableOpacity
+                        style={styles.locationButton}
+                        onPress={getCurrentLocation}
+                        disabled={locationFetching}
+                    >
+                        <Text style={styles.locationButtonText}>
+                            {locationFetching ? 'Getting Location...' : 'Set Current Location'}
+                        </Text>
+                    </TouchableOpacity>
+
+                    {(locationDetails.latitude !== 0 && locationDetails.longitude !== 0) && (
+                        <View style={styles.locationInfo}>
+                            <Text style={styles.locationText}>
+                                Latitude: {locationDetails.latitude.toFixed(6)}
+                            </Text>
+                            <Text style={styles.locationText}>
+                                Longitude: {locationDetails.longitude.toFixed(6)}
+                            </Text>
+                        </View>
+                    )}
+
+                    <Text style={styles.label}>Verification Radius (meters)</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={locationDetails.radius.toString()}
+                        onChangeText={(text) => {
+                            const radius = parseInt(text) || 100;
+                            setLocationDetails(prev => ({...prev, radius}));
+                        }}
+                        keyboardType="numeric"
+                        placeholder="100"
+                    />
+                </View>
+            )}
+        </View>
+    );
 
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardAvoid}
+                style={styles.keyboardAvoidingView}
             >
-                <ScrollView contentContainerStyle={styles.scrollContainer}>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
                     <View style={styles.header}>
-                        <Text style={styles.headerTitle}>Create New Challenge</Text>
+                        <Text style={styles.title}>Create Challenge</Text>
+                        <Text style={styles.subtitle}>Set up your new challenge</Text>
                     </View>
 
-                    <View style={styles.formContainer}>
+                    <View style={styles.form}>
                         {/* Title */}
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Title *</Text>
@@ -266,34 +350,33 @@ const CreateChallengeScreen: React.FC = () => {
                                 style={styles.input}
                                 value={formData.title}
                                 onChangeText={(text) => updateFormField('title', text)}
-                                placeholder="Enter a title for your challenge"
-                                maxLength={255}
+                                placeholder="Enter challenge title"
                             />
                         </View>
 
                         {/* Description */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Description</Text>
+                            <Text style={styles.label}>Description *</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={formData.description}
                                 onChangeText={(text) => updateFormField('description', text)}
-                                placeholder="Describe your challenge..."
+                                placeholder="Describe your challenge"
                                 multiline
-                                numberOfLines={4}
+                                numberOfLines={3}
                             />
                         </View>
 
-                        {/* Challenge Type */}
+                        {/* Type */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Type</Text>
+                            <Text style={styles.label}>Challenge Type</Text>
                             <View style={styles.pickerContainer}>
                                 <Picker
                                     selectedValue={formData.type}
-                                    onValueChange={(value: string) => updateFormField('type', value)}
+                                    onValueChange={(value) => updateFormField('type', value)}
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="QUEST" value="QUEST"/>
+                                    <Picker.Item label="Quest" value="QUEST"/>
                                     <Picker.Item label="Quiz" value="QUIZ"/>
                                     <Picker.Item label="Activity Partner" value="ACTIVITY_PARTNER"/>
                                     <Picker.Item label="Fitness Tracking" value="FITNESS_TRACKING"/>
@@ -318,132 +401,103 @@ const CreateChallengeScreen: React.FC = () => {
                             </View>
                         </View>
 
+                        {/* Frequency */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Frequency</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={formData.frequency}
+                                    onValueChange={(value) => updateFormField('frequency', value)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="One Time" value="ONE_TIME"/>
+                                    <Picker.Item label="Daily" value="DAILY"/>
+                                    <Picker.Item label="Weekly" value="WEEKLY"/>
+                                </Picker>
+                            </View>
+                        </View>
+
                         {/* Verification Methods Toggle */}
                         <TouchableOpacity
-                            style={styles.advancedToggle}
+                            style={styles.sectionToggle}
                             onPress={() => setShowVerificationOptions(!showVerificationOptions)}
                         >
-                            <Text style={styles.advancedToggleText}>
+                            <Text style={styles.sectionToggleText}>
                                 {showVerificationOptions ? 'Hide Verification Options' : 'Show Verification Options'}
                             </Text>
                         </TouchableOpacity>
 
                         {/* Verification Methods */}
-                        {showVerificationOptions && (
-                            <View style={styles.verificationContainer}>
-                                <Text style={styles.sectionTitle}>Verification Methods</Text>
+                        {showVerificationOptions && renderVerificationMethodSection()}
 
-                                {/* Photo Verification */}
-                                <View style={styles.verificationMethod}>
-                                    <View style={styles.verificationHeader}>
-                                        <Text style={styles.verificationTitle}>Photo Verification</Text>
-                                        <Switch
-                                            value={photoVerification.enabled}
-                                            onValueChange={() => toggleVerificationMethod(photoVerificationIndex)}
-                                            trackColor={{false: '#767577', true: '#81b0ff'}}
-                                            thumbColor={photoVerification.enabled ? '#4CAF50' : '#f4f3f4'}
-                                        />
-                                    </View>
+                        {/* Date Options Toggle */}
+                        <TouchableOpacity
+                            style={styles.sectionToggle}
+                            onPress={() => setShowDateOptions(!showDateOptions)}
+                        >
+                            <Text style={styles.sectionToggleText}>
+                                {showDateOptions ? 'Hide Date Options' : 'Show Date Options'}
+                            </Text>
+                        </TouchableOpacity>
 
-                                    {photoVerification.enabled && (
-                                        <View style={styles.verificationDetails}>
-                                            <Text style={styles.detailLabel}>What should be in the photo?</Text>
-                                            <TextInput
-                                                style={[styles.input, styles.textArea]}
-                                                value={photoVerification.details.photoPrompt}
-                                                onChangeText={(text) =>
-                                                    updateVerificationDetails(photoVerificationIndex, {photoPrompt: text})
-                                                }
-                                                placeholder="E.g., Person wearing a different shirt each day"
-                                                multiline
-                                                numberOfLines={3}
-                                            />
+                        {/* Date Options */}
+                        {showDateOptions && (
+                            <View style={styles.dateContainer}>
+                                <Text style={styles.sectionTitle}>Challenge Schedule</Text>
 
-                                            <Text style={styles.detailLabel}>AI Instructions (Optional)</Text>
-                                            <TextInput
-                                                style={[styles.input, styles.textArea]}
-                                                value={photoVerification.details.aiPrompt}
-                                                onChangeText={(text) =>
-                                                    updateVerificationDetails(photoVerificationIndex, {aiPrompt: text})
-                                                }
-                                                placeholder="E.g., Check if person is wearing a shirt different from previous days"
-                                                multiline
-                                                numberOfLines={3}
-                                            />
-                                        </View>
-                                    )}
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>Start Date</Text>
+                                    <TouchableOpacity
+                                        style={styles.dateButton}
+                                        onPress={() => {
+                                            // TODO: Implement date picker
+                                            Alert.alert('Info', 'Date picker will be implemented');
+                                        }}
+                                    >
+                                        <Text style={styles.dateButtonText}>
+                                            {formData.startDate
+                                                ? formData.startDate.toLocaleDateString()
+                                                : 'Select Start Date'
+                                            }
+                                        </Text>
+                                    </TouchableOpacity>
                                 </View>
 
-                                {/* Location Verification */}
-                                <View style={styles.verificationMethod}>
-                                    <View style={styles.verificationHeader}>
-                                        <Text style={styles.verificationTitle}>Location Verification</Text>
-                                        <Switch
-                                            value={locationVerification.enabled}
-                                            onValueChange={() => toggleVerificationMethod(locationVerificationIndex)}
-                                            trackColor={{false: '#767577', true: '#81b0ff'}}
-                                            thumbColor={locationVerification.enabled ? '#4CAF50' : '#f4f3f4'}
-                                        />
-                                    </View>
-
-                                    {locationVerification.enabled && (
-                                        <View style={styles.verificationDetails}>
-                                            <Text style={styles.detailLabel}>Location</Text>
-
-                                            <View style={styles.locationContainer}>
-                                                <TextInput
-                                                    style={[styles.input, {flex: 1}]}
-                                                    value={locationVerification.details.locationData?.address || locationAddress}
-                                                    placeholder="Set location for verification"
-                                                    editable={false}
-                                                />
-                                                <TouchableOpacity
-                                                    style={styles.locationButton}
-                                                    onPress={fetchCurrentLocation}
-                                                    disabled={locationFetching}
-                                                >
-                                                    {locationFetching ? (
-                                                        <ActivityIndicator size="small" color="white"/>
-                                                    ) : (
-                                                        <Text style={styles.locationButtonText}>Get Current</Text>
-                                                    )}
-                                                </TouchableOpacity>
-                                            </View>
-
-                                            <Text style={styles.detailLabel}>Radius (meters)</Text>
-                                            <TextInput
-                                                style={styles.input}
-                                                value={locationVerification.details.locationData?.radius.toString()}
-                                                onChangeText={(text) => {
-                                                    const radius = parseInt(text) || 100;
-                                                    const locationData = {
-                                                        ...locationVerification.details.locationData,
-                                                        radius
-                                                    };
-                                                    updateVerificationDetails(locationVerificationIndex, {locationData});
-                                                }}
-                                                placeholder="100"
-                                                keyboardType="numeric"
-                                            />
-                                        </View>
-                                    )}
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>End Date</Text>
+                                    <TouchableOpacity
+                                        style={styles.dateButton}
+                                        onPress={() => {
+                                            // TODO: Implement date picker
+                                            Alert.alert('Info', 'Date picker will be implemented');
+                                        }}
+                                    >
+                                        <Text style={styles.dateButtonText}>
+                                            {formData.endDate
+                                                ? formData.endDate.toLocaleDateString()
+                                                : 'Select End Date'
+                                            }
+                                        </Text>
+                                    </TouchableOpacity>
                                 </View>
                             </View>
                         )}
 
                         {/* Advanced Options Toggle */}
                         <TouchableOpacity
-                            style={styles.advancedToggle}
+                            style={styles.sectionToggle}
                             onPress={() => setShowAdvancedOptions(!showAdvancedOptions)}
                         >
-                            <Text style={styles.advancedToggleText}>
+                            <Text style={styles.sectionToggleText}>
                                 {showAdvancedOptions ? 'Hide Advanced Options' : 'Show Advanced Options'}
                             </Text>
                         </TouchableOpacity>
 
                         {/* Advanced Options Section */}
                         {showAdvancedOptions && (
-                            <>
+                            <View style={styles.advancedContainer}>
+                                <Text style={styles.sectionTitle}>Advanced Options</Text>
+
                                 {/* Target Group */}
                                 <View style={styles.formGroup}>
                                     <Text style={styles.label}>Target Group</Text>
@@ -453,6 +507,26 @@ const CreateChallengeScreen: React.FC = () => {
                                         onChangeText={(text) => updateFormField('targetGroup', text)}
                                         placeholder="Choose group (optional)"
                                     />
+                                </View>
+
+                                {/* Tags */}
+                                <View style={styles.formGroup}>
+                                    <Text style={styles.label}>Tags</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={tagsInput}
+                                        onChangeText={handleTagsChange}
+                                        placeholder="Enter tags separated by commas (e.g., fitness, daily, workout)"
+                                    />
+                                    {formData.tags.length > 0 && (
+                                        <View style={styles.tagsPreview}>
+                                            {formData.tags.map((tag, index) => (
+                                                <View key={index} style={styles.tag}>
+                                                    <Text style={styles.tagText}>{tag}</Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    )}
                                 </View>
 
                                 {/* Reward */}
@@ -476,17 +550,17 @@ const CreateChallengeScreen: React.FC = () => {
                                         placeholder="What's the penalty for failing?"
                                     />
                                 </View>
-                            </>
+                            </View>
                         )}
 
                         {/* Submit Button */}
                         <TouchableOpacity
-                            style={styles.submitButton}
+                            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
                             onPress={handleSubmit}
                             disabled={isLoading}
                         >
                             {isLoading ? (
-                                <ActivityIndicator color="white" size="small"/>
+                                <ActivityIndicator color="white" size="small" />
                             ) : (
                                 <Text style={styles.submitButtonText}>Create Challenge</Text>
                             )}
@@ -503,90 +577,80 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
-    keyboardAvoid: {
+    keyboardAvoidingView: {
         flex: 1,
     },
-    scrollContainer: {
+    scrollContent: {
         flexGrow: 1,
+        paddingBottom: 20,
     },
     header: {
-        padding: 16,
         backgroundColor: '#4CAF50',
-        elevation: 4,
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        shadowOffset: {width: 0, height: 2},
+        padding: 20,
+        paddingTop: 40,
     },
-    headerTitle: {
-        fontSize: 20,
+    title: {
+        fontSize: 24,
         fontWeight: 'bold',
         color: 'white',
+        marginBottom: 4,
     },
-    formContainer: {
-        padding: 16,
+    subtitle: {
+        fontSize: 16,
+        color: 'rgba(255, 255, 255, 0.9)',
+    },
+    form: {
+        flex: 1,
+        backgroundColor: 'white',
+        margin: 16,
+        borderRadius: 12,
+        padding: 20,
+        elevation: 2,
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        shadowOffset: {width: 0, height: 2},
     },
     formGroup: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     label: {
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '600',
         marginBottom: 8,
         color: '#333',
     },
     input: {
-        backgroundColor: 'white',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
+        backgroundColor: '#fafafa',
     },
     textArea: {
-        minHeight: 100,
+        height: 80,
         textAlignVertical: 'top',
     },
     pickerContainer: {
-        backgroundColor: 'white',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
-        overflow: 'hidden',
+        backgroundColor: '#fafafa',
     },
     picker: {
         height: 50,
     },
-    advancedToggle: {
-        padding: 10,
-        alignItems: 'center',
-        marginVertical: 8,
-    },
-    advancedToggleText: {
-        color: '#4CAF50',
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    submitButton: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
+    sectionToggle: {
+        backgroundColor: '#f0f0f0',
+        padding: 12,
         borderRadius: 8,
+        marginVertical: 10,
         alignItems: 'center',
-        marginTop: 16,
     },
-    submitButtonText: {
-        color: 'white',
+    sectionToggleText: {
         fontSize: 16,
-        fontWeight: 'bold',
-    },
-    verificationContainer: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 16,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: {width: 0, height: 1},
+        fontWeight: '500',
+        color: '#4CAF50',
     },
     sectionTitle: {
         fontSize: 18,
@@ -594,46 +658,104 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         color: '#333',
     },
-    verificationMethod: {
-        marginBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        paddingBottom: 16,
+    verificationContainer: {
+        backgroundColor: '#f9f9f9',
+        padding: 16,
+        borderRadius: 8,
+        marginVertical: 8,
     },
-    verificationHeader: {
+    verificationDetailsContainer: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    switchContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
-    },
-    verificationTitle: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#333',
-    },
-    verificationDetails: {
-        marginLeft: 8,
-    },
-    detailLabel: {
-        fontSize: 14,
-        fontWeight: '500',
-        marginBottom: 6,
-        marginTop: 10,
-        color: '#555',
-    },
-    locationContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        marginVertical: 12,
     },
     locationButton: {
         backgroundColor: '#4CAF50',
         padding: 12,
         borderRadius: 8,
-        marginLeft: 8,
+        alignItems: 'center',
+        marginVertical: 8,
     },
     locationButtonText: {
         color: 'white',
-        fontWeight: '500',
+        fontWeight: '600',
+        fontSize: 16,
+    },
+    locationInfo: {
+        backgroundColor: '#f0f8f0',
+        padding: 10,
+        borderRadius: 6,
+        marginVertical: 8,
+    },
+    locationText: {
+        fontSize: 14,
+        color: '#2e7d32',
+        fontFamily: 'monospace',
+    },
+    dateContainer: {
+        backgroundColor: '#f9f9f9',
+        padding: 16,
+        borderRadius: 8,
+        marginVertical: 8,
+    },
+    dateButton: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 12,
+        backgroundColor: '#fafafa',
+        alignItems: 'center',
+    },
+    dateButtonText: {
+        fontSize: 16,
+        color: '#333',
+    },
+    advancedContainer: {
+        backgroundColor: '#f9f9f9',
+        padding: 16,
+        borderRadius: 8,
+        marginVertical: 8,
+    },
+    tagsPreview: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
+    },
+    tag: {
+        backgroundColor: '#e3f2fd',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+        margin: 2,
+    },
+    tagText: {
+        fontSize: 12,
+        color: '#1976d2',
+    },
+    submitButton: {
+        backgroundColor: '#4CAF50',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    submitButtonDisabled: {
+        backgroundColor: '#a5d6a7',
+        opacity: 0.7,
+    },
+    submitButtonText: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: 'bold',
     },
 });
 

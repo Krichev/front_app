@@ -1,8 +1,9 @@
 import {ApiChallenge} from '../../entities/ChallengeState/model/slice/challengeApi';
-import {VerificationMethod} from '../../app/types';
+import {getVerificationMethods, VerificationMethod} from '../../app/types';
 
 /**
  * Service for handling challenge-related operations
+ * UPDATED to work with new backend verification structure
  */
 export class ChallengeService {
     /**
@@ -13,26 +14,18 @@ export class ChallengeService {
     static getVerificationMethods(challenge?: ApiChallenge | null): VerificationMethod[] {
         if (!challenge?.verificationMethod) return [];
 
-        try {
-            const parsedData = JSON.parse(challenge.verificationMethod);
+        // Use the updated helper function from types
+        return getVerificationMethods(challenge.verificationMethod);
+    }
 
-            // Check if the parsed data is an array
-            if (Array.isArray(parsedData)) {
-                return parsedData;
-            }
-
-            // If it's a single object, wrap it in an array
-            if (typeof parsedData === 'object' && parsedData !== null) {
-                return [parsedData];
-            }
-
-            // If it's neither an array nor an object, return an empty array
-            console.error('Unexpected verification method format:', parsedData);
-            return [];
-        } catch (e) {
-            console.error('Error parsing verification methods:', e);
-            return [];
-        }
+    /**
+     * Get the primary verification method (first one) from challenge
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
+     * @returns {VerificationMethod|null} Primary verification method
+     */
+    static getPrimaryVerificationMethod(challenge?: ApiChallenge | null): VerificationMethod | null {
+        const methods = this.getVerificationMethods(challenge);
+        return methods.length > 0 ? methods[0] : null;
     }
 
     /**
@@ -52,6 +45,74 @@ export class ChallengeService {
     static hasVerificationMethods(challenge?: ApiChallenge | null): boolean {
         const methods = this.getVerificationMethods(challenge);
         return methods.length > 0;
+    }
+
+    /**
+     * Check if challenge has photo verification
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
+     * @returns {boolean} Whether it has photo verification
+     */
+    static hasPhotoVerification(challenge?: ApiChallenge | null): boolean {
+        const methods = this.getVerificationMethods(challenge);
+        return methods.some(method => method.type === 'PHOTO');
+    }
+
+    /**
+     * Check if challenge has location verification
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
+     * @returns {boolean} Whether it has location verification
+     */
+    static hasLocationVerification(challenge?: ApiChallenge | null): boolean {
+        const methods = this.getVerificationMethods(challenge);
+        return methods.some(method => method.type === 'LOCATION');
+    }
+
+    /**
+     * Get photo verification details
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
+     * @returns {object|null} Photo verification details
+     */
+    static getPhotoVerificationDetails(challenge?: ApiChallenge | null): {
+        description: string;
+        requiresComparison: boolean;
+        verificationMode: string;
+    } | null {
+        const methods = this.getVerificationMethods(challenge);
+        const photoMethod = methods.find(method => method.type === 'PHOTO');
+
+        if (!photoMethod) return null;
+
+        return {
+            description: photoMethod.details.description || photoMethod.details.photoPrompt || 'Take a photo to verify completion',
+            requiresComparison: photoMethod.details.requiresComparison || false,
+            verificationMode: photoMethod.details.verificationMode || 'standard'
+        };
+    }
+
+    /**
+     * Get location verification details
+     * @param {ApiChallenge|null|undefined} challenge - Challenge object
+     * @returns {object|null} Location verification details
+     */
+    static getLocationVerificationDetails(challenge?: ApiChallenge | null): {
+        latitude: number;
+        longitude: number;
+        radius: number;
+        locationName: string;
+    } | null {
+        const methods = this.getVerificationMethods(challenge);
+        const locationMethod = methods.find(method => method.type === 'LOCATION');
+
+        if (!locationMethod) return null;
+
+        const details = locationMethod.details;
+
+        return {
+            latitude: details.latitude || details.locationData?.latitude || 0,
+            longitude: details.longitude || details.locationData?.longitude || 0,
+            radius: details.radius || details.locationData?.radius || 100,
+            locationName: details.locationName || details.locationData?.address || ''
+        };
     }
 
     /**
@@ -99,155 +160,48 @@ export class ChallengeService {
     }
 
     /**
-     * Calculate challenge progress
-     * @param {ApiChallenge} challenge - Challenge object
-     * @param {number} completedTasks - Number of completed tasks
-     * @param {number} totalTasks - Total number of tasks
-     * @returns {number} Progress percentage (0-100)
-     */
-    static calculateProgress(challenge: ApiChallenge, completedTasks: number, totalTasks: number): number {
-        if (totalTasks === 0) return 0;
-
-        // For daily challenges, calculate based on days
-        if (this.isDailyChallenge(challenge) && challenge.startDate && challenge.endDate) {
-            const startDate = new Date(challenge.startDate);
-            const endDate = new Date(challenge.endDate);
-            const today = new Date();
-
-            // Calculate total days and days elapsed
-            const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-            const daysElapsed = Math.ceil((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-
-            // Calculate expected completed tasks based on days elapsed
-            const expectedCompleted = Math.min(daysElapsed, totalDays);
-
-            // Calculate progress
-            if (completedTasks >= expectedCompleted) {
-                // On track or ahead
-                return Math.min(Math.round((daysElapsed / totalDays) * 100), 100);
-            } else {
-                // Behind schedule
-                return Math.min(Math.round((completedTasks / totalDays) * 100), 100);
-            }
-        }
-
-        // For non-daily challenges, calculate based on completed/total
-        return Math.min(Math.round((completedTasks / totalTasks) * 100), 100);
-    }
-
-    /**
-     * Check if the user has completed today's verification
-     * @param {ApiChallenge} challenge - Challenge object
-     * @param {Array} verificationHistory - History of verifications
-     * @returns {boolean} Whether today's verification is completed
-     */
-    static isTodayVerified(challenge: ApiChallenge, verificationHistory: any[]): boolean {
-        if (!verificationHistory || verificationHistory.length === 0) return false;
-
-        // Get today's date (without time)
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        // Check if there's a verification for today
-        return verificationHistory.some(verification => {
-            const verificationDate = new Date(verification.completionDate);
-            verificationDate.setHours(0, 0, 0, 0);
-
-            return verificationDate.getTime() === today.getTime() &&
-                verification.status === 'VERIFIED';
-        });
-    }
-
-    /**
-     * Get challenge streak (consecutive days verified)
-     * @param {Array} verificationHistory - History of verifications
-     * @returns {number} Current streak
-     */
-    static getCurrentStreak(verificationHistory: any[]): number {
-        if (!verificationHistory || verificationHistory.length === 0) return 0;
-
-        // Sort by date (newest first)
-        const sortedHistory = [...verificationHistory].sort((a, b) =>
-            new Date(b.completionDate).getTime() - new Date(a.completionDate).getTime()
-        );
-
-        let streak = 0;
-        let currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0);
-
-        // Check if today is verified
-        const todayVerified = sortedHistory.some(verification => {
-            const verificationDate = new Date(verification.completionDate);
-            verificationDate.setHours(0, 0, 0, 0);
-
-            return verificationDate.getTime() === currentDate.getTime() &&
-                verification.status === 'VERIFIED';
-        });
-
-        if (todayVerified) {
-            streak = 1;
-        } else {
-            // Check if yesterday was verified
-            currentDate.setDate(currentDate.getDate() - 1);
-        }
-
-        // Loop through sorted history to find consecutive days
-        for (let i = 0; i < sortedHistory.length; i++) {
-            const verification = sortedHistory[i];
-            const verificationDate = new Date(verification.completionDate);
-            verificationDate.setHours(0, 0, 0, 0);
-
-            // Check if this verification is for the expected date
-            if (verificationDate.getTime() === currentDate.getTime() &&
-                verification.status === 'VERIFIED') {
-                // If it's verified, increment streak and move to the next expected date
-                if (streak > 0 || todayVerified) {
-                    streak++;
-                }
-                currentDate.setDate(currentDate.getDate() - 1);
-            } else if (verificationDate.getTime() < currentDate.getTime()) {
-                // If we found a gap (missed day), break the streak
-                break;
-            }
-        }
-
-        return streak;
-    }
-
-    /**
-     * Format challenge type for display
-     * @param {string} type - Challenge type
-     * @returns {string} Formatted type string
-     */
-    static formatChallengeType(type: string): string {
-        if (!type) return '';
-
-        // Replace underscores with spaces and capitalize each word
-        return type
-            .replace(/_/g, ' ')
-            .toLowerCase()
-            .replace(/\b\w/g, (char) => char.toUpperCase());
-    }
-
-    /**
      * Get challenge status color
      * @param {string} status - Challenge status
-     * @returns {string} Color hex code
+     * @returns {string} Color code
      */
     static getStatusColor(status: string): string {
         switch (status?.toUpperCase()) {
-            case 'OPEN':
-                return '#4CAF50';  // Green
+            case 'ACTIVE':
             case 'IN_PROGRESS':
-                return '#2196F3';  // Blue
+                return '#4CAF50';
             case 'COMPLETED':
-                return '#9C27B0';  // Purple
+                return '#2196F3';
             case 'FAILED':
-                return '#F44336';  // Red
             case 'CANCELLED':
-                return '#9E9E9E';  // Grey
+                return '#F44336';
+            case 'DRAFT':
+                return '#FF9800';
             default:
-                return '#757575';  // Dark Grey
+                return '#757575';
+        }
+    }
+
+    /**
+     * Get verification type display name
+     * @param {string} type - Verification type
+     * @returns {string} Display name
+     */
+    static getVerificationTypeDisplayName(type: string): string {
+        switch (type?.toUpperCase()) {
+            case 'PHOTO':
+                return 'Photo Verification';
+            case 'LOCATION':
+                return 'Location Check-in';
+            case 'QUIZ':
+                return 'Quiz';
+            case 'MANUAL':
+                return 'Manual Verification';
+            case 'FITNESS_API':
+                return 'Fitness Tracker';
+            case 'ACTIVITY':
+                return 'Activity Tracking';
+            default:
+                return type;
         }
     }
 }
