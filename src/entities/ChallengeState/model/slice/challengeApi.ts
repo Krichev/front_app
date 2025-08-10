@@ -35,12 +35,14 @@ export interface CreateChallengeRequest {
     status: string;
     reward?: string;
     penalty?: string;
-    verificationMethod?: string; // JSON string of VerificationMethod[]
+    verificationMethod?: string;
+    verificationDetails?: Record<string, any>;  // ✅ Add this missing field
     targetGroup?: string;
     frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
-    startDate?: Date;
-    endDate?: Date;
-    quizConfig?: string; // JSON string of QuizConfig
+    startDate?: string;   // ✅ Changed to string
+    endDate?: string;     // ✅ Changed to string
+    tags?: string[];      // ✅ Add this missing field
+    quizConfig?: string;
 }
 
 // Backend Quiz Challenge Config - matches Java QuizChallengeConfig

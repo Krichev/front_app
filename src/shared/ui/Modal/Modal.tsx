@@ -1,145 +1,143 @@
+// src/shared/ui/Modal/Modal.tsx
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {
-    Animated,
-    BackHandler,
-    Easing,
-    GestureResponderEvent,
-    Keyboard,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import {Animated, BackHandler, Easing, GestureResponderEvent, Text, TouchableOpacity, View} from 'react-native';
 import {styles} from './Modal.style.js';
-import {useTheme} from "../../../app/providers/ThemeProvider"; // Import styles
+import {useTheme} from "../../../app/providers/ThemeProvider";
 import {Portal} from '../Portal/Portal.js';
 
-const ANIMATION_DELAY = 300; // Animation duration in milliseconds
+const ANIMATION_DELAY = 300;
 
 interface ModalProps {
     children?: React.ReactNode;
     isOpen?: boolean;
     onClose?: () => void;
+    title?: string;
+    showCloseButton?: boolean;
 }
 
-export const Modal = (props: ModalProps) => {
-    const {children, isOpen, onClose} = props;
+export const Modal: React.FC<ModalProps> = ({
+                                                children,
+                                                isOpen = false,
+                                                onClose,
+                                                title,
+                                                showCloseButton = true,
+                                            }) => {
+    const { theme } = useTheme();
+    const [visible, setVisible] = useState(isOpen);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const scaleAnim = useRef(new Animated.Value(0.7)).current;
 
-    const [isClosing, setIsClosing] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const {theme} = useTheme(); // Get the current theme
-    const animation = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        if (isOpen) {
+            setVisible(true);
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: ANIMATION_DELAY,
+                    easing: Easing.out(Easing.quad),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scaleAnim, {
+                    toValue: 1,
+                    duration: ANIMATION_DELAY,
+                    easing: Easing.out(Easing.back(1.1)),
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        } else {
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 0,
+                    duration: ANIMATION_DELAY,
+                    easing: Easing.in(Easing.quad),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(scaleAnim, {
+                    toValue: 0.7,
+                    duration: ANIMATION_DELAY,
+                    easing: Easing.in(Easing.back(1.1)),
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                setVisible(false);
+            });
+        }
+    }, [isOpen, fadeAnim, scaleAnim]);
 
-    // Close handler
-    const closeHandler = useCallback(() => {
-        if (onClose) {
-            setIsClosing(true);
-            timerRef.current = setTimeout(() => {
+    useEffect(() => {
+        const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+            if (isOpen && onClose) {
                 onClose();
-                setIsClosing(false);
-            }, ANIMATION_DELAY);
+                return true;
+            }
+            return false;
+        });
+
+        return () => backHandler.remove();
+    }, [isOpen, onClose]);
+
+    const handleBackdropPress = useCallback((event: GestureResponderEvent) => {
+        if (event.target === event.currentTarget && onClose) {
+            onClose();
         }
     }, [onClose]);
 
-    // Handle back button press (Android)
-    useEffect(() => {
-        const backAction = () => {
-            if (isOpen) {
-                closeHandler();
-                return true; // Prevent default back action
-            }
-            return false;
-        };
-
-        const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
-
-        return () => backHandler.remove();
-    }, [isOpen, closeHandler]);
-
-    // Handle keyboard events (Escape key equivalent)
-    useEffect(() => {
-        const handleKeyDown = () => {
-            closeHandler();
-        };
-
-        if (isOpen) {
-            const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', handleKeyDown);
-
-            return () => {
-                keyboardDidHideListener.remove(); // Remove the listener when the component unmounts
-            };
+    const handleClosePress = useCallback(() => {
+        if (onClose) {
+            onClose();
         }
-    }, [isOpen, closeHandler]);
+    }, [onClose]);
 
-    // Animation logic
-    useEffect(() => {
-        if (isOpen) {
-            Animated.timing(animation, {
-                toValue: 1,
-                duration: ANIMATION_DELAY,
-                easing: Easing.ease,
-                useNativeDriver: true,
-            }).start();
-        } else if (isClosing) {
-            Animated.timing(animation, {
-                toValue: 0,
-                duration: ANIMATION_DELAY,
-                easing: Easing.ease,
-                useNativeDriver: true,
-            }).start(() => {
-                if (onClose) onClose();
-            });
-        }
-    }, [isOpen, isClosing, animation, onClose]);
-
-    // Interpolate animation values
-    const opacity = animation.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 1],
-    });
-
-    const scale = animation.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.5, 1],
-    });
-
-    const bgColor = theme === 'dark' ? '#090949' : '#fff';
-    const textColor = theme === 'dark' ? '#04ff04' : '#000';
+    if (!visible) {
+        return null;
+    }
 
     return (
         <Portal>
             <Animated.View
                 style={[
-                    styles.modal,
-                    isOpen && styles.opened,
-                    isClosing && styles.isClosing,
-                    {opacity},
+                    styles.overlay,
+                    styles[theme],
+                    { opacity: fadeAnim }
                 ]}
             >
-                {/* Overlay */}
-                <View
-                    style={styles.overlay}
-                    onStartShouldSetResponder={(event: GestureResponderEvent) => {
-                        closeHandler();
-                        return true; // Allow the overlay to handle the touch event
-                    }}
+                <TouchableOpacity
+                    style={styles.backdrop}
+                    activeOpacity={1}
+                    onPress={handleBackdropPress}
                 >
-                    {/* Modal Content */}
                     <Animated.View
                         style={[
-                            styles.content,
-                            {backgroundColor: bgColor, transform: [{scale}]},
+                            styles.modal,
+                            styles[theme],
+                            {
+                                transform: [{ scale: scaleAnim }],
+                                opacity: fadeAnim,
+                            }
                         ]}
-                        onStartShouldSetResponder={(event: GestureResponderEvent) => {
-                            // Prevent the overlay from handling touch events inside the modal content
-                            return false;
-                        }}
                     >
-                        {children}
-                        <TouchableOpacity onPress={closeHandler} style={styles.closeButton}>
-                            <Text style={[styles.closeButtonText, {color: textColor}]}>Close</Text>
-                        </TouchableOpacity>
+                        {title && (
+                            <View style={styles.header}>
+                                <Text style={[styles.title, styles[`${theme}Text`]]}>
+                                    {title}
+                                </Text>
+                                {showCloseButton && (
+                                    <TouchableOpacity
+                                        style={styles.closeButton}
+                                        onPress={handleClosePress}
+                                    >
+                                        <Text style={[styles.closeButtonText, styles[`${theme}Text`]]}>
+                                            ×
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+                        <View style={styles.content}>
+                            {children}
+                        </View>
                     </Animated.View>
-                </View>
+                </TouchableOpacity>
             </Animated.View>
         </Portal>
     );

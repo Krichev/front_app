@@ -69,7 +69,7 @@ const CreateChallengeScreen: React.FC = () => {
         reward: '',
         penalty: '',
         targetGroup: '',
-        verificationMethod: undefined,
+        verificationMethod: 'QUIZ',
         frequency: 'ONE_TIME',
         startDate: undefined,
         endDate: undefined,

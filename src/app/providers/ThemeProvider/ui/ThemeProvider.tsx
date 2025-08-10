@@ -1,6 +1,7 @@
+// src/app/providers/ThemeProvider/ui/ThemeProvider.tsx
 import React, {useEffect, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {LOCAL_STORAGE_THEME_KEY, Theme, ThemeContext} from "../lib/ThemeContext.ts";
+import {LOCAL_STORAGE_THEME_KEY, Theme, ThemeContext} from "../lib/ThemeContext";
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [theme, setTheme] = useState<Theme>(Theme.LIGHT);
@@ -17,7 +18,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     return (
         <ThemeContext.Provider value={{ theme, setTheme }}>
-    {children}
-    </ThemeContext.Provider>
-);
+            {children}
+        </ThemeContext.Provider>
+    );
 };
