@@ -121,7 +121,7 @@ export class QuestionService {
     /**
      * FIXED: Fetch random questions using React Native compatible HTTP and XML parsing
      */
-    private static async fetchRandomQuestions(
+    static async fetchRandomQuestions(
         count: number = 10,
         fromYear?: string,
         difficulty?: UIDifficulty
