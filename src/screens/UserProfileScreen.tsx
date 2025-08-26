@@ -46,12 +46,24 @@ interface UserProfile {
 const UserProfileScreen: React.FC = () => {
     const route = useRoute<UserProfileRouteProp>();
     const navigation = useNavigation<UserProfileNavigationProp>();
-    const { userId } = route.params;
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
+
+    // FIXED: Handle missing route params and use current user's ID as fallback
+    const userId = route.params?.userId || currentUser?.id;
 
     // State for tab selection
     const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created');
     const [refreshing, setRefreshing] = useState(false);
+
+    // Early return if no userId available
+    if (!userId) {
+        return (
+            <SafeAreaView style={styles.errorContainer}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F44336" />
+                <Text style={styles.errorText}>User not found.</Text>
+            </SafeAreaView>
+        );
+    }
 
     // RTK Query hooks with proper error handling
     const {
@@ -160,6 +172,15 @@ const UserProfileScreen: React.FC = () => {
         );
     }
 
+    // Render stats item
+    const renderStatsItem = (icon: string, label: string, value: number | undefined) => (
+        <View style={styles.statItem}>
+            <MaterialCommunityIcons name={icon} size={24} color="#4CAF50" />
+            <Text style={styles.statValue}>{value || 0}</Text>
+            <Text style={styles.statLabel}>{label}</Text>
+        </View>
+    );
+
     // Render challenge item
     const renderChallengeItem = ({ item }: { item: any }) => (
         <TouchableOpacity
@@ -167,12 +188,12 @@ const UserProfileScreen: React.FC = () => {
             onPress={() => navigateToChallengeDetails(item.id)}
         >
             <View style={styles.challengeHeader}>
-                <Text style={styles.challengeTitle}>{item.title}</Text>
-                <View style={[styles.statusBadge, getStatusBadgeStyle(item.status)]}>
-                    <Text style={[styles.statusText, getStatusTextStyle(item.status)]}>
-                        {item.status}
-                    </Text>
-                </View>
+                <Text style={styles.challengeTitle} numberOfLines={1}>
+                    {item.title}
+                </Text>
+                <Text style={styles.challengeDate}>
+                    {formatDate(item.createdAt)}
+                </Text>
             </View>
             {item.description && (
                 <Text style={styles.challengeDescription} numberOfLines={2}>
@@ -180,38 +201,16 @@ const UserProfileScreen: React.FC = () => {
                 </Text>
             )}
             <View style={styles.challengeFooter}>
-                <Text style={styles.challengeType}>{item.type}</Text>
-                <Text style={styles.challengeDate}>
-                    Created: {formatDate(item.created_at)}
+                <View style={styles.challengeTag}>
+                    <MaterialCommunityIcons name="trophy-outline" size={16} color="#4CAF50" />
+                    <Text style={styles.challengeTagText}>{item.category || 'General'}</Text>
+                </View>
+                <Text style={styles.challengeDifficulty}>
+                    {item.difficulty || 'Medium'}
                 </Text>
             </View>
         </TouchableOpacity>
     );
-
-    // Get status badge styling
-    const getStatusBadgeStyle = (status: string) => {
-        switch (status?.toLowerCase()) {
-            case 'completed':
-                return { backgroundColor: '#4CAF50' };
-            case 'in_progress':
-                return { backgroundColor: '#FF9800' };
-            case 'open':
-                return { backgroundColor: '#2196F3' };
-            default:
-                return { backgroundColor: '#757575' };
-        }
-    };
-
-    const getStatusTextStyle = (status: string) => {
-        return { color: 'white' };
-    };
-
-    // Get current challenges to display
-    const currentChallenges = activeTab === 'created' ? createdChallenges : joinedChallenges;
-    const isLoadingChallenges = activeTab === 'created' ? loadingCreated : loadingJoined;
-
-    // Check if user has bio for conditional styling
-    const hasBio = user && user.bio && user.bio.trim() !== '';
 
     return (
         <SafeAreaView style={styles.container}>
@@ -219,131 +218,123 @@ const UserProfileScreen: React.FC = () => {
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
+                style={styles.scrollView}
             >
                 {/* Profile Header */}
                 <View style={styles.profileHeader}>
                     <View style={styles.avatarContainer}>
-                        {user.avatar ? (
-                            <Image source={{ uri: user.avatar }} style={styles.avatar} />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <Text style={styles.avatarText}>
-                                    {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                                </Text>
-                            </View>
+                        <Image
+                            source={{
+                                uri: user.avatar || 'https://via.placeholder.com/100x100?text=User'
+                            }}
+                            style={styles.avatar}
+                        />
+                        {isCurrentUser && (
+                            <TouchableOpacity
+                                style={styles.editAvatarButton}
+                                onPress={handleEditProfile}
+                            >
+                                <MaterialCommunityIcons name="camera" size={20} color="white" />
+                            </TouchableOpacity>
                         )}
                     </View>
-                    <Text style={styles.username}>{user.username}</Text>
-                    <Text style={styles.joinDate}>{formatJoinDate(user.createdAt)}</Text>
+
+                    <View style={styles.userInfo}>
+                        <Text style={styles.username}>{user.username}</Text>
+                        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
+                        <Text style={styles.joinDate}>{formatJoinDate(user.createdAt)}</Text>
+                    </View>
 
                     {isCurrentUser && (
-                        <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-                            <MaterialCommunityIcons name="pencil" size={16} color="white" />
-                            <Text style={styles.editButtonText}>Edit Profile</Text>
+                        <TouchableOpacity
+                            style={styles.editProfileButton}
+                            onPress={handleEditProfile}
+                        >
+                            <MaterialCommunityIcons name="pencil" size={18} color="white" />
+                            <Text style={styles.editProfileButtonText}>Edit Profile</Text>
                         </TouchableOpacity>
                     )}
                 </View>
 
-                {/* Bio Section */}
-                {hasBio && (
-                    <View style={styles.bioSection}>
-                        <Text style={styles.bioLabel}>About</Text>
-                        <Text style={styles.bioText}>{user.bio}</Text>
-                    </View>
-                )}
-
                 {/* Stats Section */}
-                <View style={hasBio ? styles.statsContainer : styles.statsContainerNoBio}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>
-                            {userStats?.created || 0}
-                        </Text>
-                        <Text style={styles.statLabel}>Created</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>
-                            {userStats?.completed || 0}
-                        </Text>
-                        <Text style={styles.statLabel}>Completed</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statNumber}>
-                            {userStats?.success ? `${Math.round(userStats.success)}%` : '0%'}
-                        </Text>
-                        <Text style={styles.statLabel}>Success Rate</Text>
+                <View style={styles.statsSection}>
+                    <Text style={styles.sectionTitle}>Stats</Text>
+                    <View style={styles.statsContainer}>
+                        {renderStatsItem('trophy', 'Completed', userStats?.completed)}
+                        {renderStatsItem('plus-circle', 'Created', userStats?.created)}
+                        {renderStatsItem('check-circle', 'Success Rate', userStats?.success)}
                     </View>
                 </View>
 
-                {/* Tabs */}
-                <View style={styles.tabContainer}>
-                    <TouchableOpacity
-                        style={[
-                            styles.tabButton,
-                            activeTab === 'created' && styles.activeTabButton,
-                        ]}
-                        onPress={() => setActiveTab('created')}
-                    >
-                        <Text
-                            style={[
-                                styles.tabText,
-                                activeTab === 'created' && styles.activeTabText,
-                            ]}
+                {/* Challenges Section */}
+                <View style={styles.challengesSection}>
+                    <View style={styles.tabContainer}>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'created' && styles.activeTab]}
+                            onPress={() => setActiveTab('created')}
                         >
-                            Created ({createdChallenges?.length || 0})
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[
-                            styles.tabButton,
-                            activeTab === 'joined' && styles.activeTabButton,
-                        ]}
-                        onPress={() => setActiveTab('joined')}
-                    >
-                        <Text
-                            style={[
-                                styles.tabText,
-                                activeTab === 'joined' && styles.activeTabText,
-                            ]}
-                        >
-                            Joined ({joinedChallenges?.length || 0})
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Challenges List */}
-                <View style={styles.challengesContainer}>
-                    {isLoadingChallenges ? (
-                        <View style={styles.loadingChallenges}>
-                            <ActivityIndicator size="small" color="#4CAF50" />
-                            <Text style={styles.loadingText}>Loading challenges...</Text>
-                        </View>
-                    ) : currentChallenges && currentChallenges.length > 0 ? (
-                        <FlatList
-                            data={currentChallenges}
-                            renderItem={renderChallengeItem}
-                            keyExtractor={(item) => item.id}
-                            scrollEnabled={false}
-                            ItemSeparatorComponent={() => <View style={styles.separator} />}
-                        />
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <MaterialCommunityIcons
-                                name={activeTab === 'created' ? 'plus-circle-outline' : 'account-plus-outline'}
-                                size={48}
-                                color="#ccc"
-                            />
-                            <Text style={styles.emptyText}>
-                                {activeTab === 'created'
-                                    ? isCurrentUser
-                                        ? "You haven't created any challenges yet"
-                                        : "This user hasn't created any challenges yet"
-                                    : isCurrentUser
-                                        ? "You haven't joined any challenges yet"
-                                        : "This user hasn't joined any challenges yet"
-                                }
+                            <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
+                                Created ({createdChallenges?.length || 0})
                             </Text>
-                        </View>
-                    )}
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, activeTab === 'joined' && styles.activeTab]}
+                            onPress={() => setActiveTab('joined')}
+                        >
+                            <Text style={[styles.tabText, activeTab === 'joined' && styles.activeTabText]}>
+                                Joined ({joinedChallenges?.length || 0})
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Challenge List */}
+                    <View style={styles.challengesList}>
+                        {activeTab === 'created' ? (
+                            loadingCreated ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="small" color="#4CAF50" />
+                                    <Text style={styles.loadingText}>Loading created challenges...</Text>
+                                </View>
+                            ) : createdChallenges && createdChallenges.length > 0 ? (
+                                <FlatList
+                                    data={createdChallenges}
+                                    renderItem={renderChallengeItem}
+                                    keyExtractor={(item) => item.id}
+                                    scrollEnabled={false}
+                                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                                />
+                            ) : (
+                                <View style={styles.emptyState}>
+                                    <MaterialCommunityIcons name="trophy-outline" size={48} color="#ccc" />
+                                    <Text style={styles.emptyStateText}>
+                                        {isCurrentUser ? "You haven't created any challenges yet" : "No challenges created"}
+                                    </Text>
+                                </View>
+                            )
+                        ) : (
+                            loadingJoined ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="small" color="#4CAF50" />
+                                    <Text style={styles.loadingText}>Loading joined challenges...</Text>
+                                </View>
+                            ) : joinedChallenges && joinedChallenges.length > 0 ? (
+                                <FlatList
+                                    data={joinedChallenges}
+                                    renderItem={renderChallengeItem}
+                                    keyExtractor={(item) => item.id}
+                                    scrollEnabled={false}
+                                    ItemSeparatorComponent={() => <View style={styles.separator} />}
+                                />
+                            ) : (
+                                <View style={styles.emptyState}>
+                                    <MaterialCommunityIcons name="account-group-outline" size={48} color="#ccc" />
+                                    <Text style={styles.emptyStateText}>
+                                        {isCurrentUser ? "You haven't joined any challenges yet" : "No challenges joined"}
+                                    </Text>
+                                </View>
+                            )
+                        )}
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -355,170 +346,187 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
-    profileHeader: {
-        backgroundColor: '#4CAF50',
-        paddingTop: 40,
-        paddingBottom: 24,
-        alignItems: 'center',
+    scrollView: {
+        flex: 1,
     },
-    avatarContainer: {
-        marginBottom: 12,
-    },
-    avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        borderWidth: 3,
-        borderColor: 'white',
-    },
-    avatarPlaceholder: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    loadingContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 3,
-        borderColor: 'white',
+        padding: 20,
     },
-    avatarText: {
-        fontSize: 32,
-        fontWeight: 'bold',
+    loadingText: {
+        marginTop: 10,
+        fontSize: 16,
+        color: '#666',
+    },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 18,
+        color: '#F44336',
+        textAlign: 'center',
+        marginVertical: 10,
+    },
+    retryButton: {
+        backgroundColor: '#4CAF50',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 5,
+        marginTop: 10,
+    },
+    retryButtonText: {
         color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    profileHeader: {
+        backgroundColor: 'white',
+        padding: 20,
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    avatarContainer: {
+        position: 'relative',
+        marginBottom: 15,
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#eee',
+    },
+    editAvatarButton: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: '#4CAF50',
+        borderRadius: 15,
+        width: 30,
+        height: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    userInfo: {
+        alignItems: 'center',
+        marginBottom: 15,
     },
     username: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: 'white',
-        marginBottom: 4,
+        color: '#333',
+        marginBottom: 5,
+    },
+    bio: {
+        fontSize: 16,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 5,
     },
     joinDate: {
         fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginBottom: 16,
+        color: '#999',
     },
-    editButton: {
+    editProfileButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        backgroundColor: '#4CAF50',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.3)',
     },
-    editButtonText: {
+    editProfileButtonText: {
         color: 'white',
-        fontWeight: '600',
-        marginLeft: 4,
-    },
-    bioSection: {
-        backgroundColor: 'white',
-        padding: 16,
-        marginHorizontal: 16,
-        marginTop: -12,
-        borderRadius: 8,
-        elevation: 2,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
-    },
-    bioLabel: {
         fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        fontWeight: 'bold',
+        marginLeft: 5,
     },
-    bioText: {
-        fontSize: 14,
-        lineHeight: 20,
-        color: '#555',
+    statsSection: {
+        backgroundColor: 'white',
+        margin: 10,
+        padding: 20,
+        borderRadius: 10,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.22,
+        shadowRadius: 2.22,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 15,
     },
     statsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        padding: 16,
-        backgroundColor: 'white',
-        margin: 16,
-        marginTop: 8,
-        borderRadius: 8,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
-    },
-    statsContainerNoBio: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        padding: 16,
-        backgroundColor: 'white',
-        margin: 16,
-        marginTop: 16,
-        borderRadius: 8,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
     },
     statItem: {
         alignItems: 'center',
+        flex: 1,
     },
-    statNumber: {
-        fontSize: 20,
+    statValue: {
+        fontSize: 24,
         fontWeight: 'bold',
-        color: '#4CAF50',
+        color: '#333',
+        marginTop: 5,
     },
     statLabel: {
         fontSize: 12,
-        color: '#757575',
-        marginTop: 4,
+        color: '#666',
+        marginTop: 2,
+    },
+    challengesSection: {
+        backgroundColor: 'white',
+        margin: 10,
+        borderRadius: 10,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.22,
+        shadowRadius: 2.22,
     },
     tabContainer: {
         flexDirection: 'row',
-        marginHorizontal: 16,
-        backgroundColor: 'white',
-        borderRadius: 8,
-        overflow: 'hidden',
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
-    tabButton: {
+    tab: {
         flex: 1,
-        paddingVertical: 16,
+        paddingVertical: 15,
         alignItems: 'center',
-        borderBottomWidth: 3,
-        borderBottomColor: 'transparent',
     },
-    activeTabButton: {
+    activeTab: {
+        borderBottomWidth: 2,
         borderBottomColor: '#4CAF50',
     },
     tabText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#757575',
+        fontSize: 16,
+        color: '#666',
     },
     activeTabText: {
         color: '#4CAF50',
+        fontWeight: 'bold',
     },
-    challengesContainer: {
-        padding: 16,
-        paddingTop: 8,
+    challengesList: {
+        padding: 20,
     },
     challengeItem: {
-        backgroundColor: 'white',
+        padding: 15,
         borderRadius: 8,
-        padding: 16,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
+        backgroundColor: '#f9f9f9',
+        marginVertical: 5,
     },
     challengeHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         marginBottom: 8,
     },
     challengeTitle: {
@@ -526,91 +534,54 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
         flex: 1,
-        marginRight: 8,
+        marginRight: 10,
     },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: '600',
-        textTransform: 'uppercase',
+    challengeDate: {
+        fontSize: 12,
+        color: '#999',
     },
     challengeDescription: {
         fontSize: 14,
         color: '#666',
-        marginBottom: 8,
-        lineHeight: 18,
+        marginBottom: 10,
     },
     challengeFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    challengeType: {
+    challengeTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#e8f5e8',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    challengeTagText: {
         fontSize: 12,
         color: '#4CAF50',
-        fontWeight: '600',
-        textTransform: 'uppercase',
+        marginLeft: 4,
     },
-    challengeDate: {
+    challengeDifficulty: {
         fontSize: 12,
-        color: '#757575',
+        color: '#666',
+        fontWeight: '500',
     },
     separator: {
-        height: 12,
+        height: 1,
+        backgroundColor: '#eee',
+        marginVertical: 5,
     },
     emptyState: {
         alignItems: 'center',
-        paddingVertical: 32,
+        padding: 40,
     },
-    emptyText: {
+    emptyStateText: {
+        fontSize: 16,
+        color: '#999',
         textAlign: 'center',
-        fontSize: 16,
-        color: '#757575',
-        marginTop: 12,
-        maxWidth: 250,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-    },
-    loadingChallenges: {
-        alignItems: 'center',
-        paddingVertical: 20,
-    },
-    loadingText: {
-        marginTop: 8,
-        fontSize: 14,
-        color: '#666',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: 16,
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#F44336',
-        textAlign: 'center',
-        marginVertical: 16,
-    },
-    retryButton: {
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
-    },
-    retryButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
+        marginTop: 10,
     },
 });
 
