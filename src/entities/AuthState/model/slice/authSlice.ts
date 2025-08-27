@@ -1,5 +1,6 @@
 // src/entities/AuthState/model/slice/authSlice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
+import * as Keychain from 'react-native-keychain';
 
 interface User {
     id: string;
@@ -52,6 +53,68 @@ const authSlice = createSlice({
         },
     },
 });
+
+// Enhanced action creators with persistence
+export const setTokensWithPersistence = (authData: AuthState) => async (dispatch: any) => {
+    try {
+        // Update Redux state
+        dispatch(setTokens(authData));
+
+        // Persist to Keychain
+        if (authData.accessToken && authData.refreshToken && authData.user) {
+            await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                accessToken: authData.accessToken,
+                refreshToken: authData.refreshToken,
+                user: authData.user
+            }));
+            console.log('Tokens persisted to Keychain successfully');
+        }
+    } catch (error) {
+        console.error('Error persisting tokens:', error);
+        // Still update Redux state even if persistence fails
+        dispatch(setTokens(authData));
+    }
+};
+
+export const updateUserWithPersistence = (userData: User) => async (dispatch: any, getState: any) => {
+    try {
+        // Update Redux state
+        dispatch(updateUser(userData));
+
+        // Get current auth state
+        const currentState = getState().auth;
+
+        // Update persistent storage with new user data
+        if (currentState.accessToken && currentState.refreshToken) {
+            await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                accessToken: currentState.accessToken,
+                refreshToken: currentState.refreshToken,
+                user: userData
+            }));
+            console.log('User data updated in persistent storage');
+        }
+    } catch (error) {
+        console.error('Error updating user data in storage:', error);
+        // Still update Redux state even if persistence fails
+        dispatch(updateUser(userData));
+    }
+};
+
+export const logoutWithCleanup = () => async (dispatch: any) => {
+    try {
+        // Clear Redux state
+        dispatch(logout());
+
+        // Clear Keychain
+        await Keychain.resetGenericPassword();
+
+        console.log('Logout completed - all tokens cleared');
+    } catch (error) {
+        console.error('Error during logout cleanup:', error);
+        // Still clear Redux state even if Keychain clear fails
+        dispatch(logout());
+    }
+};
 
 export const { setTokens, updateUser, updateUserField, logout } = authSlice.actions;
 export default authSlice.reducer;

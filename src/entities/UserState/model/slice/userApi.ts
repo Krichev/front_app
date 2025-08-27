@@ -1,7 +1,8 @@
 // src/entities/UserState/model/slice/userApi.ts
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
-import {setTokens, updateUser} from '../../../AuthState/model/slice/authSlice';
+import {updateUser} from '../../../AuthState/model/slice/authSlice';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
+import {TokenRefreshService} from '../../../../services/auth/TokenRefreshService';
 
 // Interfaces
 export interface UserProfile {
@@ -109,22 +110,25 @@ export const userApi = createApi({
                             ...response.user,
                         };
 
-                        dispatch(updateUser(updatedUser));
-
-                        // If username was changed and we received a new token, update auth state
+                        // If username was changed and we received a new token, update everything
                         if (response.newToken) {
-                            // Update the Redux auth state with new token
-                            dispatch(setTokens({
-                                accessToken: response.newToken,
-                                refreshToken: state.auth.refreshToken, // Keep existing refresh token
-                                user: updatedUser,
-                            }));
+                            console.log('🔄 Username changed, updating token and persisting to storage');
 
-                            console.log('Username updated and new JWT token set in auth state');
+                            // Use centralized token refresh service
+                            await TokenRefreshService.updateTokensAndPersist(response.newToken, updatedUser);
+
+                            console.log('✅ Username updated and new JWT token persisted successfully');
+                        } else {
+                            // Just update user data
+                            console.log('👤 Updating user profile data');
+
+                            await TokenRefreshService.updateUserAndPersist(updatedUser);
+
+                            console.log('✅ User profile updated successfully');
                         }
                     }
                 } catch (error) {
-                    console.error('Failed to update user profile:', error);
+                    console.error('❌ Failed to update user profile:', error);
                 }
             },
         }),
