@@ -1,10 +1,10 @@
+// src/screens/EditProfileScreen.tsx
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
     Image,
     KeyboardAvoidingView,
-    PermissionsAndroid,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -16,8 +16,9 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useSelector} from 'react-redux';
+import {useDispatch, useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
+import {updateUser} from '../entities/AuthState/model/slice/authSlice';
 import {useGetUserProfileQuery, useUpdateUserProfileMutation} from '../entities/UserState/model/slice/userApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
@@ -40,17 +41,7 @@ type EditProfileRouteProp = RouteProp<RootStackParamList, 'EditProfile'>;
 type EditProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditProfile'>;
 
 const EditProfileScreen: React.FC = () => {
-        const [loading, setLoading] = useState(false);
-        const [updating, setUpdating] = useState(false);
-        const [profileData, setProfileData] = useState({
-            userName: '',
-            email: '',
-            fullName: '',
-            phoneNumber: '',
-            address: '',
-        });
-        const [originalUsername, setOriginalUsername] = useState('');
-
+    const dispatch = useDispatch();
     const route = useRoute<EditProfileRouteProp>();
     const navigation = useNavigation<EditProfileNavigationProp>();
     const { userId } = route.params;
@@ -74,223 +65,37 @@ const EditProfileScreen: React.FC = () => {
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
     useEffect(() => {
-        loadUserProfile();
-    }, []);
-
-    const loadUserProfile = async () => {
-        try {
-            setLoading(true);
-            const userData = await authService.getCurrentUser();
-            if (userData) {
-                setProfileData({
-                    userName: userData.userName || '',
-                    email: userData.email || '',
-                    fullName: userData.fullName || '',
-                    phoneNumber: userData.phoneNumber || '',
-                    address: userData.address || '',
-                });
-                setOriginalUsername(userData.userName || '');
-            }
-        } catch (error) {
-            Alert.alert('Error', 'Failed to load profile data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleUpdateProfile = async () => {
-        try {
-            setUpdating(true);
-
-            // Validate username
-            if (!profileData.userName || profileData.userName.trim().length < 3) {
-                Alert.alert('Error', 'Username must be at least 3 characters long');
-                return;
-            }
-
-            // Call API to update profile
-            const response = await userApi.updateProfile(profileData);
-
-            // Show success message
-            Alert.alert(
-                'Success',
-                profileData.userName !== originalUsername
-                    ? 'Profile and username updated successfully. You may need to log in again if you experience any issues.'
-                    : 'Profile updated successfully',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => {
-                            // If username changed, we might want to navigate to a different screen
-                            // or refresh the app state
-                            if (profileData.userName !== originalUsername) {
-                                // Option 1: Navigate back to profile screen
-                                navigation.goBack();
-
-                                // Option 2: Restart the app or navigate to login
-                                // navigation.reset({
-                                //   index: 0,
-                                //   routes: [{ name: 'MainTabs' }],
-                                // });
-                            } else {
-                                navigation.goBack();
-                            }
-                        },
-                    },
-                ]
-            );
-        } catch (error) {
-            console.error('Update profile error:', error);
-
-            if (error.response?.status === 400) {
-                Alert.alert('Error', error.response.data.message || 'Invalid input');
-            } else if (error.response?.status === 401) {
-                Alert.alert(
-                    'Session Expired',
-                    'Please log in again',
-                    [
-                        {
-                            text: 'OK',
-                            onPress: () => navigation.navigate('Login'),
-                        },
-                    ]
-                );
-            } else {
-                Alert.alert('Error', 'Failed to update profile. Please try again.');
-            }
-        } finally {
-            setUpdating(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#007AFF" />
-            </View>
-        );
-    }
-
-    // Initialize form with data when profile loads
-    useEffect(() => {
         if (userProfile) {
             setFormData({
                 username: userProfile.username || '',
                 bio: userProfile.bio || '',
                 avatar: userProfile.avatar || '',
             });
-            if (userProfile.avatar) {
-                setAvatarUri(userProfile.avatar);
-            }
+            setAvatarUri(userProfile.avatar || null);
         }
     }, [userProfile]);
 
     // Handle input changes
-    const handleInputChange = (field: string, value: string) => {
+    const handleInputChange = (field: keyof typeof formData, value: string) => {
         setFormData(prev => ({
             ...prev,
-            [field]: value,
+            [field]: value
         }));
     };
 
-    // Request camera permission (Android)
-    const requestCameraPermission = async () => {
-        if (Platform.OS === 'android') {
-            try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.CAMERA,
-                    {
-                        title: 'Camera Permission',
-                        message: 'This app needs access to camera to take profile pictures.',
-                        buttonNeutral: 'Ask Me Later',
-                        buttonNegative: 'Cancel',
-                        buttonPositive: 'OK',
-                    },
-                );
-                return granted === PermissionsAndroid.RESULTS.GRANTED;
-            } catch (err) {
-                console.warn(err);
-                return false;
-            }
-        }
-        return true;
-    };
-
-    // Take photo
-    const takePhoto = async () => {
-        const hasPermission = await requestCameraPermission();
-        if (!hasPermission) {
-            Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
-            return;
-        }
-
-        const options: CameraOptions = {
-            mediaType: 'photo' as MediaType,
-            includeBase64: false,
-            maxHeight: 800,
-            maxWidth: 800,
-            quality: 0.8 as PhotoQuality,
-        };
-
-        launchCamera(options, (response: ImagePickerResponse) => {
-            if (response.didCancel || response.errorMessage) {
-                return;
-            }
-
-            if (response.assets && response.assets[0]) {
-                const asset = response.assets[0];
-                if (asset.uri) {
-                    setAvatarUri(asset.uri);
-                    setFormData(prev => ({
-                        ...prev,
-                        avatar: asset.uri || '',
-                    }));
-                }
-            }
-        });
-    };
-
-    // Pick image from gallery
-    const pickImage = () => {
-        const options: ImageLibraryOptions = {
-            mediaType: 'photo' as MediaType,
-            includeBase64: false,
-            maxHeight: 800,
-            maxWidth: 800,
-            quality: 0.8 as PhotoQuality,
-        };
-
-        launchImageLibrary(options, (response: ImagePickerResponse) => {
-            if (response.didCancel || response.errorMessage) {
-                return;
-            }
-
-            if (response.assets && response.assets[0]) {
-                const asset = response.assets[0];
-                if (asset.uri) {
-                    setAvatarUri(asset.uri);
-                    setFormData(prev => ({
-                        ...prev,
-                        avatar: asset.uri || '',
-                    }));
-                }
-            }
-        });
-    };
-
-    // Show image picker options
-    const showImagePickerOptions = () => {
+    // Handle avatar selection
+    const selectAvatar = () => {
         Alert.alert(
-            'Change Profile Picture',
-            'Choose an option',
+            'Select Profile Picture',
+            'Choose from where you want to select a profile picture',
             [
                 {
                     text: 'Camera',
-                    onPress: takePhoto,
+                    onPress: () => openCamera(),
                 },
                 {
-                    text: 'Photo Library',
-                    onPress: pickImage,
+                    text: 'Gallery',
+                    onPress: () => openImageLibrary(),
                 },
                 {
                     text: 'Cancel',
@@ -300,8 +105,50 @@ const EditProfileScreen: React.FC = () => {
         );
     };
 
-    // Handle form validation
-    const validateForm = () => {
+    const openCamera = () => {
+        const options: CameraOptions = {
+            mediaType: 'photo' as MediaType,
+            quality: 0.7 as PhotoQuality,
+            includeBase64: true,
+        };
+
+        launchCamera(options, (response: ImagePickerResponse) => {
+            if (response.assets && response.assets[0]) {
+                const imageUri = response.assets[0].uri;
+                if (imageUri) {
+                    setAvatarUri(imageUri);
+                    setFormData(prev => ({
+                        ...prev,
+                        avatar: imageUri
+                    }));
+                }
+            }
+        });
+    };
+
+    const openImageLibrary = () => {
+        const options: ImageLibraryOptions = {
+            mediaType: 'photo' as MediaType,
+            quality: 0.7 as PhotoQuality,
+            includeBase64: true,
+        };
+
+        launchImageLibrary(options, (response: ImagePickerResponse) => {
+            if (response.assets && response.assets[0]) {
+                const imageUri = response.assets[0].uri;
+                if (imageUri) {
+                    setAvatarUri(imageUri);
+                    setFormData(prev => ({
+                        ...prev,
+                        avatar: imageUri
+                    }));
+                }
+            }
+        });
+    };
+
+    // Validation
+    const validateForm = (): boolean => {
         if (formData.username.trim().length < 3) {
             Alert.alert('Validation Error', 'Username must be at least 3 characters long.');
             return false;
@@ -324,6 +171,9 @@ const EditProfileScreen: React.FC = () => {
         }
 
         try {
+            const originalUsername = userProfile?.username;
+            const usernameChanged = originalUsername !== formData.username.trim();
+
             const updateData = {
                 id: userId,
                 username: formData.username.trim(),
@@ -331,11 +181,26 @@ const EditProfileScreen: React.FC = () => {
                 avatar: formData.avatar,
             };
 
-            await updateUserProfile(updateData).unwrap();
+            const result = await updateUserProfile(updateData).unwrap();
+
+            // If this is the current user's profile and username changed, update Redux auth state
+            if (isOwn && usernameChanged && currentUser) {
+                const updatedUser = {
+                    ...currentUser,
+                    username: formData.username.trim(),
+                    bio: formData.bio.trim(),
+                    avatar: formData.avatar,
+                };
+
+                // Update the auth state in Redux
+                dispatch(updateUser(updatedUser));
+            }
 
             Alert.alert(
                 'Success',
-                'Profile updated successfully!',
+                usernameChanged
+                    ? 'Profile and username updated successfully!'
+                    : 'Profile updated successfully!',
                 [
                     {
                         text: 'OK',
@@ -358,57 +223,45 @@ const EditProfileScreen: React.FC = () => {
             'Discard Changes?',
             'Are you sure you want to discard your changes?',
             [
-                {
-                    text: 'Keep Editing',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Discard',
-                    style: 'destructive',
-                    onPress: () => navigation.goBack(),
-                },
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
             ]
         );
     };
 
-    // Render loading state
     if (profileLoading) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingText}>Loading profile...</Text>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                    <Text style={styles.loadingText}>Loading profile...</Text>
+                </View>
             </SafeAreaView>
         );
     }
 
-    // Render error state
-    if (profileError || !userProfile) {
+    if (profileError) {
         return (
-            <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F44336" />
-                <Text style={styles.errorText}>Failed to load profile for editing.</Text>
-                <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Text style={styles.retryButtonText}>Go Back</Text>
-                </TouchableOpacity>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>Failed to load profile</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+                        <Text style={styles.retryButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
 
-    // Check if user has permission to edit this profile
     if (!isOwn) {
         return (
-            <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="lock-outline" size={48} color="#F44336" />
-                <Text style={styles.errorText}>You can only edit your own profile.</Text>
-                <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={() => navigation.goBack()}
-                >
-                    <Text style={styles.retryButtonText}>Go Back</Text>
-                </TouchableOpacity>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>You can only edit your own profile</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
+                        <Text style={styles.retryButtonText}>Go Back</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
@@ -416,17 +269,32 @@ const EditProfileScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
+                style={styles.keyboardAvoidingView}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardAvoid}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <View style={styles.header}>
-                        <Text style={styles.headerTitle}>Edit Profile</Text>
-                    </View>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Edit Profile</Text>
+                    <TouchableOpacity
+                        onPress={handleSaveProfile}
+                        style={[styles.headerButton, isUpdating && styles.disabledButton]}
+                        disabled={isUpdating}
+                    >
+                        {isUpdating ? (
+                            <ActivityIndicator size="small" color="#007AFF" />
+                        ) : (
+                            <Text style={styles.saveText}>Save</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
 
-                    {/* Profile Picture */}
-                    <View style={styles.pictureContainer}>
-                        <TouchableOpacity style={styles.avatarContainer} onPress={showImagePickerOptions}>
+                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    {/* Avatar Section */}
+                    <View style={styles.avatarSection}>
+                        <TouchableOpacity onPress={selectAvatar} style={styles.avatarContainer}>
                             {avatarUri ? (
                                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
                             ) : (
@@ -476,29 +344,6 @@ const EditProfileScreen: React.FC = () => {
                             </Text>
                         </View>
                     </View>
-
-                    {/* Action Buttons */}
-                    <View style={styles.buttonContainer}>
-                        <TouchableOpacity
-                            style={[styles.saveButton, isUpdating && styles.disabledButton]}
-                            onPress={handleSaveProfile}
-                            disabled={isUpdating}
-                        >
-                            {isUpdating ? (
-                                <ActivityIndicator color="white" size="small" />
-                            ) : (
-                                <Text style={styles.saveButtonText}>Save Changes</Text>
-                            )}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={handleCancel}
-                            disabled={isUpdating}
-                        >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -508,141 +353,47 @@ const EditProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#fff',
     },
-    keyboardAvoid: {
+    keyboardAvoidingView: {
         flex: 1,
     },
-    scrollContent: {
-        flexGrow: 1,
-        padding: 16,
-        paddingTop: 0,
-    },
     header: {
-        paddingVertical: 16,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-        marginBottom: 20,
+        borderBottomColor: '#E5E5E5',
+    },
+    headerButton: {
+        padding: 8,
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    pictureContainer: {
-        alignItems: 'center',
-        marginBottom: 30,
-    },
-    avatarContainer: {
-        position: 'relative',
-        marginBottom: 8,
-    },
-    avatar: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#eee',
-    },
-    avatarPlaceholder: {
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: '#4CAF50',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    avatarText: {
-        fontSize: 48,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    editIconContainer: {
-        position: 'absolute',
-        bottom: 0,
-        right: 0,
-        backgroundColor: '#4CAF50',
-        borderRadius: 20,
-        width: 32,
-        height: 32,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 3,
-        borderColor: 'white',
-    },
-    changePhotoText: {
-        fontSize: 14,
-        color: '#666',
-        textAlign: 'center',
-    },
-    formContainer: {
-        marginBottom: 30,
-    },
-    formGroup: {
-        marginBottom: 20,
-    },
-    label: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        color: '#000',
     },
-    input: {
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
+    cancelText: {
         fontSize: 16,
-        color: '#333',
+        color: '#FF3B30',
     },
-    textArea: {
-        height: 100,
-        textAlignVertical: 'top',
-    },
-    helperText: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 4,
-    },
-    buttonContainer: {
-        gap: 12,
-        paddingHorizontal: 16,
-        paddingTop: 0,
-    },
-    saveButton: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    saveButtonText: {
-        color: 'white',
+    saveText: {
         fontSize: 16,
-        fontWeight: 'bold',
-    },
-    cancelButton: {
-        backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd',
-    },
-    cancelButtonText: {
-        color: '#666',
-        fontSize: 16,
+        color: '#007AFF',
         fontWeight: '600',
     },
     disabledButton: {
-        opacity: 0.7,
+        opacity: 0.6,
+    },
+    scrollView: {
+        flex: 1,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
     },
     loadingText: {
         marginTop: 16,
@@ -653,55 +404,111 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        padding: 16,
+        padding: 20,
     },
     errorText: {
         fontSize: 16,
-        color: '#F44336',
+        color: '#FF3B30',
         textAlign: 'center',
-        marginVertical: 16,
+        marginBottom: 20,
     },
     retryButton: {
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
         borderRadius: 8,
     },
     retryButtonText: {
-        color: 'white',
+        color: '#fff',
         fontSize: 16,
         fontWeight: '600',
     },
-    centerContainer: {
-        flex: 1,
+    avatarSection: {
+        alignItems: 'center',
+        paddingVertical: 32,
+    },
+    avatarContainer: {
+        position: 'relative',
+    },
+    avatar: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+    },
+    avatarPlaceholder: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#E5E5E5',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    form: {
-        padding: 20,
+    avatarText: {
+        fontSize: 36,
+        fontWeight: '600',
+        color: '#666',
     },
-    inputGroup: {
-        marginBottom: 20,
+    editIconContainer: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#007AFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
     },
-    warningText: {
-        color: '#ff9800',
+    changePhotoText: {
+        marginTop: 12,
+        fontSize: 14,
+        color: '#666',
+    },
+    formContainer: {
+        paddingHorizontal: 16,
+    },
+    formGroup: {
+        marginBottom: 24,
+    },
+    label: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#000',
+        marginBottom: 8,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        borderRadius: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 16,
+        color: '#000',
+    },
+    textArea: {
+        minHeight: 100,
+        textAlignVertical: 'top',
+    },
+    helperText: {
         fontSize: 12,
+        color: '#666',
         marginTop: 4,
     },
-    button: {
+    buttonContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+    },
+    saveButton: {
         backgroundColor: '#007AFF',
+        paddingVertical: 16,
         borderRadius: 8,
-        padding: 16,
         alignItems: 'center',
-        marginTop: 20,
     },
-    buttonDisabled: {
-        opacity: 0.6,
-    },
-    buttonText: {
+    saveButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: '600',
     },
 });

@@ -1,8 +1,9 @@
 // src/entities/UserState/model/slice/userApi.ts
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
-import api from '../../../../features/auth/api.js';
-import authService from '../../../../features/auth/authService';
+import {setTokens, updateUser} from '../../../AuthState/model/slice/authSlice';
+import {RootState} from '../../../../app/providers/StoreProvider/store';
 
+// Interfaces
 export interface UserProfile {
     id: string;
     username: string;
@@ -21,6 +22,17 @@ export interface UpdateUserProfileRequest {
     avatar?: string;
 }
 
+export interface UpdateUserProfileResponse {
+    user: UserProfile;
+    newToken?: string; // JWT token returned when username is changed
+}
+
+export interface UserStatsResponse {
+    created: number;
+    completed: number;
+    success: number; // This could be a percentage or ratio
+}
+
 export interface LoginRequest {
     username: string;
     password: string;
@@ -37,117 +49,100 @@ export interface AuthResponse {
     token: string;
 }
 
+// Create base query with auth token
+const baseQuery = fetchBaseQuery({
+    baseUrl: 'http://10.0.2.2:8082/challenger/api',
+    prepareHeaders: (headers, { getState }) => {
+        // Get the token from the state
+        const state = getState() as RootState;
+        const token = state.auth.accessToken;
+
+        // If we have a token, add it to the headers
+        if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
+        headers.set('Content-Type', 'application/json');
+
+        return headers;
+    },
+});
+
 export const userApi = createApi({
-
-    async updateProfile(profileData) {
-        try {
-            const response = await api.put('/users/profile', profileData);
-
-            // If username was changed, we'll receive a new token
-            if (response.data.newToken) {
-                await authService.updateAuthToken(response.data.newToken);
-                // Update stored user data
-                const userData = {
-                    id: response.data.id,
-                    userName: response.data.userName,
-                    email: response.data.email,
-                    fullName: response.data.fullName,
-                    phoneNumber: response.data.phoneNumber,
-                    address: response.data.address,
-                };
-                await authService.updateUserData(userData);
-            }
-
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
-    },
-
-    async updateUsername(newUsername) {
-        try {
-            const response = await api.put('/users/profile/username', {
-                newUsername,
-            });
-
-            // Update token and user data
-            if (response.data.token) {
-                await authService.updateAuthToken(response.data.token);
-                await authService.updateUserData(response.data.user);
-            }
-
-            return response.data;
-        } catch (error) {
-            throw error;
-        }
-    },
-
-    async getProfile() {
-        const response = await api.get('/users/profile');
-        return response.data;
-    },
-
     reducerPath: 'userApi',
-    baseQuery: fetchBaseQuery({
-        baseUrl: 'http://10.0.2.2:8082/challenger/api',
-        prepareHeaders: (headers, { getState }) => {
-            // Get the token from the state - FIXED: using accessToken instead of token
-            const token = (getState() as any).auth.accessToken;
-
-            // If we have a token, add it to the headers
-            if (token) {
-                headers.set('Authorization', `Bearer ${token}`);
-            }
-
-            return headers;
-        },
-    }),
-    tagTypes: ['User'],
+    baseQuery,
+    tagTypes: ['User', 'UserProfile'],
     endpoints: (builder) => ({
-        // Get user profile
+        // Get user profile by ID
         getUserProfile: builder.query<UserProfile, string>({
             query: (userId) => `/users/${userId}`,
-            providesTags: (_, __, userId) => [{ type: 'User', id: userId }],
+            providesTags: (result, error, userId) => [
+                { type: 'User', id: userId },
+                { type: 'UserProfile', id: userId },
+            ],
         }),
 
         // Update user profile
-        updateUserProfile: builder.mutation<UserProfile, { id: string } & UpdateUserProfileRequest>({
+        updateUserProfile: builder.mutation<UpdateUserProfileResponse, { id: string } & UpdateUserProfileRequest>({
             query: ({ id, ...body }) => ({
                 url: `/users/${id}`,
                 method: 'PATCH',
                 body,
             }),
-            invalidatesTags: (_, __, { id }) => [{ type: 'User', id }],
+            invalidatesTags: (result, error, { id }) => [
+                { type: 'User', id },
+                { type: 'UserProfile', id },
+                { type: 'User', id: 'LIST' },
+            ],
+            // Handle auth state synchronization and token refresh
+            onQueryStarted: async ({ id, username, ...profileData }, { dispatch, queryFulfilled, getState }) => {
+                try {
+                    const { data: response } = await queryFulfilled;
+
+                    // Get current auth state
+                    const state = getState() as RootState;
+                    const currentUser = state.auth.user;
+
+                    // If this is the current authenticated user, update the auth state
+                    if (currentUser && currentUser.id === id) {
+                        const updatedUser = {
+                            ...currentUser,
+                            ...response.user,
+                        };
+
+                        dispatch(updateUser(updatedUser));
+
+                        // If username was changed and we received a new token, update auth state
+                        if (response.newToken) {
+                            // Update the Redux auth state with new token
+                            dispatch(setTokens({
+                                accessToken: response.newToken,
+                                refreshToken: state.auth.refreshToken, // Keep existing refresh token
+                                user: updatedUser,
+                            }));
+
+                            console.log('Username updated and new JWT token set in auth state');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to update user profile:', error);
+                }
+            },
         }),
 
-        // Login
-        login: builder.mutation<AuthResponse, LoginRequest>({
-            query: (credentials) => ({
-                url: '/auth/login',
-                method: 'POST',
-                body: credentials,
-            }),
-        }),
-
-        // Register
-        register: builder.mutation<AuthResponse, RegisterRequest>({
-            query: (userData) => ({
-                url: '/auth/register',
-                method: 'POST',
-                body: userData,
-            }),
-        }),
-
-        // Get user stats
-        getUserStats: builder.query<{ completed: number; created: number; success: number }, string>({
+        // Get user statistics
+        getUserStats: builder.query<UserStatsResponse, string>({
             query: (userId) => `/users/${userId}/stats`,
-            providesTags: (_, __, userId) => [{ type: 'User', id: `${userId}-stats` }],
+            providesTags: (result, error, userId) => [
+                { type: 'User', id: `${userId}-stats` },
+            ],
         }),
 
         // Get user groups
         getUserGroups: builder.query<any[], string>({
             query: (userId) => `/users/${userId}/groups`,
-            providesTags: (_, __, userId) => [{ type: 'User', id: `${userId}-groups` }],
+            providesTags: (result, error, userId) => [
+                { type: 'User', id: `${userId}-groups` },
+            ],
         }),
 
         // Search users
@@ -156,17 +151,92 @@ export const userApi = createApi({
                 url: '/users/search',
                 params: { q: searchTerm },
             }),
-            providesTags: ['User'],
+            providesTags: [{ type: 'User', id: 'LIST' }],
+        }),
+
+        // Get multiple user profiles (for lists, search, etc.)
+        getUserProfiles: builder.query<UserProfile[], { ids?: string[]; search?: string }>({
+            query: ({ ids, search }) => {
+                const params = new URLSearchParams();
+                if (ids?.length) {
+                    params.append('ids', ids.join(','));
+                }
+                if (search) {
+                    params.append('search', search);
+                }
+                return `/users?${params.toString()}`;
+            },
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.map(({ id }) => ({ type: 'UserProfile' as const, id })),
+                        { type: 'User', id: 'LIST' },
+                    ]
+                    : [{ type: 'User', id: 'LIST' }],
+        }),
+
+        // Additional endpoint specifically for username updates if needed
+        updateUsername: builder.mutation<{ user: UserProfile; newToken?: string }, { userId: string; username: string }>({
+            query: ({ userId, username }) => ({
+                url: `/users/${userId}/username`,
+                method: 'PUT',
+                body: { username },
+            }),
+            invalidatesTags: (result, error, { userId }) => [
+                { type: 'User', id: userId },
+                { type: 'UserProfile', id: userId },
+                { type: 'User', id: 'LIST' },
+            ],
+            onQueryStarted: async ({ userId, username }, { dispatch, queryFulfilled, getState }) => {
+                try {
+                    const { data } = await queryFulfilled;
+
+                    // Get current auth state
+                    const state = getState() as RootState;
+                    const currentUser = state.auth.user;
+
+                    // If this is the current authenticated user, update the auth state
+                    if (currentUser && currentUser.id === userId) {
+                        dispatch(updateUser({
+                            ...currentUser,
+                            ...data.user,
+                        }));
+                    }
+                } catch (error) {
+                    console.error('Failed to update username:', error);
+                }
+            },
+        }),
+
+        // Login endpoint (if you want to handle auth through this API)
+        login: builder.mutation<AuthResponse, LoginRequest>({
+            query: (credentials) => ({
+                url: '/auth/login',
+                method: 'POST',
+                body: credentials,
+            }),
+        }),
+
+        // Register endpoint (if you want to handle auth through this API)
+        register: builder.mutation<AuthResponse, RegisterRequest>({
+            query: (userData) => ({
+                url: '/auth/register',
+                method: 'POST',
+                body: userData,
+            }),
         }),
     }),
 });
 
+// Export hooks for use in components
 export const {
     useGetUserProfileQuery,
     useUpdateUserProfileMutation,
-    useLoginMutation,
-    useRegisterMutation,
     useGetUserStatsQuery,
     useGetUserGroupsQuery,
     useSearchUsersQuery,
+    useGetUserProfilesQuery,
+    useUpdateUsernameMutation,
+    useLoginMutation,
+    useRegisterMutation,
 } = userApi;

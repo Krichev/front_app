@@ -1,10 +1,17 @@
+// src/entities/AuthState/model/slice/authSlice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 
 interface User {
     id: string;
-    name: string;
+    username: string;
     email: string;
-    // ...other user fields
+    bio?: string;
+    avatar?: string;
+    createdAt?: string;
+    statsCompleted?: number;
+    statsCreated?: number;
+    statsSuccess?: number;
+    // Add any other user fields you have
 }
 
 interface AuthState {
@@ -28,6 +35,16 @@ const authSlice = createSlice({
             state.refreshToken = action.payload.refreshToken;
             state.user = action.payload.user;
         },
+        updateUser(state, action: PayloadAction<User>) {
+            if (state.user) {
+                state.user = { ...state.user, ...action.payload };
+            }
+        },
+        updateUserField(state, action: PayloadAction<{ field: keyof User; value: any }>) {
+            if (state.user) {
+                (state.user as any)[action.payload.field] = action.payload.value;
+            }
+        },
         logout(state) {
             state.accessToken = null;
             state.refreshToken = null;
@@ -36,10 +53,5 @@ const authSlice = createSlice({
     },
 });
 
-// export const logout = () => async (dispatch: (arg0: { payload: undefined; type: "auth/logout"; }) => void) => {
-//     await Keychain.resetGenericPassword(); // Clear Keychain
-//     dispatch(authSlice.actions.logout()); // Update Redux state
-// };
-
-export const {setTokens, logout} = authSlice.actions;
+export const { setTokens, updateUser, updateUserField, logout } = authSlice.actions;
 export default authSlice.reducer;
