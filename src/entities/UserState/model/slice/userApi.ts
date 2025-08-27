@@ -1,5 +1,7 @@
 // src/entities/UserState/model/slice/userApi.ts
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
+import api from '../../../../features/auth/api.js';
+import authService from '../../../../features/auth/authService';
 
 export interface UserProfile {
     id: string;
@@ -36,6 +38,55 @@ export interface AuthResponse {
 }
 
 export const userApi = createApi({
+
+    async updateProfile(profileData) {
+        try {
+            const response = await api.put('/users/profile', profileData);
+
+            // If username was changed, we'll receive a new token
+            if (response.data.newToken) {
+                await authService.updateAuthToken(response.data.newToken);
+                // Update stored user data
+                const userData = {
+                    id: response.data.id,
+                    userName: response.data.userName,
+                    email: response.data.email,
+                    fullName: response.data.fullName,
+                    phoneNumber: response.data.phoneNumber,
+                    address: response.data.address,
+                };
+                await authService.updateUserData(userData);
+            }
+
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    async updateUsername(newUsername) {
+        try {
+            const response = await api.put('/users/profile/username', {
+                newUsername,
+            });
+
+            // Update token and user data
+            if (response.data.token) {
+                await authService.updateAuthToken(response.data.token);
+                await authService.updateUserData(response.data.user);
+            }
+
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    async getProfile() {
+        const response = await api.get('/users/profile');
+        return response.data;
+    },
+
     reducerPath: 'userApi',
     baseQuery: fetchBaseQuery({
         baseUrl: 'http://10.0.2.2:8082/challenger/api',

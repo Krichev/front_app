@@ -40,6 +40,17 @@ type EditProfileRouteProp = RouteProp<RootStackParamList, 'EditProfile'>;
 type EditProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditProfile'>;
 
 const EditProfileScreen: React.FC = () => {
+        const [loading, setLoading] = useState(false);
+        const [updating, setUpdating] = useState(false);
+        const [profileData, setProfileData] = useState({
+            userName: '',
+            email: '',
+            fullName: '',
+            phoneNumber: '',
+            address: '',
+        });
+        const [originalUsername, setOriginalUsername] = useState('');
+
     const route = useRoute<EditProfileRouteProp>();
     const navigation = useNavigation<EditProfileNavigationProp>();
     const { userId } = route.params;
@@ -61,6 +72,104 @@ const EditProfileScreen: React.FC = () => {
 
     // Local avatar state for preview
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+    useEffect(() => {
+        loadUserProfile();
+    }, []);
+
+    const loadUserProfile = async () => {
+        try {
+            setLoading(true);
+            const userData = await authService.getCurrentUser();
+            if (userData) {
+                setProfileData({
+                    userName: userData.userName || '',
+                    email: userData.email || '',
+                    fullName: userData.fullName || '',
+                    phoneNumber: userData.phoneNumber || '',
+                    address: userData.address || '',
+                });
+                setOriginalUsername(userData.userName || '');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to load profile data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleUpdateProfile = async () => {
+        try {
+            setUpdating(true);
+
+            // Validate username
+            if (!profileData.userName || profileData.userName.trim().length < 3) {
+                Alert.alert('Error', 'Username must be at least 3 characters long');
+                return;
+            }
+
+            // Call API to update profile
+            const response = await userApi.updateProfile(profileData);
+
+            // Show success message
+            Alert.alert(
+                'Success',
+                profileData.userName !== originalUsername
+                    ? 'Profile and username updated successfully. You may need to log in again if you experience any issues.'
+                    : 'Profile updated successfully',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            // If username changed, we might want to navigate to a different screen
+                            // or refresh the app state
+                            if (profileData.userName !== originalUsername) {
+                                // Option 1: Navigate back to profile screen
+                                navigation.goBack();
+
+                                // Option 2: Restart the app or navigate to login
+                                // navigation.reset({
+                                //   index: 0,
+                                //   routes: [{ name: 'MainTabs' }],
+                                // });
+                            } else {
+                                navigation.goBack();
+                            }
+                        },
+                    },
+                ]
+            );
+        } catch (error) {
+            console.error('Update profile error:', error);
+
+            if (error.response?.status === 400) {
+                Alert.alert('Error', error.response.data.message || 'Invalid input');
+            } else if (error.response?.status === 401) {
+                Alert.alert(
+                    'Session Expired',
+                    'Please log in again',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => navigation.navigate('Login'),
+                        },
+                    ]
+                );
+            } else {
+                Alert.alert('Error', 'Failed to update profile. Please try again.');
+            }
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
 
     // Initialize form with data when profile loads
     useEffect(() => {
@@ -562,6 +671,37 @@ const styles = StyleSheet.create({
     retryButtonText: {
         color: 'white',
         fontSize: 16,
+        fontWeight: '600',
+    },
+    centerContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    form: {
+        padding: 20,
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    warningText: {
+        color: '#ff9800',
+        fontSize: 12,
+        marginTop: 4,
+    },
+    button: {
+        backgroundColor: '#007AFF',
+        borderRadius: 8,
+        padding: 16,
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    buttonDisabled: {
+        opacity: 0.6,
+    },
+    buttonText: {
+        color: '#fff',
+        fontSize: 18,
         fontWeight: '600',
     },
 });
