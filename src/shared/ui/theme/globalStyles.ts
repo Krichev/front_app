@@ -1,9 +1,12 @@
+// src/shared/ui/theme/globalStyles.ts
 import {StyleSheet} from 'react-native';
 import {spacing} from './spacing';
-import {components} from './components';
+import {colors} from './colors.ts';
+import {typography} from './typography';
+import type {Style, UtilityStyles} from './types';
 
 // Utility styles
-export const utilities = {
+export const utilities: UtilityStyles = {
     // Flex utilities
     flex: {
         flex1: { flex: 1 },
@@ -23,17 +26,6 @@ export const utilities = {
         selfStart: { alignSelf: 'flex-start' },
         selfEnd: { alignSelf: 'flex-end' },
         selfStretch: { alignSelf: 'stretch' },
-    },
-
-    // Position utilities
-    position: {
-        absolute: { position: 'absolute' },
-        relative: { position: 'relative' },
-        absoluteFill: StyleSheet.absoluteFillObject,
-        top0: { top: 0 },
-        right0: { right: 0 },
-        bottom0: { bottom: 0 },
-        left0: { left: 0 },
     },
 
     // Spacing utilities
@@ -61,37 +53,83 @@ export const utilities = {
 
     // Text utilities
     text: {
-        center: { textAlign: 'center' },
         left: { textAlign: 'left' },
+        center: { textAlign: 'center' },
         right: { textAlign: 'right' },
         justify: { textAlign: 'justify' },
-        uppercase: { textTransform: 'uppercase' },
-        lowercase: { textTransform: 'lowercase' },
-        capitalize: { textTransform: 'capitalize' },
+        primary: { color: colors.text.primary },
+        secondary: { color: colors.text.secondary },
+        disabled: { color: colors.text.disabled },
+        inverse: { color: colors.text.inverse },
+        bold: { fontWeight: typography.fontWeight.bold },
+        semibold: { fontWeight: typography.fontWeight.semibold },
+        medium: { fontWeight: typography.fontWeight.medium },
+        regular: { fontWeight: typography.fontWeight.regular },
+        light: { fontWeight: typography.fontWeight.light },
     },
 
     // Display utilities
     display: {
-        hidden: { display: 'none' },
-        visible: { display: 'flex' },
+        none: { display: 'none' },
+        flex: { display: 'flex' },
     },
 
     // Size utilities
     size: {
-        w100: { width: '100%' },
-        h100: { height: '100%' },
-        wAuto: { width: 'auto' },
-        hAuto: { height: 'auto' },
+        full: { width: '100%', height: '100%' },
+        fullWidth: { width: '100%' },
+        fullHeight: { height: '100%' },
+        square50: { width: 50, height: 50 },
+        square100: { width: 100, height: 100 },
+        square150: { width: 150, height: 150 },
+        square200: { width: 200, height: 200 },
     },
 };
 
-// Create global styles
+// Global styles
 export const globalStyles = StyleSheet.create({
-    ...components,
-    ...utilities,
+    container: {
+        flex: 1,
+        backgroundColor: colors.background.primary,
+    },
+
+    safeArea: {
+        flex: 1,
+        backgroundColor: colors.background.primary,
+    },
+
+    screen: {
+        flex: 1,
+        padding: spacing.lg, // Using spacing.lg instead of layout.screenPadding
+        backgroundColor: colors.background.primary,
+    },
+
+    scrollView: {
+        flexGrow: 1,
+        padding: spacing.lg, // Using spacing.lg instead of layout.screenPadding
+    },
+
+    centered: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
+    column: {
+        flexDirection: 'column',
+    },
 });
 
-// Export a helper function to combine styles
-export const combineStyles = (...styles) => {
-    return StyleSheet.flatten(styles);
-};
+/**
+ * Helper function to combine multiple styles
+ * @param styles Array of style objects to combine
+ * @returns Flattened style object
+ */
+export function combineStyles(...styles: (Style | Style[] | undefined)[]): Style {
+    return StyleSheet.flatten(styles.filter(Boolean));
+}

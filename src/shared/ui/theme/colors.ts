@@ -1,4 +1,7 @@
-export const colors = {
+// src/shared/ui/theme/colors.ts
+import type {Colors} from './types';
+
+export const colors: Colors = {
     // Primary colors
     primary: {
         main: '#007AFF',

@@ -1,7 +1,9 @@
+// src/shared/ui/theme/shadows.ts
 import {Platform} from 'react-native';
-import {colors} from './colors';
+import {colors} from './colors.ts';
+import type {Shadows} from './types';
 
-export const shadows = {
+export const shadows: Shadows = {
     none: {
         shadowColor: 'transparent',
         shadowOffset: { width: 0, height: 0 },
@@ -10,7 +12,7 @@ export const shadows = {
         elevation: 0,
     },
 
-    sm: {
+    small: {
         shadowColor: colors.neutral.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.05,
@@ -18,7 +20,7 @@ export const shadows = {
         elevation: 2,
     },
 
-    md: {
+    medium: {
         shadowColor: colors.neutral.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -26,7 +28,7 @@ export const shadows = {
         elevation: 4,
     },
 
-    lg: {
+    large: {
         shadowColor: colors.neutral.black,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
@@ -34,14 +36,22 @@ export const shadows = {
         elevation: 6,
     },
 
-    xl: {
+    xlarge: {
         shadowColor: colors.neutral.black,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.2,
         shadowRadius: 16,
         elevation: 8,
     },
+};
 
+// Extended shadows for backward compatibility and special use cases
+export const extendedShadows = {
+    // Legacy naming for existing code
+    sm: shadows.small,
+    md: shadows.medium,
+    lg: shadows.large,
+    xl: shadows.xlarge,
     '2xl': {
         shadowColor: colors.neutral.black,
         shadowOffset: { width: 0, height: 12 },
@@ -50,18 +60,29 @@ export const shadows = {
         elevation: 10,
     },
 
-    // Special shadows
+    // Special shadows for components
     card: Platform.select({
         ios: {
             shadowColor: colors.neutral.black,
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.1,
             shadowRadius: 8,
+            elevation: 0,
         },
         android: {
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
             elevation: 4,
         },
-    }),
+    }) as {
+        shadowColor: string;
+        shadowOffset: { width: number; height: number };
+        shadowOpacity: number;
+        shadowRadius: number;
+        elevation: number;
+    },
 
     button: Platform.select({
         ios: {
@@ -69,9 +90,20 @@ export const shadows = {
             shadowOffset: { width: 0, height: 2 },
             shadowOpacity: 0.15,
             shadowRadius: 4,
+            elevation: 0,
         },
         android: {
+            shadowColor: 'transparent',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0,
+            shadowRadius: 0,
             elevation: 3,
         },
-    }),
+    }) as {
+        shadowColor: string;
+        shadowOffset: { width: number; height: number };
+        shadowOpacity: number;
+        shadowRadius: number;
+        elevation: number;
+    },
 };

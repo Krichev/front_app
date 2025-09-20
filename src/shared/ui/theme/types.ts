@@ -9,6 +9,22 @@ export type StyleFunction<T = any> = (theme: Theme) => T;
 export type StylesObject = Record<string, Style>;
 
 /**
+ * React Native FontWeight type
+ */
+export type FontWeightValue =
+    | 'normal'
+    | 'bold'
+    | '100'
+    | '200'
+    | '300'
+    | '400'
+    | '500'
+    | '600'
+    | '700'
+    | '800'
+    | '900';
+
+/**
  * Color definitions for the theme system
  */
 export interface ColorScheme {
@@ -83,11 +99,11 @@ export interface Colors {
  * Typography system definitions
  */
 export interface FontWeight {
-    light: string;
-    regular: string;
-    medium: string;
-    semibold: string;
-    bold: string;
+    light: FontWeightValue;
+    regular: FontWeightValue;
+    medium: FontWeightValue;
+    semibold: FontWeightValue;
+    bold: FontWeightValue;
 }
 
 export interface FontSize {
@@ -120,14 +136,14 @@ export interface LetterSpacing {
 
 export interface HeadingStyle extends TextStyle {
     fontSize: number;
-    fontWeight: string;
+    fontWeight: FontWeightValue;
     lineHeight: number;
     letterSpacing: number;
 }
 
 export interface BodyStyle extends TextStyle {
     fontSize: number;
-    fontWeight: string;
+    fontWeight: FontWeightValue;
     lineHeight: number;
 }
 
@@ -259,10 +275,11 @@ export interface ButtonStyles {
 export interface InputStyles {
     container: ViewStyle;
     label: TextStyle;
-    field: ViewStyle;
+    field: ViewStyle & TextStyle; // Combined for input fields
     focused: ViewStyle;
     error: ViewStyle;
     disabled: ViewStyle;
+    disabledText: TextStyle; // Separate text style for disabled state
     helperText: TextStyle;
     errorText: TextStyle;
 }
