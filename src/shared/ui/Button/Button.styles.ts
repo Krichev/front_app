@@ -1,75 +1,211 @@
-import {StyleSheet, TextStyle, ViewStyle} from "react-native";
-import {ButtonSize, ButtonTheme} from "./Button.tsx";
+import {StyleSheet, TextStyle, ViewStyle} from 'react-native';
+import {ButtonSize, ButtonVariant} from './Button';
+import type {Theme} from '../theme/types';
 
-// Define the ButtonStyle type
-interface ButtonStyle {
-    container: ViewStyle;
-    text: TextStyle;
-}
+/**
+ * Helper function to get button styles from theme
+ * This can be used for custom styling or when theme context is not available
+ */
+export const getButtonStylesFromTheme = (
+    theme: Theme,
+    variant: ButtonVariant = ButtonVariant.PRIMARY,
+    size: ButtonSize = ButtonSize.MEDIUM,
+    disabled: boolean = false
+) => {
+    const buttonTheme = theme.components.button;
+    const effectiveVariant = disabled ? ButtonVariant.DISABLED : variant;
 
-// Helper function to generate size-specific styles
-const getSizeStyles = (size: ButtonSize): ViewStyle => {
-    const sizeStyles: Record<ButtonSize, ViewStyle> = {
-        [ButtonSize.M]: { width: 50, height: 50 },
-        [ButtonSize.L]: { width: 70, height: 70 },
-        [ButtonSize.XL]: { width: 90, height: 90 },
-    };
-    return sizeStyles[size];
-};
-
-// Helper function to generate text-specific styles
-const getTextStyles = (size: ButtonSize): TextStyle => {
-    const textStyles: Record<ButtonSize, TextStyle> = {
-        [ButtonSize.M]: { fontSize: 16 },
-        [ButtonSize.L]: { fontSize: 20 },
-        [ButtonSize.XL]: { fontSize: 24 },
-    };
-    return textStyles[size];
-};
-
-// Helper function to generate theme-specific styles
-const getThemeStyles = (theme: ButtonTheme): ViewStyle => {
-    const themeStyles: Record<ButtonTheme, ViewStyle> = {
-        clear: {
-            padding: 0,
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-        },
-        clearInverted: {
-            padding: 0,
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-        },
-        outline: {
-            borderWidth: 1,
-            borderColor: '#007AFF', // Replace with your primary color
-            backgroundColor: 'transparent',
-        },
-        background: {
-            backgroundColor: '#007AFF', // Replace with your bg color
-        },
-        backgroundInverted: {
-            backgroundColor: '#FFFFFF', // Replace with your inverted bg color
-        },
-    };
-    return themeStyles[theme];
-};
-
-// Main function to generate button styles
-export const getButtonStyle = (theme: ButtonTheme, size: ButtonSize, square: boolean): ButtonStyle => {
-    const baseStyles: ViewStyle = {
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: square ? 0 : 10,
-        borderRadius: square ? 5 : 8,
+    const containerStyle: ViewStyle = {
+        ...buttonTheme.base,
+        ...buttonTheme.variants[effectiveVariant],
+        ...buttonTheme.sizes[size],
     };
 
-    const sizeStyles = getSizeStyles(size);
-    const themeStyles = getThemeStyles(theme);
-    const textStyles = getTextStyles(size);
+    const textStyle: TextStyle = {
+        ...buttonTheme.text[effectiveVariant] || buttonTheme.text.primary,
+    };
 
     return {
-        container: StyleSheet.create({ button: { ...baseStyles, ...sizeStyles, ...themeStyles } }).button,
-        text: StyleSheet.create({ text: textStyles }).text,
+        container: containerStyle,
+        text: textStyle,
+    };
+};
+
+/**
+ * Static styles that don't depend on theme
+ * These can be used for layout or positioning that's consistent across themes
+ */
+export const staticButtonStyles = StyleSheet.create({
+    fullWidth: {
+        width: '100%' as const,
+    },
+
+    centered: {
+        alignSelf: 'center',
+    },
+
+    leftAligned: {
+        alignSelf: 'flex-start',
+    },
+
+    rightAligned: {
+        alignSelf: 'flex-end',
+    },
+
+    // Loading state styles
+    loading: {
+        opacity: 0.7,
+    },
+
+    // Icon button specific styles
+    iconOnly: {
+        aspectRatio: 1,
+        paddingHorizontal: 0,
+    },
+
+    // Button with icon and text
+    withStartIcon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+
+    withEndIcon: {
+        flexDirection: 'row-reverse',
+        alignItems: 'center',
+    },
+
+    iconSpacing: {
+        marginHorizontal: 8,
+    },
+});
+
+/**
+ * Helper function to create custom button variants
+ * This allows extending the theme with additional button styles
+ */
+export const createCustomButtonVariant = (
+    theme: Theme,
+    customStyles: {
+        container?: ViewStyle;
+        text?: TextStyle;
+    }
+): { container: ViewStyle; text: TextStyle } => {
+    return {
+        container: {
+            ...theme.components.button.base,
+            ...customStyles.container,
+        },
+        text: {
+            ...theme.components.button.text.primary,
+            ...customStyles.text,
+        },
+    };
+};
+
+/**
+ * Predefined style combinations for common use cases
+ */
+export const createCommonButtonStyles = (theme: Theme) => {
+    return StyleSheet.create({
+        // Floating Action Button
+        fab: {
+            ...theme.components.button.base,
+            ...theme.components.button.variants.primary,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+            elevation: 6,
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+        },
+
+        // Compact button for toolbars
+        compact: {
+            ...theme.components.button.base,
+            ...theme.components.button.variants.ghost,
+            paddingHorizontal: theme.spacing.sm,
+            paddingVertical: theme.spacing.xs,
+            minHeight: 32,
+        },
+
+        // Link-style button
+        link: {
+            ...theme.components.button.base,
+            backgroundColor: 'transparent',
+            paddingHorizontal: 0,
+            paddingVertical: theme.spacing.xs,
+        },
+
+        linkText: {
+            ...theme.typography.body.medium,
+            color: theme.colors.primary.main,
+            textDecorationLine: 'underline',
+        },
+
+        // Danger button
+        danger: {
+            ...theme.components.button.base,
+            ...theme.components.button.variants.primary,
+            backgroundColor: theme.colors.error.main,
+        },
+
+        dangerText: {
+            ...theme.components.button.text.primary,
+            color: theme.colors.neutral.white,
+        },
+
+        // Success button
+        success: {
+            ...theme.components.button.base,
+            ...theme.components.button.variants.primary,
+            backgroundColor: theme.colors.success.main,
+        },
+
+        successText: {
+            ...theme.components.button.text.primary,
+            color: theme.colors.neutral.white,
+        },
+    });
+};
+
+/**
+ * Animation helpers for button states
+ */
+export const buttonAnimations = {
+    // Scale animation for press feedback
+    pressScale: {
+        transform: [{ scale: 0.98 }],
+    },
+
+    // Opacity for loading state
+    loadingOpacity: {
+        opacity: 0.6,
+    },
+
+    // Disabled state
+    disabledOpacity: {
+        opacity: 0.5,
+    },
+};
+
+/**
+ * Accessibility helpers
+ */
+export const getButtonAccessibilityProps = (
+    variant: ButtonVariant,
+    disabled: boolean,
+    loading: boolean
+) => {
+    return {
+        accessible: true,
+        accessibilityRole: 'button' as const,
+        accessibilityState: {
+            disabled: disabled || loading,
+        },
+        accessibilityHint: loading ? 'Button is loading' : undefined,
     };
 };

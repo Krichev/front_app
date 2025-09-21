@@ -1,6 +1,7 @@
 // src/shared/ui/theme/ThemeProvider.tsx
 import React, {createContext, useCallback, useContext, useMemo} from 'react';
-import type {Theme, ThemeConfig, ThemeMode, ThemeProviderProps, UseThemeResult} from './types';
+import type {Theme, ThemeConfig, ThemeProviderProps, UseThemeResult} from './types';
+import {ThemeMode} from './types'; // Import ThemeMode as a value, not a type
 import {theme as defaultTheme} from './index';
 
 /**
