@@ -18,6 +18,7 @@ import {useLoginMutation} from "../entities/AuthState/model/slice/authApi.ts";
 import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
 import {RootStackParamList} from "../navigation/AppNavigator.tsx";
 import {theme} from '../shared/ui/theme';
+import {isFetchBaseQueryError} from "../utils/errorHandler.ts";
 
 type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
 
