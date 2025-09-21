@@ -1,17 +1,48 @@
-import React, {memo, ReactNode, useEffect, useRef, useState,} from 'react';
-import {Text, TextInput, TextInputProps, TextStyle, View, ViewStyle,} from 'react-native';
-import styles from "./Input.styles.ts";
+import React, {memo, ReactNode, useEffect, useRef, useState} from 'react';
+import {Text, TextInput, TextInputProps, TextStyle, View, ViewStyle} from 'react-native';
+import {getAddonStyles, getInputStyle, getPlaceholderTextColor} from './Input.styles';
 
-interface InputProps extends TextInputProps {
+// Input size enumeration
+export enum InputSize {
+    SMALL = 'small',
+    MEDIUM = 'medium',
+    LARGE = 'large',
+}
+
+// Input variant enumeration
+export enum InputVariant {
+    DEFAULT = 'default',
+    OUTLINE = 'outline',
+    FILLED = 'filled',
+    UNDERLINE = 'underline',
+}
+
+// Input state enumeration
+export enum InputState {
+    DEFAULT = 'default',
+    FOCUSED = 'focused',
+    ERROR = 'error',
+    DISABLED = 'disabled',
+    READONLY = 'readonly',
+}
+
+// Input component props interface
+export interface InputProps extends Omit<TextInputProps, 'style'> {
     className?: string;
     label?: string;
+    helperText?: string;
+    errorText?: string;
     containerStyle?: ViewStyle;
     inputStyle?: TextStyle;
+    style?: TextStyle;
     autofocus?: boolean;
     readonly?: boolean;
+    disabled?: boolean;
+    error?: boolean;
     addonLeft?: ReactNode;
     addonRight?: ReactNode;
-    size?: 's' | 'm' | 'l';
+    size?: InputSize;
+    variant?: InputVariant;
 }
 
 export const Input = memo((props: InputProps) => {
@@ -19,12 +50,17 @@ export const Input = memo((props: InputProps) => {
         value,
         onChangeText,
         label,
+        helperText,
+        errorText,
         placeholder,
         autofocus,
-        readonly,
+        readonly = false,
+        disabled = false,
+        error = false,
         addonLeft,
         addonRight,
-        size = 'm',
+        size = InputSize.MEDIUM,
+        variant = InputVariant.DEFAULT,
         containerStyle,
         inputStyle,
         style,
@@ -41,55 +77,95 @@ export const Input = memo((props: InputProps) => {
         }
     }, [autofocus]);
 
-    const handleFocus = () => setIsFocused(true);
-    const handleBlur = () => setIsFocused(false);
-
-    const getSizeStyle = () => {
-        switch (size) {
-            case 's': return styles.sizeS;
-            case 'm': return styles.sizeM;
-            case 'l': return styles.sizeL;
+    const handleFocus = () => {
+        if (!disabled && !readonly) {
+            setIsFocused(true);
         }
     };
 
-    const inputContainer = (
-        <View style={[
-            styles.inputWrapper,
-            getSizeStyle(),
-            isFocused && styles.focused,
-            readonly && styles.readonly,
-            containerStyle,
-        ]}>
-            {addonLeft && <View style={styles.addonLeft}>{addonLeft}</View>}
+    const handleBlur = () => setIsFocused(false);
+
+    // Determine current state
+    const getCurrentState = (): InputState => {
+        if (disabled) return InputState.DISABLED;
+        if (readonly) return InputState.READONLY;
+        if (error) return InputState.ERROR;
+        if (isFocused) return InputState.FOCUSED;
+        return InputState.DEFAULT;
+    };
+
+    const currentState = getCurrentState();
+    const hasAddons = !!(addonLeft || addonRight);
+    const supportText = errorText || helperText;
+    const isErrorText = !!errorText;
+
+    // Get computed styles
+    const computedStyles = getInputStyle(variant, size, currentState, hasAddons, isErrorText);
+    const placeholderColor = getPlaceholderTextColor(currentState);
+
+    // Build the input field
+    const inputField = (
+        <View style={[computedStyles.field, containerStyle]}>
+            {addonLeft && (
+                <View style={[computedStyles.addon, getAddonStyles('left')]}>
+                    {addonLeft}
+                </View>
+            )}
+
             <TextInput
                 ref={ref}
                 value={value?.toString()}
                 onChangeText={onChangeText}
                 style={[
-                    styles.input,
+                    computedStyles.text,
                     inputStyle,
                     style,
                 ]}
                 placeholder={placeholder}
-                placeholderTextColor="#888"
-                editable={!readonly}
+                placeholderTextColor={placeholderColor}
+                editable={!readonly && !disabled}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
                 {...otherProps}
             />
-            {addonRight && <View style={styles.addonRight}>{addonRight}</View>}
+
+            {addonRight && (
+                <View style={[computedStyles.addon, getAddonStyles('right')]}>
+                    {addonRight}
+                </View>
+            )}
         </View>
     );
 
+    // Return with label if provided
     if (label) {
         return (
-            <View style={[styles.labelContainer, containerStyle]}>
-                <Text style={styles.label}>{label}</Text>
-                {inputContainer}
+            <View style={computedStyles.container}>
+                <Text style={computedStyles.label}>
+                    {label}
+                </Text>
+                {inputField}
+                {supportText && (
+                    <Text style={computedStyles.supportText}>
+                        {supportText}
+                    </Text>
+                )}
             </View>
         );
     }
 
-    return inputContainer;
+    // Return input field only
+    return (
+        <View>
+            {inputField}
+            {supportText && (
+                <Text style={computedStyles.supportText}>
+                    {supportText}
+                </Text>
+            )}
+        </View>
+    );
 });
 
+// Display name for debugging
+Input.displayName = 'Input';
