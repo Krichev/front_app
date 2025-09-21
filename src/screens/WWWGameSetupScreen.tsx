@@ -140,7 +140,7 @@ const WWWGameSetupScreen: React.FC = () => {
                 <ScrollView style={styles.scrollView}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={styles.headerTitle}>What? Where? When?</Text>
+                        <Text style={styles.headerTitle}>WWW_QUIZ</Text>
                         <Text style={styles.headerSubtitle}>Game Setup</Text>
                     </View>
 

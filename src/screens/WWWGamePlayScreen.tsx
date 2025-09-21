@@ -284,7 +284,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         />
                         <Text style={styles.waitingTitle}>Ready to Start?</Text>
                         <Text style={styles.waitingText}>
-                            Welcome to What? Where? When? Quiz!{'\n\n'}
+                            Welcome to WWW_QUIZ!{'\n\n'}
                             You'll have {session?.roundTimeSeconds || 60} seconds to discuss each question with your team.{'\n\n'}
                             When you're ready to begin, press the button below.
                         </Text>

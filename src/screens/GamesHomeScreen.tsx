@@ -19,7 +19,7 @@ const GamesHomeScreen: React.FC = () => {
     const gameOptions = [
         {
             id: 'www',
-            title: 'What? Where? When?',
+            title: 'WWW_QUIZ',
             description: 'A team trivia game where players discuss and answer challenging questions.',
             icon: 'brain',
             color: '#4CAF50',
@@ -50,7 +50,7 @@ const GamesHomeScreen: React.FC = () => {
         {
             id: 'question-management',
             title: 'Question Management',
-            description: 'Add, edit, and manage questions for the What? Where? When? game.',
+            description: 'Add, edit, and manage questions for the WWW_QUIZ game.',
             icon: 'playlist-edit',
             color: '#673AB7',
             onPress: () => navigation.navigate('QuestionManagement'),
@@ -105,7 +105,7 @@ const GamesHomeScreen: React.FC = () => {
                             defaultSource={require('../../assets/www-game-banner.png')}
                         />
                         <View style={styles.featuredOverlay}>
-                            <Text style={styles.featuredTitle}>What? Where? When?</Text>
+                            <Text style={styles.featuredTitle}>WWW_QUIZ</Text>
                             <Text style={styles.featuredDescription}>
                                 A challenging team-based trivia game with AI-powered hosting
                             </Text>

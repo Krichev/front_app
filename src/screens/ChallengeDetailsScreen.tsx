@@ -186,7 +186,7 @@ const ChallengeDetailsScreen: React.FC = () => {
             console.error('Error parsing quiz config:', e);
         }
 
-        // Check if this is a What? Where? When? quiz
+        // Check if this is a WWW_QUIZ quiz
         const isWWWQuiz = quizConfig && quizConfig.gameType === 'WWW';
 
         return (
@@ -197,7 +197,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                     <View style={styles.quizDetails}>
                         {isWWWQuiz ? (
                             <>
-                                <Text style={styles.quizType}>What? Where? When? Team Quiz</Text>
+                                <Text style={styles.quizType}>WWW_QUIZ Team Quiz</Text>
 
                                 <View style={styles.quizStat}>
                                     <Text style={styles.quizStatLabel}>Difficulty:</Text>

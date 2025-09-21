@@ -220,7 +220,7 @@ const AppNavigation = () => {
                         <Stack.Screen
                             name="WWWGamePlay"
                             component={WWWGamePlayScreen}
-                            options={{ title: 'What? Where? When?', headerShown: false }}
+                            options={{ title: 'WWW_QUIZ', headerShown: false }}
                         />
                         <Stack.Screen
                             name="WWWGameResults"

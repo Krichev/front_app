@@ -31,7 +31,7 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
     // Special filter just for WWW quizzes
     const wwwFilter: FilterOption = {
         id: 'WWW_QUIZ',
-        label: 'What? Where? When?',
+        label: 'WWW_QUIZ',
         icon: 'brain',
         color: '#4CAF50'
     };

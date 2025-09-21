@@ -89,7 +89,7 @@ const HomeScreen: React.FC = () => {
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.title}>Challenge App</Text>
-                {user && <Text style={styles.welcome}>Welcome, {user.name}</Text>}
+                {user && <Text style={styles.welcome}>Welcome, {user.username}</Text>}
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Text style={styles.logoutText}>Sign Out</Text>
                 </TouchableOpacity>
@@ -126,7 +126,7 @@ const HomeScreen: React.FC = () => {
                         <View>
                             <View style={styles.featuredQuizHeader}>
                                 <MaterialCommunityIcons name="brain" size={20} color="#4CAF50"/>
-                                <Text style={styles.featuredQuizTitle}>What? Where? When? Quizzes</Text>
+                                <Text style={styles.featuredQuizTitle}>WWW_QUIZ Quizzes</Text>
                             </View>
 
                             {wwwQuizzes.slice(0, 2).map(quiz => (
@@ -153,7 +153,7 @@ const HomeScreen: React.FC = () => {
                                 onPress={() => navigation.navigate('CreateWWWQuest')}
                             >
                                 <MaterialCommunityIcons name="plus" size={16} color="white"/>
-                                <Text style={styles.createQuizText}>Create What? Where? When? Quiz</Text>
+                                <Text style={styles.createQuizText}>Create WWW_QUIZ</Text>
                             </TouchableOpacity>
                         </View>
                     )}

@@ -37,7 +37,7 @@ interface LoginApiResponse {
     refreshToken: string;
     user: {
         id: string;
-        name: string; // API returns 'name'
+        username: string; // API returns 'name'
         email: string;
         bio?: string;
         avatar?: string;
@@ -63,7 +63,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
                     // Handle backward compatibility: older stored data might have 'name' or 'username'
                     const mappedUser = {
                         id: user.id,
-                        username: user.username || user.name, // Handle both cases for backward compatibility
+                        username: user.username, // Handle both cases for backward compatibility
                         email: user.email,
                         bio: user.bio,
                         avatar: user.avatar,
@@ -109,7 +109,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
             // Note: API returns 'name' field, but our app uses 'username' consistently
             const mappedUser = {
                 id: user.id,
-                username: user.name, // Map 'name' from API to 'username' for our app
+                username: user.username, // Map 'name' from API to 'username' for our app
                 email: user.email,
                 bio: user.bio,
                 avatar: user.avatar,

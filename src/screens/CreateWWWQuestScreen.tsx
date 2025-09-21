@@ -108,7 +108,7 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [newCustomQuestions, setNewCustomQuestions] = useState<CreateQuestionRequest[]>([]);
 
     // Form state
-    const [title, setTitle] = useState('What? Where? When? Quiz');
+    const [title, setTitle] = useState('WWW_QUIZ');
     const [description, setDescription] = useState('Test your knowledge in this team-based quiz game.');
     const [reward, setReward] = useState('Points and bragging rights!');
     const [difficulty, setDifficulty] = useState<UIDifficulty>('Medium');

@@ -1,7 +1,7 @@
 // Add this to a types file (e.g., src/entities/ChallengeState/model/types.ts)
 
 /**
- * Type definition for What? Where? When? quiz configuration
+ * Type definition for WWW_QUIZ quiz configuration
  */
 export interface WWWQuizConfig {
     /** The game type identifier */

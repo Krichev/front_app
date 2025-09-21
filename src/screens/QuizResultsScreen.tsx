@@ -118,7 +118,7 @@ const QuizResultsScreen: React.FC = () => {
     // Share quiz results
     const shareResults = async () => {
         try {
-            const shareMessage = `I just completed the "${teamName}" What? Where? When? quiz challenge with ${score}/${totalRounds} correct answers (${scorePercentage.toFixed(0)}%)!`;
+            const shareMessage = `I just completed the "${teamName}" WWW_QUIZ quiz challenge with ${score}/${totalRounds} correct answers (${scorePercentage.toFixed(0)}%)!`;
 
             await Share.share({
                 message: shareMessage,

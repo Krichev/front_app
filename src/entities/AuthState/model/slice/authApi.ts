@@ -165,7 +165,7 @@ export const authApi = createApi({
                     // Map API response to match User interface
                     const mappedUser = {
                         id: data.user.id,
-                        username: data.user.name, // Map 'name' from API to 'username' for our app
+                        username: data.user.username, // Map 'name' from API to 'username' for our app
                         email: data.user.email,
                         bio: data.user.bio,
                         avatar: data.user.avatar,

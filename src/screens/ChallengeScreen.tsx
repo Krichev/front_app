@@ -179,7 +179,7 @@ const ChallengesScreen: React.FC = () => {
             'What type of challenge would you like to create?',
             [
                 {
-                    text: 'What? Where? When? Quiz',
+                    text: 'WWW_QUIZ',
                     onPress: () => navigation.navigate('CreateWWWQuest')
                 },
                 {
@@ -270,7 +270,7 @@ const ChallengesScreen: React.FC = () => {
                         <MaterialCommunityIcons name="bulletin-board" size={60} color="#e0e0e0"/>
                         <Text style={styles.noDataText}>
                             {selectedType ?
-                                `No ${selectedType === 'WWW_QUIZ' ? 'What? Where? When?' : selectedType} challenges found.` :
+                                `No ${selectedType === 'WWW_QUIZ' ? 'WWW_QUIZ' : selectedType} challenges found.` :
                                 'No challenges available.'}
                         </Text>
                         <TouchableOpacity
