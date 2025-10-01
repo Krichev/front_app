@@ -1,10 +1,12 @@
-// src/screens/CreateWWWQuestScreen.tsx - COMPLETE FIXED VERSION
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+// src/screens/CreateWWWQuestScreen.tsx - Enhanced with Video/Audio Support
+import React, {useEffect, useMemo, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Dimensions,
     FlatList,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -22,8 +24,35 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {QuestionData, QuestionService} from '../services/wwwGame/questionService';
+import {FileService, ProcessedFileInfo} from '../services/speech/FileService';
 
-// Enhanced interfaces for question saving
+// Enhanced question types
+export type QuestionType = 'text' | 'audio' | 'video';
+
+// Enhanced interfaces for multimedia questions
+interface MediaFile {
+    id?: string;
+    uri: string;
+    type: string;
+    name: string;
+    size: number;
+    uploadedUrl?: string;
+    isUploading?: boolean;
+    uploadProgress?: number;
+}
+
+interface MultimediaQuestionData {
+    id?: string;
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    questionType: QuestionType;
+    mediaFile?: MediaFile;
+    questionMediaUrl?: string;
+}
+
 interface AppQuestionData {
     question: string;
     answer: string;
@@ -32,6 +61,8 @@ interface AppQuestionData {
     additionalInfo?: string;
     externalId?: string;
     source?: string;
+    questionType?: QuestionType;
+    questionMediaUrl?: string;
 }
 
 interface CreateQuestionRequest {
@@ -40,9 +71,11 @@ interface CreateQuestionRequest {
     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     topic?: string;
     additionalInfo?: string;
+    questionType?: QuestionType;
+    questionMediaUrl?: string;
 }
 
-// Enhanced StartQuizSessionRequest with question saving
+// Enhanced StartQuizSessionRequest with multimedia support
 interface EnhancedStartQuizSessionRequest {
     challengeId: string;
     teamName: string;
@@ -55,6 +88,86 @@ interface EnhancedStartQuizSessionRequest {
     customQuestionIds?: number[];
     newCustomQuestions?: CreateQuestionRequest[];
     appQuestions?: AppQuestionData[];
+}
+
+// API configuration
+const API_BASE_URL = 'http://10.0.2.2:8080'; // Update with your actual API URL
+
+// Media upload service
+class MediaUploadService {
+    static async uploadQuizMedia(file: ProcessedFileInfo, questionId?: string): Promise<string> {
+        try {
+            const formData = new FormData();
+            formData.append('file', {
+                uri: file.uri,
+                type: file.type,
+                name: file.name,
+            } as any);
+
+            if (questionId) {
+                formData.append('questionId', questionId);
+            }
+
+            const response = await fetch(`${API_BASE_URL}/api/media/upload/quiz-media`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                return result.mediaUrl;
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Media upload error:', error);
+            throw error;
+        }
+    }
+
+    static async uploadTempMedia(file: ProcessedFileInfo): Promise<string> {
+        // For new questions without an ID yet, we can use a temporary upload endpoint
+        // or store locally until the question is created
+        try {
+            const formData = new FormData();
+            formData.append('file', {
+                uri: file.uri,
+                type: file.type,
+                name: file.name,
+            } as any);
+
+            formData.append('questionId', 'temp_' + Date.now());
+
+            const response = await fetch(`${API_BASE_URL}/api/media/upload/quiz-media`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                return result.mediaUrl;
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+        } catch (error) {
+            console.error('Temp media upload error:', error);
+            throw error;
+        }
+    }
 }
 
 // API Difficulty type mapping
@@ -105,10 +218,10 @@ const CreateWWWQuestScreen: React.FC = () => {
     // Selection state - which questions are checked/selected
     const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<string>>(new Set());
     const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<number>>(new Set());
-    const [newCustomQuestions, setNewCustomQuestions] = useState<CreateQuestionRequest[]>([]);
+    const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
 
     // Form state
-    const [title, setTitle] = useState('WWW_QUIZ');
+    const [title, setTitle] = useState('What? Where? When? Quiz');
     const [description, setDescription] = useState('Test your knowledge in this team-based quiz game.');
     const [reward, setReward] = useState('Points and bragging rights!');
     const [difficulty, setDifficulty] = useState<UIDifficulty>('Medium');
@@ -118,6 +231,10 @@ const CreateWWWQuestScreen: React.FC = () => {
     // Team info state
     const [teamName, setTeamName] = useState('My Quiz Team');
     const [teamMembers, setTeamMembers] = useState<string[]>(['']);
+
+    // Media modal state
+    const [showMediaModal, setShowMediaModal] = useState(false);
+    const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null);
 
     // Load app questions when needed
     useEffect(() => {
@@ -130,7 +247,6 @@ const CreateWWWQuestScreen: React.FC = () => {
         try {
             setIsLoadingAppQuestions(true);
             setAppQuestionsError(null);
-            // Use the correct method name from QuestionService
             const questions = await QuestionService.fetchRandomQuestions(50);
             setAppQuestions(questions);
         } catch (error) {
@@ -141,554 +257,348 @@ const CreateWWWQuestScreen: React.FC = () => {
         }
     };
 
-    // Question selection handlers
-    const toggleAppQuestionSelection = useCallback((questionId: string) => {
-        setSelectedAppQuestionIds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(questionId)) {
-                newSet.delete(questionId);
+    // Media handling functions
+    const pickMedia = async (mediaType: 'image' | 'video' | 'audio') => {
+        try {
+            let file: ProcessedFileInfo | null = null;
+
+            if (mediaType === 'audio') {
+                // For audio, we would need to implement audio recording
+                // For now, let's use file picker for audio files
+                Alert.alert('Audio Recording', 'Audio recording feature coming soon!');
+                return;
             } else {
-                newSet.add(questionId);
+                const options = {
+                    mediaType: mediaType === 'video' ? 'video' as const : 'photo' as const,
+                    quality: 0.8 as any,
+                    maxWidth: mediaType === 'video' ? 1920 : 1080,
+                    maxHeight: mediaType === 'video' ? 1080 : 1080,
+                };
+
+                file = await FileService.pickFile(options);
             }
-            return newSet;
-        });
-    }, []);
 
-    const toggleUserQuestionSelection = useCallback((questionId: number) => {
-        setSelectedUserQuestionIds(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(questionId)) {
-                newSet.delete(questionId);
-            } else {
-                newSet.add(questionId);
+            if (file && selectedQuestionIndex !== null) {
+                await uploadMediaForQuestion(file, selectedQuestionIndex, mediaType);
             }
-            return newSet;
-        });
-    }, []);
+        } catch (error) {
+            console.error('Error picking media:', error);
+            Alert.alert('Error', 'Failed to select media. Please try again.');
+        }
+    };
 
-    const selectAllAppQuestions = useCallback(() => {
-        const allIds = new Set(appQuestions.map(q => q.id));
-        setSelectedAppQuestionIds(allIds);
-    }, [appQuestions]);
+    const uploadMediaForQuestion = async (file: ProcessedFileInfo, questionIndex: number, mediaType: string) => {
+        try {
+            // Update question with uploading state
+            const updatedQuestions = [...newCustomQuestions];
+            if (!updatedQuestions[questionIndex]) return;
 
-    const deselectAllAppQuestions = useCallback(() => {
-        setSelectedAppQuestionIds(new Set());
-    }, []);
+            updatedQuestions[questionIndex] = {
+                ...updatedQuestions[questionIndex],
+                mediaFile: {
+                    uri: file.uri,
+                    type: file.type,
+                    name: file.name,
+                    size: file.size,
+                    isUploading: true,
+                    uploadProgress: 0,
+                },
+                questionType: mediaType === 'video' ? 'video' : mediaType === 'audio' ? 'audio' : 'text',
+            };
+            setNewCustomQuestions(updatedQuestions);
 
-    const selectAllUserQuestions = useCallback(() => {
-        const allIds = new Set(userQuestions.map(q => Number(q.id)));
-        setSelectedUserQuestionIds(allIds);
-    }, [userQuestions]);
+            // Upload to S3
+            const uploadedUrl = await MediaUploadService.uploadTempMedia(file);
 
-    const deselectAllUserQuestions = useCallback(() => {
-        setSelectedUserQuestionIds(new Set());
-    }, []);
+            // Update question with uploaded URL
+            updatedQuestions[questionIndex] = {
+                ...updatedQuestions[questionIndex],
+                mediaFile: {
+                    ...updatedQuestions[questionIndex].mediaFile!,
+                    isUploading: false,
+                    uploadedUrl,
+                },
+                questionMediaUrl: uploadedUrl,
+            };
+            setNewCustomQuestions(updatedQuestions);
+            setShowMediaModal(false);
+            setSelectedQuestionIndex(null);
 
-    // Custom questions handlers
-    const addNewCustomQuestion = useCallback(() => {
-        setNewCustomQuestions(prev => [...prev, {
+            Alert.alert('Success', 'Media uploaded successfully!');
+        } catch (error) {
+            console.error('Error uploading media:', error);
+            Alert.alert('Upload Error', 'Failed to upload media. Please try again.');
+
+            // Reset uploading state
+            const updatedQuestions = [...newCustomQuestions];
+            if (updatedQuestions[questionIndex]) {
+                updatedQuestions[questionIndex] = {
+                    ...updatedQuestions[questionIndex],
+                    mediaFile: undefined,
+                    questionType: 'text',
+                };
+                setNewCustomQuestions(updatedQuestions);
+            }
+        }
+    };
+
+    const removeMediaFromQuestion = (questionIndex: number) => {
+        const updatedQuestions = [...newCustomQuestions];
+        if (updatedQuestions[questionIndex]) {
+            updatedQuestions[questionIndex] = {
+                ...updatedQuestions[questionIndex],
+                mediaFile: undefined,
+                questionType: 'text',
+                questionMediaUrl: undefined,
+            };
+            setNewCustomQuestions(updatedQuestions);
+        }
+    };
+
+    // Custom question management
+    const addCustomQuestion = () => {
+        setNewCustomQuestions([...newCustomQuestions, {
             question: '',
             answer: '',
             difficulty: DIFFICULTY_MAPPING[difficulty],
             topic: '',
-            additionalInfo: ''
+            additionalInfo: '',
+            questionType: 'text',
         }]);
-    }, [difficulty]);
+    };
 
-    const removeCustomQuestion = useCallback((index: number) => {
-        setNewCustomQuestions(prev => prev.filter((_, i) => i !== index));
-    }, []);
+    const updateCustomQuestion = (index: number, field: keyof MultimediaQuestionData, value: any) => {
+        const updatedQuestions = [...newCustomQuestions];
+        updatedQuestions[index] = { ...updatedQuestions[index], [field]: value };
+        setNewCustomQuestions(updatedQuestions);
+    };
 
-    const updateCustomQuestion = useCallback((index: number, field: keyof CreateQuestionRequest, value: string) => {
-        setNewCustomQuestions(prev => prev.map((q, i) =>
-            i === index ? { ...q, [field]: value } : q
-        ));
-    }, []);
+    const removeCustomQuestion = (index: number) => {
+        setNewCustomQuestions(newCustomQuestions.filter((_, i) => i !== index));
+    };
 
-    // Team members handlers
-    const addTeamMember = useCallback(() => {
-        setTeamMembers(prev => [...prev, '']);
-    }, []);
+    // Team member management
+    const addTeamMember = () => {
+        setTeamMembers([...teamMembers, '']);
+    };
 
-    const removeTeamMember = useCallback((index: number) => {
-        setTeamMembers(prev => prev.filter((_, i) => i !== index));
-    }, []);
+    const updateTeamMember = (index: number, value: string) => {
+        const updatedMembers = [...teamMembers];
+        updatedMembers[index] = value;
+        setTeamMembers(updatedMembers);
+    };
 
-    const updateTeamMember = useCallback((index: number, value: string) => {
-        setTeamMembers(prev => prev.map((member, i) => i === index ? value : member));
-    }, []);
+    const removeTeamMember = (index: number) => {
+        if (teamMembers.length > 1) {
+            setTeamMembers(teamMembers.filter((_, i) => i !== index));
+        }
+    };
 
     // Computed values
-    const selectedAppQuestions = useMemo(() =>
-            appQuestions.filter(q => selectedAppQuestionIds.has(q.id)),
-        [appQuestions, selectedAppQuestionIds]
-    );
+    const totalSelectedQuestions = useMemo(() => {
+        if (questionSource === 'app') {
+            return selectedAppQuestionIds.size;
+        } else {
+            return selectedUserQuestionIds.size + newCustomQuestions.length;
+        }
+    }, [questionSource, selectedAppQuestionIds.size, selectedUserQuestionIds.size, newCustomQuestions.length]);
 
-    const validCustomQuestions = useMemo(() =>
-            newCustomQuestions.filter(q => q.question.trim() && q.answer.trim()),
-        [newCustomQuestions]
-    );
-
-    const validTeamMembers = useMemo(() =>
-            teamMembers.filter(member => member.trim()),
-        [teamMembers]
-    );
-
-    const totalSelectedQuestions = questionSource === 'app'
-        ? selectedAppQuestions.length + validCustomQuestions.length
-        : selectedUserQuestionIds.size + validCustomQuestions.length;
+    const validTeamMembers = useMemo(() => {
+        return teamMembers.filter(member => member.trim().length > 0);
+    }, [teamMembers]);
 
     const canCreateQuest = useMemo(() => {
-        return title.trim() &&
-            description.trim() &&
-            teamName.trim() &&
+        return (
+            title.trim().length > 0 &&
+            teamName.trim().length > 0 &&
             validTeamMembers.length > 0 &&
-            totalSelectedQuestions >= 5 &&
-            parseInt(roundTime) > 0;
-    }, [title, description, teamName, validTeamMembers, totalSelectedQuestions, roundTime]);
-
-    // Create quest handler
-    const handleCreateQuest = useCallback(async () => {
-        if (!canCreateQuest || !user) {
-            Alert.alert('Error', 'Please fill in all required fields and select at least 5 questions.');
-            return;
-        }
-
-        try {
-            // Create challenge first
-            const challengeRequest: CreateChallengeRequest = {
-                title: title.trim(),
-                description: description.trim(),
-                type: 'QUIZ',
-                status: 'ACTIVE',
-                visibility: 'PUBLIC',
-                frequency: 'ONE_TIME',
-                startDate: new Date().toISOString(),
-                endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                reward: reward.trim(),
-                verificationMethod: 'QUIZ',
-                quizConfig: JSON.stringify({
-                    defaultDifficulty: DIFFICULTY_MAPPING[difficulty],
-                    defaultRoundTimeSeconds: parseInt(roundTime),
-                    defaultTotalRounds: totalSelectedQuestions,
-                    enableAiHost: enableAIHost,
-                    questionSource: questionSource,
-                    allowCustomQuestions: true,
-                }),
-                verificationDetails: {
-                    enableAiHost: enableAIHost,
-                    roundTimeSeconds: parseInt(roundTime),
-                    difficulty: DIFFICULTY_MAPPING[difficulty],
-                    totalRounds: totalSelectedQuestions,
-                },
-            };
-
-            console.log('Creating challenge:', challengeRequest);
-            const result = await createChallenge(challengeRequest).unwrap();
-
-            if (result?.id) {
-                console.log('Challenge created successfully:', result.id);
-
-                // Prepare questions data with proper difficulty conversion
-                const appQuestionsData: AppQuestionData[] = selectedAppQuestions.map(q => ({
-                    question: q.question,
-                    answer: q.answer,
-                    difficulty: q.difficulty ? DIFFICULTY_MAPPING[q.difficulty] : DIFFICULTY_MAPPING[difficulty],
-                    topic: q.topic,
-                    additionalInfo: q.additionalInfo,
-                    externalId: q.id,
-                    source: 'app'
-                }));
-
-                // Create session request
-                const sessionRequest: EnhancedStartQuizSessionRequest = {
-                    challengeId: result.id.toString(),
-                    teamName: teamName.trim(),
-                    teamMembers: validTeamMembers,
-                    difficulty: DIFFICULTY_MAPPING[difficulty],
-                    roundTimeSeconds: parseInt(roundTime),
-                    totalRounds: totalSelectedQuestions,
-                    enableAiHost: enableAIHost,
-                    questionSource,
-                    ...(questionSource === 'user' && {
-                        customQuestionIds: Array.from(selectedUserQuestionIds),
-                        newCustomQuestions: validCustomQuestions,
-                    }),
-                    ...(questionSource === 'app' && {
-                        appQuestions: appQuestionsData,
-                        newCustomQuestions: validCustomQuestions,
-                    }),
-                };
-
-                console.log('Starting quiz session with selected questions:', {
-                    questionSource,
-                    selectedAppQuestions: appQuestionsData.length,
-                    selectedUserQuestions: selectedUserQuestionIds.size,
-                    newQuestions: validCustomQuestions.length,
-                    totalRounds: sessionRequest.totalRounds,
-                });
-
-                // Start quiz session with selected questions
-                const sessionResult = await startQuizSession(sessionRequest as any).unwrap();
-
-                if (sessionResult?.id) {
-                    console.log('Quiz session created successfully:', {
-                        sessionId: sessionResult.id,
-                        challengeId: result.id,
-                        questionsCount: sessionResult.totalRounds,
-                    });
-
-                    Alert.alert(
-                        'Success! 🎉',
-                        `WWW Quest created successfully!\n\n✅ Challenge created\n✅ ${sessionRequest.totalRounds} selected questions saved\n✅ Quiz session ready`,
-                        [
-                            {
-                                text: 'Start Playing',
-                                onPress: () => navigation.navigate('WWWGamePlay', {
-                                    sessionId: sessionResult.id.toString(),
-                                    challengeId: result.id.toString()
-                                }),
-                            },
-                        ]
-                    );
-                } else {
-                    throw new Error('Failed to start quiz session - no session ID returned');
-                }
-            } else {
-                throw new Error('Failed to create challenge - no challenge ID returned');
-            }
-        } catch (error) {
-            console.error('Error creating quest:', error);
-            let errorMessage = 'Unknown error occurred';
-
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            } else if (typeof error === 'object' && error !== null && 'data' in error) {
-                errorMessage = (error as any).data?.message || 'Server error occurred';
-            }
-
-            Alert.alert('Error', `Failed to create quest: ${errorMessage}`);
-        }
-    }, [
-        canCreateQuest,
-        totalSelectedQuestions,
-        difficulty,
-        title,
-        description,
-        reward,
-        roundTime,
-        enableAIHost,
-        questionSource,
-        selectedAppQuestions,
-        validCustomQuestions,
-        teamName,
-        validTeamMembers,
-        selectedUserQuestionIds,
-        createChallenge,
-        startQuizSession,
-        navigation,
-        user
-    ]);
-
-    // Render app question item
-    const renderAppQuestionItem = ({ item }: { item: QuestionData }) => (
-        <TouchableOpacity
-            style={[
-                styles.questionItem,
-                selectedAppQuestionIds.has(item.id) && styles.questionItemSelected
-            ]}
-            onPress={() => toggleAppQuestionSelection(item.id)}
-            activeOpacity={0.7}
-        >
-            <View style={styles.questionHeader}>
-                <MaterialCommunityIcons
-                    name={selectedAppQuestionIds.has(item.id) ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                    size={24}
-                    color={selectedAppQuestionIds.has(item.id) ? '#007AFF' : '#999'}
-                />
-                <View style={styles.questionMeta}>
-                    <Text style={styles.questionDifficulty}>{item.difficulty}</Text>
-                    {item.topic && <Text style={styles.questionTopic}>{item.topic}</Text>}
-                </View>
-            </View>
-            <Text style={styles.questionText} numberOfLines={3}>{item.question}</Text>
-            <Text style={styles.answerText} numberOfLines={2}>Answer: {item.answer}</Text>
-            {item.additionalInfo && (
-                <Text style={styles.additionalInfo} numberOfLines={2}>{item.additionalInfo}</Text>
-            )}
-        </TouchableOpacity>
-    );
-
-    // Render user question item
-    const renderUserQuestionItem = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            style={[
-                styles.questionItem,
-                selectedUserQuestionIds.has(Number(item.id)) && styles.questionItemSelected
-            ]}
-            onPress={() => toggleUserQuestionSelection(Number(item.id))}
-            activeOpacity={0.7}
-        >
-            <View style={styles.questionHeader}>
-                <MaterialCommunityIcons
-                    name={selectedUserQuestionIds.has(Number(item.id)) ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                    size={24}
-                    color={selectedUserQuestionIds.has(Number(item.id)) ? '#007AFF' : '#999'}
-                />
-                <View style={styles.questionMeta}>
-                    <Text style={styles.questionDifficulty}>{item.difficulty}</Text>
-                    {item.topic && <Text style={styles.questionTopic}>{item.topic}</Text>}
-                </View>
-            </View>
-            <Text style={styles.questionText} numberOfLines={3}>{item.question}</Text>
-            <Text style={styles.answerText} numberOfLines={2}>Answer: {item.answer}</Text>
-            {item.additionalInfo && (
-                <Text style={styles.additionalInfo} numberOfLines={2}>{item.additionalInfo}</Text>
-            )}
-        </TouchableOpacity>
-    );
+            totalSelectedQuestions > 0 &&
+            parseInt(roundTime) > 0
+        );
+    }, [title, teamName, validTeamMembers.length, totalSelectedQuestions, roundTime]);
 
     const isLoading = isCreatingChallenge || isStartingSession;
+
+    // Create quest handler
+    const handleCreateQuest = async () => {
+        if (!canCreateQuest || !user) return;
+
+        try {
+            // Prepare questions for the API
+            const questionsToSend: CreateQuestionRequest[] = newCustomQuestions.map(q => ({
+                question: q.question,
+                answer: q.answer,
+                difficulty: q.difficulty,
+                topic: q.topic,
+                additionalInfo: q.additionalInfo,
+                questionType: q.questionType,
+                questionMediaUrl: q.questionMediaUrl,
+            }));
+
+            // Create challenge
+            const challengeRequest: CreateChallengeRequest = {
+                title,
+                description,
+                reward,
+                difficulty: DIFFICULTY_MAPPING[difficulty],
+                createdBy: user.id,
+            };
+
+            const challengeResult = await createChallenge(challengeRequest).unwrap();
+
+            // Start quiz session with multimedia questions
+            const sessionRequest: EnhancedStartQuizSessionRequest = {
+                challengeId: challengeResult.id,
+                teamName,
+                teamMembers: validTeamMembers,
+                difficulty: DIFFICULTY_MAPPING[difficulty],
+                roundTimeSeconds: parseInt(roundTime),
+                totalRounds: totalSelectedQuestions,
+                enableAiHost: enableAIHost,
+                questionSource,
+                newCustomQuestions: questionsToSend,
+            };
+
+            if (questionSource === 'user') {
+                sessionRequest.customQuestionIds = Array.from(selectedUserQuestionIds);
+            } else {
+                sessionRequest.appQuestions = appQuestions
+                    .filter(q => selectedAppQuestionIds.has(q.id))
+                    .map(q => ({
+                        question: q.question,
+                        answer: q.answer,
+                        difficulty: DIFFICULTY_MAPPING[q.difficulty || 'Medium'],
+                        topic: q.topic,
+                        additionalInfo: q.additionalInfo,
+                        externalId: q.id,
+                        source: q.source,
+                    }));
+            }
+
+            const sessionResult = await startQuizSession(sessionRequest).unwrap();
+
+            Alert.alert(
+                'Quest Created!',
+                'Your multimedia WWW Quest has been created successfully.',
+                [
+                    {
+                        text: 'Start Game',
+                        onPress: () => navigation.navigate('WWWGamePlay', {
+                            sessionId: sessionResult.sessionId,
+                            challengeId: challengeResult.id,
+                        }),
+                    },
+                ]
+            );
+        } catch (error) {
+            console.error('Error creating quest:', error);
+            Alert.alert('Error', 'Failed to create quest. Please try again.');
+        }
+    };
+
+    // Render functions
+    const renderCustomQuestion = ({ item, index }: { item: MultimediaQuestionData; index: number }) => (
+        <View style={styles.customQuestionContainer}>
+            <View style={styles.customQuestionHeader}>
+                <Text style={styles.customQuestionNumber}>Question {index + 1}</Text>
+                <View style={styles.customQuestionActions}>
+                    <TouchableOpacity
+                        style={styles.mediaButton}
+                        onPress={() => {
+                            setSelectedQuestionIndex(index);
+                            setShowMediaModal(true);
+                        }}
+                    >
+                        <MaterialCommunityIcons
+                            name={item.questionType === 'video' ? 'video' : item.questionType === 'audio' ? 'microphone' : 'camera-plus'}
+                            size={16}
+                            color="#007AFF"
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.deleteButton}
+                        onPress={() => removeCustomQuestion(index)}
+                    >
+                        <MaterialCommunityIcons name="delete" size={16} color="#FF3B30" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Media preview */}
+            {item.mediaFile && (
+                <View style={styles.mediaPreviewContainer}>
+                    {item.mediaFile.isUploading ? (
+                        <View style={styles.uploadingContainer}>
+                            <ActivityIndicator size="small" color="#007AFF" />
+                            <Text style={styles.uploadingText}>Uploading...</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.mediaPreview}>
+                            <MaterialCommunityIcons
+                                name={item.questionType === 'video' ? 'video' : 'microphone'}
+                                size={24}
+                                color="#007AFF"
+                            />
+                            <Text style={styles.mediaFileName}>{item.mediaFile.name}</Text>
+                            <TouchableOpacity onPress={() => removeMediaFromQuestion(index)}>
+                                <MaterialCommunityIcons name="close" size={20} color="#FF3B30" />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+            )}
+
+            <TextInput
+                style={styles.customQuestionInput}
+                placeholder="Enter your question..."
+                value={item.question}
+                onChangeText={(text) => updateCustomQuestion(index, 'question', text)}
+                multiline
+            />
+            <TextInput
+                style={styles.customQuestionInput}
+                placeholder="Enter the answer..."
+                value={item.answer}
+                onChangeText={(text) => updateCustomQuestion(index, 'answer', text)}
+            />
+            <TextInput
+                style={styles.customQuestionInput}
+                placeholder="Topic (optional)"
+                value={item.topic || ''}
+                onChangeText={(text) => updateCustomQuestion(index, 'topic', text)}
+            />
+        </View>
+    );
 
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
+                style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardView}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Create WWW Quest</Text>
-                </View>
-
-                <ScrollView
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.content}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {/* Question Source Selection */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Question Source</Text>
-                        <View style={styles.radioGroup}>
-                            <TouchableOpacity
-                                style={styles.radioOption}
-                                onPress={() => setQuestionSource('app')}
-                                activeOpacity={0.7}
-                            >
-                                <MaterialCommunityIcons
-                                    name={questionSource === 'app' ? 'radiobox-marked' : 'radiobox-blank'}
-                                    size={24}
-                                    color="#007AFF"
-                                />
-                                <Text style={styles.radioText}>App Questions</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.radioOption}
-                                onPress={() => setQuestionSource('user')}
-                                activeOpacity={0.7}
-                            >
-                                <MaterialCommunityIcons
-                                    name={questionSource === 'user' ? 'radiobox-marked' : 'radiobox-blank'}
-                                    size={24}
-                                    color="#007AFF"
-                                />
-                                <Text style={styles.radioText}>My Questions</Text>
-                            </TouchableOpacity>
-                        </View>
+                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Create WWW Quest</Text>
+                        <Text style={styles.subtitle}>Set up your multimedia quiz challenge</Text>
                     </View>
 
-                    {/* Question Selection */}
+                    {/* Basic Info Section */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>
-                            Select Questions ({totalSelectedQuestions} selected, min 5)
-                        </Text>
-
-                        {questionSource === 'app' && (
-                            <View style={styles.questionsContainer}>
-                                <View style={styles.sectionHeaderWithActions}>
-                                    <Text style={styles.subsectionTitle}>
-                                        App Questions ({selectedAppQuestions.length})
-                                    </Text>
-                                    {appQuestions.length > 0 && (
-                                        <TouchableOpacity
-                                            style={styles.selectAllButton}
-                                            onPress={selectedAppQuestionIds.size === appQuestions.length ?
-                                                deselectAllAppQuestions : selectAllAppQuestions}
-                                        >
-                                            <Text style={styles.selectAllButtonText}>
-                                                {selectedAppQuestionIds.size === appQuestions.length ?
-                                                    'Deselect All' : 'Select All'}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                {isLoadingAppQuestions ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="small" color="#007AFF" />
-                                        <Text style={styles.loadingText}>Loading questions...</Text>
-                                    </View>
-                                ) : appQuestionsError ? (
-                                    <View style={styles.errorContainer}>
-                                        <Text style={styles.errorText}>{appQuestionsError}</Text>
-                                        <TouchableOpacity
-                                            style={styles.retryButton}
-                                            onPress={loadAppQuestions}
-                                        >
-                                            <Text style={styles.retryButtonText}>Retry</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                ) : appQuestions.length === 0 ? (
-                                    <Text style={styles.helperText}>No questions available</Text>
-                                ) : (
-                                    <FlatList
-                                        data={appQuestions}
-                                        renderItem={renderAppQuestionItem}
-                                        keyExtractor={(item) => item.id}
-                                        style={styles.questionsList}
-                                        scrollEnabled={false}
-                                        showsVerticalScrollIndicator={false}
-                                        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-                                    />
-                                )}
-                            </View>
-                        )}
-
-                        {questionSource === 'user' && (
-                            <View style={styles.questionsContainer}>
-                                <View style={styles.sectionHeaderWithActions}>
-                                    <Text style={styles.subsectionTitle}>
-                                        Your Questions ({selectedUserQuestionIds.size})
-                                    </Text>
-                                    {userQuestions.length > 0 && (
-                                        <TouchableOpacity
-                                            style={styles.selectAllButton}
-                                            onPress={selectedUserQuestionIds.size === userQuestions.length ?
-                                                deselectAllUserQuestions : selectAllUserQuestions}
-                                        >
-                                            <Text style={styles.selectAllButtonText}>
-                                                {selectedUserQuestionIds.size === userQuestions.length ?
-                                                    'Deselect All' : 'Select All'}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                {isLoadingUserQuestions ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="small" color="#007AFF" />
-                                        <Text style={styles.loadingText}>Loading your questions...</Text>
-                                    </View>
-                                ) : userQuestions.length === 0 ? (
-                                    <View style={styles.emptyStateContainer}>
-                                        <Text style={styles.helperText}>No existing questions found</Text>
-                                        <TouchableOpacity
-                                            style={styles.addQuestionsButton}
-                                            onPress={() => navigation.navigate('UserQuestions')}
-                                        >
-                                            <Text style={styles.addQuestionsButtonText}>Create Questions</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                ) : (
-                                    <FlatList
-                                        data={userQuestions}
-                                        renderItem={renderUserQuestionItem}
-                                        keyExtractor={(item) => item.id.toString()}
-                                        style={styles.questionsList}
-                                        scrollEnabled={false}
-                                        showsVerticalScrollIndicator={false}
-                                        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-                                    />
-                                )}
-                            </View>
-                        )}
-
-                        {/* New Custom Questions */}
-                        <View style={styles.subsection}>
-                            <View style={styles.subsectionHeader}>
-                                <Text style={styles.subsectionTitle}>
-                                    New Questions ({validCustomQuestions.length})
-                                </Text>
-                                <TouchableOpacity
-                                    style={styles.addButton}
-                                    onPress={addNewCustomQuestion}
-                                >
-                                    <MaterialCommunityIcons name="plus" size={16} color="#007AFF" />
-                                    <Text style={styles.addButtonText}>Add Question</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {newCustomQuestions.length === 0 ? (
-                                <Text style={styles.helperText}>No new questions added</Text>
-                            ) : (
-                                <View>
-                                    {newCustomQuestions.map((question, index) => (
-                                        <View key={index} style={styles.customQuestionContainer}>
-                                            <View style={styles.customQuestionHeader}>
-                                                <Text style={styles.customQuestionNumber}>
-                                                    Question {index + 1}
-                                                </Text>
-                                                <TouchableOpacity
-                                                    style={styles.deleteButton}
-                                                    onPress={() => removeCustomQuestion(index)}
-                                                >
-                                                    <MaterialCommunityIcons name="delete" size={20} color="#FF3B30" />
-                                                </TouchableOpacity>
-                                            </View>
-
-                                            <TextInput
-                                                style={styles.customQuestionInput}
-                                                placeholder="Enter question..."
-                                                value={question.question}
-                                                onChangeText={(text) => updateCustomQuestion(index, 'question', text)}
-                                                multiline
-                                            />
-
-                                            <TextInput
-                                                style={styles.customQuestionInput}
-                                                placeholder="Enter answer..."
-                                                value={question.answer}
-                                                onChangeText={(text) => updateCustomQuestion(index, 'answer', text)}
-                                                multiline
-                                            />
-
-                                            <TextInput
-                                                style={styles.customQuestionInput}
-                                                placeholder="Topic (optional)"
-                                                value={question.topic}
-                                                onChangeText={(text) => updateCustomQuestion(index, 'topic', text)}
-                                            />
-                                        </View>
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                    </View>
-
-                    {/* Basic Info */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Basic Information</Text>
-
+                        <Text style={styles.sectionTitle}>Quest Details</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Quest Title"
                             value={title}
                             onChangeText={setTitle}
                         />
-
                         <TextInput
                             style={[styles.input, styles.textArea]}
                             placeholder="Description"
                             value={description}
                             onChangeText={setDescription}
                             multiline
-                            numberOfLines={3}
                         />
-
                         <TextInput
                             style={styles.input}
                             placeholder="Reward"
@@ -701,58 +611,102 @@ const CreateWWWQuestScreen: React.FC = () => {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Game Settings</Text>
 
-                        <View style={styles.subsection}>
-                            <Text style={styles.subsectionTitle}>Difficulty</Text>
-                            <View style={styles.difficultyContainer}>
-                                {(['Easy', 'Medium', 'Hard'] as UIDifficulty[]).map((level) => (
-                                    <TouchableOpacity
-                                        key={level}
-                                        style={[
-                                            styles.difficultyButton,
-                                            difficulty === level && styles.difficultyButtonSelected
-                                        ]}
-                                        onPress={() => setDifficulty(level)}
-                                    >
-                                        <Text style={[
-                                            styles.difficultyButtonText,
-                                            difficulty === level && styles.difficultyButtonTextSelected
-                                        ]}>
-                                            {level}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                        <Text style={styles.label}>Difficulty</Text>
+                        <View style={styles.difficultyContainer}>
+                            {(['Easy', 'Medium', 'Hard'] as UIDifficulty[]).map((diff) => (
+                                <TouchableOpacity
+                                    key={diff}
+                                    style={[
+                                        styles.difficultyButton,
+                                        difficulty === diff && styles.difficultyButtonSelected
+                                    ]}
+                                    onPress={() => setDifficulty(diff)}
+                                >
+                                    <Text style={[
+                                        styles.difficultyButtonText,
+                                        difficulty === diff && styles.difficultyButtonTextSelected
+                                    ]}>
+                                        {diff}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
 
-                        <View style={styles.subsection}>
-                            <Text style={styles.subsectionTitle}>Round Time (seconds)</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="60"
-                                value={roundTime}
-                                onChangeText={setRoundTime}
-                                keyboardType="numeric"
-                            />
-                        </View>
+                        <Text style={styles.label}>Round Time (seconds)</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="60"
+                            value={roundTime}
+                            onChangeText={setRoundTime}
+                            keyboardType="numeric"
+                        />
 
                         <TouchableOpacity
-                            style={styles.radioOption}
+                            style={styles.toggleButton}
                             onPress={() => setEnableAIHost(!enableAIHost)}
-                            activeOpacity={0.7}
                         >
                             <MaterialCommunityIcons
                                 name={enableAIHost ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                                size={24}
+                                size={20}
                                 color="#007AFF"
                             />
-                            <Text style={styles.radioText}>Enable AI Host</Text>
+                            <Text style={styles.toggleText}>Enable AI Host</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Team Info */}
+                    {/* Question Source Selection */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Team Information</Text>
+                        <Text style={styles.sectionTitle}>Question Source</Text>
+                        <View style={styles.radioGroup}>
+                            <TouchableOpacity
+                                style={styles.radioOption}
+                                onPress={() => setQuestionSource('app')}
+                            >
+                                <MaterialCommunityIcons
+                                    name={questionSource === 'app' ? 'radio-button-checked' : 'radio-button-unchecked'}
+                                    size={20}
+                                    color="#007AFF"
+                                />
+                                <Text style={styles.radioText}>App Questions</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.radioOption}
+                                onPress={() => setQuestionSource('user')}
+                            >
+                                <MaterialCommunityIcons
+                                    name={questionSource === 'user' ? 'radio-button-checked' : 'radio-button-unchecked'}
+                                    size={20}
+                                    color="#007AFF"
+                                />
+                                <Text style={styles.radioText}>Custom Questions</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
 
+                    {/* Questions Section */}
+                    {questionSource === 'user' && (
+                        <View style={styles.section}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Custom Questions</Text>
+                                <TouchableOpacity style={styles.addButton} onPress={addCustomQuestion}>
+                                    <MaterialCommunityIcons name="plus" size={16} color="#007AFF" />
+                                    <Text style={styles.addButtonText}>Add Question</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            <FlatList
+                                data={newCustomQuestions}
+                                keyExtractor={(_, index) => index.toString()}
+                                renderItem={renderCustomQuestion}
+                                style={styles.questionsList}
+                                scrollEnabled={false}
+                            />
+                        </View>
+                    )}
+
+                    {/* Team Setup */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Team Setup</Text>
                         <TextInput
                             style={styles.input}
                             placeholder="Team Name"
@@ -760,42 +714,34 @@ const CreateWWWQuestScreen: React.FC = () => {
                             onChangeText={setTeamName}
                         />
 
-                        <View style={styles.subsection}>
-                            <View style={styles.subsectionHeader}>
-                                <Text style={styles.subsectionTitle}>Team Members</Text>
-                                <TouchableOpacity
-                                    style={styles.addButton}
-                                    onPress={addTeamMember}
-                                >
-                                    <MaterialCommunityIcons name="plus" size={16} color="#007AFF" />
-                                    <Text style={styles.addButtonText}>Add Member</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.teamMembersContainer}>
-                                {teamMembers.map((member, index) => (
-                                    <View key={index} style={styles.teamMemberRow}>
-                                        <TextInput
-                                            style={[styles.input, styles.teamMemberInput]}
-                                            placeholder={`Team member ${index + 1}`}
-                                            value={member}
-                                            onChangeText={(text) => updateTeamMember(index, text)}
-                                        />
-                                        {teamMembers.length > 1 && (
-                                            <TouchableOpacity
-                                                style={styles.deleteButton}
-                                                onPress={() => removeTeamMember(index)}
-                                            >
-                                                <MaterialCommunityIcons name="delete" size={20} color="#FF3B30" />
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                ))}
-                            </View>
+                        <Text style={styles.label}>Team Members</Text>
+                        <View style={styles.teamMembersContainer}>
+                            {teamMembers.map((member, index) => (
+                                <View key={index} style={styles.teamMemberRow}>
+                                    <TextInput
+                                        style={[styles.input, styles.teamMemberInput]}
+                                        placeholder={`Member ${index + 1}`}
+                                        value={member}
+                                        onChangeText={(text) => updateTeamMember(index, text)}
+                                    />
+                                    {teamMembers.length > 1 && (
+                                        <TouchableOpacity
+                                            style={styles.deleteButton}
+                                            onPress={() => removeTeamMember(index)}
+                                        >
+                                            <MaterialCommunityIcons name="minus" size={16} color="#FF3B30" />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))}
+                            <TouchableOpacity style={styles.addButton} onPress={addTeamMember}>
+                                <MaterialCommunityIcons name="plus" size={16} color="#007AFF" />
+                                <Text style={styles.addButtonText}>Add Member</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
 
-                    {/* Summary */}
+                    {/* Quest Summary */}
                     <View style={styles.section}>
                         <View style={styles.summaryCard}>
                             <Text style={styles.summaryTitle}>Quest Summary</Text>
@@ -820,105 +766,115 @@ const CreateWWWQuestScreen: React.FC = () => {
                             activeOpacity={0.8}
                         >
                             {isLoading ? (
-                                <ActivityIndicator size="small" color="#FFF" />
+                                <>
+                                    <ActivityIndicator size="small" color="#FFF" />
+                                    <Text style={styles.createButtonText}>Creating...</Text>
+                                </>
                             ) : (
                                 <>
-                                    <MaterialCommunityIcons name="plus-circle" size={20} color="#FFF" />
-                                    <Text style={styles.createButtonText}>Create WWW Quest</Text>
+                                    <MaterialCommunityIcons name="rocket-launch" size={20} color="#FFF" />
+                                    <Text style={styles.createButtonText}>Create Quest</Text>
                                 </>
                             )}
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
+
+                {/* Media Selection Modal */}
+                <Modal
+                    visible={showMediaModal}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setShowMediaModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContainer}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Add Media to Question</Text>
+                                <TouchableOpacity onPress={() => setShowMediaModal(false)}>
+                                    <MaterialCommunityIcons name="close" size={24} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.mediaOptionsContainer}>
+                                <TouchableOpacity
+                                    style={styles.mediaOption}
+                                    onPress={() => pickMedia('video')}
+                                >
+                                    <MaterialCommunityIcons name="video" size={32} color="#007AFF" />
+                                    <Text style={styles.mediaOptionText}>Video</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.mediaOption}
+                                    onPress={() => pickMedia('audio')}
+                                >
+                                    <MaterialCommunityIcons name="microphone" size={32} color="#007AFF" />
+                                    <Text style={styles.mediaOptionText}>Audio</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.mediaOption}
+                                    onPress={() => pickMedia('image')}
+                                >
+                                    <MaterialCommunityIcons name="image" size={32} color="#007AFF" />
+                                    <Text style={styles.mediaOptionText}>Image</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
+const { width: screenWidth } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
-    },
-    keyboardView: {
-        flex: 1,
+        backgroundColor: '#F5F5F7',
     },
     scrollView: {
         flex: 1,
+        padding: 16,
     },
     header: {
-        flexDirection: 'row',
+        marginBottom: 24,
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#FFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E5E7',
     },
-    backButton: {
-        marginRight: 16,
+    title: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#1D1D1F',
+        marginBottom: 4,
     },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-    },
-    content: {
-        padding: 16,
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
     },
     section: {
         marginBottom: 24,
     },
-    subsection: {
-        marginBottom: 16,
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: '600',
-        color: '#333',
+        color: '#1D1D1F',
         marginBottom: 12,
     },
-    subsectionTitle: {
-        fontSize: 14,
+    label: {
+        fontSize: 16,
         fontWeight: '500',
-        color: '#666',
+        color: '#333',
         marginBottom: 8,
     },
-    subsectionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    sectionHeaderWithActions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    selectAllButton: {
-        backgroundColor: '#007AFF',
-        borderRadius: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    selectAllButtonText: {
-        color: '#FFF',
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    radioGroup: {
-        gap: 12,
-    },
-    radioOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    radioText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    // Input styles
     input: {
         backgroundColor: '#FFF',
         borderRadius: 8,
@@ -932,10 +888,10 @@ const styles = StyleSheet.create({
         height: 80,
         textAlignVertical: 'top',
     },
-    // Difficulty selection styles
     difficultyContainer: {
         flexDirection: 'row',
         gap: 8,
+        marginBottom: 16,
     },
     difficultyButton: {
         flex: 1,
@@ -958,125 +914,28 @@ const styles = StyleSheet.create({
     difficultyButtonTextSelected: {
         color: '#FFF',
     },
-    // Question selection styles
-    questionsContainer: {
-        backgroundColor: '#FFF',
-        borderRadius: 8,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E5E5E7',
-    },
-    questionsList: {
-        maxHeight: 400, // Limit height and make scrollable
-    },
-    questionItem: {
-        backgroundColor: '#FFF',
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 8,
-        borderWidth: 1,
-        borderColor: '#E5E5E7',
-    },
-    questionItemSelected: {
-        borderColor: '#007AFF',
-        backgroundColor: '#F0F8FF',
-    },
-    questionHeader: {
+    toggleButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
         gap: 8,
+        padding: 8,
     },
-    questionMeta: {
-        flexDirection: 'row',
-        gap: 8,
-        flex: 1,
-    },
-    questionDifficulty: {
-        backgroundColor: '#007AFF',
-        color: '#FFF',
-        fontSize: 10,
-        fontWeight: '600',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-        textTransform: 'uppercase',
-    },
-    questionTopic: {
-        backgroundColor: '#28A745',
-        color: '#FFF',
-        fontSize: 10,
-        fontWeight: '600',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    questionText: {
-        fontSize: 14,
+    toggleText: {
+        fontSize: 16,
         color: '#333',
-        marginBottom: 4,
-        fontWeight: '500',
     },
-    answerText: {
-        fontSize: 12,
-        color: '#666',
-        fontStyle: 'italic',
+    radioGroup: {
+        gap: 12,
     },
-    additionalInfo: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 4,
-    },
-    // Loading and error states
-    loadingContainer: {
+    radioOption: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 20,
         gap: 8,
     },
-    loadingText: {
-        fontSize: 14,
-        color: '#666',
+    radioText: {
+        fontSize: 16,
+        color: '#333',
     },
-    errorContainer: {
-        alignItems: 'center',
-        padding: 20,
-    },
-    errorText: {
-        fontSize: 14,
-        color: '#FF3B30',
-        textAlign: 'center',
-        marginBottom: 8,
-    },
-    retryButton: {
-        backgroundColor: '#007AFF',
-        borderRadius: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-    },
-    retryButtonText: {
-        color: '#FFF',
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    emptyStateContainer: {
-        alignItems: 'center',
-        padding: 20,
-    },
-    addQuestionsButton: {
-        backgroundColor: '#28A745',
-        borderRadius: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        marginTop: 8,
-    },
-    addQuestionsButtonText: {
-        color: '#FFF',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    // Custom questions styles
     customQuestionContainer: {
         backgroundColor: '#FFF',
         borderRadius: 8,
@@ -1096,6 +955,15 @@ const styles = StyleSheet.create({
         fontWeight: '500',
         color: '#666',
     },
+    customQuestionActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    mediaButton: {
+        padding: 8,
+        backgroundColor: '#F0F8FF',
+        borderRadius: 6,
+    },
     customQuestionInput: {
         borderWidth: 1,
         borderColor: '#E5E5E7',
@@ -1105,7 +973,34 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         minHeight: 40,
     },
-    // Team members styles
+    mediaPreviewContainer: {
+        marginBottom: 8,
+    },
+    uploadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        padding: 8,
+        backgroundColor: '#F0F8FF',
+        borderRadius: 6,
+    },
+    uploadingText: {
+        fontSize: 14,
+        color: '#007AFF',
+    },
+    mediaPreview: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        padding: 8,
+        backgroundColor: '#E8F5E8',
+        borderRadius: 6,
+    },
+    mediaFileName: {
+        flex: 1,
+        fontSize: 14,
+        color: '#333',
+    },
     teamMembersContainer: {
         marginTop: 8,
     },
@@ -1119,7 +1014,6 @@ const styles = StyleSheet.create({
         flex: 1,
         marginBottom: 0,
     },
-    // Button styles
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1134,7 +1028,6 @@ const styles = StyleSheet.create({
     deleteButton: {
         padding: 8,
     },
-    // Summary card styles
     summaryCard: {
         backgroundColor: '#FFF',
         borderRadius: 8,
@@ -1153,14 +1046,6 @@ const styles = StyleSheet.create({
         color: '#666',
         marginBottom: 4,
     },
-    // Helper text
-    helperText: {
-        fontSize: 14,
-        color: '#666',
-        fontStyle: 'italic',
-        marginBottom: 8,
-    },
-    // Create button
     createButton: {
         backgroundColor: '#007AFF',
         borderRadius: 8,
@@ -1178,6 +1063,50 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
+    },
+    questionsList: {
+        maxHeight: 400,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContainer: {
+        backgroundColor: '#FFF',
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        padding: 20,
+        maxHeight: '50%',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
+    },
+    mediaOptionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        paddingVertical: 20,
+    },
+    mediaOption: {
+        alignItems: 'center',
+        gap: 8,
+        padding: 16,
+        borderRadius: 12,
+        backgroundColor: '#F5F5F7',
+        minWidth: 80,
+    },
+    mediaOptionText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#333',
     },
 });
 

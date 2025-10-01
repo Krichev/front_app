@@ -1,4 +1,4 @@
-// src/screens/SignupScreen.tsx - Refactored with Theme Integration & Proper RTK Query Error Handling
+// src/screens/SignupScreen.tsx - Fixed with proper error handling
 import React, {useState} from 'react';
 import {
     Alert,
@@ -38,9 +38,9 @@ interface FormData {
 interface SignupApiResponse {
     accessToken: string;
     refreshToken: string;
-    user: {
+    user?: {
         id: string;
-        username: string; // API returns 'name'
+        username: string;
         email: string;
         bio?: string;
         avatar?: string;
@@ -100,18 +100,37 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                 password,
             }).unwrap() as SignupApiResponse;
 
+            console.log('Signup API Response:', JSON.stringify(result, null, 2));
+
+            // ✅ FIX: Check if result exists and has required properties
+            if (!result) {
+                throw new Error('No response received from server');
+            }
+
             const {accessToken, refreshToken, user} = result;
 
+            // ✅ FIX: Validate that we have tokens
+            if (!accessToken || !refreshToken) {
+                throw new Error('Invalid response: missing authentication tokens');
+            }
+
+            // ✅ FIX: Check if user object exists before accessing its properties
+            if (!user || !user.id) {
+                console.error('Invalid user data in response:', result);
+                throw new Error('Invalid response: missing user information');
+            }
+
             // Map API response to match User interface
-            // Note: API returns 'name' field, but our app uses 'username' consistently
             const mappedUser = {
                 id: user.id,
-                username: user.username, // Map 'name' from API to 'username' for our app
-                email: user.email,
+                username: user.username || username.trim(),
+                email: user.email || email.trim().toLowerCase(),
                 bio: user.bio,
                 avatar: user.avatar,
-                createdAt: user.createdAt,
+                createdAt: user.createdAt || new Date().toISOString(),
             };
+
+            console.log('Mapped user data:', mappedUser);
 
             // Store tokens securely
             await Keychain.setGenericPassword('authTokens', JSON.stringify({
@@ -139,8 +158,25 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
         } catch (err: any) {
             console.error('Signup error:', err);
-            // For catch block errors, we handle them directly since they're not RTK Query errors
-            const errorMessage = err?.data?.message || err?.message || 'Signup failed. Please try again.';
+            console.error('Error details:', JSON.stringify(err, null, 2));
+
+            // Enhanced error handling with more context
+            let errorMessage = 'Signup failed. Please try again.';
+
+            if (err?.data?.message) {
+                errorMessage = err.data.message;
+            } else if (err?.message) {
+                errorMessage = err.message;
+            } else if (err?.status === 'FETCH_ERROR') {
+                errorMessage = 'Network error. Please check your connection.';
+            } else if (err?.status === 400) {
+                errorMessage = 'Invalid signup data. Please check your inputs.';
+            } else if (err?.status === 409) {
+                errorMessage = 'Username or email already exists.';
+            } else if (err?.status === 500) {
+                errorMessage = 'Server error. Please try again later.';
+            }
+
             Alert.alert('Signup Failed', errorMessage);
         }
     };
@@ -168,19 +204,18 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
             >
-                {/* Logo Section */}
+                {/* Logo/Brand Section */}
                 <View style={styles.logoContainer}>
                     <Image
                         source={require('../../assets/logo.png')}
                         style={styles.logo}
                         resizeMode="contain"
                     />
-                    <Text style={styles.appName}>ChallengeApp</Text>
+                    <Text style={styles.appName}>Challenger</Text>
                 </View>
 
-                {/* Form Section */}
+                {/* Form Container */}
                 <View style={styles.formContainer}>
                     <Text style={styles.title}>Create Account</Text>
 
@@ -192,7 +227,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                                 styles.input,
                                 focusedInput === 'username' && styles.inputFocused
                             ]}
-                            placeholder="Enter your username"
+                            placeholder="Choose a username"
                             placeholderTextColor={theme.colors.text.disabled}
                             value={formData.username}
                             onChangeText={(value) => handleInputChange('username', value)}
@@ -207,7 +242,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
                     {/* Email Input */}
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Email Address</Text>
+                        <Text style={styles.label}>Email</Text>
                         <TextInput
                             style={[
                                 styles.input,
@@ -290,7 +325,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                         </Text>
                     </TouchableOpacity>
 
-                    {/* Error Display - Using RTK Query type guard for proper error handling */}
+                    {/* Error Display */}
                     {Boolean(error) && (
                         <View style={styles.errorContainer}>
                             <Text style={styles.errorText}>
