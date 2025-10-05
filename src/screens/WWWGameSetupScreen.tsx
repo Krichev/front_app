@@ -1,6 +1,7 @@
-// Update the Game Setup screen to ensure Question Source selector appears
+// src/screens/WWWGameSetupScreen.tsx - UPDATED: Backend Integration
 import React, {useEffect, useState} from 'react';
 import {
+    ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
     Platform,
@@ -17,69 +18,88 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
-import {GameSettings, initializeWWWGameServices} from '../services/wwwGame';
+import {GameSettings} from '../services/wwwGame';
 import {useWWWGame} from '../app/providers/WWWGameProvider';
-import {QuestionService, UserQuestion} from "../services/wwwGame/questionService";
-import QuestionSourceSelector from "../components/QuestionSourceSelector";
-import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+    convertToAPIDifficulty,
+    convertToUIDifficulty,
+    useGetQuestionsByDifficultyQuery,
+    useGetTournamentStatisticsQuery,
+} from '../entities/TournamentState/model/slice/tournamentQuestionApi';
 
 const WWWGameSetupScreen: React.FC = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const { user } = useSelector((state: RootState) => state.auth);
-    const { isInitialized, config } = useWWWGame();
+    const { config } = useWWWGame();
 
-    // State for question source
-    const [questionSource, setQuestionSource] = useState<'app' | 'user'>('app');
-    const [userQuestions, setUserQuestions] = useState<UserQuestion[]>([]);
+    // Tournament & Question State
+    const [tournamentId, setTournamentId] = useState<string>('1'); // Default tournament
+    const [questionSource, setQuestionSource] = useState<'tournament' | 'local'>('tournament');
+    const [useTournamentQuestions, setUseTournamentQuestions] = useState(true);
 
-    // Initialize game if not already initialized
-    useEffect(() => {
-        if (!isInitialized) {
-            initializeWWWGameServices();
-        }
-    }, [isInitialized]);
-
-    // Load user questions when source changes
-    useEffect(() => {
-        const loadUserQuestions = async () => {
-            if (questionSource === 'user') {
-                try {
-                    const questions = await QuestionService.getUserQuestions();
-                    setUserQuestions(questions);
-
-                    // If no questions are available, alert the user
-                    if (questions.length === 0) {
-                        Alert.alert(
-                            'No Custom Questions',
-                            'You haven\'t created any questions yet. Would you like to create some now?',
-                            [
-                                { text: 'Not Now', style: 'cancel' },
-                                {
-                                    text: 'Create Questions',
-                                    onPress: () => navigation.navigate('UserQuestions')
-                                }
-                            ]
-                        );
-                    }
-                } catch (error) {
-                    console.error('Error loading user questions:', error);
-                }
-            }
-        };
-
-        loadUserQuestions();
-    }, [questionSource, navigation]);
-
-    // State for game settings
+    // Game Settings State
     const [teamName, setTeamName] = useState('Team Intellect');
-    const [teamMembers, setTeamMembers] = useState<string[]>([user?.name || 'Player 1']);
+    const [teamMembers, setTeamMembers] = useState<string[]>([user?.username || 'Player 1']);
     const [newMember, setNewMember] = useState('');
     const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(
-        config.questions.defaultDifficulty || 'Medium'
+        config?.questions?.defaultDifficulty || 'Medium'
     );
-    const [roundTime, setRoundTime] = useState(config.game.defaultRoundTime || 60); // seconds
-    const [roundCount, setRoundCount] = useState(config.game.defaultRoundCount || 10);
-    const [enableAIHost, setEnableAIHost] = useState<boolean>(config.aiHost.enabled || true);
+    const [roundTime, setRoundTime] = useState(config?.game?.defaultRoundTime || 60);
+    const [roundCount, setRoundCount] = useState(config?.game?.defaultRoundCount || 10);
+    const [enableAIHost, setEnableAIHost] = useState<boolean>(config?.aiHost?.enabled || true);
+
+    // Parse tournament ID
+    const parsedTournamentId = parseInt(tournamentId) || 1;
+
+    // Fetch questions from backend when tournament questions are enabled
+    const {
+        data: tournamentQuestions,
+        isLoading: isLoadingQuestions,
+        error: questionsError,
+        refetch: refetchQuestions,
+    } = useGetQuestionsByDifficultyQuery(
+        {
+            tournamentId: parsedTournamentId,
+            difficulty: convertToAPIDifficulty(difficulty),
+            limit: Math.max(roundCount, 20), // Fetch extra for variety
+        },
+        {
+            skip: !useTournamentQuestions, // Skip if not using tournament questions
+        }
+    );
+
+    // Fetch tournament statistics
+    const {
+        data: tournamentStats,
+        isLoading: isLoadingStats,
+    } = useGetTournamentStatisticsQuery(parsedTournamentId, {
+        skip: !useTournamentQuestions,
+    });
+
+    // Show tournament info when questions are loaded
+    useEffect(() => {
+        if (tournamentQuestions && tournamentQuestions.length > 0) {
+            console.log(`Loaded ${tournamentQuestions.length} questions from tournament ${parsedTournamentId}`);
+        }
+    }, [tournamentQuestions, parsedTournamentId]);
+
+    // Warn if not enough questions
+    useEffect(() => {
+        if (
+            useTournamentQuestions &&
+            tournamentQuestions &&
+            tournamentQuestions.length < roundCount &&
+            tournamentQuestions.length > 0
+        ) {
+            Alert.alert(
+                'Limited Questions',
+                `Only ${tournamentQuestions.length} questions available for ${difficulty} difficulty. Round count adjusted.`,
+                [{ text: 'OK' }]
+            );
+            setRoundCount(tournamentQuestions.length);
+        }
+    }, [tournamentQuestions, roundCount, difficulty, useTournamentQuestions]);
 
     // Add team member
     const addTeamMember = () => {
@@ -99,6 +119,10 @@ const WWWGameSetupScreen: React.FC = () => {
 
     // Remove team member
     const removeTeamMember = (index: number) => {
+        if (teamMembers.length === 1) {
+            Alert.alert('Error', 'You must have at least one team member');
+            return;
+        }
         const updatedMembers = [...teamMembers];
         updatedMembers.splice(index, 1);
         setTeamMembers(updatedMembers);
@@ -111,21 +135,58 @@ const WWWGameSetupScreen: React.FC = () => {
             return;
         }
 
-        if (questionSource === 'user' && userQuestions.length === 0) {
-            Alert.alert('Error', 'No custom questions available. Please create some questions or switch to App Questions.');
-            return;
+        // Check if using tournament questions
+        if (useTournamentQuestions) {
+            if (isLoadingQuestions) {
+                Alert.alert('Please Wait', 'Questions are still loading...');
+                return;
+            }
+
+            if (questionsError) {
+                Alert.alert(
+                    'Error Loading Questions',
+                    'Failed to load tournament questions. Please check your connection and try again.',
+                    [
+                        { text: 'Retry', onPress: () => refetchQuestions() },
+                        { text: 'Use Local Questions', onPress: () => setUseTournamentQuestions(false) },
+                    ]
+                );
+                return;
+            }
+
+            if (!tournamentQuestions || tournamentQuestions.length === 0) {
+                Alert.alert(
+                    'No Questions Available',
+                    `No questions found for ${difficulty} difficulty in this tournament. Try a different difficulty or tournament.`,
+                    [{ text: 'OK' }]
+                );
+                return;
+            }
         }
 
-        // Create game settings object to pass to the game screen
+        // Convert backend questions to game format
+        const userQuestions = useTournamentQuestions && tournamentQuestions
+            ? tournamentQuestions.slice(0, roundCount).map((q, idx) => ({
+                id: q.id.toString(),
+                question: q.questionPreview,
+                answer: 'Answer pending', // Will be loaded in detail view
+                difficulty: convertToUIDifficulty(q.difficulty),
+                topic: q.topic,
+            }))
+            : undefined;
+
+        // Create game settings
         const gameSettings: GameSettings = {
             teamName,
             teamMembers,
             difficulty,
             roundTime,
-            roundCount,
+            roundCount: useTournamentQuestions
+                ? Math.min(roundCount, tournamentQuestions?.length || roundCount)
+                : roundCount,
             enableAIHost,
-            questionSource,
-            userQuestions: questionSource === 'user' ? userQuestions : undefined,
+            questionSource: useTournamentQuestions ? 'user' : 'app',
+            userQuestions,
         };
 
         navigation.navigate('WWWGamePlay', gameSettings);
@@ -137,35 +198,142 @@ const WWWGameSetupScreen: React.FC = () => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.keyboardAvoidContainer}
             >
-                <ScrollView style={styles.scrollView}>
+                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                     {/* Header */}
                     <View style={styles.header}>
+                        <MaterialCommunityIcons name="brain" size={48} color="white" />
                         <Text style={styles.headerTitle}>WWW_QUIZ</Text>
                         <Text style={styles.headerSubtitle}>Game Setup</Text>
                     </View>
 
-                    {/* Question Source Section - Ensure this appears */}
+                    {/* Tournament Selection Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Question Source</Text>
-                        <QuestionSourceSelector
-                            source={questionSource}
-                            onSelectSource={setQuestionSource}
-                        />
 
-                        {questionSource === 'user' && (
+                        {/* Toggle: Tournament vs Local */}
+                        <View style={styles.sourceToggle}>
                             <TouchableOpacity
-                                style={styles.manageQuestionsButton}
-                                onPress={() => navigation.navigate('UserQuestions')}
+                                style={[
+                                    styles.sourceButton,
+                                    useTournamentQuestions && styles.sourceButtonActive,
+                                ]}
+                                onPress={() => setUseTournamentQuestions(true)}
                             >
-                                <MaterialCommunityIcons name="playlist-edit" size={18} color="#4CAF50"/>
-                                <Text style={styles.manageQuestionsText}>Manage My Questions</Text>
+                                <MaterialCommunityIcons
+                                    name="server"
+                                    size={20}
+                                    color={useTournamentQuestions ? 'white' : '#666'}
+                                />
+                                <Text
+                                    style={[
+                                        styles.sourceButtonText,
+                                        useTournamentQuestions && styles.sourceButtonTextActive,
+                                    ]}
+                                >
+                                    Tournament
+                                </Text>
                             </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.sourceButton,
+                                    !useTournamentQuestions && styles.sourceButtonActive,
+                                ]}
+                                onPress={() => setUseTournamentQuestions(false)}
+                            >
+                                <MaterialCommunityIcons
+                                    name="database"
+                                    size={20}
+                                    color={!useTournamentQuestions ? 'white' : '#666'}
+                                />
+                                <Text
+                                    style={[
+                                        styles.sourceButtonText,
+                                        !useTournamentQuestions && styles.sourceButtonTextActive,
+                                    ]}
+                                >
+                                    Local
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Tournament ID Input */}
+                        {useTournamentQuestions && (
+                            <View style={styles.tournamentInputContainer}>
+                                <Text style={styles.inputLabel}>Tournament ID:</Text>
+                                <TextInput
+                                    style={styles.tournamentInput}
+                                    value={tournamentId}
+                                    onChangeText={setTournamentId}
+                                    placeholder="Enter tournament ID"
+                                    keyboardType="number-pad"
+                                />
+                            </View>
                         )}
 
-                        {questionSource === 'user' && userQuestions.length > 0 && (
-                            <Text style={styles.infoText}>
-                                You have {userQuestions.length} custom questions available
-                            </Text>
+                        {/* Tournament Stats */}
+                        {useTournamentQuestions && tournamentStats && !isLoadingStats && (
+                            <View style={styles.statsContainer}>
+                                <MaterialCommunityIcons
+                                    name="chart-box"
+                                    size={20}
+                                    color="#4CAF50"
+                                    style={styles.statsIcon}
+                                />
+                                <View style={styles.statsContent}>
+                                    <Text style={styles.statsTitle}>
+                                        {tournamentStats.tournamentTitle || `Tournament #${tournamentId}`}
+                                    </Text>
+                                    <Text style={styles.statsText}>
+                                        {tournamentStats.totalQuestions} total questions •
+                                        {tournamentStats.activeQuestions} active
+                                    </Text>
+                                    <Text style={styles.statsText}>
+                                        Avg Points: {tournamentStats.averagePoints?.toFixed(1) || 0}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Loading Indicator */}
+                        {useTournamentQuestions && isLoadingQuestions && (
+                            <View style={styles.loadingContainer}>
+                                <ActivityIndicator size="small" color="#4CAF50" />
+                                <Text style={styles.loadingText}>Loading questions...</Text>
+                            </View>
+                        )}
+
+                        {/* Questions Loaded Info */}
+                        {useTournamentQuestions &&
+                            tournamentQuestions &&
+                            tournamentQuestions.length > 0 && (
+                                <View style={styles.infoContainer}>
+                                    <MaterialCommunityIcons
+                                        name="check-circle"
+                                        size={16}
+                                        color="#4CAF50"
+                                    />
+                                    <Text style={styles.infoText}>
+                                        {tournamentQuestions.length} questions loaded for {difficulty}{' '}
+                                        difficulty
+                                    </Text>
+                                </View>
+                            )}
+
+                        {/* Error State */}
+                        {useTournamentQuestions && questionsError && (
+                            <View style={styles.errorContainer}>
+                                <MaterialCommunityIcons name="alert-circle" size={16} color="#F44336" />
+                                <Text style={styles.errorText}>
+                                    Failed to load questions
+                                </Text>
+                                <TouchableOpacity
+                                    style={styles.retryButton}
+                                    onPress={() => refetchQuestions()}
+                                >
+                                    <Text style={styles.retryButtonText}>Retry</Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </View>
 
@@ -190,16 +358,26 @@ const WWWGameSetupScreen: React.FC = () => {
                             <View style={styles.teamMembersContainer}>
                                 {teamMembers.map((member, index) => (
                                     <View key={index} style={styles.memberItem}>
+                                        <MaterialCommunityIcons
+                                            name="account"
+                                            size={20}
+                                            color="#4CAF50"
+                                        />
                                         <Text style={styles.memberName}>{member}</Text>
                                         <TouchableOpacity
                                             onPress={() => removeTeamMember(index)}
                                             style={styles.removeButton}
                                         >
-                                            <Text style={styles.removeButtonText}>×</Text>
+                                            <MaterialCommunityIcons
+                                                name="close"
+                                                size={16}
+                                                color="white"
+                                            />
                                         </TouchableOpacity>
                                     </View>
                                 ))}
 
+                                {/* Add Member Input */}
                                 <View style={styles.addMemberContainer}>
                                     <TextInput
                                         style={styles.memberInput}
@@ -212,7 +390,7 @@ const WWWGameSetupScreen: React.FC = () => {
                                         onPress={addTeamMember}
                                         style={styles.addButton}
                                     >
-                                        <Text style={styles.addButtonText}>+</Text>
+                                        <MaterialCommunityIcons name="plus" size={20} color="white" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -249,9 +427,9 @@ const WWWGameSetupScreen: React.FC = () => {
                             </View>
                         </View>
 
-                        {/* Discussion Time */}
+                        {/* Round Time */}
                         <View style={styles.settingItem}>
-                            <Text style={styles.settingLabel}>Discussion Time (seconds)</Text>
+                            <Text style={styles.settingLabel}>Time per Round (seconds)</Text>
                             <View style={styles.timeButtons}>
                                 {[30, 60, 90, 120].map((time) => (
                                     <TouchableOpacity
@@ -268,18 +446,18 @@ const WWWGameSetupScreen: React.FC = () => {
                                                 roundTime === time && styles.selectedTimeText,
                                             ]}
                                         >
-                                            {time}
+                                            {time}s
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
-                        {/* Number of Questions */}
+                        {/* Round Count */}
                         <View style={styles.settingItem}>
-                            <Text style={styles.settingLabel}>Number of Questions</Text>
+                            <Text style={styles.settingLabel}>Number of Rounds</Text>
                             <View style={styles.countButtons}>
-                                {[5, 10, 15].map((count) => (
+                                {[5, 10, 15, 20].map((count) => (
                                     <TouchableOpacity
                                         key={count}
                                         style={[
@@ -299,66 +477,61 @@ const WWWGameSetupScreen: React.FC = () => {
                                     </TouchableOpacity>
                                 ))}
                             </View>
-
-                            {questionSource === 'user' && userQuestions.length > 0 && userQuestions.length < roundCount && (
-                                <Text style={styles.warningText}>
-                                    Note: You only have {userQuestions.length} custom questions available.
-                                    The game will use all available questions.
-                                </Text>
-                            )}
+                            {useTournamentQuestions &&
+                                tournamentQuestions &&
+                                tournamentQuestions.length < roundCount && (
+                                    <Text style={styles.warningText}>
+                                        ⚠️ Only {tournamentQuestions.length} questions available
+                                    </Text>
+                                )}
                         </View>
 
-                        {/* AI Host */}
+                        {/* AI Host Toggle */}
                         <View style={styles.settingItem}>
-                            <Text style={styles.settingLabel}>Enable AI Host</Text>
                             <View style={styles.switchRow}>
                                 <TouchableOpacity
+                                    onPress={() => setEnableAIHost(!enableAIHost)}
                                     style={[
                                         styles.toggleButton,
                                         enableAIHost ? styles.toggleActive : styles.toggleInactive,
                                     ]}
-                                    onPress={() => setEnableAIHost(!enableAIHost)}
                                 >
                                     <View
                                         style={[
                                             styles.toggleKnob,
-                                            enableAIHost ? styles.toggleKnobActive : styles.toggleKnobInactive,
+                                            enableAIHost
+                                                ? styles.toggleKnobActive
+                                                : styles.toggleKnobInactive,
                                         ]}
                                     />
                                 </TouchableOpacity>
-                                <Text style={styles.toggleText}>
-                                    {enableAIHost ? 'Enabled' : 'Disabled'}
-                                </Text>
+                                <Text style={styles.toggleText}>Enable AI Host</Text>
                             </View>
                             <Text style={styles.aiHostDescription}>
-                                {enableAIHost
-                                    ? "AI Host will analyze team discussions and provide feedback"
-                                    : "AI Host features will be disabled"}
+                                AI host provides commentary and hints during the game
                             </Text>
                         </View>
                     </View>
 
                     {/* Action Buttons */}
                     <View style={styles.actionsContainer}>
-                        {/* Start Game Button */}
                         <TouchableOpacity
                             style={[
                                 styles.startButton,
-                                (questionSource === 'user' && userQuestions.length === 0) && styles.disabledButton
+                                (isLoadingQuestions ||
+                                    (useTournamentQuestions && !tournamentQuestions)) &&
+                                styles.disabledButton,
                             ]}
                             onPress={startGame}
-                            disabled={questionSource === 'user' && userQuestions.length === 0}
+                            disabled={
+                                isLoadingQuestions ||
+                                (useTournamentQuestions && !tournamentQuestions)
+                            }
                         >
+                            <MaterialCommunityIcons name="play" size={24} color="white" />
                             <Text style={styles.startButtonText}>Start Game</Text>
                         </TouchableOpacity>
 
-                        {questionSource === 'user' && userQuestions.length === 0 && (
-                            <Text style={styles.errorText}>
-                                Please create and select some questions first
-                            </Text>
-                        )}
-
-                        {/* Back Button */}
                         <TouchableOpacity
                             style={styles.backButton}
                             onPress={() => navigation.goBack()}
@@ -385,29 +558,39 @@ const styles = StyleSheet.create({
     },
     header: {
         backgroundColor: '#4CAF50',
-        padding: 20,
+        padding: 24,
         alignItems: 'center',
+        borderBottomLeftRadius: 20,
+        borderBottomRightRadius: 20,
+        marginBottom: 16,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     headerTitle: {
-        fontSize: 24,
+        fontSize: 28,
         fontWeight: 'bold',
         color: 'white',
+        marginTop: 8,
     },
     headerSubtitle: {
         fontSize: 16,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginTop: 5,
+        color: 'rgba(255, 255, 255, 0.9)',
+        marginTop: 4,
     },
     section: {
         backgroundColor: 'white',
-        borderRadius: 8,
+        borderRadius: 12,
         padding: 16,
-        margin: 16,
-        marginBottom: 8,
+        marginHorizontal: 16,
+        marginBottom: 16,
         elevation: 2,
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        shadowOffset: { width: 0, height: 2 },
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     sectionTitle: {
         fontSize: 18,
@@ -415,27 +598,128 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 16,
     },
-    manageQuestionsButton: {
+    sourceToggle: {
+        flexDirection: 'row',
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        padding: 4,
+        marginBottom: 16,
+    },
+    sourceButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 12,
-        marginTop: 12,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
+        borderRadius: 6,
+        gap: 6,
     },
-    manageQuestionsText: {
-        marginLeft: 6,
-        color: '#4CAF50',
-        fontSize: 14,
-        fontWeight: '500',
+    sourceButtonActive: {
+        backgroundColor: '#4CAF50',
     },
-    infoText: {
+    sourceButtonText: {
         fontSize: 14,
         color: '#666',
-        fontStyle: 'italic',
-        marginTop: 12,
-        textAlign: 'center',
+        fontWeight: '500',
+    },
+    sourceButtonTextActive: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    tournamentInputContainer: {
+        marginBottom: 12,
+    },
+    inputLabel: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 6,
+        fontWeight: '500',
+    },
+    tournamentInput: {
+        backgroundColor: '#f9f9f9',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+    },
+    statsContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#f0f9f4',
+        borderRadius: 8,
+        padding: 12,
+        marginTop: 8,
+        borderLeftWidth: 3,
+        borderLeftColor: '#4CAF50',
+    },
+    statsIcon: {
+        marginRight: 10,
+        marginTop: 2,
+    },
+    statsContent: {
+        flex: 1,
+    },
+    statsTitle: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 4,
+    },
+    statsText: {
+        fontSize: 13,
+        color: '#666',
+        marginTop: 2,
+    },
+    loadingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        gap: 8,
+    },
+    loadingText: {
+        fontSize: 14,
+        color: '#666',
+    },
+    infoContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f0f9f4',
+        borderRadius: 6,
+        padding: 10,
+        marginTop: 8,
+        gap: 6,
+    },
+    infoText: {
+        fontSize: 13,
+        color: '#4CAF50',
+        fontWeight: '500',
+    },
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff5f5',
+        borderRadius: 6,
+        padding: 10,
+        marginTop: 8,
+        gap: 6,
+    },
+    errorText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#F44336',
+        fontWeight: '500',
+    },
+    retryButton: {
+        backgroundColor: '#F44336',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 4,
+    },
+    retryButtonText: {
+        color: 'white',
+        fontSize: 12,
+        fontWeight: 'bold',
     },
     formGroup: {
         marginBottom: 16,
@@ -464,32 +748,29 @@ const styles = StyleSheet.create({
     },
     memberItem: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 10,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        borderBottomColor: '#eee',
+        gap: 8,
     },
     memberName: {
+        flex: 1,
         fontSize: 16,
         color: '#333',
     },
     removeButton: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: '#ff6b6b',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    removeButtonText: {
-        fontSize: 16,
-        color: 'white',
-        fontWeight: 'bold',
-    },
     addMemberContainer: {
         flexDirection: 'row',
         marginTop: 12,
+        gap: 8,
     },
     memberInput: {
         flex: 1,
@@ -507,30 +788,26 @@ const styles = StyleSheet.create({
         backgroundColor: '#4CAF50',
         alignItems: 'center',
         justifyContent: 'center',
-        marginLeft: 8,
-    },
-    addButtonText: {
-        fontSize: 20,
-        color: 'white',
-        fontWeight: 'bold',
     },
     settingItem: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     settingLabel: {
         fontSize: 16,
         color: '#555',
-        marginBottom: 8,
+        marginBottom: 10,
+        fontWeight: '500',
     },
     difficultyButtons: {
         flexDirection: 'row',
+        gap: 8,
     },
     difficultyButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        marginRight: 8,
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 8,
         backgroundColor: '#f0f0f0',
+        alignItems: 'center',
     },
     selectedDifficulty: {
         backgroundColor: '#4CAF50',
@@ -538,6 +815,7 @@ const styles = StyleSheet.create({
     difficultyText: {
         fontSize: 14,
         color: '#555',
+        fontWeight: '500',
     },
     selectedDifficultyText: {
         color: 'white',
@@ -545,13 +823,14 @@ const styles = StyleSheet.create({
     },
     timeButtons: {
         flexDirection: 'row',
+        gap: 8,
     },
     timeButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        marginRight: 8,
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 8,
         backgroundColor: '#f0f0f0',
+        alignItems: 'center',
     },
     selectedTime: {
         backgroundColor: '#4CAF50',
@@ -559,6 +838,7 @@ const styles = StyleSheet.create({
     timeText: {
         fontSize: 14,
         color: '#555',
+        fontWeight: '500',
     },
     selectedTimeText: {
         color: 'white',
@@ -566,13 +846,14 @@ const styles = StyleSheet.create({
     },
     countButtons: {
         flexDirection: 'row',
+        gap: 8,
     },
     countButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        marginRight: 8,
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 8,
         backgroundColor: '#f0f0f0',
+        alignItems: 'center',
     },
     selectedCount: {
         backgroundColor: '#4CAF50',
@@ -580,6 +861,7 @@ const styles = StyleSheet.create({
     countText: {
         fontSize: 14,
         color: '#555',
+        fontWeight: '500',
     },
     selectedCountText: {
         color: 'white',
@@ -594,6 +876,7 @@ const styles = StyleSheet.create({
     switchRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: 12,
     },
     toggleButton: {
         width: 50,
@@ -614,7 +897,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: 'white',
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
+        shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 2,
         elevation: 2,
@@ -626,32 +909,34 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-start',
     },
     toggleText: {
-        marginLeft: 8,
         fontSize: 16,
         color: '#555',
+        fontWeight: '500',
     },
     aiHostDescription: {
         fontSize: 12,
         color: '#666',
         fontStyle: 'italic',
         marginTop: 8,
-    },
-    errorText: {
-        color: '#F44336',
-        fontSize: 14,
-        textAlign: 'center',
-        marginTop: 8,
+        marginLeft: 62,
     },
     actionsContainer: {
         padding: 16,
         marginBottom: 24,
     },
     startButton: {
+        flexDirection: 'row',
         backgroundColor: '#4CAF50',
         padding: 16,
-        borderRadius: 8,
+        borderRadius: 12,
         alignItems: 'center',
-        marginTop: 16,
+        justifyContent: 'center',
+        gap: 8,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
     },
     startButtonText: {
         color: 'white',
@@ -664,11 +949,11 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     backButtonText: {
-        color: '#555',
+        color: '#666',
         fontSize: 16,
     },
     disabledButton: {
-        opacity: 0.7,
+        opacity: 0.5,
         backgroundColor: '#A5D6A7',
     },
 });
