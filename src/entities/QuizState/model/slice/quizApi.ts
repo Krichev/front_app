@@ -22,6 +22,7 @@ export interface QuizConfig {
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
+    teamBased: boolean;
 }
 
 // Quiz Question types

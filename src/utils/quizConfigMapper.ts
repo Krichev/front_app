@@ -4,63 +4,142 @@ import {QuizChallengeConfig} from "../entities/ChallengeState/model/slice/challe
 
 /**
  * Maps UI QuizConfig to backend QuizChallengeConfig format
+ * COMPLETE IMPLEMENTATION - All fields are now mapped correctly
+ *
+ * @param uiConfig - The quiz configuration from the UI
+ * @returns Backend-formatted quiz configuration
  */
 export const mapQuizConfigToBackend = (uiConfig: QuizConfig): QuizChallengeConfig => {
     // Map UI difficulty to backend difficulty format
-    const difficultyMap = {
-        'Easy': 'EASY' as const,
-        'Medium': 'MEDIUM' as const,
-        'Hard': 'HARD' as const
+    const difficultyMap: Record<'Easy' | 'Medium' | 'Hard', 'EASY' | 'MEDIUM' | 'HARD'> = {
+        'Easy': 'EASY',
+        'Medium': 'MEDIUM',
+        'Hard': 'HARD'
     };
 
-    return {
+    // Create complete backend config with ALL fields
+    const backendConfig: QuizChallengeConfig = {
+        // Mapped fields (format conversion)
         defaultDifficulty: difficultyMap[uiConfig.difficulty],
         defaultRoundTimeSeconds: uiConfig.roundTime,
         defaultTotalRounds: uiConfig.roundCount,
         enableAiHost: uiConfig.enableAIHost,
-        questionSource: 'MIXED', // Default to mixed, can be customized
-        allowCustomQuestions: true // Default to true since we're creating custom questions
+
+        // Default values
+        questionSource: 'MIXED',
+        allowCustomQuestions: true,
+
+        // Direct pass-through fields (NEW - these were missing!)
+        gameType: uiConfig.gameType,
+        teamName: uiConfig.teamName,
+        teamMembers: uiConfig.teamMembers,
+        teamBased: uiConfig.teamBased ?? false
     };
+
+    console.log('Mapping UI config to backend:');
+    console.log('  UI:', uiConfig);
+    console.log('  Backend:', backendConfig);
+
+    return backendConfig;
 };
 
 /**
  * Maps backend QuizChallengeConfig to UI QuizConfig format
+ * Used when retrieving and displaying quiz challenges
+ *
+ * @param backendConfig - The quiz configuration from the backend
+ * @returns UI-formatted quiz configuration
  */
 export const mapQuizConfigFromBackend = (backendConfig: QuizChallengeConfig): QuizConfig => {
     // Map backend difficulty to UI difficulty format
-    const difficultyMap = {
-        'EASY': 'Easy' as const,
-        'MEDIUM': 'Medium' as const,
-        'HARD': 'Hard' as const
+    const difficultyMap: Record<'EASY' | 'MEDIUM' | 'HARD', 'Easy' | 'Medium' | 'Hard'> = {
+        'EASY': 'Easy',
+        'MEDIUM': 'Medium',
+        'HARD': 'Hard'
     };
 
-    return {
-        gameType: 'WWW',
-        teamName: 'My Team', // Default values since backend doesn't store these
-        teamMembers: ['Player 1'],
-        difficulty: difficultyMap[backendConfig.defaultDifficulty],
-        roundTime: backendConfig.defaultRoundTimeSeconds,
-        roundCount: backendConfig.defaultTotalRounds,
-        enableAIHost: backendConfig.enableAiHost
+    // Create complete UI config with ALL fields
+    const uiConfig: QuizConfig = {
+        gameType: (backendConfig.gameType || 'WWW') as 'WWW',
+        teamName: backendConfig.teamName || 'My Team',
+        teamMembers: backendConfig.teamMembers || ['Player 1'],
+        difficulty: difficultyMap[backendConfig.defaultDifficulty] || 'Medium',
+        roundTime: backendConfig.defaultRoundTimeSeconds || 60,
+        roundCount: backendConfig.defaultTotalRounds || 10,
+        enableAIHost: backendConfig.enableAiHost ?? true,
+        teamBased: backendConfig.teamBased ?? false
     };
+
+    console.log('Mapping backend config to UI:');
+    console.log('  Backend:', backendConfig);
+    console.log('  UI:', uiConfig);
+
+    return uiConfig;
 };
 
 /**
  * Creates a default QuizChallengeConfig for backend requests
+ * Useful for quick testing or default values
  */
 export const createDefaultQuizChallengeConfig = (
     difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium',
     roundTime: number = 60,
     roundCount: number = 10,
-    enableAI: boolean = true
+    enableAI: boolean = true,
+    teamName: string = 'Default Team',
+    teamMembers: string[] = ['Player 1']
 ): QuizChallengeConfig => {
     return mapQuizConfigToBackend({
         gameType: 'WWW',
-        teamName: 'Default Team',
-        teamMembers: ['Player 1'],
+        teamName,
+        teamMembers,
         difficulty,
         roundTime,
         roundCount,
-        enableAIHost: enableAI
+        enableAIHost: enableAI,
+        teamBased: false
     });
+};
+
+/**
+ * Validates that all required fields are present in the UI config
+ * Returns an array of validation error messages
+ */
+export const validateQuizConfig = (config: QuizConfig): string[] => {
+    const errors: string[] = [];
+
+    if (!config.teamName || config.teamName.trim() === '') {
+        errors.push('Team name is required');
+    }
+
+    if (!config.teamMembers || config.teamMembers.length === 0) {
+        errors.push('At least one team member is required');
+    }
+
+    if (config.roundTime < 10) {
+        errors.push('Round time must be at least 10 seconds');
+    }
+
+    if (config.roundTime > 300) {
+        errors.push('Round time must not exceed 300 seconds');
+    }
+
+    if (config.roundCount < 1) {
+        errors.push('Must have at least 1 question');
+    }
+
+    if (config.roundCount > 50) {
+        errors.push('Cannot exceed 50 questions');
+    }
+
+    return errors;
+};
+
+/**
+ * Pretty prints the quiz configuration for debugging
+ */
+export const debugPrintConfig = (config: QuizConfig | QuizChallengeConfig, label: string = 'Config') => {
+    console.log(`\n=== ${label} ===`);
+    console.log(JSON.stringify(config, null, 2));
+    console.log('=================\n');
 };

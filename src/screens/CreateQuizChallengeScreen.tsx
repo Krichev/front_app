@@ -1,59 +1,53 @@
 // src/screens/CreateQuizChallengeScreen.tsx
-import React, {useState} from "react";
-import {useNavigation} from "@react-navigation/native";
-import {Alert, ScrollView, Text, TextInput, TouchableOpacity, View} from "react-native";
-import {styles} from "../shared/ui/Modal/Modal.style";
-
-// FIXED: Import both interfaces from ChallengeState
+import React, {useState} from 'react';
+import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {QuizConfig} from '../entities/QuizState/model/slice/quizApi';
 import {
     CreateQuizChallengeRequest,
     useCreateQuizChallengeMutation
-} from "../entities/ChallengeState/model/slice/challengeApi";
+} from '../entities/ChallengeState/model/slice/challengeApi';
+import {mapQuizConfigToBackend} from '../utils/quizConfigMapper';
+import {QuizConfigForm} from '../components/QuizConfigForm';
 
-// Import from QuizState for question and config types
-import {CreateQuizQuestionRequest, QuizConfig} from "../entities/QuizState/model/slice/quizApi";
-import {mapQuizConfigToBackend} from "../utils/quizConfigMapper.ts";
+interface Question {
+    question: string;
+    answer: string;
+    topic?: string;
+    additionalInfo?: string;
+}
 
 export const CreateQuizChallengeScreen = () => {
+    const navigation = useNavigation();
+    const [createQuizChallenge, { isLoading }] = useCreateQuizChallengeMutation();
+
+    // Basic challenge info
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
-    const [questions, setQuestions] = useState<CreateQuizQuestionRequest[]>([]);
+
+    // Quiz configuration with default values
     const [quizConfig, setQuizConfig] = useState<QuizConfig>({
         gameType: 'WWW',
-        teamName: 'My Team',
-        teamMembers: ['Player 1'],
+        teamName: '',
+        teamMembers: [],
         difficulty: 'Medium',
         roundTime: 60,
         roundCount: 10,
-        enableAIHost: true
+        enableAIHost: true,
+        teamBased: false,
     });
 
-    // FIXED: Now properly imported from challengeApi
-    const [createQuizChallenge, {isLoading}] = useCreateQuizChallengeMutation();
-    const navigation = useNavigation();
+    // Custom questions
+    const [questions, setQuestions] = useState<Question[]>([]);
+    const [currentQuestion, setCurrentQuestion] = useState<Question>({
+        question: '',
+        answer: '',
+        topic: '',
+        additionalInfo: '',
+    });
 
-    const addQuestion = () => {
-        setQuestions([...questions, {
-            question: '',
-            answer: '',
-            difficulty: 'MEDIUM',
-            topic: '',
-            source: 'USER_CREATED',
-            additionalInfo: ''
-        }]);
-    };
-
-    const updateQuestion = (index: number, field: string, value: string) => {
-        const updatedQuestions = [...questions];
-        updatedQuestions[index] = {...updatedQuestions[index], [field]: value};
-        setQuestions(updatedQuestions);
-    };
-
-    const removeQuestion = (index: number) => {
-        setQuestions(questions.filter((_, i) => i !== index));
-    };
-
-    const validateForm = () => {
+    // Validation
+    const validateForm = (): boolean => {
         if (!title.trim()) {
             Alert.alert('Error', 'Please enter a quiz title');
             return false;
@@ -62,231 +56,450 @@ export const CreateQuizChallengeScreen = () => {
             Alert.alert('Error', 'Please enter a quiz description');
             return false;
         }
+        if (!quizConfig.teamName.trim()) {
+            Alert.alert('Error', 'Please enter a team name');
+            return false;
+        }
+        if (quizConfig.teamMembers.length === 0) {
+            Alert.alert('Error', 'Please add at least one team member');
+            return false;
+        }
         return true;
     };
 
+    // Add a custom question
+    const addQuestion = () => {
+        if (!currentQuestion.question.trim()) {
+            Alert.alert('Error', 'Please enter a question');
+            return;
+        }
+        if (!currentQuestion.answer.trim()) {
+            Alert.alert('Error', 'Please enter an answer');
+            return;
+        }
+
+        setQuestions([...questions, currentQuestion]);
+        setCurrentQuestion({
+            question: '',
+            answer: '',
+            topic: '',
+            additionalInfo: '',
+        });
+        Alert.alert('Success', 'Question added!');
+    };
+
+    // Remove a question
+    const removeQuestion = (index: number) => {
+        Alert.alert(
+            'Remove Question',
+            'Are you sure you want to remove this question?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: () => {
+                        setQuestions(questions.filter((_, i) => i !== index));
+                    },
+                },
+            ]
+        );
+    };
+
+    // Create the quiz challenge
     const handleCreateQuiz = async () => {
         if (!validateForm()) return;
 
         try {
-            // FIXED: Use the mapper utility to convert UI config to backend format
-            const backendQuizConfig = mapQuizConfigToBackend(quizConfig);
+            console.log('Starting quiz challenge creation...');
+            console.log('Quiz Config:', quizConfig);
 
-            // FIXED: Use the correct structure matching CreateQuizChallengeRequest from backend
+            // Map the UI quiz config to backend format
+            const backendQuizConfig = mapQuizConfigToBackend(quizConfig);
+            console.log('Mapped Backend Config:', backendQuizConfig);
+
+            // Prepare custom questions for backend
+            const customQuestions = questions
+                .filter(q => q.question.trim() && q.answer.trim())
+                .map(q => ({
+                    question: q.question.trim(),
+                    answer: q.answer.trim(),
+                    difficulty: backendQuizConfig.defaultDifficulty,
+                    topic: q.topic?.trim() || 'General',
+                    additionalInfo: q.additionalInfo?.trim(),
+                }));
+
+            // Create the request
             const request: CreateQuizChallengeRequest = {
                 title: title.trim(),
                 description: description.trim(),
                 visibility: 'PUBLIC',
                 frequency: 'ONE_TIME',
-                quizConfig: backendQuizConfig, // Now properly typed and mapped
-                customQuestions: questions.filter(q => q.question.trim() && q.answer.trim()) // FIXED: Use 'customQuestions'
+                quizConfig: backendQuizConfig,
+                customQuestions: customQuestions,
             };
 
-            console.log('Creating quiz challenge with request:', request);
+            console.log('Final Request:', JSON.stringify(request, null, 2));
 
+            // Send request to backend
             const result = await createQuizChallenge(request).unwrap();
 
+            console.log('Challenge created successfully:', result);
+
+            // Success alert
             Alert.alert(
-                'Success',
-                `Quiz challenge created successfully!\n${questions.filter(q => q.question.trim() && q.answer.trim()).length} custom questions added.`,
+                'Success! 🎉',
+                `Quiz challenge "${title}" created successfully!\n\n` +
+                `Team: ${quizConfig.teamName}\n` +
+                `Members: ${quizConfig.teamMembers.join(', ')}\n` +
+                `Difficulty: ${quizConfig.difficulty}\n` +
+                `Questions: ${customQuestions.length} custom questions`,
                 [
                     {
                         text: 'OK',
-                        onPress: () => navigation.goBack()
-                    }
+                        onPress: () => navigation.goBack(),
+                    },
                 ]
             );
-
         } catch (error: any) {
-            console.error('Create quiz error:', error);
-
-            // Better error handling
-            let errorMessage = 'Failed to create quiz challenge';
-            if (error?.data?.message) {
-                errorMessage = error.data.message;
-            } else if (error?.message) {
-                errorMessage = error.message;
-            }
-
-            Alert.alert('Error', errorMessage);
+            console.error('Error creating quiz challenge:', error);
+            Alert.alert(
+                'Error',
+                error?.data?.message ||
+                error?.message ||
+                'Failed to create quiz challenge. Please try again.'
+            );
         }
-    };
-
-    const getDifficultyColor = (difficulty: string) => {
-        switch (difficulty) {
-            case 'Easy':
-                return '#4CAF50';
-            case 'Medium':
-                return '#FF9800';
-            case 'Hard':
-                return '#F44336';
-            default:
-                return '#757575';
-        }
-    };
-
-    const updateQuizConfig = (field: keyof QuizConfig, value: any) => {
-        setQuizConfig(prev => ({
-            ...prev,
-            [field]: value
-        }));
     };
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.container}>
             <View style={styles.content}>
-                <Text style={styles.title}>Create Quiz Challenge</Text>
-                <Text style={styles.subtitle}>Create a custom quiz challenge for others to join</Text>
+                {/* Header */}
+                <Text style={styles.header}>Create Quiz Challenge</Text>
+                <Text style={styles.subheader}>
+                    Fill in the details below to create your quiz challenge
+                </Text>
 
-                {/* Basic Challenge Info */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Challenge Details</Text>
+                {/* Basic Info Section */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Basic Information</Text>
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Quiz Title *"
-                        value={title}
-                        onChangeText={setTitle}
-                        maxLength={100}
-                    />
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Challenge Title *</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={title}
+                            onChangeText={setTitle}
+                            placeholder="e.g., Team Trivia Challenge"
+                            placeholderTextColor="#999"
+                        />
+                    </View>
 
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        placeholder="Description *"
-                        value={description}
-                        onChangeText={setDescription}
-                        multiline
-                        numberOfLines={3}
-                        maxLength={500}
-                    />
-                </View>
-
-                {/* Quiz Configuration */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Quiz Settings</Text>
-
-                    <View style={styles.configSection}>
-                        <View style={styles.configRow}>
-                            <Text style={styles.configLabel}>Game Type:</Text>
-                            <Text style={styles.configValue}>{quizConfig.gameType}</Text>
-                        </View>
-
-                        <View style={styles.configRow}>
-                            <Text style={styles.configLabel}>Difficulty:</Text>
-                            <Text style={[styles.configValue, {color: getDifficultyColor(quizConfig.difficulty)}]}>
-                                {quizConfig.difficulty}
-                            </Text>
-                        </View>
-
-                        <View style={styles.configRow}>
-                            <Text style={styles.configLabel}>Round Time:</Text>
-                            <Text style={styles.configValue}>{quizConfig.roundTime}s</Text>
-                        </View>
-
-                        <View style={styles.configRow}>
-                            <Text style={styles.configLabel}>Number of Rounds:</Text>
-                            <Text style={styles.configValue}>{quizConfig.roundCount}</Text>
-                        </View>
-
-                        <View style={styles.configRow}>
-                            <Text style={styles.configLabel}>AI Host:</Text>
-                            <Text style={styles.configValue}>{quizConfig.enableAIHost ? 'Enabled' : 'Disabled'}</Text>
-                        </View>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Description *</Text>
+                        <TextInput
+                            style={[styles.input, styles.textArea]}
+                            value={description}
+                            onChangeText={setDescription}
+                            placeholder="Describe your quiz challenge..."
+                            placeholderTextColor="#999"
+                            multiline
+                            numberOfLines={4}
+                        />
                     </View>
                 </View>
 
-                {/* Questions Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Custom Questions ({questions.length})</Text>
-                    <Text style={styles.subtitle}>
-                        Add your own questions or leave empty to use app questions during gameplay
+                {/* Quiz Configuration Section */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Quiz Configuration</Text>
+                    <QuizConfigForm
+                        quizConfig={quizConfig}
+                        onConfigChange={setQuizConfig}
+                    />
+                </View>
+
+                {/* Custom Questions Section */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>
+                        Custom Questions (Optional)
+                    </Text>
+                    <Text style={styles.cardDescription}>
+                        Add your own questions or use our question bank
                     </Text>
 
-                    {questions.map((question, index) => (
-                        <View key={index} style={styles.questionCard}>
-                            <View style={styles.questionHeader}>
-                                <Text style={styles.questionNumber}>Question {index + 1}</Text>
-                                <TouchableOpacity
-                                    onPress={() => removeQuestion(index)}
-                                    style={styles.removeButton}
-                                >
-                                    <Text style={styles.removeButtonText}>×</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Question"
-                                value={question.question}
-                                onChangeText={(value) => updateQuestion(index, 'question', value)}
-                                multiline
-                            />
-
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Answer"
-                                value={question.answer}
-                                onChangeText={(value) => updateQuestion(index, 'answer', value)}
-                            />
-
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Topic (optional)"
-                                value={question.topic || ''}
-                                onChangeText={(value) => updateQuestion(index, 'topic', value)}
-                            />
-
-                            {/* Difficulty Selection */}
-                            <View style={styles.difficultyContainer}>
-                                <Text style={styles.difficultyLabel}>Difficulty:</Text>
-                                <View style={styles.difficultyButtons}>
-                                    {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
-                                        <TouchableOpacity
-                                            key={diff}
-                                            style={[
-                                                styles.difficultyButton,
-                                                question.difficulty === diff && styles.selectedDifficulty
-                                            ]}
-                                            onPress={() => updateQuestion(index, 'difficulty', diff)}
-                                        >
-                                            <Text style={[
-                                                styles.difficultyButtonText,
-                                                question.difficulty === diff && styles.selectedDifficultyText
-                                            ]}>
-                                                {diff}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
+                    {/* Existing Questions */}
+                    {questions.length > 0 && (
+                        <View style={styles.questionsList}>
+                            <Text style={styles.questionsCount}>
+                                {questions.length} question{questions.length !== 1 ? 's' : ''} added
+                            </Text>
+                            {questions.map((q, index) => (
+                                <View key={index} style={styles.questionItem}>
+                                    <View style={styles.questionContent}>
+                                        <Text style={styles.questionNumber}>Q{index + 1}</Text>
+                                        <View style={styles.questionDetails}>
+                                            <Text style={styles.questionText}>{q.question}</Text>
+                                            <Text style={styles.answerText}>A: {q.answer}</Text>
+                                            {q.topic && (
+                                                <Text style={styles.topicText}>Topic: {q.topic}</Text>
+                                            )}
+                                        </View>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => removeQuestion(index)}
+                                        style={styles.deleteButton}
+                                    >
+                                        <Text style={styles.deleteButtonText}>Delete</Text>
+                                    </TouchableOpacity>
                                 </View>
-                            </View>
+                            ))}
                         </View>
-                    ))}
+                    )}
 
-                    <TouchableOpacity style={styles.addQuestionButton} onPress={addQuestion}>
-                        <Text style={styles.addQuestionText}>+ Add Question</Text>
-                    </TouchableOpacity>
+                    {/* Add New Question Form */}
+                    <View style={styles.addQuestionForm}>
+                        <Text style={styles.formSubtitle}>Add New Question</Text>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Question</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={currentQuestion.question}
+                                onChangeText={(text) =>
+                                    setCurrentQuestion({ ...currentQuestion, question: text })
+                                }
+                                placeholder="Enter your question"
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Answer</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={currentQuestion.answer}
+                                onChangeText={(text) =>
+                                    setCurrentQuestion({ ...currentQuestion, answer: text })
+                                }
+                                placeholder="Enter the answer"
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Topic (Optional)</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={currentQuestion.topic}
+                                onChangeText={(text) =>
+                                    setCurrentQuestion({ ...currentQuestion, topic: text })
+                                }
+                                placeholder="e.g., History, Science"
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={currentQuestion.additionalInfo}
+                                onChangeText={(text) =>
+                                    setCurrentQuestion({
+                                        ...currentQuestion,
+                                        additionalInfo: text,
+                                    })
+                                }
+                                placeholder="Extra context or hints"
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={addQuestion}
+                            style={styles.addQuestionButton}
+                        >
+                            <Text style={styles.addQuestionButtonText}>Add Question</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Action Buttons */}
-                <View style={styles.actionContainer}>
-                    <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
+                {/* Create Button */}
+                <TouchableOpacity
+                    onPress={handleCreateQuiz}
+                    style={[styles.createButton, isLoading && styles.createButtonDisabled]}
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.createButtonText}>Create Quiz Challenge</Text>
+                    )}
+                </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.createButton, isLoading && styles.disabledButton]}
-                        onPress={handleCreateQuiz}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.createButtonText}>
-                            {isLoading ? 'Creating...' : 'Create Quiz'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
+                <View style={styles.spacer} />
             </View>
         </ScrollView>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+    },
+    content: {
+        padding: 16,
+    },
+    header: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 8,
+    },
+    subheader: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 24,
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    cardTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#333',
+        marginBottom: 16,
+    },
+    cardDescription: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 16,
+    },
+    inputGroup: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 8,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        backgroundColor: '#fff',
+    },
+    textArea: {
+        height: 100,
+        textAlignVertical: 'top',
+    },
+    questionsList: {
+        marginBottom: 16,
+    },
+    questionsCount: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#4CAF50',
+        marginBottom: 12,
+    },
+    questionItem: {
+        backgroundColor: '#f8f8f8',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 8,
+    },
+    questionContent: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    questionNumber: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#2196F3',
+        marginRight: 12,
+    },
+    questionDetails: {
+        flex: 1,
+    },
+    questionText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    answerText: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 4,
+    },
+    topicText: {
+        fontSize: 12,
+        color: '#999',
+        fontStyle: 'italic',
+    },
+    deleteButton: {
+        backgroundColor: '#ff4444',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+    },
+    deleteButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    addQuestionForm: {
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        paddingTop: 16,
+    },
+    formSubtitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 16,
+    },
+    addQuestionButton: {
+        backgroundColor: '#4CAF50',
+        padding: 14,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    addQuestionButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    createButton: {
+        backgroundColor: '#2196F3',
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 8,
+    },
+    createButtonDisabled: {
+        backgroundColor: '#ccc',
+    },
+    createButtonText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    spacer: {
+        height: 40,
+    },
+});

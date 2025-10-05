@@ -63,7 +63,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 [
                     {
                         text: 'OK',
-                        onPress: () =>  navigateToTab(navigation, 'Challenges')
+                        onPress: () => navigateToTab(navigation, 'Challenges')
                     }
                 ]
             );
@@ -111,7 +111,7 @@ const ChallengeDetailsScreen: React.FC = () => {
             return;
         }
         try {
-            await joinChallenge(challengeId).unwrap();
+            await joinChallenge({challengeId: challengeId}).unwrap();
             Alert.alert('Success', 'You have joined this challenge!');
             // Force refetch to get updated challenge data
             await refetch();
@@ -127,10 +127,10 @@ const ChallengeDetailsScreen: React.FC = () => {
             Alert.alert('Error', 'Challenge ID not found');
             return;
         }
-        navigation.navigate('ChallengeVerification', {challengeId});
+        navigation.navigate('ChallengeVerification', {challengeId: challengeId});
     };
 
-    // Handle submit challenge completion
+    // Handle submit challenge completion - FIXED
     const handleSubmitCompletion = async () => {
         if (!challengeId) {
             Alert.alert('Error', 'Challenge ID not found');
@@ -138,8 +138,8 @@ const ChallengeDetailsScreen: React.FC = () => {
         }
         try {
             await submitCompletion({
-                id: challengeId,
-                proof: {completed: true}
+                challengeId: challengeId,  // Changed from 'id' to 'challengeId'
+                completionData: {completed: true}  // Changed from 'proof' to 'completionData'
             }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');
@@ -153,7 +153,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     // Handle view creator profile
     const navigateToCreatorProfile = () => {
         if (challenge?.creator_id) {
-            navigation.navigate('UserProfile', {userId: challenge.creator_id});
+            navigation.navigate('UserProfile', {userId: String(challenge.creator_id)});
         } else {
             Alert.alert('Error', 'Creator information is not available');
         }
@@ -197,48 +197,31 @@ const ChallengeDetailsScreen: React.FC = () => {
                     <View style={styles.quizDetails}>
                         {isWWWQuiz ? (
                             <>
-                                <Text style={styles.quizType}>WWW_QUIZ Team Quiz</Text>
-
-                                <View style={styles.quizStat}>
-                                    <Text style={styles.quizStatLabel}>Difficulty:</Text>
-                                    <Text style={styles.quizStatValue}>{quizConfig.difficulty || 'Medium'}</Text>
+                                <View style={styles.quizRow}>
+                                    <Text style={styles.quizLabel}>Game Type:</Text>
+                                    <Text style={styles.quizValue}>Who? What? Where?</Text>
                                 </View>
-
-                                <View style={styles.quizStat}>
-                                    <Text style={styles.quizStatLabel}>Questions:</Text>
-                                    <Text style={styles.quizStatValue}>{quizConfig.roundCount || 10}</Text>
+                                <View style={styles.quizRow}>
+                                    <Text style={styles.quizLabel}>Difficulty:</Text>
+                                    <Text style={styles.quizValue}>{quizConfig.difficulty || 'Medium'}</Text>
                                 </View>
-
-                                <View style={styles.quizStat}>
-                                    <Text style={styles.quizStatLabel}>Time per question:</Text>
-                                    <Text style={styles.quizStatValue}>{quizConfig.roundTime || 60} seconds</Text>
+                                <View style={styles.quizRow}>
+                                    <Text style={styles.quizLabel}>Rounds:</Text>
+                                    <Text style={styles.quizValue}>{quizConfig.roundCount || 5}</Text>
                                 </View>
-
+                                <View style={styles.quizRow}>
+                                    <Text style={styles.quizLabel}>Time per Round:</Text>
+                                    <Text style={styles.quizValue}>{quizConfig.roundTime || 30}s</Text>
+                                </View>
                                 {quizConfig.teamName && (
-                                    <View style={styles.quizStat}>
-                                        <Text style={styles.quizStatLabel}>Team:</Text>
-                                        <Text style={styles.quizStatValue}>{quizConfig.teamName}</Text>
+                                    <View style={styles.quizRow}>
+                                        <Text style={styles.quizLabel}>Team:</Text>
+                                        <Text style={styles.quizValue}>{quizConfig.teamName}</Text>
                                     </View>
                                 )}
-
-                                {/* Enhanced Play Button - more prominent */}
-                                <TouchableOpacity
-                                    style={styles.prominentPlayButton}
-                                    onPress={() => startWWWGame(quizConfig)}
-                                >
-                                    <MaterialCommunityIcons name="play-circle" size={24} color="white" />
-                                    <Text style={styles.prominentPlayButtonText}>Start Quiz Game</Text>
-                                </TouchableOpacity>
                             </>
                         ) : (
-                            <>
-                                <Text style={styles.quizType}>Standard Quiz</Text>
-                                {/* Render standard quiz details */}
-                                <TouchableOpacity style={styles.prominentPlayButton}>
-                                    <MaterialCommunityIcons name="play-circle" size={24} color="white" />
-                                    <Text style={styles.prominentPlayButtonText}>Start Quiz</Text>
-                                </TouchableOpacity>
-                            </>
+                            <Text style={styles.quizValue}>Standard Quiz</Text>
                         )}
                     </View>
                 )}
@@ -246,258 +229,174 @@ const ChallengeDetailsScreen: React.FC = () => {
         );
     };
 
+    // Helper function to check if verification methods array exists
+    const hasVerificationMethods = () => {
+        if (!challenge?.verificationMethod) return false;
 
-    // Start the WWW game
-    const startWWWGame = (quizConfig: any) => {
-        // First, try to get questions specifically for this quiz
-        const fetchQuestionsAndStartGame = async () => {
-            let questionsToUse: any[] = [];
-
-            try {
-                console.log("Fetching questions for WWW game...");
-                // Fetch questions based on the config difficulty
-                const difficulty = quizConfig.difficulty || 'Medium';
-                const count = quizConfig.roundCount || 10;
-
-                // Use the QuestionService to fetch questions from db.chgk.info
-                const questions = await QuestionService.getQuestionsByDifficulty(
-                    difficulty as 'Easy' | 'Medium' | 'Hard',
-                    count
-                );
-
-                console.log(`Fetched ${questions.length} questions from db.chgk.info`);
-                if (questions.length > 0) {
-                    questionsToUse = questions;
-                }
-            } catch (error) {
-                console.error("Error fetching questions:", error);
-                console.log("Will use fallback questions");
-                // Will continue with empty questionsToUse, which will trigger fallback
+        try {
+            // If it's already an array
+            if (Array.isArray(challenge.verificationMethod)) {
+                return challenge.verificationMethod.length > 0;
             }
 
-            // Now navigate to the game with the fetched questions - with proper type safety
-            console.log(`Starting WWW game with ${questionsToUse.length} questions`);
+            // If it's a string, try to parse it
+            if (typeof challenge.verificationMethod === 'string') {
+                const parsed = JSON.parse(challenge.verificationMethod);
+                return Array.isArray(parsed) && parsed.length > 0;
+            }
 
-            // Create navigation params with proper types
-            const navigationParams = {
-                teamName: quizConfig.teamName || 'Team Intellect',
-                teamMembers: quizConfig.teamMembers || [user?.name || 'Player'],
-                difficulty: quizConfig.difficulty || 'Medium',
-                roundTime: quizConfig.roundTime || 60,
-                roundCount: quizConfig.roundCount || 10,
-                enableAIHost: quizConfig.enableAIHost !== false,
-                challengeId: challenge?.id, // Pass the challenge ID to track completion
-                questionSource: 'app' as 'app' | 'user', // Explicitly set source to 'app' with type assertion
-                userQuestions: questionsToUse // Pass the fetched questions
-            };
-
-            navigation.navigate('WWWGamePlay', navigationParams);
-        };
-
-        // Start fetching and navigate
-        fetchQuestionsAndStartGame();
+            return false;
+        } catch (e) {
+            return false;
+        }
     };
 
-    // Parse verification methods from challenge data with better error handling
-    const getVerificationMethods = () => {
+    // Helper to get verification methods safely
+    const getVerificationMethods = (): any[] => {
         if (!challenge?.verificationMethod) return [];
 
         try {
-            // If it's already an object, return it
-            if (typeof challenge.verificationMethod === 'object') {
-                return Array.isArray(challenge.verificationMethod)
-                    ? challenge.verificationMethod
-                    : [challenge.verificationMethod];
+            // If it's already an array
+            if (Array.isArray(challenge.verificationMethod)) {
+                return challenge.verificationMethod;
             }
 
-            // If it's a string, try to parse it as JSON
+            // If it's a string, try to parse it
             if (typeof challenge.verificationMethod === 'string') {
-                // Check if it starts with [ or { (likely JSON)
-                if (challenge.verificationMethod.trim().startsWith('[') ||
-                    challenge.verificationMethod.trim().startsWith('{')) {
-                    return JSON.parse(challenge.verificationMethod);
-                } else {
-                    // It's a plain string, wrap it in an object
-                    return [{
-                        type: challenge.verificationMethod,
-                        details: {}
-                    }];
-                }
+                const parsed = JSON.parse(challenge.verificationMethod);
+                return Array.isArray(parsed) ? parsed : [];
             }
 
             return [];
         } catch (e) {
             console.error('Error parsing verification methods:', e);
-            console.log('Raw verificationMethod value:', challenge.verificationMethod);
-
-            // Fallback: try to create a basic verification method from the string
-            if (typeof challenge.verificationMethod === 'string') {
-                return [{
-                    type: challenge.verificationMethod,
-                    details: {}
-                }];
-            }
-
             return [];
         }
     };
 
-    // Check if the challenge has verification methods
-    const hasVerificationMethods = () => {
-        const methods = getVerificationMethods();
-        return methods.length > 0;
-    };
+    // Determine if user has joined the challenge
+    const hasUserJoined = (user?.id && challenge?.participants?.includes(user.id)) || challenge?.userIsCreator;
 
-    // Check if this is a daily challenge that requires regular verification
-    const isDailyChallenge = () => {
-        return challenge?.type === 'HABIT_BUILDING' || challenge?.frequency === 'DAILY';
-    };
-
-    // Get status badge style
-    const getStatusBadgeStyle = () => {
-        if (!challenge || !challenge.status) return {};
-
-        switch (challenge.status.toLowerCase()) {
-            case 'active':
-                return styles.statusActive;
-            case 'completed':
-                return styles.statusCompleted;
-            case 'failed':
-                return styles.statusFailed;
-            default:
-                return {};
-        }
-    };
-
-    const getCreatorInitial = (creatorId?: string | null): string => {
-        if (!creatorId) return '?';
-        return creatorId.charAt(0).toUpperCase();
-    };
-
-    // Enhanced user has joined check with multiple fallbacks
-    const userHasJoined = () => {
-        if (!challenge || !user) {
-            console.log('No challenge or user data');
-            return false;
-        }
-
-        // Method 1: Check userIsCreator flag (creator is automatically "joined")
-        if (challenge.userIsCreator) {
-            console.log('User is creator, treating as joined');
-            return true;
-        }
-
-        // Method 2: Check if user ID matches creator ID
-        if (challenge.creator_id === user.id) {
-            console.log('User ID matches creator ID');
-            return true;
-        }
-
-        // Method 3: Check participants array
-        if (challenge.participants) {
-            // Handle array of participants
-            if (Array.isArray(challenge.participants)) {
-                const isInParticipants = challenge.participants.includes(user.id);
-                console.log('Checking participants array:', isInParticipants);
-                return isInParticipants;
-            }
-
-            // Handle string of participants (comma-separated)
-            if (typeof challenge.participants === 'string') {
-                const participantsList = challenge.participants.split(',').map(p => p.trim());
-                const isInStringList = participantsList.includes(user.id);
-                console.log('Checking participants as string:', isInStringList);
-                return isInStringList;
-            }
-
-            // Handle single participant as string
-            if (challenge.participants === user.id) {
-                console.log('Single participant matches user ID');
-                return true;
-            }
-        }
-
-        console.log('User has not joined the challenge');
-        return false;
-    };
-
-    // Render loading state
-    if (!challengeId) {
-        return (
-            <SafeAreaView style={styles.errorContainer}>
-                <Text style={styles.errorText}>Challenge ID not found</Text>
-                <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={() =>  navigateToTab(navigation, 'Challenges')}
-                >
-                    <Text style={styles.retryButtonText}>Back to Challenges</Text>
-                </TouchableOpacity>
-            </SafeAreaView>
-        );
-    }
-
-    // Render loading state
+    // Loading state
     if (isLoading) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4CAF50"/>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF"/>
+                    <Text style={styles.loadingText}>Loading challenge...</Text>
+                </View>
             </SafeAreaView>
         );
     }
 
-    // Render error state
+    // Error state
     if (error || !challenge) {
         return (
-            <SafeAreaView style={styles.errorContainer}>
-                <Text style={styles.errorText}>
-                    Failed to load challenge details. {error ? `Error: ${JSON.stringify(error)}` : ''}
-                </Text>
-                <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-                    <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
-                    <Text style={styles.retryButtonText}>Go Back</Text>
-                </TouchableOpacity>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={64} color="#FF3B30"/>
+                    <Text style={styles.errorText}>Failed to load challenge</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                        <Text style={styles.retryButtonText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
 
-    const hasUserJoined = userHasJoined();
+    const handleStartQuiz = async () => {
+        if (!challenge || challenge.type !== 'QUIZ') {
+            Alert.alert('Error', 'This is not a quiz challenge');
+            return;
+        }
+
+        let quizConfig: {
+            gameType?: string;
+            difficulty?: string;
+            roundCount?: number;
+            roundTime?: number;
+            teamName?: string;
+            teamMembers?: string[];
+            enableAIHost?: boolean;
+        } | null = null;
+
+        try {
+            if (challenge.quizConfig) {
+                quizConfig = JSON.parse(challenge.quizConfig);
+            }
+        } catch (e) {
+            console.error('Error parsing quiz config:', e);
+        }
+
+        // Check if this is a WWW quiz with game configuration
+        console.log(quizConfig?.gameType);
+        if (quizConfig && quizConfig.gameType === 'WWW') {
+            try {
+                // Use static methods directly on QuestionService
+                const questions = await QuestionService.getQuestionsByDifficulty(
+                    quizConfig.difficulty?.toLowerCase() as any || 'Medium',
+                    quizConfig.roundCount || 5
+                );
+
+                navigation.navigate('WWWGamePlay', {
+                    teamName: quizConfig.teamName || 'Team',
+                    teamMembers: quizConfig.teamMembers || [],
+                    difficulty: quizConfig.difficulty || 'medium',
+                    roundTime: quizConfig.roundTime || 30,
+                    roundCount: quizConfig.roundCount || 5,
+                    enableAIHost: quizConfig.enableAIHost !== false,
+                    challengeId: challengeId || undefined,
+                });
+            } catch (error) {
+                console.error('Failed to load quiz questions:', error);
+                Alert.alert('Error', 'Failed to load quiz questions. Please try again.');
+            }
+        } else {
+            Alert.alert('Info', 'This quiz type is not yet supported');
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView>
-                {/* Challenge Header */}
+                {/* Header */}
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>{challenge.title}</Text>
-                    <View style={styles.badgeContainer}>
-                        <View style={styles.typeBadge}>
-                            <Text style={styles.badgeText}>{challenge.type}</Text>
-                        </View>
-                        <View style={[styles.statusBadge, getStatusBadgeStyle()]}>
-                            <Text style={styles.badgeText}>{challenge.status}</Text>
+                    <View style={styles.headerContent}>
+                        <Text style={styles.title}>{challenge.title}</Text>
+
+                        {/* Type and Status Badges */}
+                        <View style={styles.badgeContainer}>
+                            <View style={styles.typeBadge}>
+                                <Text style={styles.badgeText}>{challenge.type}</Text>
+                            </View>
+                            {challenge.status && (
+                                <View style={[
+                                    styles.statusBadge,
+                                    challenge.status === 'ACTIVE' && styles.statusActive,
+                                    challenge.status === 'COMPLETED' && styles.statusCompleted,
+                                    challenge.status === 'FAILED' && styles.statusFailed,
+                                ]}>
+                                    <Text style={styles.badgeText}>{challenge.status}</Text>
+                                </View>
+                            )}
                         </View>
                     </View>
                 </View>
 
-                {/* Challenge Details */}
+                {/* Content */}
                 <View style={styles.content}>
                     {/* Description */}
-                    <View style={styles.descriptionContainer}>
-                        <Text style={styles.descriptionTitle}>Challenge Description:</Text>
-                        <Text
-                            style={styles.descriptionText}>{challenge.description || 'No description provided.'}</Text>
-                    </View>
+                    {challenge.description && (
+                        <View style={styles.descriptionContainer}>
+                            <Text style={styles.descriptionTitle}>Description</Text>
+                            <Text style={styles.descriptionText}>{challenge.description}</Text>
+                        </View>
+                    )}
 
-                    {/* Special Quiz Content */}
-                    {challenge.type === 'QUIZ' && renderQuizContent()}
-
-                    {/* Debug Info - Remove in production */}
+                    {/* Debug Container - Remove this in production */}
                     <View style={styles.debugContainer}>
-                        <Text style={styles.debugTitle}>Debug Info:</Text>
-                        <Text style={styles.debugText}>User ID: {user?.id}</Text>
-                        <Text style={styles.debugText}>Creator ID: {challenge.creator_id}</Text>
-                        <Text style={styles.debugText}>User is creator: {challenge.userIsCreator ? 'Yes' : 'No'}</Text>
+                        <Text style={styles.debugTitle}>Debug Info</Text>
+                        <Text style={styles.debugText}>Is Creator: {challenge.userIsCreator ? 'Yes' : 'No'}</Text>
                         <Text style={styles.debugText}>Has joined: {hasUserJoined ? 'Yes' : 'No'}</Text>
                         <Text style={styles.debugText}>Participants: {JSON.stringify(challenge.participants)}</Text>
                     </View>
@@ -534,7 +433,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     {getVerificationMethods().map((method: any, index: number) => (
                                         <View key={index} style={styles.verificationBadge}>
                                             <Text style={styles.verificationText}>
-                                                {method.type.charAt(0) + method.type.slice(1).toLowerCase()}
+                                                {method?.type ? method.type.charAt(0) + method.type.slice(1).toLowerCase() : 'Unknown'}
                                             </Text>
                                         </View>
                                     ))}
@@ -560,82 +459,70 @@ const ChallengeDetailsScreen: React.FC = () => {
                         </View>
                     </TouchableOpacity>
 
+                    {/* Render Quiz Content if applicable */}
+                    {renderQuizContent()}
+
                     {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
                     <View style={styles.actionSection}>
                         {challenge.type === 'QUIZ' ? (
-                            // For Quiz challenges, show a Start Quiz button
+                            // Quiz-specific button
                             <TouchableOpacity
-                                style={styles.startQuizButton}
-                                onPress={() => {
-                                    // Parse quiz configuration if available
-                                    let quizConfig = null;
-                                    try {
-                                        if (challenge.quizConfig) {
-                                            quizConfig = JSON.parse(challenge.quizConfig);
-                                        }
-                                    } catch (e) {
-                                        console.error('Error parsing quiz config:', e);
-                                    }
-
-                                    // Start the game with config or defaults
-                                    startWWWGame(quizConfig || {
-                                        teamName: 'Team Intellect',
-                                        teamMembers: [user?.name || 'Player'],
-                                        difficulty: 'Medium',
-                                        roundTime: 60,
-                                        roundCount: 10,
-                                        enableAIHost: true,
-                                    });
-                                }}
+                                style={[styles.button, styles.primaryButton]}
+                                onPress={handleStartQuiz}
                             >
-                                <MaterialCommunityIcons name="play-circle" size={24} color="white" />
-                                <Text style={styles.startQuizButtonText}>Start Quiz Game</Text>
+                                <MaterialCommunityIcons name="play-circle" size={24} color="white"/>
+                                <Text style={styles.buttonText}>Start Quiz</Text>
                             </TouchableOpacity>
                         ) : (
-                            // For non-Quiz challenges, show standard Join/Submit buttons
-                            !userHasJoined() ? (
-                                <TouchableOpacity
-                                    style={styles.primaryButton}
-                                    onPress={handleJoinChallenge}
-                                    disabled={isJoining}
-                                >
-                                    {isJoining ? (
-                                        <ActivityIndicator size="small" color="white"/>
-                                    ) : (
-                                        <Text style={styles.buttonText}>Join Challenge</Text>
-                                    )}
-                                </TouchableOpacity>
-                            ) : (
-                                // For daily challenges, show the verification button
-                                isDailyChallenge() ? (
+                            // Regular challenge buttons
+                            <>
+                                {!hasUserJoined && !challenge.userIsCreator && (
                                     <TouchableOpacity
-                                        style={styles.verifyButton}
-                                        onPress={navigateToVerification}
+                                        style={[styles.button, styles.primaryButton]}
+                                        onPress={handleJoinChallenge}
+                                        disabled={isJoining}
                                     >
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="white"/>
-                                        <Text style={styles.buttonText}>Daily Check-In</Text>
-                                    </TouchableOpacity>
-                                ) : proofSubmitted ? (
-                                    <View style={styles.successMessage}>
-                                        <Text style={styles.successText}>Completion Submitted</Text>
-                                    </View>
-                                ) : (
-                                    <TouchableOpacity
-                                        style={styles.secondaryButton}
-                                        onPress={handleSubmitCompletion}
-                                        disabled={isSubmitting}
-                                    >
-                                        {isSubmitting ? (
-                                            <ActivityIndicator size="small" color="white"/>
+                                        {isJoining ? (
+                                            <ActivityIndicator color="white"/>
                                         ) : (
                                             <>
-                                                <MaterialCommunityIcons name="check" size={20} color="white"/>
-                                                <Text style={styles.buttonText}>Submit Completion</Text>
+                                                <MaterialCommunityIcons name="account-plus" size={24} color="white"/>
+                                                <Text style={styles.buttonText}>Join Challenge</Text>
                                             </>
                                         )}
                                     </TouchableOpacity>
-                                )
-                            )
+                                )}
+
+                                {(hasUserJoined || challenge.userIsCreator) && (
+                                    <>
+                                        <TouchableOpacity
+                                            style={[styles.button, styles.secondaryButton]}
+                                            onPress={navigateToVerification}
+                                        >
+                                            <MaterialCommunityIcons name="camera" size={24} color="white"/>
+                                            <Text style={styles.buttonText}>Submit Proof</Text>
+                                        </TouchableOpacity>
+
+                                        {!proofSubmitted && (
+                                            <TouchableOpacity
+                                                style={[styles.button, styles.successButton]}
+                                                onPress={handleSubmitCompletion}
+                                                disabled={isSubmitting}
+                                            >
+                                                {isSubmitting ? (
+                                                    <ActivityIndicator color="white"/>
+                                                ) : (
+                                                    <>
+                                                        <MaterialCommunityIcons name="check-circle" size={24}
+                                                                                color="white"/>
+                                                        <Text style={styles.buttonText}>Mark as Complete</Text>
+                                                    </>
+                                                )}
+                                            </TouchableOpacity>
+                                        )}
+                                    </>
+                                )}
+                            </>
                         )}
                     </View>
                 </View>
@@ -647,12 +534,17 @@ const ChallengeDetailsScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#F5F5F5',
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#666',
     },
     errorContainer: {
         flex: 1,
@@ -661,45 +553,51 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     errorText: {
-        fontSize: 16,
-        color: '#d32f2f',
-        marginBottom: 16,
+        fontSize: 18,
+        color: '#666',
+        marginTop: 16,
+        marginBottom: 24,
     },
     retryButton: {
-        padding: 10,
-        backgroundColor: '#4CAF50',
-        borderRadius: 4,
-        marginBottom: 8,
+        backgroundColor: '#007AFF',
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 8,
     },
     retryButtonText: {
         color: 'white',
-        fontWeight: 'bold',
+        fontSize: 16,
+        fontWeight: '600',
     },
     header: {
-        padding: 16,
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#007AFF',
+        padding: 20,
+        paddingTop: 16,
     },
-    headerTitle: {
-        fontSize: 24,
+    headerContent: {
+        flex: 1,
+    },
+    title: {
+        fontSize: 28,
         fontWeight: 'bold',
         color: 'white',
-        marginBottom: 8,
+        marginBottom: 12,
     },
     badgeContainer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
     },
     typeBadge: {
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        marginRight: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
     },
     statusBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
     },
     statusActive: {
         backgroundColor: 'rgba(76, 175, 80, 0.7)',
@@ -794,19 +692,18 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         flexWrap: 'wrap',
+        gap: 6,
     },
     verificationBadge: {
         backgroundColor: '#E3F2FD',
-        paddingHorizontal: 8,
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
-        marginRight: 8,
-        marginBottom: 4,
     },
     verificationText: {
-        color: '#1976D2',
         fontSize: 12,
-        fontWeight: '600',
+        color: '#1976D2',
+        fontWeight: '500',
     },
     creatorSection: {
         backgroundColor: 'white',
@@ -824,61 +721,8 @@ const styles = StyleSheet.create({
     },
     creatorName: {
         fontSize: 16,
-        color: '#333',
-    },
-    actionSection: {
-        marginTop: 8,
-        marginBottom: 24,
-    },
-    joinedSection: {
-        alignItems: 'center',
-    },
-    joinedText: {
-        fontSize: 16,
-        color: '#4CAF50',
-        fontWeight: 'bold',
-        marginBottom: 16,
-    },
-    primaryButton: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-    },
-    secondaryButton: {
-        backgroundColor: '#2196F3',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-    },
-    verifyButton: {
-        backgroundColor: '#FF9800',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-    },
-    buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 8,
-    },
-    successMessage: {
-        backgroundColor: '#4CAD50',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    successText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: '#007AFF',
+        fontWeight: '500',
     },
     quizContainer: {
         backgroundColor: 'white',
@@ -897,83 +741,51 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     quizDetails: {
-        backgroundColor: '#f9f9f9',
-        padding: 12,
-        borderRadius: 6,
+        marginTop: 8,
     },
-    quizType: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#4CAF50',
-        marginBottom: 12,
-    },
-    quizStat: {
+    quizRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         marginBottom: 8,
     },
-    quizStatLabel: {
+    quizLabel: {
+        width: 120,
         fontSize: 14,
-        color: '#555',
-    },
-    quizStatValue: {
-        fontSize: 14,
-        color: '#333',
+        color: '#757575',
         fontWeight: '500',
     },
-    playButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 16,
+    quizValue: {
+        flex: 1,
+        fontSize: 14,
+        color: '#333',
     },
-    playButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+    actionSection: {
+        gap: 12,
     },
-    prominentPlayButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 20,
-        marginBottom: 10,
+    button: {
         flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'center',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-    },
-    prominentPlayButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: 8,
-    },
-    startQuizButton: {
-        backgroundColor: '#4CAF50',
         padding: 16,
         borderRadius: 8,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        gap: 8,
+        elevation: 2,
         shadowOpacity: 0.2,
-        shadowRadius: 2,
+        shadowRadius: 4,
+        shadowOffset: {width: 0, height: 2},
     },
-    startQuizButtonText: {
+    primaryButton: {
+        backgroundColor: '#007AFF',
+    },
+    secondaryButton: {
+        backgroundColor: '#FF9500',
+    },
+    successButton: {
+        backgroundColor: '#34C759',
+    },
+    buttonText: {
         color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: 8,
+        fontSize: 16,
+        fontWeight: '600',
     },
 });
 

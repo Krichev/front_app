@@ -47,12 +47,19 @@ export interface CreateChallengeRequest {
 
 // Backend Quiz Challenge Config - matches Java QuizChallengeConfig
 export interface QuizChallengeConfig {
+    // Existing fields
     defaultDifficulty: 'EASY' | 'MEDIUM' | 'HARD';
     defaultRoundTimeSeconds: number;
     defaultTotalRounds: number;
     enableAiHost: boolean;
     questionSource: string;
     allowCustomQuestions: boolean;
+
+    // NEW: Fields that were missing from backend
+    gameType: string;  // e.g., "WWW"
+    teamName: string;  // Team name for quiz
+    teamMembers: string[];  // List of team member names
+    teamBased?: boolean;  // Whether it's team-based (optional)
 }
 
 // Correct CreateQuizChallengeRequest interface that matches the Java backend exactly
