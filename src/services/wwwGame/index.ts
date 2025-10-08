@@ -54,12 +54,12 @@ export function initializeWWWGameServices(config?: {
     }
 
     // Extend the question service with AI capabilities
-    if (config?.enableExtendedFeatures) {
-        import('./questionService').then(({ QuestionService }) => {
-            if (typeof QuestionService.extendGPT4HostService === 'function') {
-                QuestionService.extendGPT4HostService();
-                console.log('WWW Game Question Service extended with AI capabilities');
-            }
-        });
-    }
+    // if (config?.enableExtendedFeatures) {
+    //     import('./questionService').then(({ QuestionService }) => {
+    //         if (typeof QuestionService.extendGPT4HostService === 'function') {
+    //             QuestionService.extendGPT4HostService();
+    //             console.log('WWW Game Question Service extended with AI capabilities');
+    //         }
+    //     });
+    // }
 }

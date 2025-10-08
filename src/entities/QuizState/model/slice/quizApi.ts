@@ -73,9 +73,10 @@ export interface StartQuizSessionRequest {
     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     roundTimeSeconds: number;
     totalRounds: number;
+    timePerRound: number;
     enableAiHost: boolean;
     questionSource: 'app' | 'user';
-    customQuestionIds?: string[];
+    customQuestionIds?: number[];
 }
 
 // Quiz Round types

@@ -1,18 +1,22 @@
 import React from 'react';
-import {ActivityIndicator, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {ActivityIndicator, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
-import {useNavigation} from '@react-navigation/native';
+import {CompositeNavigationProp, useNavigation} from '@react-navigation/native';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import {logout} from "../entities/AuthState/model/slice/authSlice.ts";
-import {StackNavigationProp} from "@react-navigation/stack";
+import {BottomTabNavigationProp} from "@react-navigation/bottom-tabs";
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {MainTabParamList, RootStackParamList} from "../navigation/AppNavigator.tsx";
-import * as Keychain from "react-native-keychain"; // RTK Query hook for fetching challenges
+import * as Keychain from "react-native-keychain";
 import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.tsx";
 
-
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+// Correct navigation type for a screen inside bottom tabs
+type HomeScreenNavigationProp = CompositeNavigationProp<
+    BottomTabNavigationProp<MainTabParamList, 'Home'>,
+    NativeStackNavigationProp<RootStackParamList>
+>;
 
 const HomeScreen: React.FC = () => {
     const dispatch = useDispatch();
@@ -21,8 +25,7 @@ const HomeScreen: React.FC = () => {
     // Read the current authenticated user from your Redux store
     const {user} = useSelector((state: RootState) => state.auth);
 
-    // Sample RTK Query hook to fetch recent challenges—ensure you define this endpoint in your RTK Query slice!
-    // const { data: recentChallenges, error, isLoading } = useGetRecentChallengesQuery();
+    // Sample RTK Query hook to fetch recent challenges
     const {data: recentChallenges, error, isLoading} = useGetChallengesQuery({
         participant_id: user?.id,
     });
@@ -30,7 +33,7 @@ const HomeScreen: React.FC = () => {
     // Query for quiz challenges specifically
     const {data: quizChallenges, isLoading: loadingQuizzes} = useGetChallengesQuery({
         type: 'QUIZ',
-        limit: 5 // Just show a few
+        limit: 5
     });
 
     // Filter for WWW quizzes with proper type checking
@@ -39,124 +42,135 @@ const HomeScreen: React.FC = () => {
 
         return quizChallenges.filter(challenge => {
             try {
-                // Check if quizConfig exists before trying to use it
                 if (!challenge.quizConfig) return false;
-
-                // Parse the quizConfig safely
                 const config = JSON.parse(challenge.quizConfig);
                 return config && config.gameType === 'WWW';
             } catch (error) {
-                // If parsing fails, log error and filter out this challenge
                 console.error('Error parsing quiz config:', error);
                 return false;
             }
         });
     }, [quizChallenges]);
 
-
-// Define the menu item type to reference tab screens
+    // Define the menu item type to reference tab screens
     type MenuItem = {
         id: string;
         title: string;
-        tabScreen: keyof MainTabParamList;
+        icon: string;
+        screen: keyof MainTabParamList;
     };
 
-// Define the menu items for the main tabs
     const menuItems: MenuItem[] = [
-        {id: '1', title: 'Home', tabScreen: 'Home'},
-        {id: '2', title: 'Challenges', tabScreen: 'Challenges'},
-        {id: '3', title: 'Search', tabScreen: 'Search'},
-        {id: '4', title: 'Groups', tabScreen: 'Groups'},
-        {id: '5', title: 'Profile', tabScreen: 'Profile'},
+        {id: '1', title: 'Challenges', icon: 'trophy', screen: 'Challenges'},
+        {id: '2', title: 'Search', icon: 'magnify', screen: 'Search'},
+        {id: '3', title: 'Groups', icon: 'account-group', screen: 'Groups'},
+        {id: '4', title: 'My Profile', icon: 'account', screen: 'Profile'},
     ];
 
     const handleLogout = async () => {
-        dispatch(logout());
-        await Keychain.resetGenericPassword();
+        try {
+            await Keychain.resetGenericPassword();
+            dispatch(logout());
+        } catch (error) {
+            console.error('Error during logout:', error);
+        }
     };
 
-    const renderMenuItem = ({item}: { item: MenuItem }) => (
-        <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Main', {screen: item.tabScreen})}
-        >
-            <Text style={styles.menuText}>{item.title}</Text>
-        </TouchableOpacity>
-    );
+    const navigateToScreen = (screen: keyof MainTabParamList) => {
+        navigation.navigate(screen);
+    };
+
+    const handleChallengePress = (challengeId: string) => {
+        navigation.navigate('ChallengeDetails', {challengeId});
+    };
+
+    const handleCreateWWWQuiz = () => {
+        navigation.navigate('CreateWWWQuest');
+    };
+
+    if (isLoading || loadingQuizzes) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <ActivityIndicator size="large" color="#4CAF50"/>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>Challenge App</Text>
-                {user && <Text style={styles.welcome}>Welcome, {user.username}</Text>}
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <Text style={styles.logoutText}>Sign Out</Text>
+                    <Text style={styles.logoutText}>Logout</Text>
                 </TouchableOpacity>
+                <Text style={styles.title}>Challenge Hub</Text>
+                <Text style={styles.welcome}>Welcome, {user?.username || 'User'}!</Text>
             </View>
 
-            {/* Menu Options */}
+            {/* Menu Items */}
             <View style={styles.menuContainer}>
                 <FlatList
                     data={menuItems}
-                    renderItem={renderMenuItem}
                     keyExtractor={(item) => item.id}
+                    renderItem={({item}) => (
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => navigateToScreen(item.screen)}
+                        >
+                            <MaterialCommunityIcons name={item.icon} size={24} color="#4CAF50"/>
+                            <Text style={styles.menuText}>{item.title}</Text>
+                        </TouchableOpacity>
+                    )}
                     contentContainerStyle={styles.menuList}
                 />
             </View>
 
-            {/* Recent Challenges Section (RTK Query usage) */}
-            {(quizChallenges?.length && quizChallenges?.length > 0 || wwwQuizzes.length > 0) && (
-                <View style={styles.quizContainer}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Quiz Challenges</Text>
+            {/* Recent Challenges Section */}
+            {recentChallenges && recentChallenges.length > 0 && (
+                <View style={styles.challengesContainer}>
+                    <Text style={styles.sectionTitle}>Recent Challenges</Text>
+                    <FlatList
+                        horizontal
+                        data={recentChallenges.slice(0, 5)}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({item}) => (
+                            <TouchableOpacity
+                                style={styles.challengeItem}
+                                onPress={() => handleChallengePress(item.id)}
+                            >
+                                <Text style={styles.challengeTitle}>{item.title}</Text>
+                                <Text style={styles.challengeType}>{item.type}</Text>
+                            </TouchableOpacity>
+                        )}
+                        showsHorizontalScrollIndicator={false}
+                    />
+                </View>
+            )}
+
+            {/* WWW Quizzes Section */}
+            {wwwQuizzes.length > 0 && (
+                <View style={styles.wwwSection}>
+                    <View style={styles.wwwHeader}>
+                        <Text style={styles.sectionTitle}>WWW Quizzes</Text>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Main', {
-                                screen: 'Challenges',
-                                params: {initialFilter: 'QUIZ'}
-                            })}
+                            style={styles.createQuizButton}
+                            onPress={handleCreateWWWQuiz}
                         >
-                            <Text style={styles.viewAllText}>View All</Text>
+                            <MaterialCommunityIcons name="plus" size={16} color="white"/>
+                            <Text style={styles.createQuizText}>Create WWW_QUIZ</Text>
                         </TouchableOpacity>
                     </View>
-
-                    {loadingQuizzes ? (
-                        <ActivityIndicator size="small" color="#4CAF50"/>
-                    ) : wwwQuizzes.length > 0 ? (
-                        <View>
-                            <View style={styles.featuredQuizHeader}>
-                                <MaterialCommunityIcons name="brain" size={20} color="#4CAF50"/>
-                                <Text style={styles.featuredQuizTitle}>WWW_QUIZ Quizzes</Text>
-                            </View>
-
-                            {wwwQuizzes.slice(0, 2).map(quiz => (
-                                <QuizChallengeCard
-                                    key={quiz.id}
-                                    challenge={quiz}
-                                    onPress={() => navigation.navigate('ChallengeDetails', {challengeId: quiz.id})}
-                                />
-                            ))}
-
-                            <TouchableOpacity
-                                style={styles.createQuizButton}
-                                onPress={() => navigation.navigate('CreateWWWQuest')}
-                            >
-                                <MaterialCommunityIcons name="plus" size={16} color="white"/>
-                                <Text style={styles.createQuizText}>Create Quiz</Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <View style={styles.emptyQuizContainer}>
-                            <Text style={styles.emptyQuizText}>No quiz challenges found</Text>
-                            <TouchableOpacity
-                                style={styles.createQuizButton}
-                                onPress={() => navigation.navigate('CreateWWWQuest')}
-                            >
-                                <MaterialCommunityIcons name="plus" size={16} color="white"/>
-                                <Text style={styles.createQuizText}>Create WWW_QUIZ</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <FlatList
+                        data={wwwQuizzes}
+                        keyExtractor={(item) => item.id}
+                        renderItem={({item}) => (
+                            <QuizChallengeCard
+                                challenge={item}
+                                onPress={() => handleChallengePress(item.id)}
+                            />
+                        )}
+                        contentContainerStyle={styles.quizList}
+                    />
                 </View>
             )}
         </SafeAreaView>
@@ -209,9 +223,12 @@ const styles = StyleSheet.create({
         marginVertical: 8,
         borderRadius: 8,
         elevation: 2,
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     menuText: {
         fontSize: 18,
+        marginLeft: 12,
     },
     challengesContainer: {
         padding: 16,
@@ -221,81 +238,53 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: '600',
-        marginBottom: 8,
+        marginBottom: 12,
+        color: '#333',
     },
     challengeItem: {
         padding: 12,
         backgroundColor: '#fff',
-        borderRadius: 6,
-        marginBottom: 8,
+        marginRight: 12,
+        borderRadius: 8,
+        minWidth: 150,
         elevation: 1,
     },
     challengeTitle: {
         fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
     },
-    errorText: {
-        color: 'red',
-    },
-    noChallenges: {
-        fontStyle: 'italic',
+    challengeType: {
+        fontSize: 14,
         color: '#666',
+        marginTop: 4,
     },
-    quizContainer: {
+    wwwSection: {
         padding: 16,
-        backgroundColor: '#f9f9f9',
-        borderRadius: 8,
-        marginTop: 16,
-        marginBottom: 16,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: {width: 0, height: 1},
+        borderTopWidth: 1,
+        borderTopColor: '#ddd',
     },
-    sectionHeader: {
+    wwwHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 12,
     },
-    viewAllText: {
-        color: '#4CAF50',
-        fontSize: 14,
-        fontWeight: '500',
-    },
-    featuredQuizHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    featuredQuizTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-        marginLeft: 8,
-    },
-    emptyQuizContainer: {
-        alignItems: 'center',
-        padding: 16,
-    },
-    emptyQuizText: {
-        fontSize: 14,
-        color: '#888',
-        marginBottom: 16,
-    },
     createQuizButton: {
-        flexDirection: 'row',
         backgroundColor: '#4CAF50',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
+        flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'center',
-        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
     },
     createQuizText: {
         color: 'white',
-        fontSize: 14,
-        fontWeight: 'bold',
         marginLeft: 4,
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    quizList: {
+        paddingBottom: 16,
     },
 });

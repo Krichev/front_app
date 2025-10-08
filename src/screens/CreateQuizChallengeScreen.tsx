@@ -2,6 +2,7 @@
 import React, {useState} from 'react';
 import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {Picker} from '@react-native-picker/picker';
 import {QuizConfig} from '../entities/QuizState/model/slice/quizApi';
 import {
     CreateQuizChallengeRequest,
@@ -13,6 +14,7 @@ import {QuizConfigForm} from '../components/QuizConfigForm';
 interface Question {
     question: string;
     answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     topic?: string;
     additionalInfo?: string;
 }
@@ -42,6 +44,7 @@ export const CreateQuizChallengeScreen = () => {
     const [currentQuestion, setCurrentQuestion] = useState<Question>({
         question: '',
         answer: '',
+        difficulty: 'MEDIUM',
         topic: '',
         additionalInfo: '',
     });
@@ -82,6 +85,7 @@ export const CreateQuizChallengeScreen = () => {
         setCurrentQuestion({
             question: '',
             answer: '',
+            difficulty: 'MEDIUM',
             topic: '',
             additionalInfo: '',
         });
@@ -106,6 +110,20 @@ export const CreateQuizChallengeScreen = () => {
         );
     };
 
+    // Get difficulty color
+    const getDifficultyColor = (difficulty: string): string => {
+        switch (difficulty) {
+            case 'EASY':
+                return '#4CAF50';
+            case 'MEDIUM':
+                return '#FF9800';
+            case 'HARD':
+                return '#F44336';
+            default:
+                return '#999';
+        }
+    };
+
     // Create the quiz challenge
     const handleCreateQuiz = async () => {
         if (!validateForm()) return;
@@ -124,7 +142,7 @@ export const CreateQuizChallengeScreen = () => {
                 .map(q => ({
                     question: q.question.trim(),
                     answer: q.answer.trim(),
-                    difficulty: backendQuizConfig.defaultDifficulty,
+                    difficulty: q.difficulty, // Use question's specific difficulty
                     topic: q.topic?.trim() || 'General',
                     additionalInfo: q.additionalInfo?.trim(),
                 }));
@@ -237,37 +255,59 @@ export const CreateQuizChallengeScreen = () => {
                             {questions.map((q, index) => (
                                 <View key={index} style={styles.questionItem}>
                                     <View style={styles.questionContent}>
-                                        <Text style={styles.questionNumber}>Q{index + 1}</Text>
+                                        <Text style={styles.questionNumber}>
+                                            Q{index + 1}
+                                        </Text>
                                         <View style={styles.questionDetails}>
-                                            <Text style={styles.questionText}>{q.question}</Text>
-                                            <Text style={styles.answerText}>A: {q.answer}</Text>
-                                            {q.topic && (
-                                                <Text style={styles.topicText}>Topic: {q.topic}</Text>
-                                            )}
+                                            <Text style={styles.questionText}>
+                                                {q.question}
+                                            </Text>
+                                            <Text style={styles.answerText}>
+                                                Answer: {q.answer}
+                                            </Text>
+                                            <View style={styles.metaRow}>
+                                                <View style={[
+                                                    styles.difficultyBadge,
+                                                    { backgroundColor: getDifficultyColor(q.difficulty) }
+                                                ]}>
+                                                    <Text style={styles.difficultyText}>
+                                                        {q.difficulty}
+                                                    </Text>
+                                                </View>
+                                                {q.topic && (
+                                                    <Text style={styles.topicText}>
+                                                        Topic: {q.topic}
+                                                    </Text>
+                                                )}
+                                            </View>
                                         </View>
                                     </View>
                                     <TouchableOpacity
-                                        onPress={() => removeQuestion(index)}
                                         style={styles.deleteButton}
-                                    >
-                                        <Text style={styles.deleteButtonText}>Delete</Text>
+                                        onPress={() => removeQuestion(index)}>
+                                        <Text style={styles.deleteButtonText}>
+                                            Delete
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
                             ))}
                         </View>
                     )}
 
-                    {/* Add New Question Form */}
+                    {/* Add Question Form */}
                     <View style={styles.addQuestionForm}>
                         <Text style={styles.formSubtitle}>Add New Question</Text>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Question</Text>
+                            <Text style={styles.label}>Question *</Text>
                             <TextInput
                                 style={styles.input}
                                 value={currentQuestion.question}
                                 onChangeText={(text) =>
-                                    setCurrentQuestion({ ...currentQuestion, question: text })
+                                    setCurrentQuestion({
+                                        ...currentQuestion,
+                                        question: text,
+                                    })
                                 }
                                 placeholder="Enter your question"
                                 placeholderTextColor="#999"
@@ -275,16 +315,38 @@ export const CreateQuizChallengeScreen = () => {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Answer</Text>
+                            <Text style={styles.label}>Answer *</Text>
                             <TextInput
                                 style={styles.input}
                                 value={currentQuestion.answer}
                                 onChangeText={(text) =>
-                                    setCurrentQuestion({ ...currentQuestion, answer: text })
+                                    setCurrentQuestion({
+                                        ...currentQuestion,
+                                        answer: text,
+                                    })
                                 }
-                                placeholder="Enter the answer"
+                                placeholder="Enter the correct answer"
                                 placeholderTextColor="#999"
                             />
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Difficulty *</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={currentQuestion.difficulty}
+                                    onValueChange={(value) =>
+                                        setCurrentQuestion({
+                                            ...currentQuestion,
+                                            difficulty: value,
+                                        })
+                                    }
+                                    style={styles.picker}>
+                                    <Picker.Item label="Easy" value="EASY" />
+                                    <Picker.Item label="Medium" value="MEDIUM" />
+                                    <Picker.Item label="Hard" value="HARD" />
+                                </Picker>
+                            </View>
                         </View>
 
                         <View style={styles.inputGroup}>
@@ -293,17 +355,22 @@ export const CreateQuizChallengeScreen = () => {
                                 style={styles.input}
                                 value={currentQuestion.topic}
                                 onChangeText={(text) =>
-                                    setCurrentQuestion({ ...currentQuestion, topic: text })
+                                    setCurrentQuestion({
+                                        ...currentQuestion,
+                                        topic: text,
+                                    })
                                 }
-                                placeholder="e.g., History, Science"
+                                placeholder="e.g., Science, History, Sports"
                                 placeholderTextColor="#999"
                             />
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <Text style={styles.label}>
+                                Additional Info (Optional)
+                            </Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, styles.textArea]}
                                 value={currentQuestion.additionalInfo}
                                 onChangeText={(text) =>
                                     setCurrentQuestion({
@@ -311,30 +378,37 @@ export const CreateQuizChallengeScreen = () => {
                                         additionalInfo: text,
                                     })
                                 }
-                                placeholder="Extra context or hints"
+                                placeholder="Any additional context or explanation..."
                                 placeholderTextColor="#999"
+                                multiline
+                                numberOfLines={3}
                             />
                         </View>
 
                         <TouchableOpacity
-                            onPress={addQuestion}
                             style={styles.addQuestionButton}
-                        >
-                            <Text style={styles.addQuestionButtonText}>Add Question</Text>
+                            onPress={addQuestion}>
+                            <Text style={styles.addQuestionButtonText}>
+                                + Add Question
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Create Button */}
                 <TouchableOpacity
+                    style={[
+                        styles.createButton,
+                        isLoading && styles.createButtonDisabled,
+                    ]}
                     onPress={handleCreateQuiz}
-                    style={[styles.createButton, isLoading && styles.createButtonDisabled]}
-                    disabled={isLoading}
-                >
+                    disabled={isLoading}>
                     {isLoading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.createButtonText}>Create Quiz Challenge</Text>
+                        <Text style={styles.createButtonText}>
+                            Create Quiz Challenge
+                        </Text>
                     )}
                 </TouchableOpacity>
 
@@ -369,7 +443,7 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 16,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: {width: 0, height: 2},
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
@@ -378,7 +452,7 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '700',
         color: '#333',
-        marginBottom: 16,
+        marginBottom: 8,
     },
     cardDescription: {
         fontSize: 14,
@@ -405,6 +479,16 @@ const styles = StyleSheet.create({
     textArea: {
         height: 100,
         textAlignVertical: 'top',
+    },
+    pickerContainer: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        backgroundColor: '#fff',
+        overflow: 'hidden',
+    },
+    picker: {
+        height: 50,
     },
     questionsList: {
         marginBottom: 16,
@@ -443,7 +527,22 @@ const styles = StyleSheet.create({
     answerText: {
         fontSize: 14,
         color: '#666',
-        marginBottom: 4,
+        marginBottom: 8,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    difficultyBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    difficultyText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
     },
     topicText: {
         fontSize: 12,

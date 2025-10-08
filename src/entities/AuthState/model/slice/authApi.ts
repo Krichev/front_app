@@ -1,85 +1,74 @@
-import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
-import type {BaseQueryFn} from '@reduxjs/toolkit/query';
+// src/entities/AuthState/model/slice/authApi.ts - UPDATED with better error handling
+import {BaseQueryFn, createApi, FetchArgs, fetchBaseQuery, FetchBaseQueryError} from '@reduxjs/toolkit/query/react';
+import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {logout, setTokens} from './authSlice';
 import * as Keychain from 'react-native-keychain';
-import {RootState} from '../../../../app/providers/StoreProvider/store';
-import NetworkConfigManager from '../../../../config/NetworkConfig';
+import {Alert} from 'react-native';
 
-// Define the interfaces for responses
+export interface User {
+    id: string;
+    username: string;
+    email: string;
+    profilePictureUrl?: string;
+    bio?: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface LoginRequest {
+    username: string;
+    password: string;
+}
+
+export interface SignupRequest {
+    username: string;
+    email: string;
+    password: string;
+}
+
 export interface LoginResponse {
     accessToken: string;
     refreshToken: string;
-    user: {
-        id: string;
-        username: string;
-        email: string;
-        bio?: string;
-        avatar?: string;
-        createdAt: string;
-    };
+    tokenType: string;
+    user: User;
 }
 
-interface SignupResponse {
-    accessToken: string;
+export interface RefreshTokenRequest {
     refreshToken: string;
-    user: {
-        id: string;
-        username: string;
-        email: string;
-        bio?: string;
-        avatar?: string;
-        createdAt: string;
-    };
 }
 
-// Enhanced base query with better error handling and retry logic
-const baseQuery = fetchBaseQuery({
-    baseUrl: NetworkConfigManager.getInstance().getBaseUrl(),
-    timeout: 30000, // 30 seconds timeout
-    prepareHeaders: async (headers, { getState }) => {
-        const token = (getState() as RootState).auth.accessToken;
+const networkConfig = {
+    retryAttempts: 3,
+    retryDelay: 1000,
+};
 
-        // Add Bearer token to Authorization header
-        if (token) {
-            headers.set('Authorization', `Bearer ${token}`);
-        }
+// Custom base query with automatic token refresh
+const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (
+    args,
+    api,
+    extraOptions
+) => {
+    const baseQuery = fetchBaseQuery({
+        baseUrl: 'http://10.0.2.2:8082/challenger/api/auth',
+        prepareHeaders: (headers, { getState }) => {
+            const token = (getState() as RootState).auth.accessToken;
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            return headers;
+        },
+    });
 
-        // Set content type
-        headers.set('Content-Type', 'application/json');
-        headers.set('Accept', 'application/json');
-
-        return headers;
-    },
-});
-
-// Enhanced base query with retry and better error handling
-const baseQueryWithReauth: BaseQueryFn = async (args, api, extraOptions) => {
-    const networkConfig = NetworkConfigManager.getInstance().getConfig();
     let result = await baseQuery(args, api, extraOptions);
 
-    // Enhanced error handling
-    if (result.error) {
-        console.error('API Request Error:', {
-            error: result.error,
-            args,
-            timestamp: new Date().toISOString()
-        });
-
-        // Handle network errors with retry logic
-        if (result.error.status === 'FETCH_ERROR' ||
-            result.error.status === 'TIMEOUT_ERROR' ||
-            (result.error as any)?.message?.includes('Network request failed')) {
-
+    // Handle network errors with retry
+    if (result.error && result.error.status === 'FETCH_ERROR') {
+        if ((result.error as any)?.message?.includes('Network request failed')) {
             console.log('Network error detected, attempting retry...');
 
-            // Retry with exponential backoff
             for (let attempt = 1; attempt <= networkConfig.retryAttempts; attempt++) {
                 console.log(`Retry attempt ${attempt}/${networkConfig.retryAttempts}`);
-
-                // Wait before retry
-                await new Promise(resolve =>
-                    setTimeout(resolve, networkConfig.retryDelay * attempt)
-                );
+                await new Promise(resolve => setTimeout(resolve, networkConfig.retryDelay * attempt));
 
                 result = await baseQuery(args, api, extraOptions);
 
@@ -89,17 +78,19 @@ const baseQueryWithReauth: BaseQueryFn = async (args, api, extraOptions) => {
                 }
             }
         }
+    }
 
-        // If still failing after retries and it's a 401, try to refresh token
-        if (result.error && result.error.status === 401) {
-            console.log('Access token expired, attempting to refresh...');
-            const refreshToken = (api.getState() as RootState).auth.refreshToken;
+    // Handle 401 errors - try to refresh token
+    if (result.error && result.error.status === 401) {
+        console.log('Access token expired (401), attempting to refresh...');
+        const refreshToken = (api.getState() as RootState).auth.refreshToken;
 
-            if (refreshToken) {
+        if (refreshToken) {
+            try {
                 // Attempt to get a new access token using the refresh token
                 const refreshResult = await baseQuery(
                     {
-                        url: 'auth/refresh-token',
+                        url: '/refresh-token',
                         method: 'POST',
                         body: { refreshToken },
                     },
@@ -127,19 +118,42 @@ const baseQueryWithReauth: BaseQueryFn = async (args, api, extraOptions) => {
                     // Retry the original query with the new access token
                     result = await baseQuery(args, api, extraOptions);
 
-                    console.log('Token refreshed successfully');
+                    console.log('✅ Token refreshed successfully');
                 } else {
                     // Refresh token failed, log out the user
+                    console.log('❌ Refresh token failed, logging out user');
                     api.dispatch(logout());
                     await Keychain.resetGenericPassword();
-                    console.log('Session expired, please log in again.');
+
+                    // Show user-friendly error message
+                    Alert.alert(
+                        'Session Expired',
+                        'Your session has expired. Please log in again.',
+                        [{ text: 'OK' }]
+                    );
                 }
-            } else {
-                // No refresh token available, log out the user
+            } catch (error) {
+                console.error('❌ Error during token refresh:', error);
                 api.dispatch(logout());
                 await Keychain.resetGenericPassword();
-                console.log('No refresh token, please log in again.');
+
+                Alert.alert(
+                    'Session Expired',
+                    'Your session has expired. Please log in again.',
+                    [{ text: 'OK' }]
+                );
             }
+        } else {
+            // No refresh token available, log out the user
+            console.log('❌ No refresh token available, logging out user');
+            api.dispatch(logout());
+            await Keychain.resetGenericPassword();
+
+            Alert.alert(
+                'Authentication Required',
+                'Please log in to continue.',
+                [{ text: 'OK' }]
+            );
         }
     }
 
@@ -149,74 +163,34 @@ const baseQueryWithReauth: BaseQueryFn = async (args, api, extraOptions) => {
 export const authApi = createApi({
     reducerPath: 'authApi',
     baseQuery: baseQueryWithReauth,
-    tagTypes: ['Auth'],
     endpoints: (builder) => ({
-        login: builder.mutation<LoginResponse, { username: string; password: string }>({
+        login: builder.mutation<LoginResponse, LoginRequest>({
             query: (credentials) => ({
-                url: 'auth/signin',
+                url: '/signin',
                 method: 'POST',
                 body: credentials,
             }),
-            invalidatesTags: ['Auth'],
-            onQueryStarted: async (args, { dispatch, queryFulfilled }) => {
-                try {
-                    const { data } = await queryFulfilled;
-
-                    // Map API response to match User interface
-                    const mappedUser = {
-                        id: data.user.id,
-                        username: data.user.username, // Map 'name' from API to 'username' for our app
-                        email: data.user.email,
-                        bio: data.user.bio,
-                        avatar: data.user.avatar,
-                        createdAt: data.user.createdAt,
-                    };
-
-                    // Store tokens in Keychain
-                    await Keychain.setGenericPassword('authTokens', JSON.stringify({
-                        accessToken: data.accessToken,
-                        refreshToken: data.refreshToken,
-                        user: mappedUser
-                    }));
-
-                    // Update Redux state
-                    dispatch(setTokens({
-                        accessToken: data.accessToken,
-                        refreshToken: data.refreshToken,
-                        user: mappedUser
-                    }));
-
-                    console.log('Login successful, Bearer token will be added automatically to future requests');
-                } catch (error) {
-                    console.error('Login error in onQueryStarted:', error);
-                }
-            },
         }),
-        signup: builder.mutation<SignupResponse, { username: string; email: string; password: string }>({
+        signup: builder.mutation<{ message: string }, SignupRequest>({
             query: (userData) => ({
-                url: 'auth/signup',
+                url: '/signup',
                 method: 'POST',
                 body: userData,
             }),
-            invalidatesTags: ['Auth'],
         }),
-        refreshToken: builder.mutation<LoginResponse, { refreshToken: string }>({
-            query: (tokenData) => ({
-                url: 'auth/refresh-token',
+        refreshToken: builder.mutation<LoginResponse, RefreshTokenRequest>({
+            query: (body) => ({
+                url: '/refresh-token',
                 method: 'POST',
-                body: tokenData,
+                body,
             }),
         }),
-        logout: builder.mutation<void, void>({
-            query: () => ({
-                url: 'auth/logout',
+        logout: builder.mutation<{ message: string }, RefreshTokenRequest>({
+            query: (body) => ({
+                url: '/logout',
                 method: 'POST',
+                body,
             }),
-            onQueryStarted: async (args, { dispatch }) => {
-                // Clear tokens regardless of API response
-                dispatch(logout());
-                await Keychain.resetGenericPassword();
-            },
         }),
     }),
 });

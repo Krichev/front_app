@@ -1,6 +1,7 @@
 // src/entities/AuthState/model/slice/authSlice.ts
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import * as Keychain from 'react-native-keychain';
+import {jwtDecode} from 'jwt-decode';
 
 interface User {
     id: string;
@@ -12,29 +13,56 @@ interface User {
     statsCompleted?: number;
     statsCreated?: number;
     statsSuccess?: number;
-    // Add any other user fields you have
 }
 
 interface AuthState {
     accessToken: string | null;
     refreshToken: string | null;
     user: User | null;
+    isRefreshing: boolean;
+}
+
+interface JwtPayload {
+    exp: number;
+    iat: number;
+    sub: string;
 }
 
 const initialState: AuthState = {
     accessToken: null,
     refreshToken: null,
     user: null,
+    isRefreshing: false,
+};
+
+// Helper function to check if token is expired or about to expire
+export const isTokenExpired = (token: string | null, bufferMinutes: number = 1): boolean => {
+    if (!token) return true;
+
+    try {
+        const decoded = jwtDecode<JwtPayload>(token);
+        const currentTime = Date.now() / 1000; // Convert to seconds
+        const bufferTime = bufferMinutes * 60; // Convert minutes to seconds
+
+        // Token is expired or will expire within buffer time
+        return decoded.exp - bufferTime <= currentTime;
+    } catch (error) {
+        console.error('Error decoding token:', error);
+        return true;
+    }
 };
 
 const authSlice = createSlice({
     name: 'auth',
     initialState,
     reducers: {
-        setTokens(state, action: PayloadAction<AuthState>) {
+        setTokens(state, action: PayloadAction<Omit<AuthState, 'isRefreshing'>>) {
             state.accessToken = action.payload.accessToken;
             state.refreshToken = action.payload.refreshToken;
             state.user = action.payload.user;
+        },
+        setRefreshing(state, action: PayloadAction<boolean>) {
+            state.isRefreshing = action.payload;
         },
         updateUser(state, action: PayloadAction<User>) {
             if (state.user) {
@@ -50,71 +78,61 @@ const authSlice = createSlice({
             state.accessToken = null;
             state.refreshToken = null;
             state.user = null;
+            state.isRefreshing = false;
         },
     },
 });
 
 // Enhanced action creators with persistence
-export const setTokensWithPersistence = (authData: AuthState) => async (dispatch: any) => {
+export const setTokensWithPersistence = (authData: Omit<AuthState, 'isRefreshing'>) => async (dispatch: any) => {
     try {
-        // Update Redux state
         dispatch(setTokens(authData));
 
-        // Persist to Keychain
         if (authData.accessToken && authData.refreshToken && authData.user) {
             await Keychain.setGenericPassword('authTokens', JSON.stringify({
                 accessToken: authData.accessToken,
                 refreshToken: authData.refreshToken,
                 user: authData.user
             }));
-            console.log('Tokens persisted to Keychain successfully');
+            console.log('✅ Tokens persisted to Keychain successfully');
         }
     } catch (error) {
-        console.error('Error persisting tokens:', error);
-        // Still update Redux state even if persistence fails
+        console.error('❌ Error persisting tokens:', error);
         dispatch(setTokens(authData));
     }
 };
 
 export const updateUserWithPersistence = (userData: User) => async (dispatch: any, getState: any) => {
     try {
-        // Update Redux state
         dispatch(updateUser(userData));
 
-        // Get current auth state
         const currentState = getState().auth;
 
-        // Update persistent storage with new user data
         if (currentState.accessToken && currentState.refreshToken) {
             await Keychain.setGenericPassword('authTokens', JSON.stringify({
                 accessToken: currentState.accessToken,
                 refreshToken: currentState.refreshToken,
                 user: userData
             }));
-            console.log('User data updated in persistent storage');
+            console.log('✅ User data updated in persistent storage');
         }
     } catch (error) {
-        console.error('Error updating user data in storage:', error);
-        // Still update Redux state even if persistence fails
+        console.error('❌ Error updating user data in storage:', error);
         dispatch(updateUser(userData));
     }
 };
 
 export const logoutWithCleanup = () => async (dispatch: any) => {
     try {
-        // Clear Redux state
         dispatch(logout());
-
-        // Clear Keychain
         await Keychain.resetGenericPassword();
-
-        console.log('Logout completed - all tokens cleared');
+        console.log('✅ Logout completed - all tokens cleared');
     } catch (error) {
-        console.error('Error during logout cleanup:', error);
-        // Still clear Redux state even if Keychain clear fails
+        console.error('❌ Error during logout cleanup:', error);
         dispatch(logout());
     }
 };
 
-export const { setTokens, updateUser, updateUserField, logout } = authSlice.actions;
+export const { setTokens, setRefreshing, updateUser, updateUserField, logout } = authSlice.actions;
 export default authSlice.reducer;
+

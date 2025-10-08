@@ -1,4 +1,6 @@
-// src/services/wwwGame/questionService.ts - UPDATED: Backend Integration
+// src/services/wwwGame/questionService.ts
+// COMPLETE FILE WITH ALL SEARCH METHODS
+
 import NetworkConfigManager from '../../config/NetworkConfig';
 import {RootState} from '../../app/providers/StoreProvider/store';
 
@@ -118,6 +120,15 @@ export interface QuestionData {
     topic?: string;
 }
 
+export interface UserQuestion {
+    id: number;
+    question: string;
+    answer: string;
+    difficulty: APIDifficulty;
+    topic?: string;
+    additionalInfo?: string;
+}
+
 export interface AddQuestionToTournamentRequest {
     tournamentTitle: string;
     quizQuestionId: number;
@@ -164,44 +175,195 @@ export class QuestionService {
             'Accept': 'application/json'
         };
 
-        // Try to get token from Redux store if available
-        if (store) {
-            const state = store.getState() as RootState;
-            const token = state?.auth?.accessToken;
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
+        try {
+            if (store) {
+                const state = store.getState() as RootState;
+                const token = state.auth?.accessToken;
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
             }
+        } catch (error) {
+            console.error('Error getting auth headers:', error);
         }
 
         return headers;
     }
 
+    // ==================== NEW SEARCH METHODS ====================
+
     /**
-     * Normalize difficulty to UI format
+     * Search quiz questions with filters
+     * This is the main method for searching questions
      */
-    private static normalizeToUIDifficulty(difficulty: UIDifficulty | APIDifficulty): UIDifficulty {
-        if (difficulty === 'EASY' || difficulty === 'Easy') return 'Easy';
-        if (difficulty === 'MEDIUM' || difficulty === 'Medium') return 'Medium';
-        if (difficulty === 'HARD' || difficulty === 'Hard') return 'Hard';
-        return 'Medium';
+    static async searchQuestions(params: {
+        keyword?: string;
+        difficulty?: APIDifficulty;
+        topic?: string;
+        page?: number;
+        size?: number;
+        store?: any;
+    }): Promise<{
+        questions: QuestionData[];
+        totalElements: number;
+        totalPages: number;
+        currentPage: number;
+    }> {
+        try {
+            const {
+                keyword = '',
+                difficulty,
+                topic = '',
+                page = 0,
+                size = 50,
+                store
+            } = params;
+
+            // Build query parameters
+            const queryParams = new URLSearchParams();
+            if (keyword) queryParams.append('keyword', keyword);
+            if (difficulty) queryParams.append('difficulty', difficulty);
+            if (topic) queryParams.append('topic', topic);
+            queryParams.append('page', page.toString());
+            queryParams.append('size', size.toString());
+
+            const response = await fetch(
+                `${this.baseUrl}/quiz-questions/search?${queryParams.toString()}`,
+                {
+                    method: 'GET',
+                    headers: this.getAuthHeaders(store)
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Convert backend response to frontend format
+            return {
+                questions: data.content.map((q: any) => this.convertQuizQuestionToQuestionData(q)),
+                totalElements: data.totalElements,
+                totalPages: data.totalPages,
+                currentPage: data.number
+            };
+        } catch (error) {
+            console.error('Error searching questions:', error);
+            throw new Error('Failed to search questions. Please try again.');
+        }
     }
 
     /**
-     * Convert UI difficulty to API difficulty
+     * Get available topics for filtering
      */
-    static convertToAPIDifficulty(difficulty: UIDifficulty): APIDifficulty {
-        return DIFFICULTY_MAPPING[difficulty];
+    static async getAvailableTopics(store?: any): Promise<string[]> {
+        try {
+            const response = await fetch(
+                `${this.baseUrl}/quiz-questions/topics`,
+                {
+                    method: 'GET',
+                    headers: this.getAuthHeaders(store)
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const topics: string[] = await response.json();
+            return topics.filter(t => t && t.trim() !== '');
+        } catch (error) {
+            console.error('Error fetching topics:', error);
+            // Return some default topics if API fails
+            return ['History', 'Science', 'Geography', 'Sports', 'Arts', 'Literature'];
+        }
     }
 
     /**
-     * Convert API difficulty to UI difficulty
+     * Get question statistics for filtering
      */
-    static convertToUIDifficulty(difficulty: APIDifficulty): UIDifficulty {
-        return DIFFICULTY_MAPPING[difficulty];
+    static async getQuestionStats(store?: any): Promise<{
+        totalQuestions: number;
+        byDifficulty: Record<APIDifficulty, number>;
+        byTopic: Record<string, number>;
+    }> {
+        try {
+            const response = await fetch(
+                `${this.baseUrl}/quiz-questions/stats`,
+                {
+                    method: 'GET',
+                    headers: this.getAuthHeaders(store)
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching question stats:', error);
+            return {
+                totalQuestions: 0,
+                byDifficulty: { EASY: 0, MEDIUM: 0, HARD: 0 },
+                byTopic: {}
+            };
+        }
     }
 
     /**
-     * Convert backend DTO to frontend QuestionData
+     * Fetch random questions (for backward compatibility)
+     */
+    static async fetchRandomQuestions(
+        count: number = 50,
+        difficulty?: APIDifficulty,
+        store?: any
+    ): Promise<QuestionData[]> {
+        try {
+            const queryParams = new URLSearchParams();
+            queryParams.append('count', count.toString());
+            if (difficulty) queryParams.append('difficulty', difficulty);
+
+            const response = await fetch(
+                `${this.baseUrl}/quiz-questions/random?${queryParams.toString()}`,
+                {
+                    method: 'GET',
+                    headers: this.getAuthHeaders(store)
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const questions = await response.json();
+            return questions.map((q: any) => this.convertQuizQuestionToQuestionData(q));
+        } catch (error) {
+            console.error('Error fetching random questions:', error);
+            throw new Error('Failed to fetch questions. Please try again.');
+        }
+    }
+
+    // ==================== CONVERTER METHODS ====================
+
+    /**
+     * Convert QuizQuestionDTO to QuestionData
+     */
+    private static convertQuizQuestionToQuestionData(dto: QuizQuestionDTO): QuestionData {
+        return {
+            id: dto.id.toString(),
+            question: dto.question,
+            answer: dto.answer,
+            difficulty: this.convertToUIDifficulty(dto.difficulty),
+            topic: dto.topic,
+            source: dto.source,
+            additionalInfo: dto.additionalInfo
+        };
+    }
+
+    /**
+     * Convert TournamentQuestionDetailDTO to QuestionData
      */
     private static convertDTOToQuestionData(dto: TournamentQuestionDetailDTO): QuestionData {
         return {
@@ -209,11 +371,37 @@ export class QuestionService {
             question: dto.effectiveQuestion,
             answer: dto.effectiveAnswer,
             difficulty: this.convertToUIDifficulty(dto.bankQuestion.difficulty),
-            source: dto.effectiveSources,
-            additionalInfo: dto.bankQuestion.additionalInfo,
-            topic: dto.bankQuestion.topic
+            topic: dto.bankQuestion.topic,
+            source: dto.effectiveSources || dto.bankQuestion.source,
+            additionalInfo: dto.bankQuestion.additionalInfo
         };
     }
+
+    /**
+     * Convert API difficulty to UI difficulty
+     */
+    private static convertToUIDifficulty(apiDifficulty: APIDifficulty): UIDifficulty {
+        const mapping: Record<APIDifficulty, UIDifficulty> = {
+            'EASY': 'Easy',
+            'MEDIUM': 'Medium',
+            'HARD': 'Hard'
+        };
+        return mapping[apiDifficulty] || 'Medium';
+    }
+
+    /**
+     * Convert UI difficulty to API difficulty
+     */
+    static convertToAPIDifficulty(uiDifficulty: UIDifficulty): APIDifficulty {
+        const mapping: Record<UIDifficulty, APIDifficulty> = {
+            'Easy': 'EASY',
+            'Medium': 'MEDIUM',
+            'Hard': 'HARD'
+        };
+        return mapping[uiDifficulty] || 'MEDIUM';
+    }
+
+    // ==================== TOURNAMENT METHODS (EXISTING) ====================
 
     /**
      * Get all questions for a tournament
@@ -477,10 +665,30 @@ export class QuestionService {
     }
 
     /**
-     * Initialize service (for compatibility)
+     * Initialize service
      */
     static initialize(): void {
         this.clearCache();
         console.log('Question Service initialized with backend integration');
     }
 }
+
+// User questions methods (if you need them)
+export const getUserQuestions = async (): Promise<UserQuestion[]> => {
+    // Implement if needed
+    return [];
+};
+
+export const createUserQuestion = async (question: Partial<UserQuestion>): Promise<UserQuestion> => {
+    // Implement if needed
+    return {} as UserQuestion;
+};
+
+export const updateUserQuestion = async (id: number, question: Partial<UserQuestion>): Promise<UserQuestion> => {
+    // Implement if needed
+    return {} as UserQuestion;
+};
+
+export const deleteUserQuestion = async (id: number): Promise<void> => {
+    // Implement if needed
+};
