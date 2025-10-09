@@ -1,6 +1,6 @@
-// src/entities/GroupState/model/slice/groupApi.ts
-import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
-import {RootState} from '../../../../app/providers/StoreProvider/store.ts';
+// src/entities/GroupState/model/slice/groupApi.ts - UPDATED
+import {createApi} from '@reduxjs/toolkit/query/react';
+import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 
 export interface Group {
     id: string;
@@ -17,23 +17,9 @@ export interface Group {
 
 export const groupApi = createApi({
     reducerPath: 'groupApi',
-    baseQuery: fetchBaseQuery({
-        baseUrl: 'http://10.0.2.2:8082/challenger/api',
-        prepareHeaders: (headers, { getState }) => {
-            // Get the token from the state
-            const token = (getState() as RootState).auth.accessToken;
-
-            // If we have a token, add it to the headers
-            if (token) {
-                headers.set('authorization', `Bearer ${token}`);
-            }
-
-            return headers;
-        },
-    }),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
     tagTypes: ['Group'],
     endpoints: (builder) => ({
-        // Get all groups the user is a member of
         getUserGroups: builder.query<Group[], void>({
             query: () => '/groups/me',
             providesTags: (result) =>
@@ -45,7 +31,6 @@ export const groupApi = createApi({
                     : [{ type: 'Group', id: 'LIST' }],
         }),
 
-        // Join a group
         joinGroup: builder.mutation<{ message: string }, string>({
             query: (groupId) => ({
                 url: `/groups/${groupId}/join`,
@@ -54,7 +39,6 @@ export const groupApi = createApi({
             invalidatesTags: [{ type: 'Group', id: 'LIST' }],
         }),
 
-        // Get groups by specific user ID
         getUserGroupsByUserId: builder.query<Group[], string>({
             query: (userId) => `/groups/user/${userId}`,
             providesTags: (result, error, userId) => [{ type: 'Group', id: userId }],

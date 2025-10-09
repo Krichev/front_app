@@ -1,9 +1,6 @@
-// src/entities/QuizState/model/slice/quizApi.ts
-import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
-import {RootState} from "../../../../app/providers/StoreProvider/store";
-
-// REMOVED: CreateQuizChallengeRequest (now only exists in ChallengeState)
-// This interface is now only in challengeApi.ts to avoid conflicts
+// src/entities/QuizState/model/slice/quizApi.ts - UPDATED
+import {createApi} from '@reduxjs/toolkit/query/react';
+import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 
 export interface CreateQuizQuestionRequest {
     question: string;
@@ -25,7 +22,6 @@ export interface QuizConfig {
     teamBased: boolean;
 }
 
-// Quiz Question types
 export interface QuizQuestion {
     id: string;
     question: string;
@@ -42,7 +38,6 @@ export interface QuizQuestion {
     lastUsed?: string;
 }
 
-// Quiz Session types
 export interface QuizSession {
     id: string;
     challengeId: string;
@@ -79,7 +74,6 @@ export interface StartQuizSessionRequest {
     customQuestionIds?: number[];
 }
 
-// Quiz Round types
 export interface QuizRound {
     id: string;
     quizSessionId: string;
@@ -109,19 +103,9 @@ export interface SubmitRoundAnswerRequest {
 
 export const quizApi = createApi({
     reducerPath: 'quizApi',
-    baseQuery: fetchBaseQuery({
-        baseUrl: 'http://10.0.2.2:8082/challenger/api/quiz',
-        prepareHeaders: (headers, {getState}) => {
-            const token = (getState() as RootState).auth.accessToken;
-            if (token) {
-                headers.set('Authorization', `Bearer ${token}`);
-            }
-            return headers;
-        },
-    }),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api/quiz'),
     tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound'],
     endpoints: (builder) => ({
-        // Question Management
         createUserQuestion: builder.mutation<QuizQuestion, CreateQuizQuestionRequest>({
             query: (request) => ({
                 url: '/questions',
@@ -171,7 +155,6 @@ export const quizApi = createApi({
             providesTags: [{type: 'QuizQuestion', id: 'SEARCH'}],
         }),
 
-        // Quiz Session Management
         startQuizSession: builder.mutation<QuizSession, StartQuizSessionRequest>({
             query: (request) => ({
                 url: '/sessions',
@@ -268,14 +251,11 @@ export const quizApi = createApi({
 });
 
 export const {
-    // Question endpoints
     useCreateUserQuestionMutation,
     useGetUserQuestionsQuery,
     useDeleteUserQuestionMutation,
     useGetQuestionsByDifficultyQuery,
     useSearchQuestionsQuery,
-
-    // Session endpoints
     useStartQuizSessionMutation,
     useBeginQuizSessionMutation,
     useSubmitRoundAnswerMutation,

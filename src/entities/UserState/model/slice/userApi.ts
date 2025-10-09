@@ -1,10 +1,10 @@
-// src/entities/UserState/model/slice/userApi.ts
-import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
+// src/entities/UserState/model/slice/userApi.ts - UPDATED
+import {createApi} from '@reduxjs/toolkit/query/react';
+import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {updateUser} from '../../../AuthState/model/slice/authSlice';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {TokenRefreshService} from '../../../../services/auth/TokenRefreshService';
 
-// Interfaces
 export interface UserProfile {
     id: string;
     username: string;
@@ -25,13 +25,13 @@ export interface UpdateUserProfileRequest {
 
 export interface UpdateUserProfileResponse {
     user: UserProfile;
-    newToken?: string; // JWT token returned when username is changed
+    newToken?: string;
 }
 
 export interface UserStatsResponse {
     created: number;
     completed: number;
-    success: number; // This could be a percentage or ratio
+    success: number;
 }
 
 export interface LoginRequest {
@@ -50,30 +50,11 @@ export interface AuthResponse {
     token: string;
 }
 
-// Create base query with auth token
-const baseQuery = fetchBaseQuery({
-    baseUrl: 'http://10.0.2.2:8082/challenger/api',
-    prepareHeaders: (headers, { getState }) => {
-        // Get the token from the state
-        const state = getState() as RootState;
-        const token = state.auth.accessToken;
-
-        // If we have a token, add it to the headers
-        if (token) {
-            headers.set('Authorization', `Bearer ${token}`);
-        }
-        headers.set('Content-Type', 'application/json');
-
-        return headers;
-    },
-});
-
 export const userApi = createApi({
     reducerPath: 'userApi',
-    baseQuery,
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
     tagTypes: ['User', 'UserProfile'],
     endpoints: (builder) => ({
-        // Get user profile by ID
         getUserProfile: builder.query<UserProfile, string>({
             query: (userId) => `/users/${userId}`,
             providesTags: (result, error, userId) => [
@@ -82,48 +63,39 @@ export const userApi = createApi({
             ],
         }),
 
-        // Update user profile
-        updateUserProfile: builder.mutation<UpdateUserProfileResponse, { id: string } & UpdateUserProfileRequest>({
-            query: ({ id, ...body }) => ({
-                url: `/users/${id}`,
+        updateUserProfile: builder.mutation<UpdateUserProfileResponse, {
+            userId: string;
+            userData: UpdateUserProfileRequest;
+        }>({
+            query: ({ userId, userData }) => ({
+                url: `/users/${userId}`,
                 method: 'PATCH',
-                body,
+                body: userData,
             }),
-            invalidatesTags: (result, error, { id }) => [
-                { type: 'User', id },
-                { type: 'UserProfile', id },
+            invalidatesTags: (result, error, { userId }) => [
+                { type: 'User', id: userId },
+                { type: 'UserProfile', id: userId },
                 { type: 'User', id: 'LIST' },
             ],
-            // Handle auth state synchronization and token refresh
-            onQueryStarted: async ({ id, username, ...profileData }, { dispatch, queryFulfilled, getState }) => {
+            onQueryStarted: async ({ userId, userData }, { dispatch, queryFulfilled, getState }) => {
                 try {
-                    const { data: response } = await queryFulfilled;
-
-                    // Get current auth state
+                    const { data } = await queryFulfilled;
                     const state = getState() as RootState;
                     const currentUser = state.auth.user;
 
-                    // If this is the current authenticated user, update the auth state
-                    if (currentUser && currentUser.id === id) {
+                    if (currentUser && currentUser.id === userId) {
                         const updatedUser = {
                             ...currentUser,
-                            ...response.user,
+                            ...data.user,
                         };
 
-                        // If username was changed and we received a new token, update everything
-                        if (response.newToken) {
-                            console.log('🔄 Username changed, updating token and persisting to storage');
+                        dispatch(updateUser(updatedUser));
 
-                            // Use centralized token refresh service
-                            await TokenRefreshService.updateTokensAndPersist(response.newToken, updatedUser);
-
-                            console.log('✅ Username updated and new JWT token persisted successfully');
+                        if (data.newToken) {
+                            await TokenRefreshService.updateTokensAndPersist(data.newToken, updatedUser);
+                            console.log('✅ Username updated and new JWT token persisted');
                         } else {
-                            // Just update user data
-                            console.log('👤 Updating user profile data');
-
                             await TokenRefreshService.updateUserAndPersist(updatedUser);
-
                             console.log('✅ User profile updated successfully');
                         }
                     }
@@ -133,7 +105,6 @@ export const userApi = createApi({
             },
         }),
 
-        // Get user statistics
         getUserStats: builder.query<UserStatsResponse, string>({
             query: (userId) => `/users/${userId}/stats`,
             providesTags: (result, error, userId) => [
@@ -141,7 +112,6 @@ export const userApi = createApi({
             ],
         }),
 
-        // Get user groups
         getUserGroups: builder.query<any[], string>({
             query: (userId) => `/users/${userId}/groups`,
             providesTags: (result, error, userId) => [
@@ -149,7 +119,6 @@ export const userApi = createApi({
             ],
         }),
 
-        // Search users
         searchUsers: builder.query<UserProfile[], string>({
             query: (searchTerm) => ({
                 url: '/users/search',
@@ -158,7 +127,6 @@ export const userApi = createApi({
             providesTags: [{ type: 'User', id: 'LIST' }],
         }),
 
-        // Get multiple user profiles (for lists, search, etc.)
         getUserProfiles: builder.query<UserProfile[], { ids?: string[]; search?: string }>({
             query: ({ ids, search }) => {
                 const params = new URLSearchParams();
@@ -179,7 +147,6 @@ export const userApi = createApi({
                     : [{ type: 'User', id: 'LIST' }],
         }),
 
-        // Additional endpoint specifically for username updates if needed
         updateUsername: builder.mutation<{ user: UserProfile; newToken?: string }, { userId: string; username: string }>({
             query: ({ userId, username }) => ({
                 url: `/users/${userId}/username`,
@@ -194,12 +161,9 @@ export const userApi = createApi({
             onQueryStarted: async ({ userId, username }, { dispatch, queryFulfilled, getState }) => {
                 try {
                     const { data } = await queryFulfilled;
-
-                    // Get current auth state
                     const state = getState() as RootState;
                     const currentUser = state.auth.user;
 
-                    // If this is the current authenticated user, update the auth state
                     if (currentUser && currentUser.id === userId) {
                         dispatch(updateUser({
                             ...currentUser,
@@ -212,7 +176,6 @@ export const userApi = createApi({
             },
         }),
 
-        // Login endpoint (if you want to handle auth through this API)
         login: builder.mutation<AuthResponse, LoginRequest>({
             query: (credentials) => ({
                 url: '/auth/login',
@@ -221,7 +184,6 @@ export const userApi = createApi({
             }),
         }),
 
-        // Register endpoint (if you want to handle auth through this API)
         register: builder.mutation<AuthResponse, RegisterRequest>({
             query: (userData) => ({
                 url: '/auth/register',
@@ -232,7 +194,6 @@ export const userApi = createApi({
     }),
 });
 
-// Export hooks for use in components
 export const {
     useGetUserProfileQuery,
     useUpdateUserProfileMutation,

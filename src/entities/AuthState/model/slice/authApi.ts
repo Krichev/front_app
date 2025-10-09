@@ -50,7 +50,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 ) => {
     const baseQuery = fetchBaseQuery({
         baseUrl: 'http://10.0.2.2:8082/challenger/api/auth',
-        prepareHeaders: (headers, { getState }) => {
+        prepareHeaders: (headers, {getState}) => {
             const token = (getState() as RootState).auth.accessToken;
             if (token) {
                 headers.set('Authorization', `Bearer ${token}`);
@@ -60,7 +60,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
     });
 
     let result = await baseQuery(args, api, extraOptions);
-
+    console.log(result);
     // Handle network errors with retry
     if (result.error && result.error.status === 'FETCH_ERROR') {
         if ((result.error as any)?.message?.includes('Network request failed')) {
@@ -92,14 +92,14 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
                     {
                         url: '/refresh-token',
                         method: 'POST',
-                        body: { refreshToken },
+                        body: {refreshToken},
                     },
                     api,
                     extraOptions
                 );
 
                 if (refreshResult.data) {
-                    const { accessToken, refreshToken: newRefreshToken, user } = refreshResult.data as LoginResponse;
+                    const {accessToken, refreshToken: newRefreshToken, user} = refreshResult.data as LoginResponse;
 
                     // Store the new tokens in Keychain
                     await Keychain.setGenericPassword('authTokens', JSON.stringify({
@@ -129,7 +129,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
                     Alert.alert(
                         'Session Expired',
                         'Your session has expired. Please log in again.',
-                        [{ text: 'OK' }]
+                        [{text: 'OK'}]
                     );
                 }
             } catch (error) {
@@ -140,7 +140,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
                 Alert.alert(
                     'Session Expired',
                     'Your session has expired. Please log in again.',
-                    [{ text: 'OK' }]
+                    [{text: 'OK'}]
                 );
             }
         } else {
@@ -152,7 +152,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             Alert.alert(
                 'Authentication Required',
                 'Please log in to continue.',
-                [{ text: 'OK' }]
+                [{text: 'OK'}]
             );
         }
     }
