@@ -1,6 +1,6 @@
-// src/navigation/AppNavigator.tsx - COMPLETE FIXED VERSION
+// src/navigation/AppNavigator.tsx - COMPLETE FINAL VERSION
 import React from 'react';
-import {NavigationContainer, RouteProp} from '@react-navigation/native';
+import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 
@@ -58,30 +58,19 @@ export type RootStackParamList = {
         challengeId?: string;
     };
     WWWGameResults: {
-        teamName: string;
         score: number;
-        totalRounds: number;
-        roundsData: any[];
+        totalQuestions: number;
         challengeId?: string;
-        gameStartTime?: string;
-        gameDuration?: number;
-        sessionId?: string;
     };
     QuizResults: {
-        challengeId: string;
-        score: number;
-        totalRounds: number;
-        teamName: string;
-        roundsData: any[];
+        challenge: StateChallenge;
+        participantScore?: number;
     };
 
-    // Question Management
-    QuestionManagement: undefined;
+    // User Questions
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
-    EditChallenge: { challengeId: string, challenge?: StateChallenge };
-    VerifyCompletions: { challengeId: string, challengeTitle: string };
 };
 
 export type MainTabParamList = {
@@ -92,79 +81,59 @@ export type MainTabParamList = {
     Profile: undefined;
 };
 
-// Global type declaration
-declare global {
-    namespace ReactNavigation {
-        interface RootParamList extends RootStackParamList {}
-    }
-}
-
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-// Main Tab Navigator
-const MainTabNavigator = ({
-                              route
-                          }: {
-    route: RouteProp<RootStackParamList, 'Main'>
-}) => {
-    const { screen, params } = route.params || {};
-
+const MainTabNavigator = () => {
     return (
         <Tab.Navigator
-            initialRouteName={screen || 'Home'}
-            screenOptions={({ route }) => ({
-                tabBarIcon: ({ focused, color, size }) => {
-                    const icons = {
-                        Home: focused ? 'home' : 'home-outline',
-                        Challenges: focused ? 'trophy' : 'trophy-outline',
-                        Search: focused ? 'magnify' : 'magnify',
-                        Groups: focused ? 'account-group' : 'account-group-outline',
-                        Profile: focused ? 'account' : 'account-outline',
-                    };
+            screenOptions={({route}) => ({
+                tabBarIcon: ({focused, color, size}) => {
+                    let iconName: string;
 
-                    return <MaterialCommunityIcons
-                        name={icons[route.name as keyof typeof icons] || 'help-circle-outline'}
-                        size={size}
-                        color={color}
-                    />;
+                    switch (route.name) {
+                        case 'Home':
+                            iconName = focused ? 'home' : 'home-outline';
+                            break;
+                        case 'Challenges':
+                            iconName = focused ? 'trophy' : 'trophy-outline';
+                            break;
+                        case 'Search':
+                            iconName = focused ? 'magnify' : 'magnify';
+                            break;
+                        case 'Groups':
+                            iconName = focused ? 'account-group' : 'account-group-outline';
+                            break;
+                        case 'Profile':
+                            iconName = focused ? 'account' : 'account-outline';
+                            break;
+                        default:
+                            iconName = 'circle';
+                    }
+
+                    return <MaterialCommunityIcons name={iconName} size={size} color={color}/>;
                 },
                 tabBarActiveTintColor: '#4CAF50',
                 tabBarInactiveTintColor: 'gray',
                 headerShown: false,
             })}
         >
-            <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen
-                name="Challenges"
-                component={ChallengesScreen}
-                initialParams={params}
-            />
-            <Tab.Screen name="Search" component={SearchScreen} />
-            <Tab.Screen name="Groups" component={GroupsScreen} />
-            <Tab.Screen name="Profile" component={UserProfileScreen} />
+            <Tab.Screen name="Home" component={HomeScreen}/>
+            <Tab.Screen name="Challenges" component={ChallengesScreen}/>
+            <Tab.Screen name="Search" component={SearchScreen}/>
+            <Tab.Screen name="Groups" component={GroupsScreen}/>
+            <Tab.Screen name="Profile" component={UserProfileScreen}/>
         </Tab.Navigator>
     );
 };
 
-// Main App Navigation
 const AppNavigation = () => {
     const isAuthenticated = useSelector((state: RootState) => state.auth.accessToken);
 
     return (
         <NavigationContainer>
-            <AuthNavigationHandler />
-            <Stack.Navigator
-                screenOptions={{
-                    headerStyle: {
-                        backgroundColor: '#4CAF50',
-                    },
-                    headerTintColor: 'white',
-                    headerTitleStyle: {
-                        fontWeight: 'bold',
-                    },
-                }}
-            >
+            <AuthNavigationHandler/>
+            <Stack.Navigator>
                 {isAuthenticated ? (
                     <>
                         <Stack.Screen

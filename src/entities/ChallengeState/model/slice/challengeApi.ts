@@ -36,6 +36,7 @@ export interface CreateChallengeRequest {
     reward?: string;
     penalty?: string;
     verificationMethod?: string;
+    difficulty?: string;
     verificationDetails?: Record<string, any>;
     targetGroup?: string;
     frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
