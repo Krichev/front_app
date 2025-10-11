@@ -1,5 +1,5 @@
 // src/services/wwwGame/questionService.ts
-// COMPLETE FILE WITH ALL SEARCH METHODS
+// UPDATED VERSION WITH ADVANCED SEARCH METHOD
 
 import NetworkConfigManager from '../../config/NetworkConfig';
 import {RootState} from '../../app/providers/StoreProvider/store';
@@ -32,27 +32,6 @@ export const DIFFICULTY_MAPPING = {
 };
 
 // Backend DTO interfaces
-export interface TournamentQuestionSummaryDTO {
-    id: number;
-    quizQuestionId: number;
-    tournamentId: number;
-    tournamentTitle: string;
-    displayOrder: number;
-    questionPreview: string;
-    difficulty: APIDifficulty;
-    topic: string;
-    questionType: QuestionType;
-    hasMedia: boolean;
-    points: number;
-    isBonusQuestion: boolean;
-    isMandatory: boolean;
-    isActive: boolean;
-    rating: number;
-    hasCustomizations: boolean;
-    enteredDate: string;
-    updatedAt: string;
-}
-
 export interface QuizQuestionDTO {
     id: number;
     question: string;
@@ -75,40 +54,6 @@ export interface QuizQuestionDTO {
     updatedAt: string;
 }
 
-export interface TournamentQuestionDetailDTO {
-    id: number;
-    tournamentId: number;
-    tournamentTitle: string;
-    displayOrder: number;
-    legacyQuestionNum: number;
-    quizQuestionId: number;
-    effectiveQuestion: string;
-    effectiveAnswer: string;
-    effectiveSources: string;
-    bankQuestion: QuizQuestionDTO;
-    customQuestion?: string;
-    customAnswer?: string;
-    customSources?: string;
-    tournamentType: string;
-    topicNum: number;
-    notices: string;
-    images: string;
-    rating: number;
-    points: number;
-    timeLimitSeconds: number;
-    isBonusQuestion: boolean;
-    isMandatory: boolean;
-    isActive: boolean;
-    hasCustomQuestion: boolean;
-    hasCustomAnswer: boolean;
-    hasCustomSources: boolean;
-    hasAnyCustomizations: boolean;
-    hasMedia: boolean;
-    enteredDate: string;
-    updatedAt: string;
-    addedBy: number;
-}
-
 // Frontend interface for compatibility
 export interface QuestionData {
     id: string;
@@ -129,38 +74,7 @@ export interface UserQuestion {
     additionalInfo?: string;
 }
 
-export interface AddQuestionToTournamentRequest {
-    tournamentTitle: string;
-    quizQuestionId: number;
-    points?: number;
-}
-
-export interface UpdateTournamentQuestionRequest {
-    customQuestion?: string;
-    customAnswer?: string;
-    points?: number;
-}
-
-export interface TournamentQuestionStatsDTO {
-    tournamentId: number;
-    tournamentTitle: string;
-    totalQuestions: number;
-    activeQuestions: number;
-    inactiveQuestions: number;
-    bonusQuestions: number;
-    mandatoryQuestions: number;
-    questionsWithCustomizations: number;
-    questionsWithMedia: number;
-    totalPoints: number;
-    averagePoints: number;
-    minPoints: number;
-    maxPoints: number;
-    difficultyDistribution: Record<APIDifficulty, number>;
-    questionTypeDistribution: Record<QuestionType, number>;
-    topicDistribution: Record<string, number>;
-    averageRating: number;
-    questionsWithRating: number;
-}
+type HeadersInit_ = Record<string, string>;
 
 export class QuestionService {
     private static baseUrl = NetworkConfigManager.getInstance().getBaseUrl();
@@ -190,11 +104,122 @@ export class QuestionService {
         return headers;
     }
 
-    // ==================== NEW SEARCH METHODS ====================
+    /**
+     * Convert backend QuizQuestionDTO to frontend QuestionData format
+     */
+    private static convertQuizQuestionToQuestionData(quizQuestion: QuizQuestionDTO): QuestionData {
+        return {
+            id: quizQuestion.id.toString(),
+            question: quizQuestion.question,
+            answer: quizQuestion.answer,
+            difficulty: DIFFICULTY_MAPPING[quizQuestion.difficulty],
+            source: quizQuestion.source,
+            additionalInfo: quizQuestion.additionalInfo,
+            topic: quizQuestion.topic
+        };
+    }
 
     /**
-     * Search quiz questions with filters
-     * This is the main method for searching questions
+     * NEW: Advanced search using QuizQuestionSearchController.advancedSearch
+     * Endpoint: GET /api/quiz/questions/search/advanced
+     */
+    static async advancedSearchQuestions(params: {
+        keyword?: string;
+        difficulty?: APIDifficulty;
+        topic?: string;
+        isUserCreated?: boolean;
+        page?: number;
+        size?: number;
+        store?: any;
+    }): Promise<{
+        questions: QuestionData[];
+        totalElements: number;
+        totalPages: number;
+        currentPage: number;
+    }> {
+        try {
+            const {
+                keyword,
+                difficulty,
+                topic,
+                isUserCreated,
+                page = 0,
+                size = 20,
+                store
+            } = params;
+
+            // Build query parameters for advanced search
+            const queryParams = new URLSearchParams();
+            if (keyword && keyword.trim()) {
+                queryParams.append('keyword', keyword.trim());
+            }
+            if (difficulty) {
+                queryParams.append('difficulty', difficulty);
+            }
+            if (topic && topic.trim()) {
+                queryParams.append('topic', topic.trim());
+            }
+            if (isUserCreated !== undefined) {
+                queryParams.append('isUserCreated', isUserCreated.toString());
+            }
+            queryParams.append('page', page.toString());
+            queryParams.append('size', size.toString());
+
+            const url = `${this.baseUrl}/quiz/questions/search/advanced?${queryParams.toString()}`;
+            console.log('Advanced search URL:', url);
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: this.getAuthHeaders(store)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Advanced search error:', response.status, errorText);
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log('Advanced search response:', data);
+
+            // The advancedSearch endpoint returns List<QuizQuestion>, not a Page object
+            // So we need to handle it differently
+            if (Array.isArray(data)) {
+                // Direct array response
+                const questions = data.map(q => this.convertQuizQuestionToQuestionData(q));
+                return {
+                    questions,
+                    totalElements: questions.length,
+                    totalPages: 1,
+                    currentPage: 0
+                };
+            } else if (data.content) {
+                // Paginated response
+                return {
+                    questions: data.content.map((q: any) => this.convertQuizQuestionToQuestionData(q)),
+                    totalElements: data.totalElements || data.content.length,
+                    totalPages: data.totalPages || 1,
+                    currentPage: data.number || 0
+                };
+            } else {
+                // Unexpected format
+                console.warn('Unexpected response format from advanced search');
+                return {
+                    questions: [],
+                    totalElements: 0,
+                    totalPages: 0,
+                    currentPage: 0
+                };
+            }
+        } catch (error) {
+            console.error('Error in advanced search:', error);
+            throw new Error('Failed to search questions. Please check your connection and try again.');
+        }
+    }
+
+    /**
+     * UPDATED: Search quiz questions with filters (kept for backward compatibility)
+     * Now uses advancedSearchQuestions internally
      */
     static async searchQuestions(params: {
         keyword?: string;
@@ -209,49 +234,11 @@ export class QuestionService {
         totalPages: number;
         currentPage: number;
     }> {
-        try {
-            const {
-                keyword = '',
-                difficulty,
-                topic = '',
-                page = 0,
-                size = 50,
-                store
-            } = params;
-
-            // Build query parameters
-            const queryParams = new URLSearchParams();
-            if (keyword) queryParams.append('keyword', keyword);
-            if (difficulty) queryParams.append('difficulty', difficulty);
-            if (topic) queryParams.append('topic', topic);
-            queryParams.append('page', page.toString());
-            queryParams.append('size', size.toString());
-
-            const response = await fetch(
-                `${this.baseUrl}/quiz-questions/search?${queryParams.toString()}`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            // Convert backend response to frontend format
-            return {
-                questions: data.content.map((q: any) => this.convertQuizQuestionToQuestionData(q)),
-                totalElements: data.totalElements,
-                totalPages: data.totalPages,
-                currentPage: data.number
-            };
-        } catch (error) {
-            console.error('Error searching questions:', error);
-            throw new Error('Failed to search questions. Please try again.');
-        }
+        // Delegate to advancedSearchQuestions
+        return this.advancedSearchQuestions({
+            ...params,
+            isUserCreated: false  // Only search app questions by default
+        });
     }
 
     /**
@@ -276,39 +263,8 @@ export class QuestionService {
         } catch (error) {
             console.error('Error fetching topics:', error);
             // Return some default topics if API fails
-            return ['History', 'Science', 'Geography', 'Sports', 'Arts', 'Literature'];
-        }
-    }
-
-    /**
-     * Get question statistics for filtering
-     */
-    static async getQuestionStats(store?: any): Promise<{
-        totalQuestions: number;
-        byDifficulty: Record<APIDifficulty, number>;
-        byTopic: Record<string, number>;
-    }> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/quiz-questions/stats`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching question stats:', error);
-            return {
-                totalQuestions: 0,
-                byDifficulty: { EASY: 0, MEDIUM: 0, HARD: 0 },
-                byTopic: {}
-            };
+            return ['History', 'Science', 'Geography', 'Sports', 'Arts', 'Literature',
+                'Technology', 'Entertainment', 'Nature', 'Culture'];
         }
     }
 
@@ -345,350 +301,15 @@ export class QuestionService {
         }
     }
 
-    // ==================== CONVERTER METHODS ====================
-
     /**
-     * Convert QuizQuestionDTO to QuestionData
-     */
-    private static convertQuizQuestionToQuestionData(dto: QuizQuestionDTO): QuestionData {
-        return {
-            id: dto.id.toString(),
-            question: dto.question,
-            answer: dto.answer,
-            difficulty: this.convertToUIDifficulty(dto.difficulty),
-            topic: dto.topic,
-            source: dto.source,
-            additionalInfo: dto.additionalInfo
-        };
-    }
-
-    /**
-     * Convert TournamentQuestionDetailDTO to QuestionData
-     */
-    private static convertDTOToQuestionData(dto: TournamentQuestionDetailDTO): QuestionData {
-        return {
-            id: dto.id.toString(),
-            question: dto.effectiveQuestion,
-            answer: dto.effectiveAnswer,
-            difficulty: this.convertToUIDifficulty(dto.bankQuestion.difficulty),
-            topic: dto.bankQuestion.topic,
-            source: dto.effectiveSources || dto.bankQuestion.source,
-            additionalInfo: dto.bankQuestion.additionalInfo
-        };
-    }
-
-    /**
-     * Convert API difficulty to UI difficulty
-     */
-    private static convertToUIDifficulty(apiDifficulty: APIDifficulty): UIDifficulty {
-        const mapping: Record<APIDifficulty, UIDifficulty> = {
-            'EASY': 'Easy',
-            'MEDIUM': 'Medium',
-            'HARD': 'Hard'
-        };
-        return mapping[apiDifficulty] || 'Medium';
-    }
-
-    /**
-     * Convert UI difficulty to API difficulty
-     */
-    static convertToAPIDifficulty(uiDifficulty: UIDifficulty): APIDifficulty {
-        const mapping: Record<UIDifficulty, APIDifficulty> = {
-            'Easy': 'EASY',
-            'Medium': 'MEDIUM',
-            'Hard': 'HARD'
-        };
-        return mapping[uiDifficulty] || 'MEDIUM';
-    }
-
-    // ==================== TOURNAMENT METHODS (EXISTING) ====================
-
-    /**
-     * Get all questions for a tournament
-     */
-    static async getTournamentQuestions(
-        tournamentId: number,
-        store?: any
-    ): Promise<TournamentQuestionSummaryDTO[]> {
-        const cacheKey = `tournament_${tournamentId}_questions`;
-
-        if (this.cache.has(cacheKey)) {
-            return this.cache.get(cacheKey);
-        }
-
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const questions: TournamentQuestionSummaryDTO[] = await response.json();
-            this.cache.set(cacheKey, questions);
-
-            return questions;
-        } catch (error) {
-            console.error('Error fetching tournament questions:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get single question details
-     */
-    static async getQuestionDetail(
-        tournamentId: number,
-        questionId: number,
-        store?: any
-    ): Promise<TournamentQuestionDetailDTO> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions/${questionId}`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching question detail:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get questions by difficulty for game play
+     * Get questions by difficulty
      */
     static async getQuestionsByDifficulty(
-        tournamentId: number,
-        difficulty: UIDifficulty | APIDifficulty,
-        count: number = 10,
+        difficulty: UIDifficulty,
+        count: number = 20,
         store?: any
     ): Promise<QuestionData[]> {
-        try {
-            const questions = await this.getTournamentQuestions(tournamentId, store);
-
-            // Convert difficulty to API format
-            const apiDifficulty = typeof difficulty === 'string' &&
-            ['Easy', 'Medium', 'Hard'].includes(difficulty)
-                ? this.convertToAPIDifficulty(difficulty as UIDifficulty)
-                : difficulty as APIDifficulty;
-
-            // Filter by difficulty and active status
-            const filteredQuestions = questions.filter(q =>
-                q.difficulty === apiDifficulty && q.isActive
-            );
-
-            // Shuffle and limit
-            const shuffled = filteredQuestions.sort(() => Math.random() - 0.5);
-            const limited = shuffled.slice(0, count);
-
-            // Get detailed data for each question
-            const detailedQuestions = await Promise.all(
-                limited.map(q => this.getQuestionDetail(tournamentId, q.id, store))
-            );
-
-            return detailedQuestions.map(dto => this.convertDTOToQuestionData(dto));
-        } catch (error) {
-            console.error('Error fetching questions by difficulty:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Add question to tournament
-     */
-    static async addQuestionToTournament(
-        tournamentId: number,
-        request: AddQuestionToTournamentRequest,
-        store?: any
-    ): Promise<TournamentQuestionDetailDTO> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions`,
-                {
-                    method: 'POST',
-                    headers: this.getAuthHeaders(store),
-                    body: JSON.stringify(request)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            // Clear cache
-            this.cache.delete(`tournament_${tournamentId}_questions`);
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error adding question to tournament:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Update tournament question
-     */
-    static async updateTournamentQuestion(
-        tournamentId: number,
-        questionId: number,
-        request: UpdateTournamentQuestionRequest,
-        store?: any
-    ): Promise<TournamentQuestionDetailDTO> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions/${questionId}`,
-                {
-                    method: 'PUT',
-                    headers: this.getAuthHeaders(store),
-                    body: JSON.stringify(request)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            // Clear cache
-            this.cache.delete(`tournament_${tournamentId}_questions`);
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error updating tournament question:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Delete question from tournament
-     */
-    static async deleteQuestion(
-        tournamentId: number,
-        questionId: number,
-        store?: any
-    ): Promise<void> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions/${questionId}`,
-                {
-                    method: 'DELETE',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            // Clear cache
-            this.cache.delete(`tournament_${tournamentId}_questions`);
-        } catch (error) {
-            console.error('Error deleting question:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get tournament question statistics
-     */
-    static async getTournamentStatistics(
-        tournamentId: number,
-        store?: any
-    ): Promise<TournamentQuestionStatsDTO> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions/stats`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('Error fetching tournament statistics:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Reorder questions in tournament
-     */
-    static async reorderQuestions(
-        tournamentId: number,
-        questionIds: number[],
-        store?: any
-    ): Promise<void> {
-        try {
-            const response = await fetch(
-                `${this.baseUrl}/tournaments/${tournamentId}/questions/reorder`,
-                {
-                    method: 'PUT',
-                    headers: this.getAuthHeaders(store),
-                    body: JSON.stringify({ questionIds })
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            // Clear cache
-            this.cache.delete(`tournament_${tournamentId}_questions`);
-        } catch (error) {
-            console.error('Error reordering questions:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Clear all cached data
-     */
-    static clearCache(): void {
-        this.cache.clear();
-    }
-
-    /**
-     * Initialize service
-     */
-    static initialize(): void {
-        this.clearCache();
-        console.log('Question Service initialized with backend integration');
+        const apiDifficulty = DIFFICULTY_MAPPING[difficulty];
+        return this.fetchRandomQuestions(count, apiDifficulty, store);
     }
 }
-
-// User questions methods (if you need them)
-export const getUserQuestions = async (): Promise<UserQuestion[]> => {
-    // Implement if needed
-    return [];
-};
-
-export const createUserQuestion = async (question: Partial<UserQuestion>): Promise<UserQuestion> => {
-    // Implement if needed
-    return {} as UserQuestion;
-};
-
-export const updateUserQuestion = async (id: number, question: Partial<UserQuestion>): Promise<UserQuestion> => {
-    // Implement if needed
-    return {} as UserQuestion;
-};
-
-export const deleteUserQuestion = async (id: number): Promise<void> => {
-    // Implement if needed
-};
