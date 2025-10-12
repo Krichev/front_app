@@ -1,8 +1,11 @@
 // src/services/wwwGame/questionService.ts
-// UPDATED VERSION WITH ADVANCED SEARCH METHOD
+// UPDATED VERSION WITH AUTOMATIC TOKEN REFRESH
 
 import NetworkConfigManager from '../../config/NetworkConfig';
-import {RootState} from '../../app/providers/StoreProvider/store';
+import {RootState, store} from '../../app/providers/StoreProvider/store';
+import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice';
+import * as Keychain from 'react-native-keychain';
+import {Alert} from 'react-native';
 
 // Types matching backend DTOs
 export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
@@ -78,30 +81,154 @@ type HeadersInit_ = Record<string, string>;
 
 export class QuestionService {
     private static baseUrl = NetworkConfigManager.getInstance().getBaseUrl();
+    private static authBaseUrl = 'http://10.0.2.2:8082/challenger/api/auth'; // Your auth endpoint
     private static cache: Map<string, any> = new Map();
+    private static isRefreshing = false;
+    private static refreshPromise: Promise<boolean> | null = null;
 
     /**
      * Get authorization header with JWT token
      */
-    private static getAuthHeaders(store?: any): HeadersInit_ {
+    private static getAuthHeaders(): HeadersInit_ {
         const headers: HeadersInit_ = {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         };
 
         try {
-            if (store) {
-                const state = store.getState() as RootState;
-                const token = state.auth?.accessToken;
-                if (token) {
-                    headers['Authorization'] = `Bearer ${token}`;
-                }
+            const state = store.getState() as RootState;
+            const token = state.auth?.accessToken;
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
             }
         } catch (error) {
-            console.error('Error getting auth headers:', error);
+            console.error('❌ Error getting auth headers:', error);
         }
 
         return headers;
+    }
+
+    /**
+     * Refresh the access token using the refresh token
+     */
+    private static async refreshAccessToken(): Promise<boolean> {
+        // If already refreshing, wait for the existing refresh to complete
+        if (this.isRefreshing && this.refreshPromise) {
+            return this.refreshPromise;
+        }
+
+        this.isRefreshing = true;
+        this.refreshPromise = (async () => {
+            try {
+                const state = store.getState() as RootState;
+                const refreshToken = state.auth?.refreshToken;
+
+                if (!refreshToken) {
+                    console.log('❌ No refresh token available');
+                    await this.handleLogout();
+                    return false;
+                }
+
+                console.log('🔄 Attempting to refresh access token...');
+
+                const response = await fetch(`${this.authBaseUrl}/refresh-token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ refreshToken })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const { accessToken, refreshToken: newRefreshToken, user } = data;
+
+                    // Store the new tokens in Keychain
+                    await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                        accessToken,
+                        refreshToken: newRefreshToken,
+                        user
+                    }));
+
+                    // Update Redux state with new tokens
+                    store.dispatch(setTokens({
+                        accessToken,
+                        refreshToken: newRefreshToken,
+                        user
+                    }));
+
+                    console.log('✅ Token refreshed successfully');
+                    return true;
+                } else {
+                    console.log('❌ Token refresh failed with status:', response.status);
+                    await this.handleLogout();
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Error refreshing token:', error);
+                await this.handleLogout();
+                return false;
+            } finally {
+                this.isRefreshing = false;
+                this.refreshPromise = null;
+            }
+        })();
+
+        return this.refreshPromise;
+    }
+
+    /**
+     * Handle logout when refresh fails
+     */
+    private static async handleLogout(): Promise<void> {
+        store.dispatch(logout());
+        await Keychain.resetGenericPassword();
+
+        Alert.alert(
+            'Session Expired',
+            'Your session has expired. Please log in again.',
+            [{ text: 'OK' }]
+        );
+    }
+
+    /**
+     * Enhanced fetch with automatic token refresh on 401 errors
+     */
+    private static async fetchWithAuth(
+        url: string,
+        options: RequestInit = {},
+        retryCount: number = 0
+    ): Promise<Response> {
+        const maxRetries = 1; // Only retry once after refreshing token
+
+        // Add auth headers
+        const headers = {
+            ...this.getAuthHeaders(),
+            ...(options.headers || {})
+        };
+
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
+
+        // Handle 401 Unauthorized - Token expired
+        if (response.status === 401 && retryCount < maxRetries) {
+            console.log('🔑 Received 401, attempting token refresh...');
+
+            const refreshSuccess = await this.refreshAccessToken();
+
+            if (refreshSuccess) {
+                console.log('♻️ Retrying original request with new token...');
+                // Retry the original request with the new token
+                return this.fetchWithAuth(url, options, retryCount + 1);
+            } else {
+                throw new Error('Authentication failed. Please log in again.');
+            }
+        }
+
+        return response;
     }
 
     /**
@@ -120,7 +247,7 @@ export class QuestionService {
     }
 
     /**
-     * NEW: Advanced search using QuizQuestionSearchController.advancedSearch
+     * Advanced search using QuizQuestionSearchController.advancedSearch
      * Endpoint: GET /api/quiz/questions/search/advanced
      */
     static async advancedSearchQuestions(params: {
@@ -130,129 +257,47 @@ export class QuestionService {
         isUserCreated?: boolean;
         page?: number;
         size?: number;
-        store?: any;
-    }): Promise<{
-        questions: QuestionData[];
-        totalElements: number;
-        totalPages: number;
-        currentPage: number;
-    }> {
+    }): Promise<{ content: QuestionData[]; totalElements: number; totalPages: number }> {
         try {
-            const {
-                keyword,
-                difficulty,
-                topic,
-                isUserCreated,
-                page = 0,
-                size = 20,
-                store
-            } = params;
-
-            // Build query parameters for advanced search
             const queryParams = new URLSearchParams();
-            if (keyword && keyword.trim()) {
-                queryParams.append('keyword', keyword.trim());
-            }
-            if (difficulty) {
-                queryParams.append('difficulty', difficulty);
-            }
-            if (topic && topic.trim()) {
-                queryParams.append('topic', topic.trim());
-            }
-            if (isUserCreated !== undefined) {
-                queryParams.append('isUserCreated', isUserCreated.toString());
-            }
-            queryParams.append('page', page.toString());
-            queryParams.append('size', size.toString());
 
-            const url = `${this.baseUrl}/quiz/questions/search/advanced?${queryParams.toString()}`;
-            console.log('Advanced search URL:', url);
+            if (params.keyword) queryParams.append('keyword', params.keyword);
+            if (params.difficulty) queryParams.append('difficulty', params.difficulty);
+            if (params.topic) queryParams.append('topic', params.topic);
+            if (params.isUserCreated !== undefined) queryParams.append('isUserCreated', params.isUserCreated.toString());
+            queryParams.append('page', (params.page ?? 0).toString());
+            queryParams.append('size', (params.size ?? 20).toString());
 
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: this.getAuthHeaders(store)
+            const url = `${this.baseUrl}/quiz-questions/search/advanced?${queryParams.toString()}`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'GET'
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Advanced search error:', response.status, errorText);
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
             const data = await response.json();
-            console.log('Advanced search response:', data);
-
-            // The advancedSearch endpoint returns List<QuizQuestion>, not a Page object
-            // So we need to handle it differently
-            if (Array.isArray(data)) {
-                // Direct array response
-                const questions = data.map(q => this.convertQuizQuestionToQuestionData(q));
-                return {
-                    questions,
-                    totalElements: questions.length,
-                    totalPages: 1,
-                    currentPage: 0
-                };
-            } else if (data.content) {
-                // Paginated response
-                return {
-                    questions: data.content.map((q: any) => this.convertQuizQuestionToQuestionData(q)),
-                    totalElements: data.totalElements || data.content.length,
-                    totalPages: data.totalPages || 1,
-                    currentPage: data.number || 0
-                };
-            } else {
-                // Unexpected format
-                console.warn('Unexpected response format from advanced search');
-                return {
-                    questions: [],
-                    totalElements: 0,
-                    totalPages: 0,
-                    currentPage: 0
-                };
-            }
+            return {
+                content: data.content.map((q: any) => this.convertQuizQuestionToQuestionData(q)),
+                totalElements: data.totalElements,
+                totalPages: data.totalPages
+            };
         } catch (error) {
-            console.error('Error in advanced search:', error);
-            throw new Error('Failed to search questions. Please check your connection and try again.');
+            console.error('❌ Error in advanced search:', error);
+            throw new Error('Failed to search questions. Please try again.');
         }
     }
 
     /**
-     * UPDATED: Search quiz questions with filters (kept for backward compatibility)
-     * Now uses advancedSearchQuestions internally
+     * Get all available topics
      */
-    static async searchQuestions(params: {
-        keyword?: string;
-        difficulty?: APIDifficulty;
-        topic?: string;
-        page?: number;
-        size?: number;
-        store?: any;
-    }): Promise<{
-        questions: QuestionData[];
-        totalElements: number;
-        totalPages: number;
-        currentPage: number;
-    }> {
-        // Delegate to advancedSearchQuestions
-        return this.advancedSearchQuestions({
-            ...params,
-            isUserCreated: false  // Only search app questions by default
-        });
-    }
-
-    /**
-     * Get available topics for filtering
-     */
-    static async getAvailableTopics(store?: any): Promise<string[]> {
+    static async getAvailableTopics(): Promise<string[]> {
         try {
-            const response = await fetch(
-                `${this.baseUrl}/quiz-questions/topics`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
+            const url = `${this.baseUrl}/quiz-questions/topics`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'GET'
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -261,33 +306,28 @@ export class QuestionService {
             const topics: string[] = await response.json();
             return topics.filter(t => t && t.trim() !== '');
         } catch (error) {
-            console.error('Error fetching topics:', error);
-            // Return some default topics if API fails
+            console.error('❌ Error fetching topics:', error);
             return ['History', 'Science', 'Geography', 'Sports', 'Arts', 'Literature',
                 'Technology', 'Entertainment', 'Nature', 'Culture'];
         }
     }
 
     /**
-     * Fetch random questions (for backward compatibility)
+     * Fetch random questions
      */
     static async fetchRandomQuestions(
         count: number = 50,
-        difficulty?: APIDifficulty,
-        store?: any
+        difficulty?: APIDifficulty
     ): Promise<QuestionData[]> {
         try {
             const queryParams = new URLSearchParams();
             queryParams.append('count', count.toString());
             if (difficulty) queryParams.append('difficulty', difficulty);
 
-            const response = await fetch(
-                `${this.baseUrl}/quiz-questions/random?${queryParams.toString()}`,
-                {
-                    method: 'GET',
-                    headers: this.getAuthHeaders(store)
-                }
-            );
+            const url = `${this.baseUrl}/quiz-questions/random?${queryParams.toString()}`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'GET'
+            });
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -296,7 +336,7 @@ export class QuestionService {
             const questions = await response.json();
             return questions.map((q: any) => this.convertQuizQuestionToQuestionData(q));
         } catch (error) {
-            console.error('Error fetching random questions:', error);
+            console.error('❌ Error fetching random questions:', error);
             throw new Error('Failed to fetch questions. Please try again.');
         }
     }
@@ -306,10 +346,93 @@ export class QuestionService {
      */
     static async getQuestionsByDifficulty(
         difficulty: UIDifficulty,
-        count: number = 20,
-        store?: any
+        count: number = 20
     ): Promise<QuestionData[]> {
         const apiDifficulty = DIFFICULTY_MAPPING[difficulty];
-        return this.fetchRandomQuestions(count, apiDifficulty, store);
+        return this.fetchRandomQuestions(count, apiDifficulty);
+    }
+
+    /**
+     * Create a new user question
+     */
+    static async createUserQuestion(question: Omit<UserQuestion, 'id'>): Promise<UserQuestion> {
+        try {
+            const url = `${this.baseUrl}/quiz-questions/user`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'POST',
+                body: JSON.stringify(question)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('❌ Error creating user question:', error);
+            throw new Error('Failed to create question. Please try again.');
+        }
+    }
+
+    /**
+     * Get user's own questions
+     */
+    static async getUserQuestions(): Promise<UserQuestion[]> {
+        try {
+            const url = `${this.baseUrl}/quiz-questions/user/my-questions`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('❌ Error fetching user questions:', error);
+            throw new Error('Failed to fetch your questions. Please try again.');
+        }
+    }
+
+    /**
+     * Update a user question
+     */
+    static async updateUserQuestion(id: number, question: Partial<UserQuestion>): Promise<UserQuestion> {
+        try {
+            const url = `${this.baseUrl}/quiz-questions/user/${id}`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'PUT',
+                body: JSON.stringify(question)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('❌ Error updating user question:', error);
+            throw new Error('Failed to update question. Please try again.');
+        }
+    }
+
+    /**
+     * Delete a user question
+     */
+    static async deleteUserQuestion(id: number): Promise<void> {
+        try {
+            const url = `${this.baseUrl}/quiz-questions/user/${id}`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('❌ Error deleting user question:', error);
+            throw new Error('Failed to delete question. Please try again.');
+        }
     }
 }
