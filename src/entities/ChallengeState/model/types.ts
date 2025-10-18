@@ -48,6 +48,7 @@ export interface WWWQuizConfig {
  */
 interface OtherQuizConfig {
     gameType: string;
+
     [key: string]: any;
 }
 
@@ -150,6 +151,7 @@ export interface CreateChallengeRequest {
     // Access control properties
     requiresApproval?: boolean;
     invitedUserIds?: number[];
+    userId: string | number;
 }
 
 /**

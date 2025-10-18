@@ -1,5 +1,6 @@
 // src/screens/CreateWWWQuestScreen.tsx
 // COMPLETE VERSION with Quiz Config and 2 Question Sources (App & User)
+// Enhanced with full question display and blurred answers
 
 import React, {useEffect, useMemo, useState} from 'react';
 import {
@@ -28,7 +29,7 @@ import {
     useStartQuizSessionMutation
 } from '../entities/QuizState/model/slice/quizApi';
 import {useSelector} from 'react-redux';
-import {RootState, store} from '../app/providers/StoreProvider/store';
+import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {APIDifficulty, QuestionData, QuestionService} from '../services/wwwGame/questionService';
 
@@ -136,87 +137,90 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [previewPage, setPreviewPage] = useState(1);
     const questionsPerPreviewPage = 5;
 
-
     const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<string>>(new Set());
     const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<string>>(new Set());
     const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
 
+    // Transform QuizQuestion to QuestionData format
+    const transformedUserQuestions = useMemo(() => {
+        return (userQuestions ?? []).map(uq => ({
+            id: uq.id?.toString() ?? '',
+            question: uq.question ?? '',
+            answer: uq.answer ?? '',
+            difficulty: uq.difficulty === 'EASY' ? 'Easy' as const :
+                uq.difficulty === 'MEDIUM' ? 'Medium' as const :
+                    uq.difficulty === 'HARD' ? 'Hard' as const : 'Medium' as const,
+            topic: uq.topic ?? '',
+            additionalInfo: uq.additionalInfo ?? '',
+        }));
+    }, [userQuestions]);
+
     const selectedQuestionsArray = useMemo(() => {
-        // Get selected app questions
         const selectedAppQuestions = (appQuestions ?? []).filter(q =>
             selectedAppQuestionIds.has(q?.id?.toString() ?? '')
-        );
+        ).map(q => ({...q, source: 'app' as const}));
 
-        // Get selected user questions
-        const selectedUserQuestions = (userQuestions ?? []).filter(q =>
-            selectedUserQuestionIds.has(q?.id?.toString() ?? '')
-        );
+        const selectedUserQuestionsData = transformedUserQuestions.filter(uq =>
+            selectedUserQuestionIds.has(uq.id)
+        ).map(uq => ({
+            ...uq,
+            difficulty: uq.difficulty === 'Easy' ? 'EASY' as const :
+                uq.difficulty === 'Medium' ? 'MEDIUM' as const :
+                    'HARD' as const,
+            source: 'user' as const
+        }));
 
-        // Get custom questions
-        const customQs = newCustomQuestions ?? [];
+        const newCustomQuestionsData = newCustomQuestions.map((q, idx) => ({
+            ...q,
+            id: `new-custom-${idx}`,
+            source: 'custom' as const
+        }));
 
-        // Combine all selected questions
-        return [...selectedAppQuestions, ...selectedUserQuestions, ...customQs];
-    }, [
-        selectedAppQuestionIds,
-        selectedUserQuestionIds,
-        appQuestions,
-        userQuestions,
-        newCustomQuestions
-    ]);
+        return [...selectedAppQuestions, ...selectedUserQuestionsData, ...newCustomQuestionsData];
+    }, [selectedAppQuestionIds, selectedUserQuestionIds, newCustomQuestions, appQuestions, transformedUserQuestions]);
 
     const totalSelectedQuestions = selectedQuestionsArray.length;
-
-    // Preview pagination
-    const totalPreviewPages = Math.ceil(totalSelectedQuestions / questionsPerPreviewPage);
+    const previewTotalPages = Math.ceil(totalSelectedQuestions / questionsPerPreviewPage);
     const previewStartIndex = (previewPage - 1) * questionsPerPreviewPage;
-    const previewEndIndex = previewStartIndex + questionsPerPreviewPage;
-    const currentPreviewQuestions = selectedQuestionsArray.slice(previewStartIndex, previewEndIndex);
-
-    useEffect(() => {
-        loadAvailableTopics();
-    }, []);
+    const previewEndIndex = Math.min(previewStartIndex + questionsPerPreviewPage, totalSelectedQuestions);
+    const previewQuestions = selectedQuestionsArray.slice(previewStartIndex, previewEndIndex);
 
     useEffect(() => {
         if (questionSource === 'app') {
+            fetchAvailableTopics();
             searchAppQuestions();
         }
-    }, [currentPage, questionSource]);
+    }, [questionSource]);
 
-    const loadAvailableTopics = async () => {
+    const fetchAvailableTopics = async () => {
         try {
             const topics = await QuestionService.getAvailableTopics();
-            setAvailableTopics(['All Topics', ...topics]);
+            setAvailableTopics(topics);
         } catch (error) {
-            setAvailableTopics(['All Topics', 'History', 'Science', 'Geography', 'Sports']);
+            console.error('Error fetching topics:', error);
         }
     };
 
     const searchAppQuestions = async () => {
         setIsLoadingAppQuestions(true);
         setAppQuestionsError(null);
-
         try {
-            const searchParams: any = {
+            const response = await QuestionService.advancedSearchQuestions({
+                keyword: searchKeyword || undefined,
+                difficulty: searchDifficulty === 'ALL' ? undefined : searchDifficulty,
+                topic: searchTopic || undefined,
                 page: currentPage,
-                size: 50,
-                store: store,
-                isUserCreated: false
-            };
+                size: 20
+            });
 
-            if (searchKeyword?.trim()) searchParams.keyword = searchKeyword.trim();
-            if (searchDifficulty !== 'ALL') searchParams.difficulty = searchDifficulty;
-            if (searchTopic && searchTopic !== 'All Topics') searchParams.topic = searchTopic.trim();
-
-            const result = await QuestionService.advancedSearchQuestions(searchParams);
-
-            // ✅ FIX: Use 'content' instead of 'questions'
-            setAppQuestions(result.content);
-            setTotalPages(result.totalPages);
-            setTotalQuestions(result.totalElements);
-
-            // ✅ FIX: Check 'content' instead of 'questions'
-            if (result.content.length === 0) {
+            if (response.content && response.content.length > 0) {
+                setAppQuestions(response.content);
+                setTotalPages(response.totalPages);
+                setTotalQuestions(response.totalElements);
+            } else {
+                setAppQuestions([]);
+                setTotalPages(0);
+                setTotalQuestions(0);
                 setAppQuestionsError('No questions found. Try different search criteria.');
             }
         } catch (error: any) {
@@ -230,7 +234,6 @@ const CreateWWWQuestScreen: React.FC = () => {
         }
     };
 
-    // Quiz Config helpers
     const addTeamMember = () => {
         if (teamMemberInput.trim()) {
             setQuizConfig({
@@ -248,7 +251,6 @@ const CreateWWWQuestScreen: React.FC = () => {
         });
     };
 
-    // Custom question helpers (for user question source)
     const addCustomQuestion = () => {
         if (!currentCustomQuestion.question.trim()) {
             Alert.alert('Error', 'Please enter a question');
@@ -281,7 +283,6 @@ const CreateWWWQuestScreen: React.FC = () => {
                     style: 'destructive',
                     onPress: () => {
                         setCustomQuestions(customQuestions.filter((_, i) => i !== index));
-                        // Adjust preview page if needed
                         const newTotal = selectedQuestionsArray.length - 1;
                         const newTotalPages = Math.ceil(newTotal / questionsPerPreviewPage);
                         if (previewPage > newTotalPages && newTotalPages > 0) {
@@ -321,8 +322,8 @@ const CreateWWWQuestScreen: React.FC = () => {
         });
     };
 
-    const getDifficultyColor = (difficulty: string | undefined): string => {
-        switch (difficulty?.toUpperCase()) {
+    const getDifficultyColor = (difficulty: string | undefined) => {
+        switch (difficulty) {
             case 'EASY':
                 return '#4CAF50';
             case 'MEDIUM':
@@ -330,96 +331,102 @@ const CreateWWWQuestScreen: React.FC = () => {
             case 'HARD':
                 return '#F44336';
             default:
-                return '#999';
+                return '#9E9E9E';
         }
-    };
-
-    const validateForm = (): boolean => {
-        if (!title.trim()) {
-            Alert.alert('Error', 'Please enter a quiz title');
-            return false;
-        }
-        if (!quizConfig.teamName.trim()) {
-            Alert.alert('Error', 'Please enter a team name');
-            return false;
-        }
-        if (quizConfig.teamMembers.length === 0) {
-            Alert.alert('Error', 'Please add at least one team member');
-            return false;
-        }
-        if (totalSelectedQuestions === 0) {
-            Alert.alert('Error', 'Please select or create at least one question');
-            return false;
-        }
-        return true;
     };
 
     const handleCreateQuest = async () => {
-        if (!validateForm()) return;
+        if (selectedQuestionsArray.length === 0) {
+            Alert.alert('Error', 'Please select at least one question');
+            return;
+        }
+
+        if (!quizConfig.teamName.trim()) {
+            Alert.alert('Error', 'Please enter a team name');
+            return;
+        }
+
+        if (quizConfig.teamMembers.length === 0) {
+            Alert.alert('Error', 'Please add at least one team member');
+            return;
+        }
 
         try {
-            // Get selected question IDs (only for saved questions, not custom ones)
-            const savedQuestionIds = Array.from(selectedQuestionIds).map(id => parseInt(id));
-
-            const challengeRequest: CreateChallengeRequest = {
-                title: title.trim(),
-                description: description.trim(),
-                type: 'QUIZ',
-                visibility: 'PUBLIC',
-                status: 'ACTIVE',
-                reward: reward.trim(),
+            const challengeData: CreateChallengeRequest = {
+                userId: "",
+                visibility: "",
+                title,
+                description,
+                reward,
+                type: 'WWW',
+                status: 'ACTIVE'
             };
 
-            const challengeResponse = await createChallenge(challengeRequest).unwrap();
+            const challengeResult = await createChallenge(challengeData).unwrap();
+            const challengeId = challengeResult.id;
 
-            const sessionRequest: StartQuizSessionRequest = {
-                challengeId: challengeResponse.id,
+            // Get selected question IDs as numbers
+            const questionIds = selectedQuestionsArray
+                .filter(q => q.id && !q.id.startsWith('new-custom-'))
+                .map(q => parseInt(q.id));
+
+            // Convert difficulty from UI format to API format
+            const apiDifficulty: 'EASY' | 'MEDIUM' | 'HARD' =
+                quizConfig.difficulty === 'Easy' ? 'EASY' :
+                    quizConfig.difficulty === 'Hard' ? 'HARD' : 'MEDIUM';
+
+            const sessionData: StartQuizSessionRequest = {
+                challengeId,
                 teamName: quizConfig.teamName,
                 teamMembers: quizConfig.teamMembers,
-                difficulty: quizConfig.difficulty === 'Easy' ? 'EASY' : quizConfig.difficulty === 'Medium' ? 'MEDIUM' : 'HARD',
+                difficulty: apiDifficulty,
                 roundTimeSeconds: quizConfig.roundTime,
-                totalRounds: totalSelectedQuestions,
+                totalRounds: selectedQuestionsArray.length,
                 timePerRound: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
                 questionSource: questionSource,
-                customQuestionIds: savedQuestionIds,
+                customQuestionIds: questionIds.length > 0 ? questionIds : undefined
             };
 
-            const sessionResponse = await startQuizSession(sessionRequest).unwrap();
+            const sessionResult = await startQuizSession(sessionData).unwrap();
 
             Alert.alert(
-                'Quest Created! 🎉',
-                `Your "${title}" quest has been created with ${totalSelectedQuestions} questions.`,
+                'Success',
+                'Quiz challenge created!',
                 [
                     {
-                        text: 'Start Now',
+                        text: 'Start Game',
                         onPress: () => navigation.navigate('WWWGamePlay', {
-                            sessionId: sessionResponse.id,
-                            challengeId: challengeResponse.id
+                            sessionId: sessionResult.id,
+                            challengeId
                         })
                     },
-                    {
-                        text: 'OK',
-                        onPress: () => navigation.navigate('Main', {screen: 'Challenges'})
-                    }
+                    {text: 'Go to Home', onPress: () => navigation.navigate('Main', {screen: 'Home'})}
                 ]
             );
         } catch (error: any) {
             console.error('Error creating quest:', error);
-            Alert.alert('Error', error.message || 'Failed to create quest.');
+            Alert.alert('Error', error.data?.message || 'Failed to create quest. Please try again.');
         }
     };
 
-    const renderQuestionCard = ({item}: { item: QuestionData | CustomQuestion }) => {
-        const questionId = 'id' in item ? item.id?.toString() : Math.random().toString();
-        const isSelected = selectedQuestionIds.has(questionId || '');
-        const isCustom = !('id' in item); // Custom questions don't have IDs from database
+    const isCustomQuestion = (q: any, globalIndex: number): boolean => {
+        if (questionSource === 'user') {
+            const savedCount = transformedUserQuestions.filter(uq => selectedQuestionIds.has(uq.id)).length;
+            return globalIndex >= savedCount;
+        }
+        return false;
+    };
 
+    const renderQuestionItem = ({item, index}: { item: QuestionData; index: number }) => {
+        const isSelected = selectedQuestionIds.has(item.id?.toString() || '');
         return (
             <TouchableOpacity
                 style={[styles.questionCard, isSelected && styles.questionCardSelected]}
-                onPress={() => !isCustom && toggleQuestionSelection(questionId || '')}
-                disabled={isCustom}
+                onPress={() => {
+                    const qId = item.id?.toString() || '';
+                    if (qId) toggleQuestionSelection(qId);
+                }}
             >
                 <View style={styles.questionHeader}>
                     <View style={styles.questionBadges}>
@@ -431,13 +438,8 @@ const CreateWWWQuestScreen: React.FC = () => {
                                 <Text style={styles.topicBadgeText}>{item.topic}</Text>
                             </View>
                         )}
-                        {isCustom && (
-                            <View style={styles.customBadge}>
-                                <Text style={styles.customBadgeText}>NEW</Text>
-                            </View>
-                        )}
                     </View>
-                    {!isCustom && (
+                    {questionSource === 'app' && (
                         <MaterialCommunityIcons
                             name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
                             size={28}
@@ -445,91 +447,74 @@ const CreateWWWQuestScreen: React.FC = () => {
                         />
                     )}
                 </View>
-                <Text style={styles.questionText} numberOfLines={3}>{item.question}</Text>
+                <Text style={styles.questionText}>{item.question}</Text>
                 <Text style={styles.answerPreview}>Answer: {item.answer?.substring(0, 30)}...</Text>
             </TouchableOpacity>
         );
     };
 
-    // Check if question is custom (not from database)
-    const isCustomQuestion = (q: any, globalIndex: number): boolean => {
-        if (questionSource === 'user') {
-            const savedCount = userQuestions.filter(uq => selectedQuestionIds.has(uq.id?.toString() || '')).length;
-            return globalIndex >= savedCount;
-        }
-        return false;
-    };
-
     return (
         <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
-                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                    {/* Header */}
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Create Quiz Challenge</Text>
-                        <Text style={styles.subtitle}>Configure your custom quiz game</Text>
-                    </View>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.container}
+            >
+                <View style={styles.header}>
+                    <Text style={styles.title}>Create WWW Quest</Text>
+                    <Text style={styles.subtitle}>Build your custom quiz challenge</Text>
+                </View>
 
-                    {/* Basic Information */}
+                <ScrollView style={styles.scrollView}>
+                    {/* Basic Info Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Basic Information</Text>
-
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Quiz Title *</Text>
+                            <Text style={styles.label}>Title</Text>
                             <TextInput
                                 style={styles.input}
                                 value={title}
                                 onChangeText={setTitle}
-                                placeholder="e.g., Team Trivia Challenge"
-                                placeholderTextColor="#999"
+                                placeholder="Enter quest title"
                             />
                         </View>
-
                         <View style={styles.inputContainer}>
                             <Text style={styles.label}>Description</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={description}
                                 onChangeText={setDescription}
-                                placeholder="Describe your quiz challenge..."
-                                placeholderTextColor="#999"
+                                placeholder="Enter quest description"
                                 multiline
-                                numberOfLines={3}
                             />
                         </View>
-
                         <View style={styles.inputContainer}>
                             <Text style={styles.label}>Reward</Text>
                             <TextInput
                                 style={styles.input}
                                 value={reward}
                                 onChangeText={setReward}
-                                placeholder="What will winners get?"
-                                placeholderTextColor="#999"
+                                placeholder="Enter reward"
                             />
                         </View>
                     </View>
 
-                    {/* Quiz Configuration */}
+                    {/* Quiz Config Section */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Quiz Configuration</Text>
-
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Team Name *</Text>
+                            <Text style={styles.label}>Team Name</Text>
                             <TextInput
                                 style={styles.input}
                                 value={quizConfig.teamName}
                                 onChangeText={(text) => setQuizConfig({...quizConfig, teamName: text})}
-                                placeholder="Enter your team name"
-                                placeholderTextColor="#999"
+                                placeholder="Enter team name"
                             />
                         </View>
-
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Team Members *</Text>
+                            <Text style={styles.label}>Team Members</Text>
                             {quizConfig.teamMembers.map((member, index) => (
                                 <View key={index} style={styles.memberRow}>
-                                    <Text style={styles.memberText}>{index + 1}. {member}</Text>
+                                    <Text style={styles.memberText}>{member}</Text>
                                     <TouchableOpacity onPress={() => removeTeamMember(index)}>
                                         <MaterialCommunityIcons name="close-circle" size={24} color="#F44336"/>
                                     </TouchableOpacity>
@@ -541,51 +526,38 @@ const CreateWWWQuestScreen: React.FC = () => {
                                     value={teamMemberInput}
                                     onChangeText={setTeamMemberInput}
                                     placeholder="Add team member"
-                                    placeholderTextColor="#999"
                                 />
                                 <TouchableOpacity style={styles.addButton} onPress={addTeamMember}>
                                     <Text style={styles.addButtonText}>Add</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
-
                         <View style={styles.inputContainer}>
                             <Text style={styles.label}>Difficulty</Text>
-                            <View style={styles.filterContainer}>
-                                {(['Easy', 'Medium', 'Hard'] as const).map((diff) => (
-                                    <TouchableOpacity
-                                        key={diff}
-                                        style={[
-                                            styles.filterChip,
-                                            quizConfig.difficulty === diff && styles.filterChipSelected
-                                        ]}
-                                        onPress={() => setQuizConfig({...quizConfig, difficulty: diff})}
-                                    >
-                                        <Text style={[
-                                            styles.filterChipText,
-                                            quizConfig.difficulty === diff && styles.filterChipTextSelected
-                                        ]}>
-                                            {diff}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                            <Picker
+                                selectedValue={quizConfig.difficulty}
+                                onValueChange={(value) => setQuizConfig({...quizConfig, difficulty: value})}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Easy" value="Easy"/>
+                                <Picker.Item label="Medium" value="Medium"/>
+                                <Picker.Item label="Hard" value="Hard"/>
+                            </Picker>
                         </View>
-
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Time per Question (seconds)</Text>
+                            <Text style={styles.label}>Round Time (seconds)</Text>
                             <TextInput
                                 style={styles.input}
                                 value={quizConfig.roundTime.toString()}
-                                onChangeText={(text) => setQuizConfig({...quizConfig, roundTime: parseInt(text) || 60})}
+                                onChangeText={(text) => setQuizConfig({
+                                    ...quizConfig,
+                                    roundTime: parseInt(text) || 60
+                                })}
                                 keyboardType="numeric"
-                                placeholder="60"
-                                placeholderTextColor="#999"
                             />
                         </View>
-
                         <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Number of Questions</Text>
+                            <Text style={styles.label}>Round Count</Text>
                             <TextInput
                                 style={styles.input}
                                 value={quizConfig.roundCount.toString()}
@@ -594,32 +566,183 @@ const CreateWWWQuestScreen: React.FC = () => {
                                     roundCount: parseInt(text) || 10
                                 })}
                                 keyboardType="numeric"
-                                placeholder="10"
-                                placeholderTextColor="#999"
                             />
                         </View>
+                    </View>
 
-                        <View style={styles.toggleRow}>
-                            <Text style={styles.label}>Enable AI Host</Text>
+                    {/* Question Source Section */}
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Question Source</Text>
+                        <View style={styles.filterContainer}>
                             <TouchableOpacity
-                                style={[styles.toggle, quizConfig.enableAIHost && styles.toggleActive]}
-                                onPress={() => setQuizConfig({...quizConfig, enableAIHost: !quizConfig.enableAIHost})}
+                                style={[
+                                    styles.filterChip,
+                                    questionSource === 'app' && styles.filterChipSelected
+                                ]}
+                                onPress={() => setQuestionSource('app')}
                             >
-                                <View
-                                    style={[styles.toggleThumb, quizConfig.enableAIHost && styles.toggleThumbActive]}/>
+                                <Text style={[
+                                    styles.filterChipText,
+                                    questionSource === 'app' && styles.filterChipTextSelected
+                                ]}>
+                                    App Questions
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.filterChip,
+                                    questionSource === 'user' && styles.filterChipSelected
+                                ]}
+                                onPress={() => setQuestionSource('user')}
+                            >
+                                <Text style={[
+                                    styles.filterChipText,
+                                    questionSource === 'user' && styles.filterChipTextSelected
+                                ]}>
+                                    My Questions
+                                </Text>
                             </TouchableOpacity>
                         </View>
-
-                        <View style={styles.summaryBox}>
-                            <Text style={styles.summaryTitle}>📋 Configuration Summary</Text>
-                            <Text style={styles.summaryText}>• Team: {quizConfig.teamName || 'Not set'}</Text>
-                            <Text style={styles.summaryText}>• Members: {quizConfig.teamMembers.length}</Text>
-                            <Text style={styles.summaryText}>• Difficulty: {quizConfig.difficulty}</Text>
-                            <Text style={styles.summaryText}>• Time per question: {quizConfig.roundTime}s</Text>
-                            <Text style={styles.summaryText}>• Total questions: {quizConfig.roundCount}</Text>
-                            <Text style={styles.summaryText}>• AI Host: {quizConfig.enableAIHost ? 'Yes' : 'No'}</Text>
-                        </View>
                     </View>
+
+                    {/* App Questions Search */}
+                    {questionSource === 'app' && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Search Questions</Text>
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Keyword</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={searchKeyword}
+                                    onChangeText={setSearchKeyword}
+                                    placeholder="Search by keyword..."
+                                />
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Difficulty</Text>
+                                <Picker
+                                    selectedValue={searchDifficulty}
+                                    onValueChange={(value) => setSearchDifficulty(value as APIDifficulty | 'ALL')}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="All" value="ALL"/>
+                                    <Picker.Item label="Easy" value="EASY"/>
+                                    <Picker.Item label="Medium" value="MEDIUM"/>
+                                    <Picker.Item label="Hard" value="HARD"/>
+                                </Picker>
+                            </View>
+                            <View style={styles.inputContainer}>
+                                <Text style={styles.label}>Topic</Text>
+                                <TouchableOpacity
+                                    style={styles.input}
+                                    onPress={() => setShowTopicPicker(true)}
+                                >
+                                    <Text>{searchTopic || 'Select topic...'}</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <View style={styles.searchActions}>
+                                <TouchableOpacity
+                                    style={styles.searchButton}
+                                    onPress={searchAppQuestions}
+                                >
+                                    <MaterialCommunityIcons name="magnify" size={20} color="#fff"/>
+                                    <Text style={styles.searchButtonText}>Search</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.clearButton}
+                                    onPress={() => {
+                                        setSearchKeyword('');
+                                        setSearchDifficulty('ALL');
+                                        setSearchTopic('');
+                                        setCurrentPage(0);
+                                    }}
+                                >
+                                    <Text style={styles.clearButtonText}>Clear</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {isLoadingAppQuestions ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color="#007AFF"/>
+                                    <Text style={styles.loadingText}>Loading questions...</Text>
+                                </View>
+                            ) : appQuestionsError ? (
+                                <View style={styles.emptyContainer}>
+                                    <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
+                                    <Text style={styles.emptyText}>{appQuestionsError}</Text>
+                                </View>
+                            ) : (
+                                <>
+                                    {totalQuestions > 0 && (
+                                        <Text style={styles.resultsCount}>
+                                            Found {totalQuestions} questions
+                                        </Text>
+                                    )}
+                                    <FlatList
+                                        data={appQuestions}
+                                        renderItem={renderQuestionItem}
+                                        keyExtractor={(item) => item.id?.toString() || ''}
+                                        scrollEnabled={false}
+                                        ListEmptyComponent={
+                                            <View style={styles.emptyContainer}>
+                                                <MaterialCommunityIcons name="file-question" size={48} color="#999"/>
+                                                <Text style={styles.emptyText}>No questions found</Text>
+                                                <Text style={styles.emptySubtext}>Try different search criteria</Text>
+                                            </View>
+                                        }
+                                    />
+                                    {totalPages > 1 && (
+                                        <View style={styles.paginationContainer}>
+                                            <TouchableOpacity
+                                                style={[styles.paginationButton, currentPage <= 0 && styles.paginationButtonDisabled]}
+                                                onPress={() => setCurrentPage(currentPage - 1)}
+                                                disabled={currentPage <= 0}
+                                            >
+                                                <Text style={styles.paginationButtonText}>← Prev</Text>
+                                            </TouchableOpacity>
+                                            <Text style={styles.pageInfo}>
+                                                Page {currentPage + 1} of {totalPages}
+                                            </Text>
+                                            <TouchableOpacity
+                                                style={[styles.paginationButton, currentPage >= totalPages - 1 && styles.paginationButtonDisabled]}
+                                                onPress={() => setCurrentPage(currentPage + 1)}
+                                                disabled={currentPage >= totalPages - 1}
+                                            >
+                                                <Text style={styles.paginationButtonText}>Next →</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+                                </>
+                            )}
+                        </View>
+                    )}
+
+                    {/* User Questions */}
+                    {questionSource === 'user' && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>My Questions</Text>
+                            {isLoadingUserQuestions ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color="#007AFF"/>
+                                    <Text style={styles.loadingText}>Loading your questions...</Text>
+                                </View>
+                            ) : (
+                                <FlatList
+                                    data={transformedUserQuestions}
+                                    renderItem={renderQuestionItem}
+                                    keyExtractor={(item) => item.id?.toString() || ''}
+                                    scrollEnabled={false}
+                                    ListEmptyComponent={
+                                        <View style={styles.emptyContainer}>
+                                            <MaterialCommunityIcons name="file-question" size={48} color="#999"/>
+                                            <Text style={styles.emptyText}>No questions yet</Text>
+                                            <Text style={styles.emptySubtext}>Create your first question!</Text>
+                                        </View>
+                                    }
+                                />
+                            )}
+                        </View>
+                    )}
 
                     {/* Selected Questions Preview */}
                     {totalSelectedQuestions > 0 && (
@@ -633,14 +756,14 @@ const CreateWWWQuestScreen: React.FC = () => {
                                 </Text>
                                 <MaterialCommunityIcons
                                     name={isPreviewCollapsed ? 'chevron-down' : 'chevron-up'}
-                                    size={24}
-                                    color="#666"
+                                    size={28}
+                                    color="#333"
                                 />
                             </TouchableOpacity>
 
                             {!isPreviewCollapsed && (
                                 <>
-                                    {currentPreviewQuestions.map((q, displayIndex) => {
+                                    {previewQuestions.map((q, displayIndex) => {
                                         const globalIndex = previewStartIndex + displayIndex;
                                         const isAnswerVisible = showAnswers.has(globalIndex);
                                         const isExpanded = expandedQuestions.has(globalIndex);
@@ -649,33 +772,35 @@ const CreateWWWQuestScreen: React.FC = () => {
                                         return (
                                             <View key={globalIndex} style={styles.previewCard}>
                                                 <View style={styles.previewHeader}>
-                                                    <Text style={styles.questionNumber}>Q{globalIndex + 1}</Text>
-                                                    {isCustom ? (
-                                                        <TouchableOpacity onPress={() => {
-                                                            const customIndex = globalIndex - (selectedQuestionsArray.length - customQuestions.length);
-                                                            removeCustomQuestion(customIndex);
-                                                        }}>
-                                                            <MaterialCommunityIcons name="delete" size={24}
-                                                                                    color="#F44336"/>
-                                                        </TouchableOpacity>
-                                                    ) : (
+                                                    <Text style={styles.questionNumber}>
+                                                        Q{globalIndex + 1}
+                                                    </Text>
+                                                    {!isCustom && (
                                                         <TouchableOpacity
                                                             onPress={() => {
-                                                                const qId = 'id' in q ? q.id?.toString() : '';
+                                                                const qId = q.id?.toString ? q.id.toString() : '';
                                                                 if (qId) toggleQuestionSelection(qId);
                                                             }}
                                                         >
-                                                            <MaterialCommunityIcons name="close-circle" size={24}
-                                                                                    color="#F44336"/>
+                                                            <MaterialCommunityIcons
+                                                                name="close-circle"
+                                                                size={24}
+                                                                color="#F44336"
+                                                            />
                                                         </TouchableOpacity>
                                                     )}
                                                 </View>
 
-                                                <Text style={styles.previewQuestionText}>{q.question}</Text>
+                                                {/* FULL QUESTION TEXT - NO TRUNCATION */}
+                                                <Text style={styles.previewQuestionText}>
+                                                    {q.question}
+                                                </Text>
 
                                                 <View style={styles.previewMetaRow}>
-                                                    <View
-                                                        style={[styles.difficultyBadge, {backgroundColor: getDifficultyColor(q.difficulty)}]}>
+                                                    <View style={[
+                                                        styles.difficultyBadge,
+                                                        {backgroundColor: getDifficultyColor(q.difficulty)}
+                                                    ]}>
                                                         <Text style={styles.badgeText}>{q.difficulty}</Text>
                                                     </View>
                                                     {q.topic && <Text style={styles.topicText}>📚 {q.topic}</Text>}
@@ -686,6 +811,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                     )}
                                                 </View>
 
+                                                {/* SHOW ANSWER BUTTON */}
                                                 <TouchableOpacity
                                                     style={styles.showAnswerButton}
                                                     onPress={() => toggleAnswerVisibility(displayIndex)}
@@ -695,13 +821,37 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                     </Text>
                                                 </TouchableOpacity>
 
-                                                {isAnswerVisible && (
-                                                    <View style={styles.answerContainer}>
-                                                        <Text style={styles.answerLabel}>Answer:</Text>
-                                                        <Text style={styles.answerText}>{q.answer}</Text>
-                                                    </View>
-                                                )}
+                                                {/* BLURRED ANSWER (DEFAULT) - REVEALED ANSWER (WHEN VISIBLE) */}
+                                                <View style={styles.answerWrapper}>
+                                                    {!isAnswerVisible ? (
+                                                        // Blurred state
+                                                        <View style={styles.blurredAnswerContainer}>
+                                                            <View style={styles.blurOverlay}>
+                                                                <Text style={styles.blurredAnswerText}>
+                                                                    {q.answer}
+                                                                </Text>
+                                                            </View>
+                                                            <View style={styles.blurIconContainer}>
+                                                                <MaterialCommunityIcons
+                                                                    name="eye-off"
+                                                                    size={24}
+                                                                    color="#666"
+                                                                />
+                                                                <Text style={styles.blurHintText}>
+                                                                    Tap "Show Answer" to reveal
+                                                                </Text>
+                                                            </View>
+                                                        </View>
+                                                    ) : (
+                                                        // Revealed answer
+                                                        <View style={styles.answerContainer}>
+                                                            <Text style={styles.answerLabel}>Answer:</Text>
+                                                            <Text style={styles.answerText}>{q.answer}</Text>
+                                                        </View>
+                                                    )}
+                                                </View>
 
+                                                {/* ADDITIONAL INFO (EXPANDABLE) */}
                                                 {q.additionalInfo && (
                                                     <>
                                                         <TouchableOpacity
@@ -715,10 +865,12 @@ const CreateWWWQuestScreen: React.FC = () => {
 
                                                         {isExpanded && (
                                                             <View style={styles.additionalInfoContainer}>
-                                                                <Text style={styles.additionalInfoLabel}>Additional
-                                                                    Info:</Text>
-                                                                <Text
-                                                                    style={styles.additionalInfoText}>{q.additionalInfo}</Text>
+                                                                <Text style={styles.additionalInfoLabel}>
+                                                                    Additional Info:
+                                                                </Text>
+                                                                <Text style={styles.additionalInfoText}>
+                                                                    {q.additionalInfo}
+                                                                </Text>
                                                             </View>
                                                         )}
                                                     </>
@@ -727,21 +879,29 @@ const CreateWWWQuestScreen: React.FC = () => {
                                         );
                                     })}
 
-                                    {totalPreviewPages > 1 && (
+                                    {/* Preview Pagination */}
+                                    {previewTotalPages > 1 && (
                                         <View style={styles.paginationContainer}>
                                             <TouchableOpacity
-                                                style={[styles.paginationButton, previewPage === 1 && styles.paginationButtonDisabled]}
+                                                style={[
+                                                    styles.paginationButton,
+                                                    previewPage <= 1 && styles.paginationButtonDisabled
+                                                ]}
                                                 onPress={() => setPreviewPage(previewPage - 1)}
-                                                disabled={previewPage === 1}
+                                                disabled={previewPage <= 1}
                                             >
-                                                <Text style={styles.paginationButtonText}>← Previous</Text>
+                                                <Text style={styles.paginationButtonText}>← Prev</Text>
                                             </TouchableOpacity>
-                                            <Text
-                                                style={styles.pageInfo}>Page {previewPage} of {totalPreviewPages}</Text>
+                                            <Text style={styles.pageInfo}>
+                                                {previewStartIndex + 1}-{previewEndIndex} of {totalSelectedQuestions}
+                                            </Text>
                                             <TouchableOpacity
-                                                style={[styles.paginationButton, previewPage === totalPreviewPages && styles.paginationButtonDisabled]}
+                                                style={[
+                                                    styles.paginationButton,
+                                                    previewPage >= previewTotalPages && styles.paginationButtonDisabled
+                                                ]}
                                                 onPress={() => setPreviewPage(previewPage + 1)}
-                                                disabled={previewPage === totalPreviewPages}
+                                                disabled={previewPage >= previewTotalPages}
                                             >
                                                 <Text style={styles.paginationButtonText}>Next →</Text>
                                             </TouchableOpacity>
@@ -752,303 +912,27 @@ const CreateWWWQuestScreen: React.FC = () => {
                         </View>
                     )}
 
-                    {/* Question Source Selection */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Question Source</Text>
-                        <View style={styles.radioGroup}>
-                            <TouchableOpacity
-                                style={styles.radioButton}
-                                onPress={() => setQuestionSource('app')}
-                            >
-                                <MaterialCommunityIcons
-                                    name={questionSource === 'app' ? 'radiobox-marked' : 'radiobox-blank'}
-                                    size={24}
-                                    color="#007AFF"
-                                />
-                                <Text style={styles.radioText}>Application Questions</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.radioButton}
-                                onPress={() => setQuestionSource('user')}
-                            >
-                                <MaterialCommunityIcons
-                                    name={questionSource === 'user' ? 'radiobox-marked' : 'radiobox-blank'}
-                                    size={24}
-                                    color="#007AFF"
-                                />
-                                <Text style={styles.radioText}>User Questions</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-
-                    {/* Search Filters (for Application Questions) */}
-                    {questionSource === 'app' && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Search Application Questions</Text>
-
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Keyword</Text>
-                                <TextInput
-                                    style={styles.input}
-                                    value={searchKeyword}
-                                    onChangeText={setSearchKeyword}
-                                    placeholder="Search questions..."
-                                    placeholderTextColor="#999"
-                                />
-                            </View>
-
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Difficulty</Text>
-                                <View style={styles.filterContainer}>
-                                    {(['ALL', 'EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
-                                        <TouchableOpacity
-                                            key={diff}
-                                            style={[
-                                                styles.filterChip,
-                                                searchDifficulty === diff && styles.filterChipSelected
-                                            ]}
-                                            onPress={() => setSearchDifficulty(diff)}
-                                        >
-                                            <Text style={[
-                                                styles.filterChipText,
-                                                searchDifficulty === diff && styles.filterChipTextSelected
-                                            ]}>
-                                                {diff === 'ALL' ? 'All' : diff.charAt(0) + diff.slice(1).toLowerCase()}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
-
-                            <View style={styles.searchActions}>
-                                <TouchableOpacity
-                                    style={styles.searchButton}
-                                    onPress={() => {
-                                        setCurrentPage(0);
-                                        searchAppQuestions();
-                                    }}
-                                    disabled={isLoadingAppQuestions}
-                                >
-                                    <MaterialCommunityIcons name="magnify" size={20} color="#FFF"/>
-                                    <Text style={styles.searchButtonText}>
-                                        {isLoadingAppQuestions ? 'Searching...' : 'Search'}
-                                    </Text>
-                                </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    style={styles.clearButton}
-                                    onPress={() => {
-                                        setSearchKeyword('');
-                                        setSearchDifficulty('ALL');
-                                        setCurrentPage(0);
-                                    }}
-                                >
-                                    <Text style={styles.clearButtonText}>Clear</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {totalQuestions > 0 && (
-                                <Text style={styles.resultsCount}>
-                                    Found {totalQuestions} questions (Page {currentPage + 1} of {totalPages})
-                                </Text>
-                            )}
-                        </View>
-                    )}
-
-                    {/* User Questions Section */}
-                    {questionSource === 'user' && (
-                        <>
-                            {/* Saved User Questions */}
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Your Saved Questions</Text>
-
-                                {isLoadingUserQuestions ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="large" color="#007AFF"/>
-                                        <Text style={styles.loadingText}>Loading your questions...</Text>
-                                    </View>
-                                ) : (
-                                    <FlatList
-                                        data={userQuestions}
-                                        renderItem={renderQuestionCard}
-                                        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-                                        ListEmptyComponent={
-                                            <View style={styles.emptyContainer}>
-                                                <MaterialCommunityIcons name="file-question-outline" size={64}
-                                                                        color="#999"/>
-                                                <Text style={styles.emptyText}>No saved questions yet</Text>
-                                                <Text style={styles.emptySubtext}>Create custom questions below</Text>
-                                            </View>
-                                        }
-                                        scrollEnabled={false}
-                                    />
-                                )}
-                            </View>
-
-                            {/* Create Custom Questions Form */}
-                            <View style={styles.section}>
-                                <Text style={styles.sectionTitle}>Create Custom Questions</Text>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Question *</Text>
-                                    <TextInput
-                                        style={[styles.input, styles.textArea]}
-                                        value={currentCustomQuestion.question}
-                                        onChangeText={(text) => setCurrentCustomQuestion({
-                                            ...currentCustomQuestion,
-                                            question: text
-                                        })}
-                                        placeholder="Enter your question..."
-                                        placeholderTextColor="#999"
-                                        multiline
-                                        numberOfLines={3}
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Answer *</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={currentCustomQuestion.answer}
-                                        onChangeText={(text) => setCurrentCustomQuestion({
-                                            ...currentCustomQuestion,
-                                            answer: text
-                                        })}
-                                        placeholder="Enter the answer..."
-                                        placeholderTextColor="#999"
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Difficulty</Text>
-                                    <View style={styles.pickerContainer}>
-                                        <Picker
-                                            selectedValue={currentCustomQuestion.difficulty}
-                                            onValueChange={(value) => setCurrentCustomQuestion({
-                                                ...currentCustomQuestion,
-                                                difficulty: value as 'EASY' | 'MEDIUM' | 'HARD'
-                                            })}
-                                            style={styles.picker}
-                                        >
-                                            <Picker.Item label="Easy" value="EASY"/>
-                                            <Picker.Item label="Medium" value="MEDIUM"/>
-                                            <Picker.Item label="Hard" value="HARD"/>
-                                        </Picker>
-                                    </View>
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Topic (Optional)</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        value={currentCustomQuestion.topic}
-                                        onChangeText={(text) => setCurrentCustomQuestion({
-                                            ...currentCustomQuestion,
-                                            topic: text
-                                        })}
-                                        placeholder="e.g., Science, History"
-                                        placeholderTextColor="#999"
-                                    />
-                                </View>
-
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Additional Info (Optional)</Text>
-                                    <TextInput
-                                        style={[styles.input, styles.textArea]}
-                                        value={currentCustomQuestion.additionalInfo}
-                                        onChangeText={(text) => setCurrentCustomQuestion({
-                                            ...currentCustomQuestion,
-                                            additionalInfo: text
-                                        })}
-                                        placeholder="Any context or explanation..."
-                                        placeholderTextColor="#999"
-                                        multiline
-                                        numberOfLines={3}
-                                    />
-                                </View>
-
-                                <TouchableOpacity style={styles.addQuestionButton} onPress={addCustomQuestion}>
-                                    <MaterialCommunityIcons name="plus-circle" size={20} color="#fff"/>
-                                    <Text style={styles.addQuestionButtonText}>Add Custom Question</Text>
-                                </TouchableOpacity>
-
-                                {customQuestions.length > 0 && (
-                                    <View style={styles.customQuestionsInfo}>
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="#2e7d32"/>
-                                        <Text style={styles.customQuestionsInfoText}>
-                                            {customQuestions.length} custom
-                                            question{customQuestions.length !== 1 ? 's' : ''} created
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        </>
-                    )}
-
-                    {/* Application Questions List */}
-                    {questionSource === 'app' && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Select Questions</Text>
-
-                            {isLoadingAppQuestions ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color="#007AFF"/>
-                                    <Text style={styles.loadingText}>Loading questions...</Text>
-                                </View>
-                            ) : (
-                                <FlatList
-                                    data={appQuestions}
-                                    renderItem={renderQuestionCard}
-                                    keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-                                    ListEmptyComponent={
-                                        <View style={styles.emptyContainer}>
-                                            <MaterialCommunityIcons name="alert-circle-outline" size={64} color="#999"/>
-                                            <Text style={styles.emptyText}>No questions found</Text>
-                                            <Text style={styles.emptySubtext}>Try different search filters</Text>
-                                        </View>
-                                    }
-                                    scrollEnabled={false}
-                                />
-                            )}
-
-                            {totalPages > 1 && (
-                                <View style={styles.paginationContainer}>
-                                    <TouchableOpacity
-                                        style={[styles.paginationButton, currentPage === 0 && styles.paginationButtonDisabled]}
-                                        onPress={() => setCurrentPage(currentPage - 1)}
-                                        disabled={currentPage === 0}
-                                    >
-                                        <Text style={styles.paginationButtonText}>← Previous</Text>
-                                    </TouchableOpacity>
-                                    <Text style={styles.pageInfo}>Page {currentPage + 1} of {totalPages}</Text>
-                                    <TouchableOpacity
-                                        style={[styles.paginationButton, currentPage >= totalPages - 1 && styles.paginationButtonDisabled]}
-                                        onPress={() => setCurrentPage(currentPage + 1)}
-                                        disabled={currentPage >= totalPages - 1}
-                                    >
-                                        <Text style={styles.paginationButtonText}>Next →</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-                        </View>
-                    )}
-
                     <View style={styles.spacer}/>
                 </ScrollView>
 
                 {/* Create Button */}
                 <View style={styles.footer}>
                     <TouchableOpacity
-                        style={[styles.createButton, (isCreatingChallenge || isStartingSession) && styles.createButtonDisabled]}
+                        style={[
+                            styles.createButton,
+                            (isCreatingChallenge || isStartingSession) && styles.createButtonDisabled
+                        ]}
                         onPress={handleCreateQuest}
                         disabled={isCreatingChallenge || isStartingSession}
                     >
                         {(isCreatingChallenge || isStartingSession) ? (
-                            <ActivityIndicator color="#fff"/>
+                            <>
+                                <ActivityIndicator color="#fff"/>
+                                <Text style={styles.createButtonText}>Creating...</Text>
+                            </>
                         ) : (
                             <>
-                                <MaterialCommunityIcons name="trophy" size={24} color="#fff"/>
+                                <MaterialCommunityIcons name="check-circle" size={24} color="#fff"/>
                                 <Text style={styles.createButtonText}>
                                     Create Quest ({totalSelectedQuestions})
                                 </Text>
@@ -1058,14 +942,28 @@ const CreateWWWQuestScreen: React.FC = () => {
                 </View>
 
                 {/* Topic Picker Modal */}
-                <Modal visible={showTopicPicker} transparent animationType="slide">
+                <Modal
+                    visible={showTopicPicker}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setShowTopicPicker(false)}
+                >
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalContent}>
                             <Text style={styles.modalTitle}>Select Topic</Text>
                             <ScrollView style={styles.topicList}>
-                                {availableTopics.map((topic) => (
+                                <TouchableOpacity
+                                    style={styles.topicItem}
+                                    onPress={() => {
+                                        setSearchTopic('');
+                                        setShowTopicPicker(false);
+                                    }}
+                                >
+                                    <Text style={styles.topicItemText}>All Topics</Text>
+                                </TouchableOpacity>
+                                {availableTopics.map((topic, index) => (
                                     <TouchableOpacity
-                                        key={topic}
+                                        key={index}
                                         style={styles.topicItem}
                                         onPress={() => {
                                             setSearchTopic(topic);
@@ -1094,9 +992,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
-    },
-    flex: {
-        flex: 1,
     },
     scrollView: {
         flex: 1,
@@ -1158,6 +1053,11 @@ const styles = StyleSheet.create({
         height: 80,
         textAlignVertical: 'top',
     },
+    picker: {
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+    },
     memberRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -1209,109 +1109,16 @@ const styles = StyleSheet.create({
     },
     filterChipText: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#666',
     },
     filterChipTextSelected: {
         color: '#fff',
     },
-    toggleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    toggle: {
-        width: 50,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: '#ccc',
-        padding: 2,
-    },
-    toggleActive: {
-        backgroundColor: '#4CAF50',
-    },
-    toggleThumb: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#fff',
-    },
-    toggleThumbActive: {
-        transform: [{translateX: 22}],
-    },
-    summaryBox: {
-        backgroundColor: '#f8f8f8',
-        padding: 16,
-        borderRadius: 8,
-        marginTop: 8,
-    },
-    summaryTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 8,
-    },
-    summaryText: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4,
-    },
-    radioGroup: {
-        flexDirection: 'row',
-        gap: 16,
-        flexWrap: 'wrap',
-    },
-    radioButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    radioText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    pickerContainer: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        backgroundColor: '#fff',
-        overflow: 'hidden',
-    },
-    picker: {
-        height: 50,
-    },
-    addQuestionButton: {
-        flexDirection: 'row',
-        backgroundColor: '#4CAF50',
-        padding: 14,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    addQuestionButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    customQuestionsInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#e8f5e9',
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 12,
-        gap: 8,
-    },
-    customQuestionsInfoText: {
-        fontSize: 14,
-        color: '#2e7d32',
-        fontWeight: '600',
-    },
     searchActions: {
         flexDirection: 'row',
         gap: 12,
+        marginTop: 16,
     },
     searchButton: {
         flex: 1,
@@ -1344,6 +1151,7 @@ const styles = StyleSheet.create({
         color: '#666',
         textAlign: 'center',
         marginTop: 12,
+        marginBottom: 12,
     },
     questionCard: {
         backgroundColor: '#f8f8f8',
@@ -1453,20 +1261,62 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         borderRadius: 6,
         alignSelf: 'flex-start',
-        marginBottom: 8,
+        marginBottom: 12,
     },
     showAnswerButtonText: {
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
     },
+    answerWrapper: {
+        marginTop: 4,
+        marginBottom: 8,
+    },
+    // BLURRED ANSWER STYLES
+    blurredAnswerContainer: {
+        position: 'relative',
+        backgroundColor: '#f0f0f0',
+        borderRadius: 8,
+        padding: 12,
+        minHeight: 60,
+    },
+    blurOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(200, 200, 200, 0.8)',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 12,
+    },
+    blurredAnswerText: {
+        fontSize: 15,
+        color: 'rgba(0, 0, 0, 0.1)',
+        textAlign: 'center',
+        lineHeight: 22,
+        letterSpacing: 2,
+    },
+    blurIconContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+    },
+    blurHintText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
+        textAlign: 'center',
+    },
+    // REVEALED ANSWER STYLES
     answerContainer: {
         backgroundColor: '#fff',
         borderWidth: 2,
         borderColor: '#4CAF50',
         borderRadius: 8,
         padding: 12,
-        marginTop: 8,
     },
     answerLabel: {
         fontSize: 13,
@@ -1485,7 +1335,7 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 6,
         alignSelf: 'flex-start',
-        marginTop: 6,
+        marginTop: 8,
     },
     expandButtonText: {
         color: '#fff',

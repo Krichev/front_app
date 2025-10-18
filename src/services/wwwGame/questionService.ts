@@ -137,12 +137,12 @@ export class QuestionService {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ refreshToken })
+                    body: JSON.stringify({refreshToken})
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    const { accessToken, refreshToken: newRefreshToken, user } = data;
+                    const {accessToken, refreshToken: newRefreshToken, user} = data;
 
                     // Store the new tokens in Keychain
                     await Keychain.setGenericPassword('authTokens', JSON.stringify({
@@ -188,7 +188,7 @@ export class QuestionService {
         Alert.alert(
             'Session Expired',
             'Your session has expired. Please log in again.',
-            [{ text: 'OK' }]
+            [{text: 'OK'}]
         );
     }
 
@@ -302,7 +302,7 @@ export class QuestionService {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
+            console.log(response.headers)
             const topics: string[] = await response.json();
             return topics.filter(t => t && t.trim() !== '');
         } catch (error) {
