@@ -131,11 +131,12 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
 
     // Preview state
-    const [showAnswers, setShowAnswers] = useState<Set<number>>(new Set());
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
     const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
     const [previewPage, setPreviewPage] = useState(1);
     const questionsPerPreviewPage = 5;
+
+    const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set());
 
     const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<string>>(new Set());
     const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<string>>(new Set());
@@ -154,6 +155,18 @@ const CreateWWWQuestScreen: React.FC = () => {
             additionalInfo: uq.additionalInfo ?? '',
         }));
     }, [userQuestions]);
+
+    const toggleAnswerVisibility = (questionId: string) => {
+        setVisibleAnswers(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(questionId)) {
+                newSet.delete(questionId);
+            } else {
+                newSet.add(questionId);
+            }
+            return newSet;
+        });
+    };
 
     const selectedQuestionsArray = useMemo(() => {
         const selectedAppQuestions = (appQuestions ?? []).filter(q =>
@@ -304,15 +317,6 @@ const CreateWWWQuestScreen: React.FC = () => {
         setSelectedQuestionIds(newSelection);
     };
 
-    const toggleAnswerVisibility = (index: number) => {
-        const globalIndex = previewStartIndex + index;
-        setShowAnswers(prev => {
-            const newSet = new Set(prev);
-            newSet.has(globalIndex) ? newSet.delete(globalIndex) : newSet.add(globalIndex);
-            return newSet;
-        });
-    };
-
     const toggleQuestionExpansion = (index: number) => {
         const globalIndex = previewStartIndex + index;
         setExpandedQuestions(prev => {
@@ -420,11 +424,13 @@ const CreateWWWQuestScreen: React.FC = () => {
 
     const renderQuestionItem = ({item, index}: { item: QuestionData; index: number }) => {
         const isSelected = selectedQuestionIds.has(item.id?.toString() || '');
+        const qId = item.id?.toString() || '';
+        const isAnswerVisible = visibleAnswers.has(qId);
+
         return (
             <TouchableOpacity
                 style={[styles.questionCard, isSelected && styles.questionCardSelected]}
                 onPress={() => {
-                    const qId = item.id?.toString() || '';
                     if (qId) toggleQuestionSelection(qId);
                 }}
             >
@@ -447,8 +453,37 @@ const CreateWWWQuestScreen: React.FC = () => {
                         />
                     )}
                 </View>
+
                 <Text style={styles.questionText}>{item.question}</Text>
-                <Text style={styles.answerPreview}>Answer: {item.answer?.substring(0, 30)}...</Text>
+
+                <View style={styles.answerContainer}>
+                    <View style={styles.answerRow}>
+                        <Text style={[
+                            styles.answerPreview,
+                            !isAnswerVisible && styles.answerBlurred
+                        ]}>
+                            Answer: {item.answer}
+                        </Text>
+                    </View>
+
+                    <TouchableOpacity
+                        style={styles.showAnswerButton}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            toggleAnswerVisibility(qId);
+                        }}
+                        activeOpacity={0.7}
+                    >
+                        <MaterialCommunityIcons
+                            name={isAnswerVisible ? 'eye-off' : 'eye'}
+                            size={20}
+                            color="#007AFF"
+                        />
+                        <Text style={styles.showAnswerText}>
+                            {isAnswerVisible ? 'Hide' : 'Show'}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </TouchableOpacity>
         );
     };
@@ -765,7 +800,6 @@ const CreateWWWQuestScreen: React.FC = () => {
                                 <>
                                     {previewQuestions.map((q, displayIndex) => {
                                         const globalIndex = previewStartIndex + displayIndex;
-                                        const isAnswerVisible = showAnswers.has(globalIndex);
                                         const isExpanded = expandedQuestions.has(globalIndex);
                                         const isCustom = isCustomQuestion(q, globalIndex);
 
@@ -807,46 +841,6 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                     {isCustom && (
                                                         <View style={styles.customBadge}>
                                                             <Text style={styles.customBadgeText}>NEW</Text>
-                                                        </View>
-                                                    )}
-                                                </View>
-
-                                                {/* SHOW ANSWER BUTTON */}
-                                                <TouchableOpacity
-                                                    style={styles.showAnswerButton}
-                                                    onPress={() => toggleAnswerVisibility(displayIndex)}
-                                                >
-                                                    <Text style={styles.showAnswerButtonText}>
-                                                        {isAnswerVisible ? '👁️ Hide Answer' : '👁️‍🗨️ Show Answer'}
-                                                    </Text>
-                                                </TouchableOpacity>
-
-                                                {/* BLURRED ANSWER (DEFAULT) - REVEALED ANSWER (WHEN VISIBLE) */}
-                                                <View style={styles.answerWrapper}>
-                                                    {!isAnswerVisible ? (
-                                                        // Blurred state
-                                                        <View style={styles.blurredAnswerContainer}>
-                                                            <View style={styles.blurOverlay}>
-                                                                <Text style={styles.blurredAnswerText}>
-                                                                    {q.answer}
-                                                                </Text>
-                                                            </View>
-                                                            <View style={styles.blurIconContainer}>
-                                                                <MaterialCommunityIcons
-                                                                    name="eye-off"
-                                                                    size={24}
-                                                                    color="#666"
-                                                                />
-                                                                <Text style={styles.blurHintText}>
-                                                                    Tap "Show Answer" to reveal
-                                                                </Text>
-                                                            </View>
-                                                        </View>
-                                                    ) : (
-                                                        // Revealed answer
-                                                        <View style={styles.answerContainer}>
-                                                            <Text style={styles.answerLabel}>Answer:</Text>
-                                                            <Text style={styles.answerText}>{q.answer}</Text>
                                                         </View>
                                                     )}
                                                 </View>
@@ -1255,19 +1249,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#666',
     },
-    showAnswerButton: {
-        backgroundColor: '#2196F3',
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 6,
-        alignSelf: 'flex-start',
-        marginBottom: 12,
-    },
-    showAnswerButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
-    },
     answerWrapper: {
         marginTop: 4,
         marginBottom: 8,
@@ -1475,6 +1456,32 @@ const styles = StyleSheet.create({
     modalCloseButtonText: {
         color: '#fff',
         fontSize: 16,
+        fontWeight: '600',
+    },
+    answerRow: {
+        marginBottom: 8,
+    },
+    answerBlurred: {
+        color: 'transparent',
+        textShadowColor: '#666',
+        textShadowRadius: 20,
+        textShadowOffset: { width: 0, height: 0 },
+    },
+    showAnswerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: '#F0F8FF',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+        gap: 6,
+    },
+    showAnswerText: {
+        fontSize: 13,
+        color: '#007AFF',
         fontWeight: '600',
     },
 });

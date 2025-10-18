@@ -1,43 +1,34 @@
-// src/screens/LoginScreen.tsx - Refactored with Theme Integration & Proper RTK Query Error Handling
-import React, {useEffect, useState} from 'react';
+// src/screens/LoginScreen.tsx - FIXED VERSION (Key parts)
+import React, {useState} from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import * as Keychain from 'react-native-keychain';
-import {StackNavigationProp} from '@react-navigation/stack';
 import {useDispatch} from 'react-redux';
-import {useLoginMutation} from "../entities/AuthState/model/slice/authApi.ts";
-import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
-import {RootStackParamList} from "../navigation/AppNavigator.tsx";
-import {theme} from '../shared/ui/theme';
-import {isFetchBaseQueryError} from "../utils/errorHandler.ts";
-
-type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
-
-interface LoginScreenProps {
-    navigation: LoginScreenNavigationProp;
-}
+import {setTokens} from '../entities/AuthState/model/slice/authSlice';
+import {useLoginMutation} from '../entities/AuthState/model/slice/authApi';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '../navigation/AppNavigator';
+import KeychainService from '../services/auth/KeychainService';
 
 interface FormData {
     username: string;
     password: string;
 }
 
-// Type for API response (what the server actually returns)
 interface LoginApiResponse {
     accessToken: string;
     refreshToken: string;
     user: {
         id: string;
-        username: string; // API returns 'name'
+        username: string;
         email: string;
         bio?: string;
         avatar?: string;
@@ -45,46 +36,20 @@ interface LoginApiResponse {
     };
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
-    const [formData, setFormData] = useState<FormData>({username: '', password: ''});
-    const [login, {isLoading, error}] = useLoginMutation();
+type LoginScreenNavigationProp = NativeStackNavigationProp<
+    RootStackParamList,
+    'Login'
+>;
+
+const LoginScreen: React.FC = () => {
     const dispatch = useDispatch();
+    const navigation = useNavigation<LoginScreenNavigationProp>();
+    const [login, {isLoading}] = useLoginMutation();
 
-    useEffect(() => {
-        const checkTokens = async () => {
-            try {
-                const credentials = await Keychain.getGenericPassword();
-                if (credentials) {
-                    console.log(credentials);
-                    const storedData = JSON.parse(credentials.password);
-                    const {accessToken, refreshToken, user} = storedData;
-
-                    // Map stored user to match User interface
-                    // Handle backward compatibility: older stored data might have 'name' or 'username'
-                    const mappedUser = {
-                        id: user.id,
-                        username: user.username, // Handle both cases for backward compatibility
-                        email: user.email,
-                        bio: user.bio,
-                        avatar: user.avatar,
-                        createdAt: user.createdAt,
-                        statsCompleted: user.statsCompleted,
-                        statsCreated: user.statsCreated,
-                        statsSuccess: user.statsSuccess,
-                    };
-
-                    dispatch(setTokens({
-                        accessToken,
-                        refreshToken,
-                        user: mappedUser
-                    }));
-                }
-            } catch (err) {
-                console.log('Error checking stored tokens:', err);
-            }
-        };
-        checkTokens();
-    }, [dispatch]);
+    const [formData, setFormData] = useState<FormData>({
+        username: '',
+        password: '',
+    });
 
     const handleInputChange = (field: keyof FormData, value: string): void => {
         setFormData(prevData => ({
@@ -102,43 +67,45 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
         }
 
         try {
-            const result = await login({username, password}).unwrap() as LoginApiResponse;
+            const result = (await login({username, password}).unwrap()) as LoginApiResponse;
             const {accessToken, refreshToken, user} = result;
 
             // Map API response to match User interface
-            // Note: API returns 'name' field, but our app uses 'username' consistently
             const mappedUser = {
                 id: user.id,
-                username: user.username, // Map 'name' from API to 'username' for our app
+                username: user.username,
                 email: user.email,
                 bio: user.bio,
                 avatar: user.avatar,
                 createdAt: user.createdAt,
             };
 
-            // Store tokens securely
-            await Keychain.setGenericPassword('authTokens', JSON.stringify({
+            // Store tokens securely using singleton KeychainService
+            await KeychainService.saveAuthTokens({
                 accessToken,
                 refreshToken,
-                user: mappedUser
-            }));
+                user: mappedUser,
+            });
 
             // Update Redux state - AuthNavigationHandler will handle navigation
-            dispatch(setTokens({
-                accessToken,
-                refreshToken,
-                user: mappedUser
-            }));
+            dispatch(
+                setTokens({
+                    accessToken,
+                    refreshToken,
+                    user: mappedUser,
+                }),
+            );
 
             // Reset form
             setFormData({username: '', password: ''});
 
-            console.log('Login successful, Bearer token will be added automatically to future requests');
-
+            console.log(
+                '✅ Login successful, tokens stored securely',
+            );
         } catch (err: any) {
-            console.error('Login error:', err);
-            // For catch block errors, we handle them directly since they're not RTK Query errors
-            const errorMessage = err?.data?.message || err?.message || 'Invalid credentials';
+            console.error('❌ Login error:', err);
+            const errorMessage =
+                err?.data?.message || err?.message || 'Invalid credentials';
             Alert.alert('Login Failed', errorMessage);
         }
     };
@@ -150,246 +117,107 @@ const LoginScreen: React.FC<LoginScreenProps> = ({navigation}) => {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.container}
-        >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-            >
-                {/* App Logo Section */}
-                <View style={styles.logoContainer}>
-                    <Text style={styles.appName}>TaskBuddy</Text>
-                    <Text style={styles.appSubtitle}>Welcome back to your productivity companion</Text>
-                </View>
+            style={styles.container}>
+            <View style={styles.formContainer}>
+                <Text style={styles.title}>Welcome Back!</Text>
+                <Text style={styles.subtitle}>Sign in to continue</Text>
 
-                {/* Login Form */}
-                <View style={styles.formContainer}>
-                    <Text style={styles.title}>Sign In</Text>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Username"
+                    placeholderTextColor="#999"
+                    value={formData.username}
+                    onChangeText={value => handleInputChange('username', value)}
+                    autoCapitalize="none"
+                />
 
-                    {/* Username Input */}
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Username</Text>
-                        <TextInput
-                            style={[
-                                styles.input,
-                                formData.username && styles.inputFocused
-                            ]}
-                            placeholder="Enter your username"
-                            placeholderTextColor={theme.colors.text.disabled}
-                            value={formData.username}
-                            onChangeText={(value) => handleInputChange('username', value)}
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            textContentType="username"
-                            returnKeyType="next"
-                        />
-                    </View>
+                <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#999"
+                    value={formData.password}
+                    onChangeText={value => handleInputChange('password', value)}
+                    secureTextEntry
+                    autoCapitalize="none"
+                />
 
-                    {/* Password Input */}
-                    <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={[
-                                styles.input,
-                                formData.password && styles.inputFocused
-                            ]}
-                            placeholder="Enter your password"
-                            placeholderTextColor={theme.colors.text.disabled}
-                            value={formData.password}
-                            onChangeText={(value) => handleInputChange('password', value)}
-                            secureTextEntry
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            textContentType="password"
-                            returnKeyType="done"
-                            onSubmitEditing={handleLogin}
-                        />
-                    </View>
+                <TouchableOpacity
+                    style={[styles.button, isLoading && styles.buttonDisabled]}
+                    onPress={handleLogin}
+                    disabled={isLoading}>
+                    <Text style={styles.buttonText}>
+                        {isLoading ? 'Logging in...' : 'Login'}
+                    </Text>
+                </TouchableOpacity>
 
-                    {/* Login Button */}
-                    <TouchableOpacity
-                        style={[
-                            styles.loginButton,
-                            isLoading && styles.loginButtonDisabled
-                        ]}
-                        onPress={handleLogin}
-                        disabled={isLoading}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={[
-                            styles.loginButtonText,
-                            isLoading && styles.loginButtonTextDisabled
-                        ]}>
-                            {isLoading ? 'Signing In...' : 'Sign In'}
-                        </Text>
-                    </TouchableOpacity>
-
-                    {/* Error Display - Using RTK Query type guard for proper error handling */}
-                    {Boolean(error) && (
-                        <View style={styles.errorContainer}>
-                            <Text style={styles.errorText}>
-                                {isFetchBaseQueryError(error)
-                                    ? (error.data as { message?: string })?.message ?? "Login failed"
-                                    : "Network error"}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-
-                {/* Sign Up Link */}
-                <View style={styles.signupContainer}>
-                    <Text style={styles.signupText}>Don't have an account? </Text>
-                    <TouchableOpacity
-                        onPress={handleSignupNavigation}
-                        activeOpacity={0.7}
-                    >
-                        <Text style={styles.signupLink}>Sign Up</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
+                <TouchableOpacity
+                    style={styles.signupButton}
+                    onPress={handleSignupNavigation}>
+                    <Text style={styles.signupText}>
+                        Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
+                    </Text>
+                </TouchableOpacity>
+            </View>
         </KeyboardAvoidingView>
     );
 };
 
-// Theme-aware styles using StyleSheet.create with theme
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.background.primary,
+        backgroundColor: '#fff',
     },
-
-    scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.xl,
-    },
-
-    logoContainer: {
-        alignItems: 'center',
-        marginBottom: theme.spacing['2xl'],
-    },
-
-    appName: {
-        ...theme.typography.heading.h1,
-        color: theme.colors.text.primary,
-        marginBottom: theme.spacing.xs,
-        fontWeight: theme.typography.fontWeight.bold,
-    },
-
-    appSubtitle: {
-        ...theme.typography.body.large,
-        color: theme.colors.text.secondary,
-        textAlign: 'center',
-        marginHorizontal: theme.spacing.md,
-    },
-
     formContainer: {
-        marginBottom: theme.spacing.xl,
+        flex: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
     },
-
     title: {
-        ...theme.typography.heading.h2,
-        color: theme.colors.text.primary,
-        textAlign: 'center',
-        marginBottom: theme.spacing.xl,
-        fontWeight: theme.typography.fontWeight.semibold,
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 8,
     },
-
-    inputContainer: {
-        marginBottom: theme.spacing.lg,
+    subtitle: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 32,
     },
-
-    label: {
-        ...theme.typography.body.medium,
-        color: theme.colors.text.primary,
-        marginBottom: theme.spacing.xs,
-        fontWeight: theme.typography.fontWeight.medium,
-    },
-
     input: {
-        ...theme.components.input.field,
-        borderWidth: theme.layout.borderWidth.thin,
-        borderColor: theme.colors.border.main,
-        borderRadius: theme.layout.borderRadius.md,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
-        fontSize: theme.typography.fontSize.base,
-        color: theme.colors.text.primary,
-        backgroundColor: theme.colors.background.primary,
-        fontFamily: theme.typography.fontFamily.primary,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        fontSize: 16,
+        color: '#333',
     },
-
-    inputFocused: {
-        borderColor: theme.colors.primary.main,
-        borderWidth: theme.layout.borderWidth.thick,
-        ...theme.shadows.small,
-    },
-
-    loginButton: {
-        ...theme.components.button.base,
-        ...theme.components.button.variants.primary,
-        backgroundColor: theme.colors.primary.main,
-        paddingVertical: theme.spacing.md,
-        paddingHorizontal: theme.spacing.lg,
-        borderRadius: theme.layout.borderRadius.md,
-        marginTop: theme.spacing.lg,
+    button: {
+        backgroundColor: '#4CAF50',
+        padding: 16,
+        borderRadius: 8,
         alignItems: 'center',
-        justifyContent: 'center',
-        ...theme.shadows.medium,
+        marginTop: 8,
     },
-
-    loginButtonDisabled: {
-        backgroundColor: theme.colors.neutral.gray[300],
-        ...theme.shadows.none,
+    buttonDisabled: {
+        backgroundColor: '#ccc',
     },
-
-    loginButtonText: {
-        ...theme.components.button.text.primary,
-        color: theme.colors.primary.contrast,
-        fontSize: theme.typography.fontSize.lg,
-        fontWeight: theme.typography.fontWeight.semibold,
-        fontFamily: theme.typography.fontFamily.primary,
+    buttonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
-
-    loginButtonTextDisabled: {
-        color: theme.colors.text.disabled,
-    },
-
-    errorContainer: {
-        marginTop: theme.spacing.md,
-        padding: theme.spacing.sm,
-        backgroundColor: theme.colors.error.background,
-        borderRadius: theme.layout.borderRadius.sm,
-        borderLeftWidth: theme.layout.borderWidth.thick,
-        borderLeftColor: theme.colors.error.main,
-    },
-
-    errorText: {
-        ...theme.typography.body.small,
-        color: theme.colors.error.main,
-        textAlign: 'center',
-        fontWeight: theme.typography.fontWeight.medium,
-    },
-
-    signupContainer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
+    signupButton: {
+        marginTop: 16,
         alignItems: 'center',
-        marginTop: theme.spacing.lg,
     },
-
     signupText: {
-        ...theme.typography.body.medium,
-        color: theme.colors.text.secondary,
+        color: '#666',
+        fontSize: 14,
     },
-
     signupLink: {
-        ...theme.typography.body.medium,
-        color: theme.colors.primary.main,
-        fontWeight: theme.typography.fontWeight.semibold,
-        textDecorationLine: 'underline',
+        color: '#4CAF50',
+        fontWeight: '600',
     },
 });
 

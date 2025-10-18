@@ -1,98 +1,121 @@
-// src/services/auth/TokenRefreshService.ts
-import * as Keychain from 'react-native-keychain';
+// src/services/auth/TokenRefreshService.ts - FIXED VERSION
 import {store} from '../../app/providers/StoreProvider/store';
-import {setTokens, updateUser} from '../../entities/AuthState/model/slice/authSlice';
+import {clearAuthState, setTokens} from '../../entities/AuthState/model/slice/authSlice';
+import KeychainService from './KeychainService';
+import axios from 'axios';
+import NetworkConfigManager from "../../config/NetworkConfig.ts";
 
-interface User {
-    id: string;
-    username: string;
-    email: string;
-    bio?: string;
-    avatar?: string;
-    createdAt?: string;
-    statsCompleted?: number;
-    statsCreated?: number;
-    statsSuccess?: number;
-}
 
-interface AuthData {
-    accessToken: string;
-    refreshToken: string;
-    user: User;
-}
+const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
 
-export class TokenRefreshService {
+
+class TokenRefreshService {
+    private isRefreshing: boolean = false;
+    private refreshSubscribers: Array<(token: string) => void> = [];
+
     /**
-     * Update tokens and persist to storage
+     * Subscribe to token refresh
      */
-    static async updateTokensAndPersist(newToken: string, user: User): Promise<void> {
+    private subscribeTokenRefresh(callback: (token: string) => void): void {
+        this.refreshSubscribers.push(callback);
+    }
+
+    /**
+     * Notify all subscribers of new token
+     */
+    private onTokenRefreshed(token: string): void {
+        this.refreshSubscribers.forEach(callback => callback(token));
+        this.refreshSubscribers = [];
+    }
+
+    /**
+     * Refresh the access token
+     */
+    public async refreshAccessToken(): Promise<string | null> {
+        if (this.isRefreshing) {
+            // If already refreshing, wait for the refresh to complete
+            return new Promise(resolve => {
+                this.subscribeTokenRefresh(token => {
+                    resolve(token);
+                });
+            });
+        }
+
+        this.isRefreshing = true;
+
         try {
-            const currentState = store.getState().auth;
+            const state = store.getState();
+            const refreshToken = state.auth.refreshToken;
 
-            const authData: AuthData = {
-                accessToken: newToken,
-                refreshToken: currentState.refreshToken || '', // Keep existing refresh token
-                user: user,
-            };
+            if (!refreshToken) {
+                throw new Error('No refresh token available');
+            }
 
-            // Update Redux state
-            store.dispatch(setTokens(authData));
+            console.log('🔄 Refreshing access token...');
 
-            // Persist to Keychain
-            await Keychain.setGenericPassword('authTokens', JSON.stringify(authData));
+            // Call your refresh token API endpoint
+            const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+                refreshToken,
+            });
 
-            console.log('✅ Token updated and persisted successfully');
+            const {accessToken, refreshToken: newRefreshToken} = response.data;
+
+            // Update tokens in Redux
+            const currentUser = state.auth.user;
+            if (currentUser) {
+                store.dispatch(
+                    setTokens({
+                        accessToken,
+                        refreshToken: newRefreshToken || refreshToken,
+                        user: currentUser,
+                    }),
+                );
+
+                // Save to keychain
+                await KeychainService.saveAuthTokens({
+                    accessToken,
+                    refreshToken: newRefreshToken || refreshToken,
+                    user: currentUser,
+                });
+            }
+
+            console.log('✅ Access token refreshed successfully');
+
+            // Notify all waiting requests
+            this.onTokenRefreshed(accessToken);
+            this.isRefreshing = false;
+
+            return accessToken;
         } catch (error) {
-            console.error('❌ Error updating tokens:', error);
-            throw error;
+            console.error('❌ Error refreshing token:', error);
+            this.isRefreshing = false;
+
+            // Clear auth state if refresh fails
+            store.dispatch(clearAuthState());
+            await KeychainService.deleteAuthTokens();
+
+            return null;
         }
     }
 
     /**
-     * Update user data and persist to storage
+     * Load tokens from storage and restore auth state
      */
-    static async updateUserAndPersist(user: User): Promise<void> {
+    public async loadTokensFromStorage(): Promise<boolean> {
         try {
-            const currentState = store.getState().auth;
+            const storedData = await KeychainService.loadAuthTokens();
 
-            // Update Redux state
-            store.dispatch(updateUser(user));
-
-            // Update persistent storage
-            if (currentState.accessToken && currentState.refreshToken) {
-                const authData = {
-                    accessToken: currentState.accessToken,
-                    refreshToken: currentState.refreshToken,
-                    user: user,
-                };
-
-                await Keychain.setGenericPassword('authTokens', JSON.stringify(authData));
-                console.log('✅ User data updated and persisted successfully');
-            }
-        } catch (error) {
-            console.error('❌ Error updating user data:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Load tokens from storage and update Redux
-     */
-    static async loadTokensFromStorage(): Promise<boolean> {
-        try {
-            const credentials = await Keychain.getGenericPassword();
-
-            if (credentials && typeof credentials.password === 'string') {
-                const authData: AuthData = JSON.parse(credentials.password);
-
-                if (authData.accessToken && authData.refreshToken && authData.user) {
-                    store.dispatch(setTokens(authData));
-                    console.log('✅ Tokens loaded from storage successfully');
-                    return true;
-                }
+            if (storedData) {
+                store.dispatch(
+                    setTokens({
+                        accessToken: storedData.accessToken,
+                        refreshToken: storedData.refreshToken,
+                        user: storedData.user,
+                    }),
+                );
+                return true;
             }
 
-            console.log('❌ No valid tokens found in storage');
             return false;
         } catch (error) {
             console.error('❌ Error loading tokens from storage:', error);
@@ -101,46 +124,16 @@ export class TokenRefreshService {
     }
 
     /**
-     * Clear all tokens from storage and Redux
+     * Clear all auth data
      */
-    static async clearAllTokens(): Promise<void> {
+    public async clearAuthData(): Promise<void> {
         try {
-            // Clear Redux state
-            store.dispatch({ type: 'auth/logout' });
-
-            // Clear persistent storage
-            await Keychain.resetGenericPassword();
-
-            console.log('✅ All tokens cleared successfully');
+            await KeychainService.deleteAuthTokens();
+            store.dispatch(clearAuthState());
         } catch (error) {
-            console.error('❌ Error clearing tokens:', error);
-            throw error;
+            console.error('❌ Error clearing auth data:', error);
         }
-    }
-
-    /**
-     * Get current access token from Redux state
-     */
-    static getCurrentAccessToken(): string | null {
-        const state = store.getState();
-        return state.auth.accessToken;
-    }
-
-    /**
-     * Check if user is authenticated
-     */
-    static isAuthenticated(): boolean {
-        const state = store.getState();
-        return !!(state.auth.accessToken && state.auth.user);
-    }
-
-    /**
-     * Get current user from Redux state
-     */
-    static getCurrentUser(): User | null {
-        const state = store.getState();
-        return state.auth.user;
     }
 }
 
-export default TokenRefreshService;
+export default new TokenRefreshService();

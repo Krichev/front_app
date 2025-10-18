@@ -4,8 +4,8 @@
 import NetworkConfigManager from '../../config/NetworkConfig';
 import {RootState, store} from '../../app/providers/StoreProvider/store';
 import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice';
-import * as Keychain from 'react-native-keychain';
 import {Alert} from 'react-native';
+import KeychainService from "../auth/KeychainService.ts";
 
 // Types matching backend DTOs
 export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
@@ -145,11 +145,11 @@ export class QuestionService {
                     const {accessToken, refreshToken: newRefreshToken, user} = data;
 
                     // Store the new tokens in Keychain
-                    await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                    await KeychainService.saveAuthTokens({
                         accessToken,
                         refreshToken: newRefreshToken,
                         user
-                    }));
+                    });
 
                     // Update Redux state with new tokens
                     store.dispatch(setTokens({
@@ -183,7 +183,7 @@ export class QuestionService {
      */
     private static async handleLogout(): Promise<void> {
         store.dispatch(logout());
-        await Keychain.resetGenericPassword();
+        await KeychainService.deleteAuthTokens()
 
         Alert.alert(
             'Session Expired',

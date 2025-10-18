@@ -8,10 +8,10 @@ import {logout} from "../entities/AuthState/model/slice/authSlice.ts";
 import {BottomTabNavigationProp} from "@react-navigation/bottom-tabs";
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {MainTabParamList, RootStackParamList} from "../navigation/AppNavigator.tsx";
-import * as Keychain from "react-native-keychain";
 import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.tsx";
+import KeychainService from "../services/auth/KeychainService.ts";
 
 // Correct navigation type for a screen inside bottom tabs
 type HomeScreenNavigationProp = CompositeNavigationProp<
@@ -70,7 +70,7 @@ const HomeScreen: React.FC = () => {
 
     const handleLogout = async () => {
         try {
-            await Keychain.resetGenericPassword();
+            await KeychainService.deleteAuthTokens()
             dispatch(logout());
         } catch (error) {
             console.error('Error during logout:', error);

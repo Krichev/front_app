@@ -14,12 +14,12 @@ import {
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {useDispatch} from 'react-redux';
-import * as Keychain from 'react-native-keychain';
 import {useSignupMutation} from "../entities/AuthState/model/slice/authApi.ts";
 import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
 import {RootStackParamList} from "../navigation/AppNavigator.tsx";
 import {theme} from '../shared/ui/theme';
 import {isFetchBaseQueryError} from "../utils/errorHandler.ts";
+import KeychainService from "../services/auth/KeychainService.ts";
 
 type SignupScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Signup'>;
 
@@ -133,11 +133,11 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
             console.log('Mapped user data:', mappedUser);
 
             // Store tokens securely
-            await Keychain.setGenericPassword('authTokens', JSON.stringify({
+            await KeychainService.saveAuthTokens({
                 accessToken,
                 refreshToken,
                 user: mappedUser
-            }));
+            });
 
             // Update Redux state - AuthNavigationHandler will handle navigation
             dispatch(setTokens({

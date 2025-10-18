@@ -8,6 +8,7 @@ import {WWWGameProvider} from "./src/app/providers/WWWGameProvider.tsx";
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {StyleSheet} from 'react-native';
 import TokenRefreshService from "./src/services/auth/TokenRefreshService.ts";
+import {AuthInitializer} from "./src/entities/AuthState/ui/AuthInitializer.tsx";
 
 // Add this to your main App component or a wrapper component
 export const AppWithTokenInitialization: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -40,13 +41,16 @@ const App: React.FC = () => {
     return (
         <GestureHandlerRootView style={styles.container}>
             <Provider store={store}>
-                <WWWGameProvider>
-                    <AppNavigation />
-                </WWWGameProvider>
+                <AuthInitializer>
+                    <WWWGameProvider>
+                        <AppNavigation />
+                    </WWWGameProvider>
+                </AuthInitializer>
             </Provider>
         </GestureHandlerRootView>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {

@@ -3,8 +3,8 @@
 import {BaseQueryFn, FetchArgs, fetchBaseQuery, FetchBaseQueryError} from '@reduxjs/toolkit/query/react';
 import {RootState} from '../providers/StoreProvider/store';
 import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice';
-import * as Keychain from 'react-native-keychain';
 import {Alert} from 'react-native';
+import KeychainService from "../../services/auth/KeychainService.ts";
 
 const networkConfig = {
     retryAttempts: 3,
@@ -84,11 +84,11 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                         };
 
                         // Store the new tokens in Keychain
-                        await Keychain.setGenericPassword('authTokens', JSON.stringify({
+                        await KeychainService.saveAuthTokens({
                             accessToken,
                             refreshToken: newRefreshToken,
                             user
-                        }));
+                        });
 
                         // Update the Redux state with the new tokens
                         api.dispatch(setTokens({
@@ -105,7 +105,7 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                         // Refresh token failed, log out the user
                         console.log('❌ Refresh token failed, logging out user');
                         api.dispatch(logout());
-                        await Keychain.resetGenericPassword();
+                        await KeychainService.deleteAuthTokens()
 
                         Alert.alert(
                             'Session Expired',
@@ -116,7 +116,7 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                 } catch (error) {
                     console.error('❌ Error during token refresh:', error);
                     api.dispatch(logout());
-                    await Keychain.resetGenericPassword();
+                    await KeychainService.deleteAuthTokens()
 
                     Alert.alert(
                         'Session Expired',
@@ -128,7 +128,7 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                 // No refresh token available, log out the user
                 console.log('❌ No refresh token available, logging out user');
                 api.dispatch(logout());
-                await Keychain.resetGenericPassword();
+                await KeychainService.deleteAuthTokens()
 
                 Alert.alert(
                     'Authentication Required',
