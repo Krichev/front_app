@@ -5,6 +5,22 @@
 // WWW QUIZ TYPES (EXISTING)
 // ============================================================================
 
+export enum PaymentType {
+    FREE = 'FREE',
+    ENTRY_FEE = 'ENTRY_FEE',
+    PRIZE = 'PRIZE',
+    BOTH = 'BOTH'
+}
+
+export enum CurrencyType {
+    USD = 'USD',
+    EUR = 'EUR',
+    GBP = 'GBP',
+    CAD = 'CAD',
+    AUD = 'AUD',
+    POINTS = 'POINTS'
+}
+
 /**
  * Type definition for WWW_QUIZ quiz configuration
  */
@@ -90,6 +106,17 @@ export interface ApiChallenge {
     quizConfig?: string;
     userIsCreator?: boolean;
     userRole?: string;
+    paymentType?: PaymentType;
+    hasEntryFee?: boolean;
+    entryFeeAmount?: number;
+    entryFeeCurrency?: CurrencyType;
+    hasPrize?: boolean;
+    prizeAmount?: number;
+    prizeCurrency?: CurrencyType;
+
+    // Access control properties
+    requiresApproval?: boolean;
+    invitedUserIds?: number[];
 }
 
 /**
@@ -111,6 +138,18 @@ export interface CreateChallengeRequest {
     endDate?: string;
     tags?: string[];
     quizConfig?: string;
+    // Payment-related properties
+    paymentType?: PaymentType;
+    hasEntryFee?: boolean;
+    entryFeeAmount?: number;
+    entryFeeCurrency?: CurrencyType;
+    hasPrize?: boolean;
+    prizeAmount?: number;
+    prizeCurrency?: CurrencyType;
+
+    // Access control properties
+    requiresApproval?: boolean;
+    invitedUserIds?: number[];
 }
 
 /**

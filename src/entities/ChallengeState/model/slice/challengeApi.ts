@@ -2,22 +2,28 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {CreateQuizQuestionRequest, QuizQuestion} from '../../../QuizState/model/slice/quizApi';
-
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 // Import types from centralized types file
 import type {
     ApiChallenge,
     ChallengeAccessUser,
     CreateChallengeRequest,
     CreateQuizChallengeRequest,
+    CurrencyType,
     GetChallengesParams,
     LocationVerificationRequest,
+    PaymentType,
     PhotoVerificationRequest,
     VerificationResponse,
 } from '../types';
 
+
+// Get base URL from centralized config
+const BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
+
 export const challengeApi = createApi({
     reducerPath: 'challengeApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth(BASE_URL),
     tagTypes: ['Challenge', 'Verification', 'QuizQuestion', 'ChallengeAccess'],
     endpoints: (builder) => ({
         // Existing endpoints
@@ -283,4 +289,7 @@ export type {
     LocationVerificationRequest,
     ChallengeAccessUser,
     CreateQuizChallengeRequest,
+    // ===== ADD THESE TWO NEW EXPORTS =====
+    PaymentType,
+    CurrencyType,
 };

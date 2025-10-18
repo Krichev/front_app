@@ -32,6 +32,18 @@ import {RootState, store} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {APIDifficulty, QuestionData, QuestionService} from '../services/wwwGame/questionService';
 
+export type QuestionType = 'text' | 'audio' | 'video';
+
+interface MultimediaQuestionData {
+    id?: string;
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    questionType: QuestionType;
+}
+
 interface CustomQuestion {
     question: string;
     answer: string;
@@ -124,20 +136,34 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [previewPage, setPreviewPage] = useState(1);
     const questionsPerPreviewPage = 5;
 
-    // Get all selected questions (combines selected saved questions + custom created questions)
+
+    const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<string>>(new Set());
+    const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<string>>(new Set());
+    const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
+
     const selectedQuestionsArray = useMemo(() => {
-        let questions: any[] = [];
+        // Get selected app questions
+        const selectedAppQuestions = (appQuestions ?? []).filter(q =>
+            selectedAppQuestionIds.has(q?.id?.toString() ?? '')
+        );
 
-        if (questionSource === 'app') {
-            questions = appQuestions.filter(q => selectedQuestionIds.has(q.id?.toString() || ''));
-        } else if (questionSource === 'user') {
-            // Combine selected saved user questions + custom created questions
-            const savedSelected = userQuestions.filter(q => selectedQuestionIds.has(q.id?.toString() || ''));
-            questions = [...savedSelected, ...customQuestions];
-        }
+        // Get selected user questions
+        const selectedUserQuestions = (userQuestions ?? []).filter(q =>
+            selectedUserQuestionIds.has(q?.id?.toString() ?? '')
+        );
 
-        return questions;
-    }, [selectedQuestionIds, appQuestions, userQuestions, customQuestions, questionSource]);
+        // Get custom questions
+        const customQs = newCustomQuestions ?? [];
+
+        // Combine all selected questions
+        return [...selectedAppQuestions, ...selectedUserQuestions, ...customQs];
+    }, [
+        selectedAppQuestionIds,
+        selectedUserQuestionIds,
+        appQuestions,
+        userQuestions,
+        newCustomQuestions
+    ]);
 
     const totalSelectedQuestions = selectedQuestionsArray.length;
 
@@ -159,7 +185,7 @@ const CreateWWWQuestScreen: React.FC = () => {
 
     const loadAvailableTopics = async () => {
         try {
-            const topics = await QuestionService.getAvailableTopics(store);
+            const topics = await QuestionService.getAvailableTopics();
             setAvailableTopics(['All Topics', ...topics]);
         } catch (error) {
             setAvailableTopics(['All Topics', 'History', 'Science', 'Geography', 'Sports']);
@@ -183,16 +209,22 @@ const CreateWWWQuestScreen: React.FC = () => {
             if (searchTopic && searchTopic !== 'All Topics') searchParams.topic = searchTopic.trim();
 
             const result = await QuestionService.advancedSearchQuestions(searchParams);
-            setAppQuestions(result.questions);
+
+            // ✅ FIX: Use 'content' instead of 'questions'
+            setAppQuestions(result.content);
             setTotalPages(result.totalPages);
             setTotalQuestions(result.totalElements);
 
-            if (result.questions.length === 0) {
-                setAppQuestionsError('No questions found.');
+            // ✅ FIX: Check 'content' instead of 'questions'
+            if (result.content.length === 0) {
+                setAppQuestionsError('No questions found. Try different search criteria.');
             }
         } catch (error: any) {
-            setAppQuestionsError(error.message || 'Failed to search questions.');
+            console.error('Error searching questions:', error);
+            setAppQuestionsError(error.message || 'Failed to search questions. Please try again.');
             setAppQuestions([]);
+            setTotalPages(0);
+            setTotalQuestions(0);
         } finally {
             setIsLoadingAppQuestions(false);
         }
