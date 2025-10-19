@@ -1,6 +1,5 @@
 // src/screens/CreateWWWQuestScreen.tsx
-// COMPLETE VERSION with Quiz Config and 2 Question Sources (App & User)
-// Enhanced with full question display and blurred answers
+// ENHANCED VERSION with Access Control + All Existing Features
 
 import React, {useEffect, useMemo, useState} from 'react';
 import {
@@ -23,10 +22,16 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Picker} from '@react-native-picker/picker';
 import {CreateChallengeRequest, useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {
+    getVisibilityDescription,
+    getVisibilityIcon,
+    getVisibilityLabel,
+    QuestionVisibility,
     QuizConfig,
     StartQuizSessionRequest,
+    useCreateUserQuestionMutation,
+    useDeleteUserQuestionMutation,
     useGetUserQuestionsQuery,
-    useStartQuizSessionMutation
+    useStartQuizSessionMutation,
 } from '../entities/QuizState/model/slice/quizApi';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -71,6 +76,10 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [createChallenge, {isLoading: isCreatingChallenge}] = useCreateChallengeMutation();
     const [startQuizSession, {isLoading: isStartingSession}] = useStartQuizSessionMutation();
 
+    // NEW: Question creation and deletion hooks
+    const [createQuestion, {isLoading: isCreatingQuestion}] = useCreateUserQuestionMutation();
+    const [deleteQuestion] = useDeleteUserQuestionMutation();
+
     // Basic Info
     const [title, setTitle] = useState('Quiz Challenge');
     const [description, setDescription] = useState('Test your knowledge in this team-based quiz game.');
@@ -102,10 +111,22 @@ const CreateWWWQuestScreen: React.FC = () => {
     // Question Source (only 'app' or 'user')
     const [questionSource, setQuestionSource] = useState<'app' | 'user'>('app');
 
+    // NEW: Add Question Modal State
+    const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
+    const [newQuestion, setNewQuestion] = useState({
+        question: '',
+        answer: '',
+        difficulty: 'MEDIUM' as 'EASY' | 'MEDIUM' | 'HARD',
+        topic: '',
+        additionalInfo: '',
+        visibility: QuestionVisibility.PRIVATE,
+    });
+
     // User questions query
     const {
         data: userQuestions = [],
-        isLoading: isLoadingUserQuestions
+        isLoading: isLoadingUserQuestions,
+        refetch: refetchUserQuestions
     } = useGetUserQuestionsQuery(undefined, {
         skip: questionSource !== 'user'
     });
@@ -153,6 +174,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                     uq.difficulty === 'HARD' ? 'Hard' as const : 'Medium' as const,
             topic: uq.topic ?? '',
             additionalInfo: uq.additionalInfo ?? '',
+            visibility: uq.visibility, // NEW: Include visibility
         }));
     }, [userQuestions]);
 
@@ -264,6 +286,64 @@ const CreateWWWQuestScreen: React.FC = () => {
         });
     };
 
+    // NEW: Handle Add Question
+    const handleAddQuestion = async () => {
+        if (!newQuestion.question.trim()) {
+            Alert.alert('Error', 'Please enter a question');
+            return;
+        }
+        if (!newQuestion.answer.trim()) {
+            Alert.alert('Error', 'Please enter an answer');
+            return;
+        }
+
+        try {
+            await createQuestion(newQuestion).unwrap();
+            Alert.alert('Success', 'Question added successfully!');
+            setShowAddQuestionModal(false);
+            resetNewQuestion();
+            refetchUserQuestions();
+        } catch (error: any) {
+            Alert.alert('Error', error?.data?.message || 'Failed to create question');
+        }
+    };
+
+    // NEW: Reset new question form
+    const resetNewQuestion = () => {
+        setNewQuestion({
+            question: '',
+            answer: '',
+            difficulty: 'MEDIUM',
+            topic: '',
+            additionalInfo: '',
+            visibility: QuestionVisibility.PRIVATE,
+        });
+    };
+
+    // NEW: Handle Delete Question
+    const handleDeleteUserQuestion = (questionId: string) => {
+        Alert.alert(
+            'Delete Question',
+            'Are you sure you want to delete this question?',
+            [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteQuestion(questionId).unwrap();
+                            Alert.alert('Success', 'Question deleted');
+                            refetchUserQuestions();
+                        } catch (error: any) {
+                            Alert.alert('Error', error?.data?.message || 'Failed to delete question');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const addCustomQuestion = () => {
         if (!currentCustomQuestion.question.trim()) {
             Alert.alert('Error', 'Please enter a question');
@@ -369,12 +449,10 @@ const CreateWWWQuestScreen: React.FC = () => {
             const challengeResult = await createChallenge(challengeData).unwrap();
             const challengeId = challengeResult.id;
 
-            // Get selected question IDs as numbers
             const questionIds = selectedQuestionsArray
                 .filter(q => q.id && !q.id.startsWith('new-custom-'))
                 .map(q => parseInt(q.id));
 
-            // Convert difficulty from UI format to API format
             const apiDifficulty: 'EASY' | 'MEDIUM' | 'HARD' =
                 quizConfig.difficulty === 'Easy' ? 'EASY' :
                     quizConfig.difficulty === 'Hard' ? 'HARD' : 'MEDIUM';
@@ -422,7 +500,162 @@ const CreateWWWQuestScreen: React.FC = () => {
         return false;
     };
 
-    const renderQuestionItem = ({item, index}: { item: QuestionData; index: number }) => {
+    // NEW: Render Add Question Modal
+    const renderAddQuestionModal = () => (
+        <Modal
+            visible={showAddQuestionModal}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setShowAddQuestionModal(false)}
+        >
+            <View style={styles.addQuestionModalOverlay}>
+                <View style={styles.addQuestionModalContent}>
+                    <View style={styles.addQuestionModalHeader}>
+                        <Text style={styles.addQuestionModalTitle}>Add New Question</Text>
+                        <TouchableOpacity onPress={() => setShowAddQuestionModal(false)}>
+                            <MaterialCommunityIcons name="close" size={28} color="#666" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={styles.addQuestionModalBody}>
+                        {/* Question Text */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Question *</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={newQuestion.question}
+                                onChangeText={(text) => setNewQuestion({...newQuestion, question: text})}
+                                placeholder="Enter your question"
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
+
+                        {/* Answer */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Answer *</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={newQuestion.answer}
+                                onChangeText={(text) => setNewQuestion({...newQuestion, answer: text})}
+                                placeholder="Enter the answer"
+                                multiline
+                                numberOfLines={2}
+                            />
+                        </View>
+
+                        {/* Difficulty */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Difficulty</Text>
+                            <Picker
+                                selectedValue={newQuestion.difficulty}
+                                onValueChange={(value) => setNewQuestion({...newQuestion, difficulty: value})}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Easy" value="EASY" />
+                                <Picker.Item label="Medium" value="MEDIUM" />
+                                <Picker.Item label="Hard" value="HARD" />
+                            </Picker>
+                        </View>
+
+                        {/* Topic */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Topic (Optional)</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={newQuestion.topic}
+                                onChangeText={(text) => setNewQuestion({...newQuestion, topic: text})}
+                                placeholder="e.g., History, Science"
+                            />
+                        </View>
+
+                        {/* Visibility / Access Policy */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Who can use this question? *</Text>
+                            <Text style={styles.helperText}>
+                                Choose who can find and use this question in their quizzes
+                            </Text>
+
+                            {[
+                                QuestionVisibility.PRIVATE,
+                                QuestionVisibility.FRIENDS_FAMILY,
+                                QuestionVisibility.PUBLIC
+                            ].map((visibility) => (
+                                <TouchableOpacity
+                                    key={visibility}
+                                    style={[
+                                        styles.visibilityOption,
+                                        newQuestion.visibility === visibility && styles.visibilityOptionSelected
+                                    ]}
+                                    onPress={() => setNewQuestion({
+                                        ...newQuestion,
+                                        visibility: visibility as QuestionVisibility
+                                    })}
+                                >
+                                    <View style={styles.visibilityOptionContent}>
+                                        <Text style={styles.visibilityIcon}>
+                                            {getVisibilityIcon(visibility as QuestionVisibility)}
+                                        </Text>
+                                        <View style={styles.visibilityTextContainer}>
+                                            <Text style={[
+                                                styles.visibilityLabel,
+                                                newQuestion.visibility === visibility && styles.visibilityLabelSelected
+                                            ]}>
+                                                {getVisibilityLabel(visibility as QuestionVisibility)}
+                                            </Text>
+                                            <Text style={styles.visibilityDescription}>
+                                                {getVisibilityDescription(visibility as QuestionVisibility)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.radioButton}>
+                                        {newQuestion.visibility === visibility && (
+                                            <View style={styles.radioButtonInner} />
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Additional Info */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={newQuestion.additionalInfo}
+                                onChangeText={(text) => setNewQuestion({...newQuestion, additionalInfo: text})}
+                                placeholder="Any additional context or notes"
+                                multiline
+                                numberOfLines={2}
+                            />
+                        </View>
+                    </ScrollView>
+
+                    <View style={styles.addQuestionModalFooter}>
+                        <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setShowAddQuestionModal(false)}
+                        >
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.saveButton, isCreatingQuestion && styles.saveButtonDisabled]}
+                            onPress={handleAddQuestion}
+                            disabled={isCreatingQuestion}
+                        >
+                            {isCreatingQuestion ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.saveButtonText}>Add Question</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </Modal>
+    );
+
+    const renderQuestionItem = ({item, index}: { item: any; index: number }) => {
         const isSelected = selectedQuestionIds.has(item.id?.toString() || '');
         const qId = item.id?.toString() || '';
         const isAnswerVisible = visibleAnswers.has(qId);
@@ -444,14 +677,35 @@ const CreateWWWQuestScreen: React.FC = () => {
                                 <Text style={styles.topicBadgeText}>{item.topic}</Text>
                             </View>
                         )}
+                        {/* NEW: Show visibility badge for user questions */}
+                        {questionSource === 'user' && item.visibility && (
+                            <View style={styles.visibilityBadge}>
+                                <Text style={styles.badgeText}>
+                                    {getVisibilityIcon(item.visibility)} {getVisibilityLabel(item.visibility)}
+                                </Text>
+                            </View>
+                        )}
                     </View>
-                    {questionSource === 'app' && (
-                        <MaterialCommunityIcons
-                            name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
-                            size={28}
-                            color={isSelected ? '#007AFF' : '#999'}
-                        />
-                    )}
+                    <View style={{flexDirection: 'row', gap: 12, alignItems: 'center'}}>
+                        {/* NEW: Delete button for user questions */}
+                        {questionSource === 'user' && (
+                            <TouchableOpacity
+                                onPress={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteUserQuestion(qId);
+                                }}
+                            >
+                                <MaterialCommunityIcons name="delete" size={24} color="#ff4444" />
+                            </TouchableOpacity>
+                        )}
+                        {questionSource === 'app' && (
+                            <MaterialCommunityIcons
+                                name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                                size={28}
+                                color={isSelected ? '#007AFF' : '#999'}
+                            />
+                        )}
+                    </View>
                 </View>
 
                 <Text style={styles.questionText}>{item.question}</Text>
@@ -755,7 +1009,18 @@ const CreateWWWQuestScreen: React.FC = () => {
                     {/* User Questions */}
                     {questionSource === 'user' && (
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>My Questions</Text>
+                            {/* NEW: Header with Add Button */}
+                            <View style={styles.sectionHeaderWithButton}>
+                                <Text style={styles.sectionTitle}>My Questions</Text>
+                                <TouchableOpacity
+                                    style={styles.addQuestionButton}
+                                    onPress={() => setShowAddQuestionModal(true)}
+                                >
+                                    <MaterialCommunityIcons name="plus-circle" size={24} color="#007AFF" />
+                                    <Text style={styles.addQuestionButtonText}>Add Question</Text>
+                                </TouchableOpacity>
+                            </View>
+
                             {isLoadingUserQuestions ? (
                                 <View style={styles.loadingContainer}>
                                     <ActivityIndicator size="large" color="#007AFF"/>
@@ -779,7 +1044,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                         </View>
                     )}
 
-                    {/* Selected Questions Preview */}
+                    {/* Selected Questions Preview - Keep your existing preview code */}
                     {totalSelectedQuestions > 0 && (
                         <View style={styles.section}>
                             <TouchableOpacity
@@ -825,7 +1090,6 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                     )}
                                                 </View>
 
-                                                {/* FULL QUESTION TEXT - NO TRUNCATION */}
                                                 <Text style={styles.previewQuestionText}>
                                                     {q.question}
                                                 </Text>
@@ -845,7 +1109,6 @@ const CreateWWWQuestScreen: React.FC = () => {
                                                     )}
                                                 </View>
 
-                                                {/* ADDITIONAL INFO (EXPANDABLE) */}
                                                 {q.additionalInfo && (
                                                     <>
                                                         <TouchableOpacity
@@ -873,7 +1136,6 @@ const CreateWWWQuestScreen: React.FC = () => {
                                         );
                                     })}
 
-                                    {/* Preview Pagination */}
                                     {previewTotalPages > 1 && (
                                         <View style={styles.paginationContainer}>
                                             <TouchableOpacity
@@ -977,12 +1239,16 @@ const CreateWWWQuestScreen: React.FC = () => {
                         </View>
                     </View>
                 </Modal>
+
+                {/* NEW: Add Question Modal */}
+                {renderAddQuestionModal()}
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
+    // ... Keep ALL your existing styles ...
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -1169,6 +1435,8 @@ const styles = StyleSheet.create({
     questionBadges: {
         flexDirection: 'row',
         gap: 8,
+        flexWrap: 'wrap',
+        flex: 1,
     },
     difficultyBadge: {
         paddingHorizontal: 10,
@@ -1253,7 +1521,6 @@ const styles = StyleSheet.create({
         marginTop: 4,
         marginBottom: 8,
     },
-    // BLURRED ANSWER STYLES
     blurredAnswerContainer: {
         position: 'relative',
         backgroundColor: '#f0f0f0',
@@ -1291,7 +1558,6 @@ const styles = StyleSheet.create({
         marginTop: 4,
         textAlign: 'center',
     },
-    // REVEALED ANSWER STYLES
     answerContainer: {
         backgroundColor: '#fff',
         borderWidth: 2,
@@ -1483,6 +1749,158 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#007AFF',
         fontWeight: '600',
+    },
+
+    // NEW: Add Question Modal Styles
+    sectionHeaderWithButton: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    addQuestionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: '#E5F1FF',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#007AFF',
+    },
+    addQuestionButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#007AFF',
+    },
+    addQuestionModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    addQuestionModalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        maxHeight: '90%',
+    },
+    addQuestionModalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+    },
+    addQuestionModalTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#333',
+    },
+    addQuestionModalBody: {
+        padding: 20,
+        maxHeight: 500,
+    },
+    helperText: {
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 12,
+    },
+    visibilityOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        borderRadius: 12,
+        marginBottom: 12,
+        backgroundColor: '#fafafa',
+    },
+    visibilityOptionSelected: {
+        borderColor: '#007AFF',
+        backgroundColor: '#e5f1ff',
+    },
+    visibilityOptionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    visibilityIcon: {
+        fontSize: 28,
+        marginRight: 12,
+    },
+    visibilityTextContainer: {
+        flex: 1,
+    },
+    visibilityLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    visibilityLabelSelected: {
+        color: '#007AFF',
+    },
+    visibilityDescription: {
+        fontSize: 13,
+        color: '#666',
+    },
+    radioButton: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#007AFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioButtonInner: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#007AFF',
+    },
+    addQuestionModalFooter: {
+        flexDirection: 'row',
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        gap: 12,
+    },
+    cancelButton: {
+        flex: 1,
+        padding: 16,
+        borderRadius: 8,
+        backgroundColor: '#f0f0f0',
+        alignItems: 'center',
+    },
+    cancelButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#666',
+    },
+    saveButton: {
+        flex: 1,
+        padding: 16,
+        borderRadius: 8,
+        backgroundColor: '#007AFF',
+        alignItems: 'center',
+    },
+    saveButtonDisabled: {
+        backgroundColor: '#ccc',
+    },
+    saveButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    visibilityBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        backgroundColor: '#4CAF50',
     },
 });
 

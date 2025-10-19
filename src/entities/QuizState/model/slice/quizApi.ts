@@ -1,15 +1,10 @@
-// src/entities/QuizState/model/slice/quizApi.ts - UPDATED
+// src/entities/QuizState/model/slice/quizApi.ts - MERGED VERSION
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 
-export interface CreateQuizQuestionRequest {
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
-}
+// ============================================================================
+// EXISTING TYPES (from your current file)
+// ============================================================================
 
 export interface QuizConfig {
     gameType: 'WWW';
@@ -20,22 +15,6 @@ export interface QuizConfig {
     roundCount: number;
     enableAIHost: boolean;
     teamBased: boolean;
-}
-
-export interface QuizQuestion {
-    id: string;
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
-    isUserCreated: boolean;
-    creatorId?: string;
-    externalId?: string;
-    usageCount: number;
-    createdAt: string;
-    lastUsed?: string;
 }
 
 export interface QuizSession {
@@ -101,11 +80,171 @@ export interface SubmitRoundAnswerRequest {
     voiceRecordingUsed?: boolean;
 }
 
+// ============================================================================
+// NEW TYPES (for access control feature)
+// ============================================================================
+
+export enum QuestionVisibility {
+    PRIVATE = 'PRIVATE',
+    FRIENDS_FAMILY = 'FRIENDS_FAMILY',
+    QUIZ_ONLY = 'QUIZ_ONLY',
+    PUBLIC = 'PUBLIC'
+}
+
+export enum RelationshipType {
+    FRIEND = 'FRIEND',
+    FAMILY = 'FAMILY',
+    BLOCKED = 'BLOCKED'
+}
+
+export enum RelationshipStatus {
+    PENDING = 'PENDING',
+    ACCEPTED = 'ACCEPTED',
+    REJECTED = 'REJECTED'
+}
+
+// ============================================================================
+// UPDATED TYPES (with new fields)
+// ============================================================================
+
+export interface CreateQuizQuestionRequest {
+    question: string;
+    answer: string;
+    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    source?: string;
+    additionalInfo?: string;
+    // NEW: Access control fields
+    visibility: QuestionVisibility;
+    originalQuizId?: number;
+}
+
+export interface QuizQuestion {
+    id: string;
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    source?: string;
+    additionalInfo?: string;
+    isUserCreated: boolean;
+    creatorId?: string;
+    creatorUsername?: string;
+    externalId?: string;
+    usageCount: number;
+    createdAt: string;
+    lastUsed?: string;
+    // NEW: Access control fields
+    visibility: QuestionVisibility;
+    originalQuizId?: number;
+    originalQuizTitle?: string;
+    canEdit: boolean;
+    canDelete: boolean;
+    canUseInQuiz: boolean;
+}
+
+export interface UpdateQuestionVisibilityRequest {
+    visibility: QuestionVisibility;
+    originalQuizId?: number;
+}
+
+export interface QuestionSearchParams {
+    keyword?: string;
+    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    quizId?: number;
+    page?: number;
+    size?: number;
+}
+
+// NEW: Relationship types
+export interface UserRelationship {
+    id: number;
+    userId: number;
+    relatedUserId: number;
+    relatedUserUsername: string;
+    relatedUserAvatar?: string;
+    relationshipType: RelationshipType;
+    status: RelationshipStatus;
+    createdAt: string;
+}
+
+export interface CreateRelationshipRequest {
+    relatedUserId: number;
+    relationshipType: RelationshipType;
+}
+
+// NEW: Paginated response type
+export interface PaginatedQuestionResponse {
+    content: QuizQuestion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    size: number;
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+export const getVisibilityLabel = (visibility: QuestionVisibility): string => {
+    switch (visibility) {
+        case QuestionVisibility.PRIVATE:
+            return 'Only Me';
+        case QuestionVisibility.FRIENDS_FAMILY:
+            return 'Friends & Family';
+        case QuestionVisibility.QUIZ_ONLY:
+            return 'This Quiz Only';
+        case QuestionVisibility.PUBLIC:
+            return 'Everyone (Public)';
+        default:
+            return visibility;
+    }
+};
+
+export const getVisibilityDescription = (visibility: QuestionVisibility): string => {
+    switch (visibility) {
+        case QuestionVisibility.PRIVATE:
+            return 'Only you can see and use this question';
+        case QuestionVisibility.FRIENDS_FAMILY:
+            return 'You and your friends/family can use this question';
+        case QuestionVisibility.QUIZ_ONLY:
+            return 'Only accessible in the quiz where it was added';
+        case QuestionVisibility.PUBLIC:
+            return 'Everyone can find and use this question';
+        default:
+            return '';
+    }
+};
+
+export const getVisibilityIcon = (visibility: QuestionVisibility): string => {
+    switch (visibility) {
+        case QuestionVisibility.PRIVATE:
+            return '🔒';
+        case QuestionVisibility.FRIENDS_FAMILY:
+            return '👥';
+        case QuestionVisibility.QUIZ_ONLY:
+            return '🎯';
+        case QuestionVisibility.PUBLIC:
+            return '🌍';
+        default:
+            return '❓';
+    }
+};
+
+// ============================================================================
+// API DEFINITION
+// ============================================================================
+
 export const quizApi = createApi({
     reducerPath: 'quizApi',
     baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api/quiz'),
-    tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound'],
+    tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship'],
     endpoints: (builder) => ({
+        // ========================================================================
+        // EXISTING QUESTION ENDPOINTS (kept as-is)
+        // ========================================================================
+
         createUserQuestion: builder.mutation<QuizQuestion, CreateQuizQuestionRequest>({
             query: (request) => ({
                 url: '/questions',
@@ -154,6 +293,115 @@ export const quizApi = createApi({
             }),
             providesTags: [{type: 'QuizQuestion', id: 'SEARCH'}],
         }),
+
+        // ========================================================================
+        // NEW QUESTION ENDPOINTS (for access control)
+        // ========================================================================
+
+        getUserQuestionsPaginated: builder.query<PaginatedQuestionResponse, {
+            page?: number;
+            size?: number;
+            sortBy?: string;
+            sortDirection?: 'ASC' | 'DESC';
+        }>({
+            query: ({page = 0, size = 20, sortBy = 'createdAt', sortDirection = 'DESC'}) => ({
+                url: '/questions/me',
+                params: {page, size, sortBy, sortDirection},
+            }),
+            providesTags: (result) =>
+                result?.content
+                    ? [
+                        ...result.content.map(({id}) => ({type: 'QuizQuestion' as const, id})),
+                        {type: 'QuizQuestion', id: 'USER_LIST'},
+                    ]
+                    : [{type: 'QuizQuestion', id: 'USER_LIST'}],
+        }),
+
+        searchAccessibleQuestions: builder.query<PaginatedQuestionResponse, QuestionSearchParams>({
+            query: (params) => ({
+                url: '/questions/accessible',
+                params,
+            }),
+            providesTags: [{type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'}],
+        }),
+
+        updateQuestionVisibility: builder.mutation<QuizQuestion, {
+            questionId: number;
+            request: UpdateQuestionVisibilityRequest;
+        }>({
+            query: ({questionId, request}) => ({
+                url: `/questions/${questionId}/visibility`,
+                method: 'PUT',
+                params: request,
+            }),
+            invalidatesTags: (result, error, {questionId}) => [
+                {type: 'QuizQuestion', id: questionId.toString()},
+                {type: 'QuizQuestion', id: 'USER_LIST'},
+                {type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'},
+            ],
+        }),
+
+        // ========================================================================
+        // RELATIONSHIP ENDPOINTS (NEW)
+        // ========================================================================
+
+        createRelationship: builder.mutation<UserRelationship, CreateRelationshipRequest>({
+            query: (request) => ({
+                url: '../relationships',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}],
+        }),
+
+        getMyRelationships: builder.query<UserRelationship[], void>({
+            query: () => '../relationships',
+            providesTags: [{type: 'UserRelationship', id: 'LIST'}],
+        }),
+
+        getPendingRequests: builder.query<UserRelationship[], void>({
+            query: () => '../relationships/pending',
+            providesTags: [{type: 'UserRelationship', id: 'PENDING'}],
+        }),
+
+        acceptRelationship: builder.mutation<UserRelationship, number>({
+            query: (relationshipId) => ({
+                url: `../relationships/${relationshipId}/accept`,
+                method: 'PUT',
+            }),
+            invalidatesTags: [
+                {type: 'UserRelationship', id: 'LIST'},
+                {type: 'UserRelationship', id: 'PENDING'},
+                {type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'},
+            ],
+        }),
+
+        rejectRelationship: builder.mutation<void, number>({
+            query: (relationshipId) => ({
+                url: `../relationships/${relationshipId}/reject`,
+                method: 'PUT',
+            }),
+            invalidatesTags: [{type: 'UserRelationship', id: 'PENDING'}],
+        }),
+
+        removeRelationship: builder.mutation<void, number>({
+            query: (relationshipId) => ({
+                url: `../relationships/${relationshipId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: [
+                {type: 'UserRelationship', id: 'LIST'},
+                {type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'},
+            ],
+        }),
+
+        checkConnection: builder.query<boolean, number>({
+            query: (otherUserId) => `../relationships/check/${otherUserId}`,
+        }),
+
+        // ========================================================================
+        // EXISTING QUIZ SESSION ENDPOINTS (kept as-is)
+        // ========================================================================
 
         startQuizSession: builder.mutation<QuizSession, StartQuizSessionRequest>({
             query: (request) => ({
@@ -250,12 +498,33 @@ export const quizApi = createApi({
     }),
 });
 
+// ============================================================================
+// EXPORT HOOKS
+// ============================================================================
+
 export const {
+    // Existing question hooks
     useCreateUserQuestionMutation,
     useGetUserQuestionsQuery,
     useDeleteUserQuestionMutation,
     useGetQuestionsByDifficultyQuery,
     useSearchQuestionsQuery,
+
+    // NEW: Question access control hooks
+    useGetUserQuestionsPaginatedQuery,
+    useSearchAccessibleQuestionsQuery,
+    useUpdateQuestionVisibilityMutation,
+
+    // NEW: Relationship hooks
+    useCreateRelationshipMutation,
+    useGetMyRelationshipsQuery,
+    useGetPendingRequestsQuery,
+    useAcceptRelationshipMutation,
+    useRejectRelationshipMutation,
+    useRemoveRelationshipMutation,
+    useCheckConnectionQuery,
+
+    // Existing quiz session hooks
     useStartQuizSessionMutation,
     useBeginQuizSessionMutation,
     useSubmitRoundAnswerMutation,
