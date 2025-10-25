@@ -276,7 +276,7 @@ export const getVisibilityIcon = (visibility: QuestionVisibility): string => {
 export const quizApi = createApi({
     reducerPath: 'quizApi',
     baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api/quiz'),
-    tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions'],
+    tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions', 'Topics'],
     endpoints: (builder) => ({
 
         createUserQuestion: builder.mutation<QuizQuestion, CreateQuizQuestionRequest>({
@@ -286,6 +286,11 @@ export const quizApi = createApi({
                 body: request,
             }),
             invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}],
+        }),
+
+        getAvailableTopics: builder.query<string[], void>({
+            query: () => '/quiz-questions/topics',
+            providesTags: ['Topics'],
         }),
 
         getUserQuestions: builder.query<QuizQuestion[], void>({
@@ -586,6 +591,7 @@ export const {
     useGetQuizSessionQuery,
     useGetUserQuizSessionsQuery,
     useGetQuizRoundsQuery,
+    useGetAvailableTopicsQuery,
     useGetCurrentRoundQuery,
     useUpdateQuizSessionConfigMutation,
 

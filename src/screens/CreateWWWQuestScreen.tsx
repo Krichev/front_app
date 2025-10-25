@@ -30,6 +30,7 @@ import {
     StartQuizSessionRequest,
     useCreateUserQuestionMutation,
     useDeleteUserQuestionMutation,
+    useGetAvailableTopicsQuery,
     useGetUserQuestionsQuery,
     useStartQuizSessionMutation,
 } from '../entities/QuizState/model/slice/quizApi';
@@ -98,6 +99,12 @@ const CreateWWWQuestScreen: React.FC = () => {
     // NEW: Question creation and deletion hooks
     const [createQuestion, {isLoading: isCreatingQuestion}] = useCreateUserQuestionMutation();
     const [deleteQuestion] = useDeleteUserQuestionMutation();
+
+    const {
+        data: availableTopics = [],
+        isLoading: isLoadingTopics,
+        error: topicsError,
+    } = useGetAvailableTopicsQuery();
 
     // Basic Info
     const [title, setTitle] = useState('Quiz Challenge');
@@ -1081,7 +1088,9 @@ const CreateWWWQuestScreen: React.FC = () => {
                                     style={styles.input}
                                     onPress={() => setShowTopicPicker(true)}
                                 >
-                                    <Text>{searchTopic || 'Select topic...'}</Text>
+                                    <Text style={{color: searchTopic ? '#333' : '#999'}}>
+                                        {searchTopic || 'Select topic...'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                             <View style={styles.searchActions}>
@@ -1352,39 +1361,57 @@ const CreateWWWQuestScreen: React.FC = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Topic Picker Modal */}
+                {/* UPDATED TOPIC PICKER MODAL */}
                 <Modal
                     visible={showTopicPicker}
-                    transparent
+                    transparent={true}
                     animationType="slide"
                     onRequestClose={() => setShowTopicPicker(false)}
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalContent}>
                             <Text style={styles.modalTitle}>Select Topic</Text>
-                            <ScrollView style={styles.topicList}>
-                                <TouchableOpacity
-                                    style={styles.topicItem}
-                                    onPress={() => {
-                                        setSearchTopic('');
-                                        setShowTopicPicker(false);
-                                    }}
-                                >
-                                    <Text style={styles.topicItemText}>All Topics</Text>
-                                </TouchableOpacity>
-                                {availableTopics.map((topic, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={styles.topicItem}
-                                        onPress={() => {
-                                            setSearchTopic(topic);
-                                            setShowTopicPicker(false);
-                                        }}
-                                    >
-                                        <Text style={styles.topicItemText}>{topic}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
+
+                            {isLoadingTopics ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color="#007AFF" />
+                                    <Text style={styles.loadingText}>Loading topics...</Text>
+                                </View>
+                            ) : topicsError ? (
+                                <View style={styles.emptyContainer}>
+                                    <Text style={styles.emptyText}>Failed to load topics</Text>
+                                    <Text style={styles.emptySubtext}>Please try again later</Text>
+                                </View>
+                            ) : availableTopics.length === 0 ? (
+                                <View style={styles.emptyContainer}>
+                                    <Text style={styles.emptyText}>No topics available</Text>
+                                </View>
+                            ) : (
+                                <FlatList
+                                    data={availableTopics}
+                                    keyExtractor={(item, index) => `topic-${index}`}
+                                    style={styles.topicList}
+                                    renderItem={({item}) => (
+                                        <TouchableOpacity
+                                            style={styles.topicItem}
+                                            onPress={() => {
+                                                setSearchTopic(item);
+                                                setShowTopicPicker(false);
+                                            }}
+                                        >
+                                            <Text style={styles.topicItemText}>{item}</Text>
+                                            {searchTopic === item && (
+                                                <MaterialCommunityIcons
+                                                    name="check"
+                                                    size={24}
+                                                    color="#007AFF"
+                                                />
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                />
+                            )}
+
                             <TouchableOpacity
                                 style={styles.modalCloseButton}
                                 onPress={() => setShowTopicPicker(false)}
@@ -1425,7 +1452,6 @@ const CreateWWWQuestScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-    // ... Keep ALL your existing styles ...
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -1884,11 +1910,41 @@ const styles = StyleSheet.create({
         padding: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#e0e0e0',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
     topicItemText: {
         fontSize: 16,
         color: '#333',
     },
+    // loadingContainer: {
+    //     padding: 40,
+    //     alignItems: 'center',
+    //     justifyContent: 'center',
+    // },
+    // loadingText: {
+    //     marginTop: 12,
+    //     fontSize: 16,
+    //     color: '#666',
+    // },
+    // emptyContainer: {
+    //     padding: 40,
+    //     alignItems: 'center',
+    //     justifyContent: 'center',
+    // },
+    // emptyText: {
+    //     fontSize: 16,
+    //     fontWeight: '600',
+    //     color: '#666',
+    //     textAlign: 'center',
+    // },
+    // emptySubtext: {
+    //     fontSize: 14,
+    //     color: '#999',
+    //     textAlign: 'center',
+    //     marginTop: 8,
+    // },
     modalCloseButton: {
         backgroundColor: '#007AFF',
         padding: 16,
