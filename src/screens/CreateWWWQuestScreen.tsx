@@ -37,7 +37,7 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {APIDifficulty, QuestionData, QuestionService} from '../services/wwwGame/questionService';
-import {CreateQuestionWithMedia, QuestionFormData} from './components/CreateQuestionWithMedia';
+import CreateQuestionWithMedia, {QuestionFormData} from "./components/CreateQuestionWithMedia.tsx";
 
 
 export type QuestionType = 'text' | 'audio' | 'video';
@@ -1415,7 +1415,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                         </TouchableOpacity>
                     </View>
                     <CreateQuestionWithMedia
-                        onSubmit={handleMediaQuestionSubmit}
+                        onQuestionSubmit={handleMediaQuestionSubmit}
                         onCancel={() => setShowMediaQuestionModal(false)}
                     />
                 </SafeAreaView>
