@@ -1,10 +1,47 @@
 // src/entities/QuizState/model/slice/quizApi.ts - MERGED VERSION
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import {MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
 
 // ============================================================================
 // EXISTING TYPES (from your current file)
 // ============================================================================
+
+export interface CreateQuestionWithMediaRequest {
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    source?: string;
+    questionType?: QuestionType;
+    mediaFileId?: number;
+    questionMediaUrl?: string;
+    questionMediaId?: string;
+    questionMediaType?: MediaType;
+}
+
+export interface QuizQuestionResponse {
+    id: number;
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    source?: string;
+    questionType: QuestionType;
+    questionMediaUrl?: string;
+    questionMediaId?: string;
+    questionMediaType?: MediaType;
+    questionThumbnailUrl?: string;
+    isUserCreated: boolean;
+    creatorId?: number;
+    creatorUsername?: string;
+    isActive: boolean;
+    usageCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
 
 export interface QuizConfig {
     gameType: 'WWW';
@@ -239,11 +276,8 @@ export const getVisibilityIcon = (visibility: QuestionVisibility): string => {
 export const quizApi = createApi({
     reducerPath: 'quizApi',
     baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api/quiz'),
-    tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship'],
+    tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions'],
     endpoints: (builder) => ({
-        // ========================================================================
-        // EXISTING QUESTION ENDPOINTS (kept as-is)
-        // ========================================================================
 
         createUserQuestion: builder.mutation<QuizQuestion, CreateQuizQuestionRequest>({
             query: (request) => ({
@@ -495,6 +529,26 @@ export const quizApi = createApi({
                 {type: 'QuizSession', id: sessionId}
             ],
         }),
+        createUserQuestionWithMedia: builder.mutation<QuizQuestionResponse, CreateQuestionWithMediaRequest>({
+            query: (questionData) => ({
+                url: '/api/quiz/questions',
+                method: 'POST',
+                body: questionData,
+            }),
+            invalidatesTags: ['UserQuestions'],
+        }),
+        // getUserQuestions: builder.query<QuizQuestionResponse[], void>({
+        //     query: () => '/api/quiz/questions/me',
+        //     providesTags: ['UserQuestions'],
+        // }),
+        //
+        // deleteUserQuestion: builder.mutation<{ message: string }, number>({
+        //     query: (questionId) => ({
+        //         url: `/api/quiz/questions/${questionId}`,
+        //         method: 'DELETE',
+        //     }),
+        //     invalidatesTags: ['UserQuestions'],
+        // }),
     }),
 });
 
@@ -534,4 +588,6 @@ export const {
     useGetQuizRoundsQuery,
     useGetCurrentRoundQuery,
     useUpdateQuizSessionConfigMutation,
+
+    useCreateUserQuestionWithMediaMutation,
 } = quizApi;

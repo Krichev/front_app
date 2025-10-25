@@ -1,11 +1,11 @@
 // src/screens/CreateWWWQuestScreen.tsx
-// ENHANCED VERSION with Access Control + All Existing Features
 
 import React, {useEffect, useMemo, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
     FlatList,
+    Image,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -37,8 +37,23 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import {APIDifficulty, QuestionData, QuestionService} from '../services/wwwGame/questionService';
+import {CreateQuestionWithMedia, QuestionFormData} from './components/CreateQuestionWithMedia';
+
 
 export type QuestionType = 'text' | 'audio' | 'video';
+
+interface MediaQuestionData {
+    id?: string;
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
+    mediaFileId?: number;
+    questionMediaUrl?: string;
+    questionMediaType?: string;
+}
 
 interface MultimediaQuestionData {
     id?: string;
@@ -72,6 +87,10 @@ const CreateWWWQuestScreen: React.FC = () => {
     const navigation = useNavigation<CreateWWWQuestScreenNavigationProp>();
     const {user} = useSelector((state: RootState) => state.auth);
 
+
+    const [mediaQuestions, setMediaQuestions] = useState<MediaQuestionData[]>([]);
+    // Add this state variable in your component
+    const [showMediaQuestionModal, setShowMediaQuestionModal] = useState(false);
     // API hooks
     const [createChallenge, {isLoading: isCreatingChallenge}] = useCreateChallengeMutation();
     const [startQuizSession, {isLoading: isStartingSession}] = useStartQuizSessionMutation();
@@ -213,6 +232,49 @@ const CreateWWWQuestScreen: React.FC = () => {
 
         return [...selectedAppQuestions, ...selectedUserQuestionsData, ...newCustomQuestionsData];
     }, [selectedAppQuestionIds, selectedUserQuestionIds, newCustomQuestions, appQuestions, transformedUserQuestions]);
+
+    const handleMediaQuestionSubmit = async (questionData: QuestionFormData) => {
+        try {
+            // Create the question with media using the API
+            const questionRequest = {
+                question: questionData.question,
+                answer: questionData.answer,
+                difficulty: questionData.difficulty,
+                topic: questionData.topic,
+                additionalInfo: questionData.additionalInfo,
+                questionType: questionData.questionType,
+                mediaFileId: questionData.media?.mediaId ? Number(questionData.media.mediaId) : undefined,
+                questionMediaUrl: questionData.media?.mediaUrl,
+                questionMediaId: questionData.media?.mediaId,
+                questionMediaType: questionData.media?.mediaType,
+            };
+
+            // Call your API to save the question
+            // You'll need to import your quiz API mutations
+            // const result = await createUserQuestionMutation(questionRequest).unwrap();
+
+            // For now, add to local state
+            const newQuestion: MultimediaQuestionData = {
+                id: `temp_${Date.now()}`,
+                question: questionData.question,
+                answer: questionData.answer,
+                difficulty: questionData.difficulty,
+                topic: questionData.topic,
+                additionalInfo: questionData.additionalInfo,
+                questionType: questionData.questionType === 'TEXT' ? 'text' :
+                    questionData.questionType === 'IMAGE' ? 'text' :
+                        questionData.questionType === 'VIDEO' ? 'video' : 'audio',
+            };
+
+            setNewCustomQuestions(prev => [...prev, newQuestion]);
+            setShowMediaQuestionModal(false);
+            Alert.alert('Success', 'Question with media added successfully!');
+        } catch (error) {
+            console.error('Error creating question with media:', error);
+            Alert.alert('Error', 'Failed to create question. Please try again.');
+        }
+    };
+
 
     const totalSelectedQuestions = selectedQuestionsArray.length;
     const previewTotalPages = Math.ceil(totalSelectedQuestions / questionsPerPreviewPage);
@@ -500,6 +562,92 @@ const CreateWWWQuestScreen: React.FC = () => {
         return false;
     };
 
+    // Add this render function for media questions preview
+    const renderMediaQuestionPreview = (item: MediaQuestionData, index: number) => {
+        const isSelected = selectedUserQuestionIds.has(item.id || '');
+        const hasMedia = item.questionMediaUrl && item.questionType !== 'TEXT';
+
+        return (
+            <TouchableOpacity
+                key={item.id || index}
+                style={[
+                    styles.questionCard,
+                    isSelected && styles.questionCardSelected
+                ]}
+                onPress={() => {
+                    if (item.id) {
+                        const newSelection = new Set(selectedUserQuestionIds);
+                        if (newSelection.has(item.id)) {
+                            newSelection.delete(item.id);
+                        } else {
+                            newSelection.add(item.id);
+                        }
+                        setSelectedUserQuestionIds(newSelection);
+                    }
+                }}
+            >
+                <View style={styles.questionHeader}>
+                    <View style={styles.questionBadges}>
+                        <View style={[styles.badge, styles.difficultyBadge]}>
+                            <Text style={styles.badgeText}>{item.difficulty}</Text>
+                        </View>
+                        {hasMedia && (
+                            <View style={[styles.badge, styles.mediaBadge]}>
+                                <MaterialCommunityIcons
+                                    name={
+                                        item.questionType === 'IMAGE' ? 'image' :
+                                            item.questionType === 'VIDEO' ? 'video' :
+                                                item.questionType === 'AUDIO' ? 'music' : 'text'
+                                    }
+                                    size={14}
+                                    color="#fff"
+                                />
+                                <Text style={styles.badgeText}>{item.questionType}</Text>
+                            </View>
+                        )}
+                    </View>
+                    {isSelected && (
+                        <MaterialCommunityIcons name="check-circle" size={24} color="#4CAF50"/>
+                    )}
+                </View>
+
+                {item.topic && (
+                    <Text style={styles.questionTopic}>Topic: {item.topic}</Text>
+                )}
+
+                <Text style={styles.questionText}>{item.question}</Text>
+
+                {hasMedia && item.questionMediaUrl && (
+                    <View style={styles.mediaPreviewContainer}>
+                        {item.questionType === 'IMAGE' && (
+                            <Image
+                                source={{uri: item.questionMediaUrl}}
+                                style={styles.questionMediaPreview}
+                                resizeMode="cover"
+                            />
+                        )}
+                        {item.questionType === 'VIDEO' && (
+                            <View style={styles.videoPlaceholder}>
+                                <MaterialCommunityIcons name="play-circle" size={48} color="#fff"/>
+                                <Text style={styles.videoPlaceholderText}>Video attached</Text>
+                            </View>
+                        )}
+                        {item.questionType === 'AUDIO' && (
+                            <View style={styles.audioPlaceholder}>
+                                <MaterialCommunityIcons name="volume-high" size={32} color="#4CAF50"/>
+                                <Text style={styles.audioPlaceholderText}>Audio file attached</Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                <View style={styles.questionFooter}>
+                    <Text style={styles.answerPreview}>Answer: {item.answer}</Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
     // NEW: Render Add Question Modal
     const renderAddQuestionModal = () => (
         <Modal
@@ -513,7 +661,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                     <View style={styles.addQuestionModalHeader}>
                         <Text style={styles.addQuestionModalTitle}>Add New Question</Text>
                         <TouchableOpacity onPress={() => setShowAddQuestionModal(false)}>
-                            <MaterialCommunityIcons name="close" size={28} color="#666" />
+                            <MaterialCommunityIcons name="close" size={28} color="#666"/>
                         </TouchableOpacity>
                     </View>
 
@@ -552,9 +700,9 @@ const CreateWWWQuestScreen: React.FC = () => {
                                 onValueChange={(value) => setNewQuestion({...newQuestion, difficulty: value})}
                                 style={styles.picker}
                             >
-                                <Picker.Item label="Easy" value="EASY" />
-                                <Picker.Item label="Medium" value="MEDIUM" />
-                                <Picker.Item label="Hard" value="HARD" />
+                                <Picker.Item label="Easy" value="EASY"/>
+                                <Picker.Item label="Medium" value="MEDIUM"/>
+                                <Picker.Item label="Hard" value="HARD"/>
                             </Picker>
                         </View>
 
@@ -610,7 +758,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                     </View>
                                     <View style={styles.radioButton}>
                                         {newQuestion.visibility === visibility && (
-                                            <View style={styles.radioButtonInner} />
+                                            <View style={styles.radioButtonInner}/>
                                         )}
                                     </View>
                                 </TouchableOpacity>
@@ -644,12 +792,19 @@ const CreateWWWQuestScreen: React.FC = () => {
                             disabled={isCreatingQuestion}
                         >
                             {isCreatingQuestion ? (
-                                <ActivityIndicator color="#fff" />
+                                <ActivityIndicator color="#fff"/>
                             ) : (
                                 <Text style={styles.saveButtonText}>Add Question</Text>
                             )}
                         </TouchableOpacity>
                     </View>
+                    <TouchableOpacity
+                        style={[styles.addButton, styles.mediaButton]}
+                        onPress={() => setShowMediaQuestionModal(true)}
+                    >
+                        <MaterialCommunityIcons name="image-plus" size={20} color="#fff"/>
+                        <Text style={styles.addButtonText}>Add Question with Media</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </Modal>
@@ -695,7 +850,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                     handleDeleteUserQuestion(qId);
                                 }}
                             >
-                                <MaterialCommunityIcons name="delete" size={24} color="#ff4444" />
+                                <MaterialCommunityIcons name="delete" size={24} color="#ff4444"/>
                             </TouchableOpacity>
                         )}
                         {questionSource === 'app' && (
@@ -1016,7 +1171,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                                     style={styles.addQuestionButton}
                                     onPress={() => setShowAddQuestionModal(true)}
                                 >
-                                    <MaterialCommunityIcons name="plus-circle" size={24} color="#007AFF" />
+                                    <MaterialCommunityIcons name="plus-circle" size={24} color="#007AFF"/>
                                     <Text style={styles.addQuestionButtonText}>Add Question</Text>
                                 </TouchableOpacity>
                             </View>
@@ -1243,6 +1398,28 @@ const CreateWWWQuestScreen: React.FC = () => {
                 {/* NEW: Add Question Modal */}
                 {renderAddQuestionModal()}
             </KeyboardAvoidingView>
+
+            <Modal
+                visible={showMediaQuestionModal}
+                animationType="slide"
+                onRequestClose={() => setShowMediaQuestionModal(false)}
+            >
+                <SafeAreaView style={{flex: 1}}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Create Question with Media</Text>
+                        <TouchableOpacity
+                            onPress={() => setShowMediaQuestionModal(false)}
+                            style={styles.modalCloseButton}
+                        >
+                            <MaterialCommunityIcons name="close" size={24} color="#333"/>
+                        </TouchableOpacity>
+                    </View>
+                    <CreateQuestionWithMedia
+                        onSubmit={handleMediaQuestionSubmit}
+                        onCancel={() => setShowMediaQuestionModal(false)}
+                    />
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -1731,7 +1908,7 @@ const styles = StyleSheet.create({
         color: 'transparent',
         textShadowColor: '#666',
         textShadowRadius: 20,
-        textShadowOffset: { width: 0, height: 0 },
+        textShadowOffset: {width: 0, height: 0},
     },
     showAnswerButton: {
         flexDirection: 'row',
@@ -1902,6 +2079,138 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         backgroundColor: '#4CAF50',
     },
+    mediaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 8,
+        backgroundColor: '#2196F3',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+        backgroundColor: 'white',
+    },
+    addMediaQuestionButton: {
+        backgroundColor: '#2196F3',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 12,
+        gap: 8,
+        marginTop: 12,
+    },
+    addMediaQuestionButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    mediaQuestionsPreview: {
+        marginTop: 20,
+    },
+    mediaQuestionsList: {
+        maxHeight: 400,
+    },
+    mediaPreviewContainer: {
+        marginTop: 12,
+        marginBottom: 8,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    questionMediaPreview: {
+        width: '100%',
+        height: 150,
+        backgroundColor: '#f0f0f0',
+    },
+    videoPlaceholder: {
+        width: '100%',
+        height: 150,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    videoPlaceholderText: {
+        color: '#fff',
+        marginTop: 8,
+        fontSize: 14,
+    },
+    audioPlaceholder: {
+        width: '100%',
+        padding: 24,
+        backgroundColor: '#f8f8f8',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        borderRadius: 8,
+    },
+    audioPlaceholderText: {
+        color: '#666',
+        marginTop: 8,
+        fontSize: 14,
+    },
+    mediaBadge: {
+        backgroundColor: '#2196F3',
+        flexDirection: 'row',
+        gap: 4,
+    },
+    modalContainer: {
+        flex: 1,
+        backgroundColor: '#f5f5f5',
+    },
+    questionFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
+    }, badge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    questionTopic: {
+        fontSize: 12,
+        color: '#888',
+        fontStyle: 'italic',
+        marginBottom: 4,
+    },
+
+
+    // modalHeader: {
+    //     flexDirection: 'row',
+    //     justifyContent: 'space-between',
+    //     alignItems: 'center',
+    //     padding: 16,
+    //     borderBottomWidth: 1,
+    //     borderBottomColor: '#e0e0e0',
+    //     backgroundColor: 'white',
+    // },
+    // modalTitle: {
+    //     fontSize: 18,
+    //     fontWeight: 'bold',
+    //     color: '#333',
+    // },
+    // modalCloseButton: {
+    //     padding: 4,
+    // },
+    // modalTitle: {
+    //     fontSize: 18,
+    //     fontWeight: 'bold',
+    //     color: '#333',
+    // },
+    // modalCloseButton: {
+    //     padding: 4,
+    // },
 });
 
 export default CreateWWWQuestScreen;
