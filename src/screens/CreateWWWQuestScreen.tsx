@@ -166,7 +166,6 @@ const CreateWWWQuestScreen: React.FC = () => {
     const [searchKeyword, setSearchKeyword] = useState('');
     const [searchDifficulty, setSearchDifficulty] = useState<APIDifficulty | 'ALL'>('ALL');
     const [searchTopic, setSearchTopic] = useState('');
-    const [availableTopics, setAvailableTopics] = useState<string[]>([]);
     const [showTopicPicker, setShowTopicPicker] = useState(false);
 
     // Pagination
@@ -291,19 +290,9 @@ const CreateWWWQuestScreen: React.FC = () => {
 
     useEffect(() => {
         if (questionSource === 'app') {
-            fetchAvailableTopics();
             searchAppQuestions();
         }
     }, [questionSource]);
-
-    const fetchAvailableTopics = async () => {
-        try {
-            const topics = await QuestionService.getAvailableTopics();
-            setAvailableTopics(topics);
-        } catch (error) {
-            console.error('Error fetching topics:', error);
-        }
-    };
 
     const searchAppQuestions = async () => {
         setIsLoadingAppQuestions(true);

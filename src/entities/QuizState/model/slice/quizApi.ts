@@ -275,7 +275,7 @@ export const getVisibilityIcon = (visibility: QuestionVisibility): string => {
 
 export const quizApi = createApi({
     reducerPath: 'quizApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api/quiz'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
     tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions', 'Topics'],
     endpoints: (builder) => ({
 
