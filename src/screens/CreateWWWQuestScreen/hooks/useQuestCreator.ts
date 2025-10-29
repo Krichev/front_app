@@ -1,10 +1,9 @@
 // src/screens/CreateWWWQuestScreen/hooks/useQuestCreator.ts
 import {useState} from 'react';
 import {Alert} from 'react-native';
-import {
-    useCreateChallengeMutation,
-    useStartQuizSessionMutation,
-} from '../../../entities/ChallengeState/model/slice/challengeApi';
+import {useCreateChallengeMutation} from '../../../entities/ChallengeState/model/slice/challengeApi';
+import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/slice/quizApi';
+import {PaymentType} from '../../../entities/ChallengeState/model/types';
 
 export interface QuizConfig {
     gameType: string;
@@ -77,16 +76,20 @@ export const useQuestCreator = () => {
         selectedQuestions: SelectedQuestion[]
     ): Promise<{ success: boolean; sessionId?: string; challengeId?: string }> => {
         try {
-            // Step 1: Create Challenge
+            console.log('Creating quest with config:', quizConfig);
+
+            // Step 1: Create Challenge with ALL required fields
             const challengePayload = {
                 title,
                 description,
                 reward,
-                challengeType: 'WWW_QUIZ',
-                difficulty: quizConfig.difficulty.toUpperCase(),
+                type: 'QUIZ',
+                visibility: 'PUBLIC',
+                status: 'ACTIVE',
+                userId: userId,
+                paymentType: PaymentType.FREE,  // ✅ Use enum instead of string
                 startDate: new Date().toISOString(),
                 endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-                creatorUserId: userId,
             };
 
             const challengeResult = await createChallenge(challengePayload).unwrap();
@@ -96,45 +99,38 @@ export const useQuestCreator = () => {
                 throw new Error('Challenge creation failed - no ID returned');
             }
 
-            // Step 2: Prepare quiz session
-            const questionsForSession = selectedQuestions.map((q) => {
-                const questionData: any = {
-                    question: q.question,
-                    answer: q.answer,
-                    difficulty: normalizeDifficulty(q.difficulty),
-                    topic: q.topic || '',
-                    additionalInfo: q.additionalInfo || '',
-                };
+            // Step 2: Prepare custom question IDs (if questions have IDs from app/user)
+            const customQuestionIds: number[] = selectedQuestions
+                .filter(q => (q.source === 'app' || q.source === 'user') && q.id)
+                .map(q => parseInt(q.id!, 10))
+                .filter(id => !isNaN(id));
 
-                if (q.source === 'app' || q.source === 'user') {
-                    questionData.questionId = parseInt(q.id || '0', 10);
-                }
+            // Step 3: Determine question source
+            const questionSource = customQuestionIds.length > 0 ? 'user' : 'app';
 
-                return questionData;
-            });
-
+            // Step 4: Create session payload with ALL required fields
             const sessionPayload = {
                 challengeId: challengeResult.id,
-                config: {
-                    gameType: quizConfig.gameType,
-                    teamName: quizConfig.teamName,
-                    teamMembers: quizConfig.teamMembers,
-                    difficulty: quizConfig.difficulty,
-                    roundTime: quizConfig.roundTime,
-                    roundCount: Math.min(quizConfig.roundCount, selectedQuestions.length),
-                    enableAIHost: quizConfig.enableAIHost,
-                    teamBased: quizConfig.teamBased,
-                },
-                questions: questionsForSession,
+                teamName: quizConfig.teamName || 'My Team',
+                teamMembers: quizConfig.teamMembers.length > 0 ? quizConfig.teamMembers : ['Player 1'],
+                difficulty: normalizeDifficulty(quizConfig.difficulty),
+                totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length),
+                roundTimeSeconds: quizConfig.roundTime,           // ✅ Required field
+                timePerRound: quizConfig.roundTime,               // ✅ Required field (same as roundTimeSeconds)
+                enableAiHost: quizConfig.enableAIHost,
+                questionSource: questionSource as 'app' | 'user',
+                customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
             };
 
-            // Step 3: Start quiz session
+            console.log('Starting quiz session with payload:', sessionPayload);
+
+            // Step 5: Start quiz session
             const sessionResult = await startQuizSession(sessionPayload).unwrap();
             console.log('Quiz session started:', sessionResult);
 
             return {
                 success: true,
-                sessionId: sessionResult.sessionId,
+                sessionId: sessionResult.id,
                 challengeId: challengeResult.id.toString(),
             };
         } catch (error: any) {

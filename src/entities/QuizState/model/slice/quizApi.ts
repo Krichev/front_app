@@ -304,7 +304,7 @@ export const quizApi = createApi({
                     : [{type: 'QuizQuestion', id: 'USER_LIST'}],
         }),
 
-        deleteUserQuestion: builder.mutation<{message: string}, string>({
+        deleteUserQuestion: builder.mutation<{message: string}, number>({
             query: (questionId) => ({
                 url: `/questions/${questionId}`,
                 method: 'DELETE',

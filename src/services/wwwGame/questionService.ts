@@ -11,13 +11,16 @@ import {QuestionVisibility} from "../../entities/QuizState/model/types/question.
 // Types matching backend DTOs
 export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
 export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type QuestionSource = 'app' | 'user';
+// export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
+export type QuestionType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
 
-export enum QuestionType {
-    WHAT_WHERE_WHEN = 'WHAT_WHERE_WHEN',
-    BLITZ = 'BLITZ',
-    OWN_QUESTION = 'OWN_QUESTION',
-    STANDARD = 'STANDARD'
-}
+// export enum QuestionType {
+//     WHAT_WHERE_WHEN = 'WHAT_WHERE_WHEN',
+//     BLITZ = 'BLITZ',
+//     OWN_QUESTION = 'OWN_QUESTION',
+//     STANDARD = 'STANDARD'
+// }
 
 export enum MediaType {
     IMAGE = 'IMAGE',
@@ -67,6 +70,7 @@ export interface QuestionData {
     source?: string;
     additionalInfo?: string;
     topic?: string;
+    visibility?: QuestionVisibility;
 }
 
 export interface UserQuestion {

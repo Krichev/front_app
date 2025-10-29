@@ -1,6 +1,6 @@
 // src/screens/CreateWWWQuestScreen/components/SelectedQuestionsPreview.tsx
 import React, {useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {MultimediaQuestionData} from '../hooks/useQuestionsManager';
 
@@ -40,6 +40,22 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
             }
             return newSet;
         });
+    };
+
+    // ✅ Helper function to get difficulty style with proper typing
+    const getDifficultyStyle = (difficulty?: string): ViewStyle => {
+        const normalizedDifficulty = (difficulty || 'MEDIUM').toUpperCase();
+
+        switch (normalizedDifficulty) {
+            case 'EASY':
+                return styles.difficultyEasy;
+            case 'MEDIUM':
+                return styles.difficultyMedium;
+            case 'HARD':
+                return styles.difficultyHard;
+            default:
+                return styles.difficultyMedium;
+        }
     };
 
     if (totalQuestions === 0) {
@@ -86,84 +102,74 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                         <View
                                             style={[
                                                 styles.difficultyBadge,
-                                                styles[`difficulty${question.difficulty || 'MEDIUM'}`],
+                                                getDifficultyStyle(question.difficulty), // ✅ Use helper function
                                             ]}
                                         >
                                             <Text style={styles.difficultyText}>
-                                                {question.difficulty}
+                                                {question.difficulty || 'MEDIUM'}
                                             </Text>
                                         </View>
                                         <View style={styles.sourceBadge}>
                                             <Text style={styles.sourceText}>
                                                 {question.source === 'app' ? 'App' :
-                                                    question.source === 'user' ? 'My' : 'Custom'}
+                                                    question.source === 'user' ? 'User' : 'Custom'}
                                             </Text>
                                         </View>
                                     </View>
-                                    {isCustom && (
+                                    <View style={styles.previewCardHeaderRight}>
                                         <TouchableOpacity
-                                            onPress={() => {
-                                                const customIndex = newCustomQuestions.findIndex(
-                                                    (q) => q.id === question.id
-                                                );
-                                                if (customIndex !== -1) {
-                                                    onRemoveCustomQuestion(customIndex);
-                                                }
-                                            }}
-                                            style={styles.removeButton}
+                                            onPress={() => toggleExpanded(globalIndex)}
+                                            style={styles.expandButton}
                                         >
                                             <MaterialCommunityIcons
-                                                name="close-circle"
-                                                size={24}
-                                                color="#F44336"
+                                                name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                                                size={20}
+                                                color="#007AFF"
                                             />
                                         </TouchableOpacity>
-                                    )}
+                                        {isCustom && (
+                                            <TouchableOpacity
+                                                onPress={() => onRemoveCustomQuestion(globalIndex)}
+                                                style={styles.removeButton}
+                                            >
+                                                <MaterialCommunityIcons
+                                                    name="close-circle"
+                                                    size={20}
+                                                    color="#F44336"
+                                                />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
                                 </View>
 
-                                <Text
-                                    style={styles.questionText}
-                                    numberOfLines={isExpanded ? undefined : 2}
-                                >
-                                    {question.question}
-                                </Text>
-
-                                {question.topic && (
-                                    <Text style={styles.topicText}>
-                                        Topic: {question.topic}
+                                {/* Question Preview (Collapsed) */}
+                                {!isExpanded && (
+                                    <Text style={styles.questionPreview} numberOfLines={2}>
+                                        {question.question}
                                     </Text>
                                 )}
 
-                                <TouchableOpacity
-                                    onPress={() => toggleExpanded(globalIndex)}
-                                    style={styles.expandButton}
-                                >
-                                    <Text style={styles.expandButtonText}>
-                                        {isExpanded ? 'Show Less' : 'Show More'}
-                                    </Text>
-                                    <MaterialCommunityIcons
-                                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                                        size={20}
-                                        color="#007AFF"
-                                    />
-                                </TouchableOpacity>
-
+                                {/* Question Details (Expanded) */}
                                 {isExpanded && (
                                     <View style={styles.expandedContent}>
-                                        <View style={styles.answerContainer}>
-                                            <Text style={styles.answerLabel}>Answer:</Text>
-                                            <Text style={styles.answerText}>
-                                                {question.answer}
-                                            </Text>
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.detailLabel}>Question:</Text>
+                                            <Text style={styles.detailText}>{question.question}</Text>
                                         </View>
+                                        <View style={styles.detailRow}>
+                                            <Text style={styles.detailLabel}>Answer:</Text>
+                                            <Text style={styles.detailText}>{question.answer}</Text>
+                                        </View>
+                                        {question.topic && (
+                                            <View style={styles.detailRow}>
+                                                <Text style={styles.detailLabel}>Topic:</Text>
+                                                <Text style={styles.detailText}>{question.topic}</Text>
+                                            </View>
+                                        )}
                                         {question.additionalInfo && (
-                                            <View style={styles.additionalInfoContainer}>
-                                                <Text style={styles.additionalInfoLabel}>
-                                                    Additional Info:
-                                                </Text>
-                                                <Text style={styles.additionalInfoText}>
-                                                    {question.additionalInfo}
-                                                </Text>
+                                            <View style={styles.detailRow}>
+                                                <Text style={styles.detailLabel}>Additional Info:</Text>
+                                                <Text style={styles.detailText}>{question.additionalInfo}</Text>
                                             </View>
                                         )}
                                     </View>
@@ -172,7 +178,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                         );
                     })}
 
-                    {/* Pagination */}
+                    {/* Pagination Controls */}
                     {totalPages > 1 && (
                         <View style={styles.paginationContainer}>
                             <TouchableOpacity
@@ -180,10 +186,14 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                     styles.paginationButton,
                                     previewPage === 1 && styles.paginationButtonDisabled,
                                 ]}
-                                onPress={() => setPreviewPage(previewPage - 1)}
+                                onPress={() => setPreviewPage(Math.max(1, previewPage - 1))}
                                 disabled={previewPage === 1}
                             >
-                                <Text style={styles.paginationButtonText}>← Previous</Text>
+                                <MaterialCommunityIcons
+                                    name="chevron-left"
+                                    size={20}
+                                    color={previewPage === 1 ? '#ccc' : '#007AFF'}
+                                />
                             </TouchableOpacity>
 
                             <Text style={styles.paginationText}>
@@ -193,12 +203,16 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                             <TouchableOpacity
                                 style={[
                                     styles.paginationButton,
-                                    previewPage >= totalPages && styles.paginationButtonDisabled,
+                                    previewPage === totalPages && styles.paginationButtonDisabled,
                                 ]}
-                                onPress={() => setPreviewPage(previewPage + 1)}
-                                disabled={previewPage >= totalPages}
+                                onPress={() => setPreviewPage(Math.min(totalPages, previewPage + 1))}
+                                disabled={previewPage === totalPages}
                             >
-                                <Text style={styles.paginationButtonText}>Next →</Text>
+                                <MaterialCommunityIcons
+                                    name="chevron-right"
+                                    size={20}
+                                    color={previewPage === totalPages ? '#ccc' : '#007AFF'}
+                                />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -210,17 +224,20 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
 
 const styles = StyleSheet.create({
     section: {
-        padding: 16,
         backgroundColor: '#fff',
-        marginBottom: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     previewHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 8,
     },
     previewHeaderLeft: {
         flexDirection: 'row',
@@ -255,6 +272,11 @@ const styles = StyleSheet.create({
         gap: 8,
         flex: 1,
     },
+    previewCardHeaderRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
     questionNumber: {
         fontSize: 14,
         fontWeight: '700',
@@ -265,20 +287,11 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderRadius: 12,
     },
-    difficultyEASY: {
-        backgroundColor: '#4CAF50',
-    },
     difficultyEasy: {
         backgroundColor: '#4CAF50',
     },
-    difficultyMEDIUM: {
-        backgroundColor: '#FF9800',
-    },
     difficultyMedium: {
         backgroundColor: '#FF9800',
-    },
-    difficultyHARD: {
-        backgroundColor: '#F44336',
     },
     difficultyHard: {
         backgroundColor: '#F44336',
@@ -299,96 +312,52 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
     },
+    expandButton: {
+        padding: 4,
+    },
     removeButton: {
         padding: 4,
     },
-    questionText: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 8,
-        fontWeight: '500',
-    },
-    topicText: {
+    questionPreview: {
         fontSize: 14,
-        color: '#666',
-        fontStyle: 'italic',
-        marginBottom: 8,
-    },
-    expandButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginTop: 8,
-    },
-    expandButtonText: {
-        fontSize: 14,
-        color: '#007AFF',
-        fontWeight: '600',
+        color: '#555',
+        lineHeight: 20,
     },
     expandedContent: {
-        marginTop: 12,
+        gap: 12,
     },
-    answerContainer: {
-        padding: 12,
-        backgroundColor: '#e8f5e9',
-        borderRadius: 8,
-        borderLeftWidth: 4,
-        borderLeftColor: '#4CAF50',
-        marginBottom: 12,
+    detailRow: {
+        gap: 4,
     },
-    answerLabel: {
+    detailLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#666',
+    },
+    detailText: {
         fontSize: 14,
-        fontWeight: '700',
-        color: '#2E7D32',
-        marginBottom: 4,
-    },
-    answerText: {
-        fontSize: 14,
-        color: '#1B5E20',
-    },
-    additionalInfoContainer: {
-        padding: 12,
-        backgroundColor: '#fff3e0',
-        borderRadius: 8,
-        borderLeftWidth: 4,
-        borderLeftColor: '#FF9800',
-    },
-    additionalInfoLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#E65100',
-        marginBottom: 4,
-    },
-    additionalInfoText: {
-        fontSize: 14,
-        color: '#E65100',
+        color: '#333',
+        lineHeight: 20,
     },
     paginationContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
         marginTop: 16,
-        gap: 12,
+        gap: 16,
     },
     paginationButton: {
-        flex: 1,
-        padding: 12,
-        backgroundColor: '#007AFF',
+        padding: 8,
         borderRadius: 8,
-        alignItems: 'center',
+        backgroundColor: '#f0f0f0',
     },
     paginationButtonDisabled: {
-        backgroundColor: '#ccc',
-    },
-    paginationButtonText: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 14,
+        backgroundColor: '#f5f5f5',
     },
     paginationText: {
         fontSize: 14,
-        color: '#666',
         fontWeight: '600',
+        color: '#333',
     },
 });
 

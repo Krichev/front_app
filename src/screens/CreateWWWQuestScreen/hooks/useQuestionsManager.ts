@@ -8,22 +8,23 @@ import {
     useGetAvailableTopicsQuery,
     useGetUserQuestionsQuery,
 } from '../../../entities/QuizState/model/slice/quizApi';
-import {QuestionService} from '../../../entities/QuizState/services/QuestionService';
+import {QuestionData, QuestionService} from "../../../services/wwwGame";
+import {APIDifficulty, QuestionSource} from "../../../services/wwwGame/questionService.ts";
 
-export type QuestionSource = 'app' | 'user';
-export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
-export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
+
+// export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+// export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
 export type QuestionType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
 
-export interface QuestionData {
-    id?: string;
-    question: string;
-    answer: string;
-    difficulty: 'Easy' | 'Medium' | 'Hard';
-    topic?: string;
-    additionalInfo?: string;
-    visibility?: QuestionVisibility;
-}
+// export interface QuestionData {
+//     id?: string;
+//     question: string;
+//     answer: string;
+//     difficulty: 'Easy' | 'Medium' | 'Hard';
+//     topic?: string;
+//     additionalInfo?: string;
+//     visibility?: QuestionVisibility;
+// }
 
 export interface CustomQuestion {
     question: string;
