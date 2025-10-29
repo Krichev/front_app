@@ -3,7 +3,7 @@ import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import KeychainService from '../../../../services/auth/KeychainService';
 
 export interface User {
-    id: string;
+    id: number;
     username: string;
     email: string;
     bio?: string;

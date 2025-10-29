@@ -4,6 +4,9 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -13,12 +16,30 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Picker} from '@react-native-picker/picker';
+import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import FileService, {ProcessedFileInfo} from "../../services/speech/FileService";
 import MediaUploadService from "../../services/media/MediaUploadService";
+import {QuestionService, UserQuestion} from '../../services/wwwGame/questionService';
+import {
+    getVisibilityDescription,
+    getVisibilityIcon,
+    getVisibilityLabel,
+    QuestionVisibility
+} from '../../entities/QuizState/model/slice/quizApi';
 
 // ============================================================================
 // TYPES & INTERFACES
 // ============================================================================
+
+type RootStackParamList = {
+    UserQuestions: undefined;
+    CreateUserQuestion: undefined;
+    EditUserQuestion: { question: UserQuestion };
+};
+
+type CreateQuestionRouteProp = RouteProp<RootStackParamList, 'CreateUserQuestion' | 'EditUserQuestion'>;
+type CreateQuestionNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateUserQuestion' | 'EditUserQuestion'>;
 
 /**
  * Media information for uploaded files
@@ -42,6 +63,7 @@ export interface QuestionFormData {
     additionalInfo: string;
     questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
     media?: MediaInfo;
+    visibility: QuestionVisibility;
 }
 
 /**
@@ -56,23 +78,36 @@ interface CreateQuestionWithMediaProps {
 // COMPONENT
 // ============================================================================
 
-export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
-                                                                                    onQuestionSubmit,
-                                                                                    onCancel
-                                                                                }) => {
+const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
+                                                                             onQuestionSubmit,
+                                                                             onCancel
+                                                                         }) => {
+    const route = useRoute<CreateQuestionRouteProp>();
+    const navigation = useNavigation<CreateQuestionNavigationProp>();
+
+    // Check if we're editing an existing question
+    const isEditing = route.name === 'EditUserQuestion';
+    const existingQuestion = isEditing ? route.params?.question : undefined;
+
     // Form state
-    const [questionText, setQuestionText] = useState('');
-    const [answer, setAnswer] = useState('');
-    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
-    const [topic, setTopic] = useState('');
-    const [additionalInfo, setAdditionalInfo] = useState('');
+    const [questionText, setQuestionText] = useState(existingQuestion?.question || '');
+    const [answer, setAnswer] = useState(existingQuestion?.answer || '');
+    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>(
+        existingQuestion?.difficulty || 'MEDIUM'
+    );
+    const [topic, setTopic] = useState(existingQuestion?.topic || '');
+    const [additionalInfo, setAdditionalInfo] = useState(existingQuestion?.additionalInfo || '');
     const [questionType, setQuestionType] = useState<'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO'>('TEXT');
+    const [visibility, setVisibility] = useState<QuestionVisibility>(
+        (existingQuestion?.visibility as QuestionVisibility) || QuestionVisibility.PRIVATE
+    );
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | null>(null);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadedMediaInfo, setUploadedMediaInfo] = useState<MediaInfo | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     /**
      * Handle media selection from camera or gallery
@@ -99,7 +134,7 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
             }
 
             setSelectedMedia(result);
-            setUploadedMediaInfo(null); // Reset uploaded media info when new media is selected
+            setUploadedMediaInfo(null);
 
             // Auto-detect question type based on media
             if (result.isImage) {
@@ -116,11 +151,13 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
     };
 
     /**
-     * Handle video selection specifically
+     * Handle video selection
      */
     const handleVideoPick = async () => {
         try {
             const result = await FileService.pickVideo({
+                mediaType: 'video',
+                allowsEditing: false,
                 quality: 0.8,
             });
 
@@ -138,6 +175,7 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
             setSelectedMedia(result);
             setUploadedMediaInfo(null);
             setQuestionType('VIDEO');
+
             console.log('Video selected:', result.name, result.sizeFormatted);
         } catch (error) {
             console.error('Error picking video:', error);
@@ -149,13 +187,7 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
      * Handle audio selection
      */
     const handleAudioPick = async () => {
-        try {
-            // You may need to implement pickAudio in FileService
-            Alert.alert('Coming Soon', 'Audio selection is not yet implemented');
-        } catch (error) {
-            console.error('Error picking audio:', error);
-            Alert.alert('Error', 'Failed to select audio. Please try again.');
-        }
+        Alert.alert('Coming Soon', 'Audio selection feature is not yet implemented.');
     };
 
     /**
@@ -163,7 +195,7 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
      */
     const handleUploadMedia = async () => {
         if (!selectedMedia) {
-            Alert.alert('No Media', 'Please select a media file first');
+            Alert.alert('No Media', 'Please select media first');
             return;
         }
 
@@ -215,7 +247,7 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
             return false;
         }
 
-        if (questionType !== 'TEXT' && !uploadedMediaInfo) {
+        if (questionType !== 'TEXT' && !uploadedMediaInfo && !isEditing) {
             Alert.alert('Validation Error', 'Please upload media first or change question type to TEXT');
             return false;
         }
@@ -226,40 +258,63 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
     /**
      * Handle form submission
      */
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!validateForm()) {
             return;
         }
 
-        const questionData: QuestionFormData = {
-            question: questionText.trim(),
-            answer: answer.trim(),
-            difficulty,
-            topic: topic.trim(),
-            additionalInfo: additionalInfo.trim(),
-            questionType,
-            media: uploadedMediaInfo || undefined,
-        };
+        setIsSubmitting(true);
 
-        onQuestionSubmit?.(questionData);
+        try {
+            if (isEditing && existingQuestion) {
+                await QuestionService.updateUserQuestion(existingQuestion.id, {
+                    question: questionText.trim(),
+                    answer: answer.trim(),
+                    difficulty,
+                    topic: topic.trim() || undefined,
+                    additionalInfo: additionalInfo.trim() || undefined,
+                    visibility,
+                });
 
-        // Reset form
-        resetForm();
-    };
+                Alert.alert('Success', 'Question updated successfully');
+            } else {
+                // Create new question
+                const questionData: any = {
+                    question: questionText.trim(),
+                    answer: answer.trim(),
+                    difficulty,
+                    topic: topic.trim() || undefined,
+                    additionalInfo: additionalInfo.trim() || undefined,
+                    visibility,
+                };
 
-    /**
-     * Reset form to initial state
-     */
-    const resetForm = () => {
-        setQuestionText('');
-        setAnswer('');
-        setDifficulty('MEDIUM');
-        setTopic('');
-        setAdditionalInfo('');
-        setQuestionType('TEXT');
-        setSelectedMedia(null);
-        setUploadedMediaInfo(null);
-        setUploadProgress(0);
+                // Add media info if available
+                if (uploadedMediaInfo) {
+                    questionData.questionType = questionType;
+                    questionData.mediaFileId = uploadedMediaInfo.mediaId;
+                }
+
+                // Call the custom handler if provided
+                if (onQuestionSubmit) {
+                    onQuestionSubmit({
+                        ...questionData,
+                        media: uploadedMediaInfo || undefined,
+                    });
+                } else {
+                    // Default behavior: save to backend
+                    await QuestionService.createUserQuestion(questionData);
+                    Alert.alert('Success', 'Question created successfully');
+                }
+            }
+
+            // Navigate back
+            navigation.navigate('UserQuestions');
+        } catch (error) {
+            console.error('Error saving question:', error);
+            Alert.alert('Error', 'Failed to save question. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     /**
@@ -300,211 +355,260 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.title}>Create Question with Media</Text>
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.keyboardAvoid}
+            >
+                <ScrollView style={styles.scrollView}>
+                    <View style={styles.header}>
+                        <Text style={styles.headerTitle}>
+                            {isEditing ? 'Edit Question' : 'Create New Question'}
+                        </Text>
+                    </View>
 
-            {/* Question Type Selector */}
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Question Type *</Text>
-                <View style={styles.pickerContainer}>
-                    <Picker
-                        selectedValue={questionType}
-                        onValueChange={(value) => setQuestionType(value)}
-                        style={styles.picker}
-                    >
-                        <Picker.Item label="Text Only" value="TEXT" />
-                        <Picker.Item label="Image Question" value="IMAGE" />
-                        <Picker.Item label="Video Question" value="VIDEO" />
-                        <Picker.Item label="Audio Question" value="AUDIO" />
-                    </Picker>
-                </View>
-            </View>
-
-            {/* Question Text */}
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Question *</Text>
-                <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={questionText}
-                    onChangeText={setQuestionText}
-                    placeholder="Enter your question here..."
-                    placeholderTextColor="#999"
-                    multiline
-                    numberOfLines={3}
-                />
-            </View>
-
-            {/* Answer */}
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Answer *</Text>
-                <TextInput
-                    style={styles.input}
-                    value={answer}
-                    onChangeText={setAnswer}
-                    placeholder="Enter the answer..."
-                    placeholderTextColor="#999"
-                />
-            </View>
-
-            {/* Difficulty */}
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Difficulty *</Text>
-                <View style={styles.pickerContainer}>
-                    <Picker
-                        selectedValue={difficulty}
-                        onValueChange={(value) => setDifficulty(value)}
-                        style={styles.picker}
-                    >
-                        <Picker.Item label="Easy" value="EASY" />
-                        <Picker.Item label="Medium" value="MEDIUM" />
-                        <Picker.Item label="Hard" value="HARD" />
-                    </Picker>
-                </View>
-            </View>
-
-            {/* Topic */}
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Topic</Text>
-                <TextInput
-                    style={styles.input}
-                    value={topic}
-                    onChangeText={setTopic}
-                    placeholder="e.g., Science, History, Sports..."
-                    placeholderTextColor="#999"
-                />
-            </View>
-
-            {/* Additional Info */}
-            <View style={styles.inputGroup}>
-                <Text style={styles.label}>Additional Info (Optional)</Text>
-                <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={additionalInfo}
-                    onChangeText={setAdditionalInfo}
-                    placeholder="Any additional context or notes..."
-                    placeholderTextColor="#999"
-                    multiline
-                    numberOfLines={2}
-                />
-            </View>
-
-            {/* Media Section - Only show if not TEXT type */}
-            {questionType !== 'TEXT' && (
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>
-                        Media ({questionType === 'IMAGE' ? 'Image' : questionType === 'VIDEO' ? 'Video' : 'Audio'}) *
-                    </Text>
-
-                    {!selectedMedia ? (
-                        <TouchableOpacity
-                            style={styles.mediaButton}
-                            onPress={showMediaOptions}
-                        >
-                            <MaterialCommunityIcons name="image-plus" size={24} color="#4CAF50" />
-                            <Text style={styles.mediaButtonText}>Select Media</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        <View style={styles.mediaPreviewContainer}>
-                            {selectedMedia.isImage && (
-                                <Image
-                                    source={{ uri: selectedMedia.uri }}
-                                    style={styles.mediaPreview}
-                                    resizeMode="cover"
-                                />
-                            )}
-                            {selectedMedia.isVideo && (
-                                <View style={styles.videoPlaceholder}>
-                                    <MaterialCommunityIcons name="video" size={48} color="#666" />
-                                    <Text style={styles.videoText}>Video Selected</Text>
+                    <View style={styles.formContainer}>
+                        {/* Question Type Selector - Only show when creating new */}
+                        {!isEditing && (
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Question Type *</Text>
+                                <View style={styles.pickerContainer}>
+                                    <Picker
+                                        selectedValue={questionType}
+                                        onValueChange={(value) => setQuestionType(value)}
+                                        style={styles.picker}
+                                    >
+                                        <Picker.Item label="Text Only" value="TEXT" />
+                                        <Picker.Item label="Image Question" value="IMAGE" />
+                                        <Picker.Item label="Video Question" value="VIDEO" />
+                                        <Picker.Item label="Audio Question" value="AUDIO" />
+                                    </Picker>
                                 </View>
-                            )}
-
-                            <View style={styles.mediaInfo}>
-                                <Text style={styles.mediaName} numberOfLines={1}>
-                                    {selectedMedia.name}
-                                </Text>
-                                <Text style={styles.mediaSize}>
-                                    {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : 'Video'}
-                                </Text>
                             </View>
+                        )}
 
-                            <TouchableOpacity
-                                style={styles.removeButton}
-                                onPress={handleRemoveMedia}
-                            >
-                                <MaterialCommunityIcons name="close" size={24} color="#f44336" />
-                            </TouchableOpacity>
+                        {/* Question Text */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Question *</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={questionText}
+                                onChangeText={setQuestionText}
+                                placeholder="Enter your question here..."
+                                placeholderTextColor="#999"
+                                multiline
+                                numberOfLines={3}
+                                textAlignVertical="top"
+                            />
                         </View>
-                    )}
 
-                    {/* Upload Progress */}
-                    {isUploading && (
-                        <View style={styles.uploadProgressContainer}>
-                            <Text style={styles.uploadProgressText}>
-                                Uploading... {Math.round(uploadProgress)}%
+                        {/* Answer */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Answer *</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={answer}
+                                onChangeText={setAnswer}
+                                placeholder="Enter the answer..."
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        {/* Difficulty */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Difficulty *</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={difficulty}
+                                    onValueChange={(value) => setDifficulty(value)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Easy" value="EASY" />
+                                    <Picker.Item label="Medium" value="MEDIUM" />
+                                    <Picker.Item label="Hard" value="HARD" />
+                                </Picker>
+                            </View>
+                        </View>
+
+                        {/* Topic */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Topic</Text>
+                            <TextInput
+                                style={styles.input}
+                                value={topic}
+                                onChangeText={setTopic}
+                                placeholder="e.g., Science, History, Sports..."
+                                placeholderTextColor="#999"
+                            />
+                        </View>
+
+                        {/* Visibility / Access Policy */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Who can use this question? *</Text>
+                            <Text style={styles.helperText}>
+                                Choose who can find and use this question in their quizzes
                             </Text>
-                            <View style={styles.progressBar}>
-                                <View
+
+                            {[
+                                QuestionVisibility.PRIVATE,
+                                QuestionVisibility.FRIENDS_FAMILY,
+                                QuestionVisibility.PUBLIC
+                            ].map((visibilityOption) => (
+                                <TouchableOpacity
+                                    key={visibilityOption}
                                     style={[
-                                        styles.progressFill,
-                                        { width: `${uploadProgress}%` }
+                                        styles.visibilityOption,
+                                        visibility === visibilityOption && styles.visibilityOptionSelected
                                     ]}
-                                />
+                                    onPress={() => setVisibility(visibilityOption as QuestionVisibility)}
+                                >
+                                    <View style={styles.visibilityOptionContent}>
+                                        <Text style={styles.visibilityIcon}>
+                                            {getVisibilityIcon(visibilityOption as QuestionVisibility)}
+                                        </Text>
+                                        <View style={styles.visibilityTextContainer}>
+                                            <Text style={[
+                                                styles.visibilityLabel,
+                                                visibility === visibilityOption && styles.visibilityLabelSelected
+                                            ]}>
+                                                {getVisibilityLabel(visibilityOption as QuestionVisibility)}
+                                            </Text>
+                                            <Text style={styles.visibilityDescription}>
+                                                {getVisibilityDescription(visibilityOption as QuestionVisibility)}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.radioButton}>
+                                        {visibility === visibilityOption && (
+                                            <View style={styles.radioButtonInner}/>
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Additional Info */}
+                        <View style={styles.formGroup}>
+                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                value={additionalInfo}
+                                onChangeText={setAdditionalInfo}
+                                placeholder="Any additional context or notes..."
+                                placeholderTextColor="#999"
+                                multiline
+                                numberOfLines={2}
+                                textAlignVertical="top"
+                            />
+                        </View>
+
+                        {/* Media Section - Only show if not TEXT type and not editing */}
+                        {!isEditing && questionType !== 'TEXT' && (
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>
+                                    Media ({questionType === 'IMAGE' ? 'Image' : questionType === 'VIDEO' ? 'Video' : 'Audio'}) *
+                                </Text>
+
+                                {!selectedMedia ? (
+                                    <TouchableOpacity
+                                        style={styles.mediaButton}
+                                        onPress={showMediaOptions}
+                                    >
+                                        <MaterialCommunityIcons name="image-plus" size={24} color="#4CAF50" />
+                                        <Text style={styles.mediaButtonText}>Select Media</Text>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View style={styles.mediaPreviewContainer}>
+                                        {selectedMedia.isImage && (
+                                            <Image
+                                                source={{ uri: selectedMedia.uri }}
+                                                style={styles.mediaPreview}
+                                                resizeMode="cover"
+                                            />
+                                        )}
+                                        {selectedMedia.isVideo && (
+                                            <View style={styles.videoPlaceholder}>
+                                                <MaterialCommunityIcons name="video" size={48} color="#666" />
+                                                <Text style={styles.videoText}>Video Selected</Text>
+                                            </View>
+                                        )}
+
+                                        <View style={styles.mediaInfo}>
+                                            <Text style={styles.mediaName} numberOfLines={1}>
+                                                {selectedMedia.name}
+                                            </Text>
+                                            <Text style={styles.mediaSize}>
+                                                {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : 'Video'}
+                                            </Text>
+                                        </View>
+
+                                        <TouchableOpacity
+                                            style={styles.removeButton}
+                                            onPress={handleRemoveMedia}
+                                        >
+                                            <MaterialCommunityIcons name="close" size={24} color="#f44336" />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+                                {/* Upload Progress */}
+                                {isUploading && (
+                                    <View style={styles.uploadProgressContainer}>
+                                        <Text style={styles.uploadProgressText}>
+                                            Uploading... {Math.round(uploadProgress)}%
+                                        </Text>
+                                        <View style={styles.progressBar}>
+                                            <View
+                                                style={[
+                                                    styles.progressFill,
+                                                    { width: `${uploadProgress}%` }
+                                                ]}
+                                            />
+                                        </View>
+                                    </View>
+                                )}
+
+                                {/* Upload Button */}
+                                {selectedMedia && !uploadedMediaInfo && !isUploading && (
+                                    <TouchableOpacity
+                                        style={styles.uploadButton}
+                                        onPress={handleUploadMedia}
+                                    >
+                                        <MaterialCommunityIcons name="cloud-upload" size={20} color="#fff" />
+                                        <Text style={styles.buttonText}>Upload Media</Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {/* Success Message */}
+                                {uploadedMediaInfo && (
+                                    <View style={styles.successContainer}>
+                                        <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
+                                        <Text style={styles.successText}>Media uploaded successfully!</Text>
+                                    </View>
+                                )}
                             </View>
-                        </View>
-                    )}
+                        )}
+                    </View>
+                </ScrollView>
 
-                    {/* Upload Success Indicator */}
-                    {uploadedMediaInfo && (
-                        <View style={styles.successContainer}>
-                            <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
-                            <Text style={styles.successText}>Media uploaded successfully!</Text>
-                        </View>
-                    )}
-
-                    {/* Upload Button - Show only if media selected but not uploaded */}
-                    {selectedMedia && !uploadedMediaInfo && !isUploading && (
-                        <TouchableOpacity
-                            style={[styles.uploadButton]}
-                            onPress={handleUploadMedia}
-                        >
-                            <MaterialCommunityIcons name="cloud-upload" size={20} color="#fff" />
-                            <Text style={styles.buttonText}>Upload Media</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
-
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-                {onCancel && (
+                {/* Action Buttons */}
+                <View style={styles.buttonContainer}>
                     <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={onCancel}
+                        style={[styles.submitButton, isSubmitting && styles.buttonDisabled]}
+                        onPress={handleSubmit}
+                        disabled={isSubmitting}
                     >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        {isSubmitting ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.buttonText}>
+                                {isEditing ? 'Update Question' : 'Create Question'}
+                            </Text>
+                        )}
                     </TouchableOpacity>
-                )}
-
-                <TouchableOpacity
-                    style={[
-                        styles.submitButton,
-                        isUploading && styles.buttonDisabled
-                    ]}
-                    onPress={handleSubmit}
-                    disabled={isUploading}
-                >
-                    {isUploading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <>
-                            <MaterialCommunityIcons name="check" size={20} color="#fff" />
-                            <Text style={styles.buttonText}>Create Question</Text>
-                        </>
-                    )}
-                </TouchableOpacity>
-            </View>
-        </ScrollView>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 };
 
@@ -515,16 +619,29 @@ export const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = (
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#f5f5f5',
+    },
+    keyboardAvoid: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+    },
+    header: {
         padding: 20,
         backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
     },
-    title: {
+    headerTitle: {
         fontSize: 24,
         fontWeight: '700',
         color: '#333',
-        marginBottom: 24,
     },
-    inputGroup: {
+    formContainer: {
+        padding: 20,
+    },
+    formGroup: {
         marginBottom: 20,
     },
     label: {
@@ -533,6 +650,11 @@ const styles = StyleSheet.create({
         color: '#333',
         marginBottom: 8,
     },
+    helperText: {
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 12,
+    },
     input: {
         borderWidth: 1,
         borderColor: '#ddd',
@@ -540,22 +662,79 @@ const styles = StyleSheet.create({
         padding: 12,
         fontSize: 16,
         color: '#333',
-        backgroundColor: '#f9f9f9',
+        backgroundColor: '#fff',
     },
     textArea: {
-        minHeight: 100,
+        minHeight: 80,
         textAlignVertical: 'top',
     },
     pickerContainer: {
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
-        backgroundColor: '#f9f9f9',
+        backgroundColor: '#fff',
         overflow: 'hidden',
     },
     picker: {
         height: 50,
     },
+    // Visibility styles
+    visibilityOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderWidth: 2,
+        borderColor: '#e0e0e0',
+        borderRadius: 12,
+        marginBottom: 12,
+        backgroundColor: '#fafafa',
+    },
+    visibilityOptionSelected: {
+        borderColor: '#4CAF50',
+        backgroundColor: '#e8f5e9',
+    },
+    visibilityOptionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    visibilityIcon: {
+        fontSize: 28,
+        marginRight: 12,
+    },
+    visibilityTextContainer: {
+        flex: 1,
+    },
+    visibilityLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    visibilityLabelSelected: {
+        color: '#4CAF50',
+    },
+    visibilityDescription: {
+        fontSize: 13,
+        color: '#666',
+    },
+    radioButton: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#4CAF50',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioButtonInner: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#4CAF50',
+    },
+    // Media styles
     mediaButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -565,57 +744,58 @@ const styles = StyleSheet.create({
         borderColor: '#4CAF50',
         borderRadius: 8,
         borderStyle: 'dashed',
-        backgroundColor: '#f0f8f0',
+        gap: 8,
     },
     mediaButtonText: {
         fontSize: 16,
-        color: '#4CAF50',
         fontWeight: '600',
-        marginLeft: 8,
+        color: '#4CAF50',
     },
     mediaPreviewContainer: {
-        position: 'relative',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: '#f9f9f9',
+        padding: 12,
+        position: 'relative',
     },
     mediaPreview: {
         width: '100%',
         height: 200,
-        backgroundColor: '#000',
+        borderRadius: 8,
+        marginBottom: 12,
     },
     videoPlaceholder: {
         width: '100%',
         height: 200,
-        backgroundColor: '#333',
-        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
         justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
     },
     videoText: {
-        color: '#fff',
-        fontSize: 16,
         marginTop: 8,
+        fontSize: 14,
+        color: '#666',
     },
     mediaInfo: {
-        padding: 12,
+        marginBottom: 8,
     },
     mediaName: {
         fontSize: 14,
+        fontWeight: '600',
         color: '#333',
-        fontWeight: '500',
+        marginBottom: 4,
     },
     mediaSize: {
         fontSize: 12,
         color: '#666',
-        marginTop: 4,
     },
     removeButton: {
         position: 'absolute',
         top: 8,
         right: 8,
-        backgroundColor: '#fff',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
         borderRadius: 20,
         padding: 4,
     },
@@ -648,31 +828,17 @@ const styles = StyleSheet.create({
         marginTop: 12,
         gap: 8,
     },
-    actionButtons: {
-        gap: 12,
-        marginTop: 24,
-        marginBottom: 40,
-    },
-    cancelButton: {
-        padding: 14,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: '#ddd',
-        alignItems: 'center',
-    },
-    cancelButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
+    buttonContainer: {
+        padding: 20,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#e0e0e0',
     },
     submitButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
         backgroundColor: '#4CAF50',
         padding: 16,
         borderRadius: 8,
-        gap: 8,
+        alignItems: 'center',
     },
     buttonText: {
         color: '#fff',

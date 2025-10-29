@@ -14,7 +14,7 @@ import SearchScreen from '../screens/SearchScreen';
 import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen';
 import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen';
 import CreateChallengeScreen from '../screens/CreateChallengeScreen';
-import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen';
+import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen/CreateWWWQuestScreen.tsx';
 import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
 import LocationVerificationScreen from '../screens/LocationVerificationScreen';
 import WWWGameSetupScreen from '../screens/WWWGameSetupScreen';
@@ -22,8 +22,6 @@ import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
 import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import UserQuestionsScreen from '../screens/UserQuestionsScreen';
-import CreateUserQuestionScreen from '../screens/CreateUserQuestionScreen';
 import GamesHomeScreen from '../screens/GamesHomeScreen';
 
 import {useSelector} from 'react-redux';
@@ -32,6 +30,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {QuestionData} from '../services/wwwGame/questionService';
 import {AuthNavigationHandler} from '../entities/AuthState/ui/AuthNavigationHandler';
 import {GameSettings} from '../services/wwwGame';
+import CreateQuestionWithMedia from "../screens/components/CreateQuestionWithMedia.tsx";
 
 // Navigation types
 export type RootStackParamList = {
@@ -209,11 +208,11 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen name="QuizResults" component={QuizResultsScreen} />
                         <Stack.Screen
                             name="UserQuestions"
-                            component={UserQuestionsScreen}
+                            component={CreateQuestionWithMedia}
                         />
                         <Stack.Screen
                             name="CreateUserQuestion"
-                            component={CreateUserQuestionScreen}
+                            component={CreateQuestionWithMedia}
                         />
                     </>
                 )}

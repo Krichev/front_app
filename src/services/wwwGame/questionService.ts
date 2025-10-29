@@ -6,6 +6,7 @@ import {RootState, store} from '../../app/providers/StoreProvider/store';
 import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice';
 import {Alert} from 'react-native';
 import KeychainService from "../auth/KeychainService.ts";
+import {QuestionVisibility} from "../../entities/QuizState/model/types/question.types.ts";
 
 // Types matching backend DTOs
 export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
@@ -73,6 +74,7 @@ export interface UserQuestion {
     question: string;
     answer: string;
     difficulty: APIDifficulty;
+    visibility: QuestionVisibility;
     topic?: string;
     additionalInfo?: string;
 }
