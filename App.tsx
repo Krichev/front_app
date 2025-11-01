@@ -1,56 +1,43 @@
-// Updated App.tsx with GestureHandlerRootView
+// App.tsx - USING CUSTOM HOOK
 import 'react-native-gesture-handler';
-import React, {useEffect} from 'react';
-import {Provider, useDispatch} from "react-redux";
-import {store} from "./src/app/providers/StoreProvider/store.ts";
-import AppNavigation from "./src/navigation/AppNavigator.tsx";
-import {WWWGameProvider} from "./src/app/providers/WWWGameProvider.tsx";
+import React from 'react';
+import {Provider} from 'react-redux';
+import {store} from './src/app/providers/StoreProvider/store.ts';
+import AppNavigation from './src/navigation/AppNavigator.tsx';
+import {WWWGameProvider} from './src/app/providers/WWWGameProvider.tsx';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {StyleSheet} from 'react-native';
-import TokenRefreshService from "./src/services/auth/TokenRefreshService.ts";
-import {AuthInitializer} from "./src/entities/AuthState/ui/AuthInitializer.tsx";
+import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
+import {useKeychainInitializer} from './src/hooks/useKeychainInitializer';
 
-// Add this to your main App component or a wrapper component
-export const AppWithTokenInitialization: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const dispatch = useDispatch();
+/**
+ * Inner app content with KeychainService initialization
+ */
+const AppContent: React.FC = () => {
+    // Initialize KeychainService once on app start
+    useKeychainInitializer();
 
-    useEffect(() => {
-        const initializeAuth = async () => {
-            try {
-                console.log('🔄 Initializing authentication...');
-
-                // Load tokens from storage on app start
-                const tokensLoaded = await TokenRefreshService.loadTokensFromStorage();
-
-                if (tokensLoaded) {
-                    console.log('✅ Authentication initialized successfully');
-                } else {
-                    console.log('❌ No valid tokens found - user needs to login');
-                }
-            } catch (error) {
-                console.error('❌ Error initializing authentication:', error);
-            }
-        };
-
-        initializeAuth();
-    }, [dispatch]);
-
-    return <>{children}</>;
+    return (
+        <AuthInitializer>
+            <WWWGameProvider>
+                <AppNavigation />
+            </WWWGameProvider>
+        </AuthInitializer>
+    );
 };
+
+/**
+ * Main App Component
+ */
 const App: React.FC = () => {
     return (
         <GestureHandlerRootView style={styles.container}>
             <Provider store={store}>
-                <AuthInitializer>
-                    <WWWGameProvider>
-                        <AppNavigation />
-                    </WWWGameProvider>
-                </AuthInitializer>
+                <AppContent />
             </Provider>
         </GestureHandlerRootView>
     );
 };
-
 
 const styles = StyleSheet.create({
     container: {

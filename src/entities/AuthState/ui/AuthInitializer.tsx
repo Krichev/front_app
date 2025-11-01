@@ -1,24 +1,24 @@
-// src/entities/AuthState/ui/AuthInitializer.tsx
-import {useEffect} from 'react';
+// src/entities/AuthState/ui/AuthInitializer.tsx - ENHANCED
+import React, {useEffect, useState} from 'react';
+import {ActivityIndicator, StyleSheet, View} from 'react-native';
 import {useDispatch} from 'react-redux';
 import {setInitialized, setTokens} from '../model/slice/authSlice';
 import KeychainService from '../../../services/auth/KeychainService';
 
 /**
  * Component to initialize auth state on app start
- * This runs once when the app loads and loads stored tokens
+ * Shows loading screen while checking for stored tokens
  */
-export const AuthInitializer: React.FC<{children: React.ReactNode}> = ({
-                                                                           children,
-                                                                       }) => {
+export const AuthInitializer: React.FC<{children: React.ReactNode}> = ({children}) => {
     const dispatch = useDispatch();
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const initializeAuth = async () => {
             try {
                 console.log('🔄 Initializing authentication...');
 
-                // Initialize the keychain service
+                // Ensure keychain is initialized
                 await KeychainService.initialize();
 
                 // Load tokens from storage
@@ -36,19 +36,37 @@ export const AuthInitializer: React.FC<{children: React.ReactNode}> = ({
                         }),
                     );
                 } else {
-                    console.log('ℹ️ No stored tokens found');
-                    // Mark as initialized even if no tokens found
+                    console.log('ℹ️ No stored tokens found, user needs to log in');
                     dispatch(setInitialized());
                 }
             } catch (error) {
                 console.error('❌ Error initializing authentication:', error);
-                // Mark as initialized even on error
                 dispatch(setInitialized());
+            } finally {
+                setIsLoading(false);
             }
         };
 
         initializeAuth();
     }, [dispatch]);
 
+    // Show loading screen while initializing
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#007AFF" />
+            </View>
+        );
+    }
+
     return <>{children}</>;
 };
+
+const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+    },
+});

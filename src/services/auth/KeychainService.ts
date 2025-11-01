@@ -1,6 +1,7 @@
-// src/services/auth/KeychainService.ts - SINGLETON KEYCHAIN MANAGER
+// src/services/auth/KeychainService.ts - FINAL FIXED VERSION
 import * as Keychain from 'react-native-keychain';
 import {Mutex} from 'async-mutex';
+import {Platform} from 'react-native';
 
 export interface StoredAuthData {
     accessToken: string;
@@ -8,21 +9,17 @@ export interface StoredAuthData {
     user: any;
 }
 
-/**
- * Singleton service to manage keychain operations and prevent multiple DataStore instances
- */
 class KeychainService {
-    private static instance: KeychainService;
+    private static instance: KeychainService | null = null;
     private mutex: Mutex;
     private isInitialized: boolean = false;
+    private readonly SERVICE_NAME = 'com.rhythmgame.auth';
 
     private constructor() {
         this.mutex = new Mutex();
+        console.log(`🔐 KeychainService created for ${Platform.OS}`);
     }
 
-    /**
-     * Get the singleton instance
-     */
     public static getInstance(): KeychainService {
         if (!KeychainService.instance) {
             KeychainService.instance = new KeychainService();
@@ -30,37 +27,51 @@ class KeychainService {
         return KeychainService.instance;
     }
 
-    /**
-     * Initialize the service (optional, but good practice)
-     */
     public async initialize(): Promise<void> {
         if (this.isInitialized) {
+            console.log('🔐 KeychainService already initialized');
             return;
         }
 
-        await this.mutex.runExclusive(async () => {
+        return await this.mutex.runExclusive(async () => {
             if (!this.isInitialized) {
-                console.log('🔐 Initializing KeychainService...');
+                console.log(`🔐 Initializing KeychainService for ${Platform.OS}...`);
+
+                if (Platform.OS === 'android') {
+                    console.log('📱 Android: Using Android Keystore');
+                } else if (Platform.OS === 'ios') {
+                    console.log('🍎 iOS: Using iOS Keychain');
+                }
+
                 this.isInitialized = true;
+                console.log('✅ KeychainService initialized successfully');
             }
         });
     }
 
     /**
-     * Save auth tokens to keychain
+     * Save auth tokens securely
      */
     public async saveAuthTokens(data: StoredAuthData): Promise<boolean> {
         return await this.mutex.runExclusive(async () => {
             try {
-                console.log('🔐 Saving auth tokens to keychain...');
+                console.log('🔐 Saving auth tokens to secure storage...');
+
+                // Build options conditionally - only include properties that have values
+                const options: Record<string, any> = {
+                    service: this.SERVICE_NAME,
+                    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED,
+                };
+
+                // Add Android-specific storage type
+                if (Platform.OS === 'android') {
+                    options.storage = Keychain.STORAGE_TYPE.AES;
+                }
 
                 await Keychain.setGenericPassword(
                     'authTokens',
                     JSON.stringify(data),
-                    {
-                        service: 'com.rhythmgame.auth',
-                        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED,
-                    }
+                    options
                 );
 
                 console.log('✅ Auth tokens saved successfully');
@@ -73,15 +84,15 @@ class KeychainService {
     }
 
     /**
-     * Load auth tokens from keychain
+     * Load auth tokens from secure storage
      */
     public async loadAuthTokens(): Promise<StoredAuthData | null> {
         return await this.mutex.runExclusive(async () => {
             try {
-                console.log('🔐 Loading auth tokens from keychain...');
+                console.log('🔐 Loading auth tokens from secure storage...');
 
                 const credentials = await Keychain.getGenericPassword({
-                    service: 'com.rhythmgame.auth',
+                    service: this.SERVICE_NAME,
                 });
 
                 if (credentials && credentials.password) {
@@ -90,7 +101,7 @@ class KeychainService {
                     return data;
                 }
 
-                console.log('ℹ️ No auth tokens found in keychain');
+                console.log('ℹ️ No auth tokens found');
                 return null;
             } catch (error) {
                 console.error('❌ Error loading auth tokens:', error);
@@ -100,15 +111,15 @@ class KeychainService {
     }
 
     /**
-     * Delete auth tokens from keychain
+     * Delete auth tokens from secure storage
      */
     public async deleteAuthTokens(): Promise<boolean> {
         return await this.mutex.runExclusive(async () => {
             try {
-                console.log('🔐 Deleting auth tokens from keychain...');
+                console.log('🔐 Deleting auth tokens from secure storage...');
 
                 await Keychain.resetGenericPassword({
-                    service: 'com.rhythmgame.auth',
+                    service: this.SERVICE_NAME,
                 });
 
                 console.log('✅ Auth tokens deleted successfully');
@@ -127,7 +138,7 @@ class KeychainService {
         return await this.mutex.runExclusive(async () => {
             try {
                 const credentials = await Keychain.getGenericPassword({
-                    service: 'com.rhythmgame.auth',
+                    service: this.SERVICE_NAME,
                 });
                 return !!credentials;
             } catch (error) {
@@ -161,7 +172,32 @@ class KeychainService {
             }
         });
     }
+
+    /**
+     * Get platform-specific storage info (for debugging)
+     */
+    public getStorageInfo(): { platform: string; storageType: string } {
+        return {
+            platform: Platform.OS,
+            storageType: Platform.OS === 'ios' ? 'iOS Keychain' : 'Android Keystore/AES',
+        };
+    }
+
+    /**
+     * Reset the singleton (use ONLY for testing)
+     */
+    public static resetInstance(): void {
+        if (__DEV__) {
+            console.warn('⚠️ Resetting KeychainService singleton (DEV only)');
+            KeychainService.instance = null;
+        } else {
+            throw new Error('resetInstance() can only be called in development mode');
+        }
+    }
 }
 
-// Export singleton instance
+// Export ONLY the singleton instance
 export default KeychainService.getInstance();
+
+// Also export the class for type checking
+export {KeychainService};
