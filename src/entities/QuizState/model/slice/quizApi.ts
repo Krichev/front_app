@@ -1,10 +1,10 @@
-// src/entities/QuizState/model/slice/quizApi.ts - MERGED VERSION
+// src/entities/QuizState/model/slice/quizApi.ts - FIXED VERSION
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
 
 // ============================================================================
-// EXISTING TYPES (from your current file)
+// TYPES
 // ============================================================================
 
 export interface CreateQuestionWithMediaRequest {
@@ -41,6 +41,74 @@ export interface QuizQuestionResponse {
     usageCount: number;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface QuizQuestion {
+    id: number;
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    source?: string;
+    questionType: QuestionType;
+    questionMediaUrl?: string;
+    questionMediaId?: string;
+    questionMediaType?: MediaType;
+    questionThumbnailUrl?: string;
+    isUserCreated: boolean;
+    creatorId?: number;
+    creatorUsername?: string;
+    isActive: boolean;
+    usageCount: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateQuizQuestionRequest {
+    question: string;
+    answer: string;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    additionalInfo?: string;
+    source?: string;
+}
+
+export interface PaginatedQuestionResponse {
+    content: QuizQuestion[];
+    totalPages: number;
+    totalElements: number;
+    currentPage: number;
+    pageSize: number;
+}
+
+export interface QuestionSearchParams {
+    keyword?: string;
+    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    topic?: string;
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    sortDirection?: 'ASC' | 'DESC';
+}
+
+export interface UpdateQuestionVisibilityRequest {
+    isPublic: boolean;
+}
+
+export interface UserRelationship {
+    id: number;
+    userId: number;
+    username: string;
+    relatedUserId: number;
+    relatedUsername: string;
+    status: 'PENDING' | 'ACCEPTED' | 'BLOCKED';
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface CreateRelationshipRequest {
+    relatedUsername: string;
 }
 
 export interface QuizConfig {
@@ -103,171 +171,13 @@ export interface QuizRound {
     answerSubmittedAt?: string;
     discussionDurationSeconds?: number;
     totalRoundDurationSeconds?: number;
-    hintUsed: boolean;
-    voiceRecordingUsed: boolean;
-    aiFeedback?: string;
 }
 
 export interface SubmitRoundAnswerRequest {
-    roundNumber: number;
     teamAnswer: string;
     playerWhoAnswered: string;
     discussionNotes?: string;
-    hintUsed?: boolean;
-    voiceRecordingUsed?: boolean;
 }
-
-// ============================================================================
-// NEW TYPES (for access control feature)
-// ============================================================================
-
-export enum QuestionVisibility {
-    PRIVATE = 'PRIVATE',
-    FRIENDS_FAMILY = 'FRIENDS_FAMILY',
-    QUIZ_ONLY = 'QUIZ_ONLY',
-    PUBLIC = 'PUBLIC'
-}
-
-export enum RelationshipType {
-    FRIEND = 'FRIEND',
-    FAMILY = 'FAMILY',
-    BLOCKED = 'BLOCKED'
-}
-
-export enum RelationshipStatus {
-    PENDING = 'PENDING',
-    ACCEPTED = 'ACCEPTED',
-    REJECTED = 'REJECTED'
-}
-
-// ============================================================================
-// UPDATED TYPES (with new fields)
-// ============================================================================
-
-export interface CreateQuizQuestionRequest {
-    question: string;
-    answer: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
-    // NEW: Access control fields
-    visibility: QuestionVisibility;
-    originalQuizId?: number;
-}
-
-export interface QuizQuestion {
-    id: string;
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
-    isUserCreated: boolean;
-    creatorId?: string;
-    creatorUsername?: string;
-    externalId?: string;
-    usageCount: number;
-    createdAt: string;
-    lastUsed?: string;
-    // NEW: Access control fields
-    visibility: QuestionVisibility;
-    originalQuizId?: number;
-    originalQuizTitle?: string;
-    canEdit: boolean;
-    canDelete: boolean;
-    canUseInQuiz: boolean;
-}
-
-export interface UpdateQuestionVisibilityRequest {
-    visibility: QuestionVisibility;
-    originalQuizId?: number;
-}
-
-export interface QuestionSearchParams {
-    keyword?: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    quizId?: number;
-    page?: number;
-    size?: number;
-}
-
-// NEW: Relationship types
-export interface UserRelationship {
-    id: number;
-    userId: number;
-    relatedUserId: number;
-    relatedUserUsername: string;
-    relatedUserAvatar?: string;
-    relationshipType: RelationshipType;
-    status: RelationshipStatus;
-    createdAt: string;
-}
-
-export interface CreateRelationshipRequest {
-    relatedUserId: number;
-    relationshipType: RelationshipType;
-}
-
-// NEW: Paginated response type
-export interface PaginatedQuestionResponse {
-    content: QuizQuestion[];
-    totalElements: number;
-    totalPages: number;
-    currentPage: number;
-    size: number;
-}
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-export const getVisibilityLabel = (visibility: QuestionVisibility): string => {
-    switch (visibility) {
-        case QuestionVisibility.PRIVATE:
-            return 'Only Me';
-        case QuestionVisibility.FRIENDS_FAMILY:
-            return 'Friends & Family';
-        case QuestionVisibility.QUIZ_ONLY:
-            return 'This Quiz Only';
-        case QuestionVisibility.PUBLIC:
-            return 'Everyone (Public)';
-        default:
-            return visibility;
-    }
-};
-
-export const getVisibilityDescription = (visibility: QuestionVisibility): string => {
-    switch (visibility) {
-        case QuestionVisibility.PRIVATE:
-            return 'Only you can see and use this question';
-        case QuestionVisibility.FRIENDS_FAMILY:
-            return 'You and your friends/family can use this question';
-        case QuestionVisibility.QUIZ_ONLY:
-            return 'Only accessible in the quiz where it was added';
-        case QuestionVisibility.PUBLIC:
-            return 'Everyone can find and use this question';
-        default:
-            return '';
-    }
-};
-
-export const getVisibilityIcon = (visibility: QuestionVisibility): string => {
-    switch (visibility) {
-        case QuestionVisibility.PRIVATE:
-            return '🔒';
-        case QuestionVisibility.FRIENDS_FAMILY:
-            return '👥';
-        case QuestionVisibility.QUIZ_ONLY:
-            return '🎯';
-        case QuestionVisibility.PUBLIC:
-            return '🌍';
-        default:
-            return '❓';
-    }
-};
 
 // ============================================================================
 // API DEFINITION
@@ -294,9 +204,9 @@ export const quizApi = createApi({
         }),
 
         getUserQuestions: builder.query<QuizQuestion[], void>({
-            query: () => '/questions/me',
+            query: () => '/quiz/questions/me',
             providesTags: (result) =>
-                result
+                result && Array.isArray(result)
                     ? [
                         ...result.map(({id}) => ({type: 'QuizQuestion' as const, id})),
                         {type: 'QuizQuestion', id: 'USER_LIST'},
@@ -304,7 +214,7 @@ export const quizApi = createApi({
                     : [{type: 'QuizQuestion', id: 'USER_LIST'}],
         }),
 
-        deleteUserQuestion: builder.mutation<{message: string}, number>({
+        deleteUserQuestion: builder.mutation<{message: string}, string>({
             query: (questionId) => ({
                 url: `/questions/${questionId}`,
                 method: 'DELETE',
@@ -344,11 +254,11 @@ export const quizApi = createApi({
             sortDirection?: 'ASC' | 'DESC';
         }>({
             query: ({page = 0, size = 20, sortBy = 'createdAt', sortDirection = 'DESC'}) => ({
-                url: '/questions/me',
+                url: '/quiz/questions/me',
                 params: {page, size, sortBy, sortDirection},
             }),
             providesTags: (result) =>
-                result?.content
+                result?.content && Array.isArray(result.content)
                     ? [
                         ...result.content.map(({id}) => ({type: 'QuizQuestion' as const, id})),
                         {type: 'QuizQuestion', id: 'USER_LIST'},
@@ -394,13 +304,19 @@ export const quizApi = createApi({
         }),
 
         getMyRelationships: builder.query<UserRelationship[], void>({
-            query: () => '../relationships',
-            providesTags: [{type: 'UserRelationship', id: 'LIST'}],
+            query: () => '../relationships/me',
+            providesTags: (result) =>
+                result && Array.isArray(result)
+                    ? [
+                        ...result.map(({id}) => ({type: 'UserRelationship' as const, id})),
+                        {type: 'UserRelationship', id: 'LIST'},
+                    ]
+                    : [{type: 'UserRelationship', id: 'LIST'}],
         }),
 
         getPendingRequests: builder.query<UserRelationship[], void>({
             query: () => '../relationships/pending',
-            providesTags: [{type: 'UserRelationship', id: 'PENDING'}],
+            providesTags: [{type: 'UserRelationship', id: 'PENDING_LIST'}],
         }),
 
         acceptRelationship: builder.mutation<UserRelationship, number>({
@@ -408,19 +324,15 @@ export const quizApi = createApi({
                 url: `../relationships/${relationshipId}/accept`,
                 method: 'PUT',
             }),
-            invalidatesTags: [
-                {type: 'UserRelationship', id: 'LIST'},
-                {type: 'UserRelationship', id: 'PENDING'},
-                {type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'},
-            ],
+            invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}, {type: 'UserRelationship', id: 'PENDING_LIST'}],
         }),
 
         rejectRelationship: builder.mutation<void, number>({
             query: (relationshipId) => ({
                 url: `../relationships/${relationshipId}/reject`,
-                method: 'PUT',
+                method: 'DELETE',
             }),
-            invalidatesTags: [{type: 'UserRelationship', id: 'PENDING'}],
+            invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}, {type: 'UserRelationship', id: 'PENDING_LIST'}],
         }),
 
         removeRelationship: builder.mutation<void, number>({
@@ -428,18 +340,15 @@ export const quizApi = createApi({
                 url: `../relationships/${relationshipId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: [
-                {type: 'UserRelationship', id: 'LIST'},
-                {type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'},
-            ],
+            invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}],
         }),
 
-        checkConnection: builder.query<boolean, number>({
-            query: (otherUserId) => `../relationships/check/${otherUserId}`,
+        checkConnection: builder.query<{connected: boolean; status?: string}, string>({
+            query: (username) => `../relationships/check/${username}`,
         }),
 
         // ========================================================================
-        // EXISTING QUIZ SESSION ENDPOINTS (kept as-is)
+        // QUIZ SESSION ENDPOINTS
         // ========================================================================
 
         startQuizSession: builder.mutation<QuizSession, StartQuizSessionRequest>({
@@ -448,7 +357,7 @@ export const quizApi = createApi({
                 method: 'POST',
                 body: request,
             }),
-            invalidatesTags: [{type: 'QuizSession', id: 'LIST'}],
+            invalidatesTags: [{type: 'QuizSession', id: 'USER_LIST'}],
         }),
 
         beginQuizSession: builder.mutation<QuizSession, string>({
@@ -463,16 +372,19 @@ export const quizApi = createApi({
 
         submitRoundAnswer: builder.mutation<QuizRound, {
             sessionId: string;
-            request: SubmitRoundAnswerRequest;
+            roundId: string;
+            answer: SubmitRoundAnswerRequest;
         }>({
-            query: ({sessionId, request}) => ({
-                url: `/sessions/${sessionId}/rounds/submit`,
+            query: ({sessionId, roundId, answer}) => ({
+                url: `/sessions/${sessionId}/rounds/${roundId}/submit`,
                 method: 'POST',
-                body: request,
+                body: answer,
             }),
-            invalidatesTags: (result, error, {sessionId}) => [
+            invalidatesTags: (result, error, {sessionId, roundId}) => [
                 {type: 'QuizSession', id: sessionId},
-                {type: 'QuizRound', id: `SESSION_${sessionId}`}
+                {type: 'QuizRound', id: `SESSION_${sessionId}`},
+                {type: 'QuizRound', id: roundId},
+                {type: 'QuizRound', id: `CURRENT_${sessionId}`},
             ],
         }),
 
@@ -482,7 +394,8 @@ export const quizApi = createApi({
                 method: 'POST',
             }),
             invalidatesTags: (result, error, sessionId) => [
-                {type: 'QuizSession', id: sessionId}
+                {type: 'QuizSession', id: sessionId},
+                {type: 'QuizSession', id: 'USER_LIST'},
             ],
         }),
 
@@ -499,7 +412,7 @@ export const quizApi = createApi({
                 params: {limit},
             }),
             providesTags: (result) =>
-                result
+                result && Array.isArray(result)
                     ? [
                         ...result.map(({id}) => ({type: 'QuizSession' as const, id})),
                         {type: 'QuizSession', id: 'USER_LIST'},
@@ -534,6 +447,7 @@ export const quizApi = createApi({
                 {type: 'QuizSession', id: sessionId}
             ],
         }),
+
         createUserQuestionWithMedia: builder.mutation<QuizQuestionResponse, CreateQuestionWithMediaRequest>({
             query: (questionData) => ({
                 url: '/api/quiz/questions',
@@ -542,18 +456,6 @@ export const quizApi = createApi({
             }),
             invalidatesTags: ['UserQuestions'],
         }),
-        // getUserQuestions: builder.query<QuizQuestionResponse[], void>({
-        //     query: () => '/api/quiz/questions/me',
-        //     providesTags: ['UserQuestions'],
-        // }),
-        //
-        // deleteUserQuestion: builder.mutation<{ message: string }, number>({
-        //     query: (questionId) => ({
-        //         url: `/api/quiz/questions/${questionId}`,
-        //         method: 'DELETE',
-        //     }),
-        //     invalidatesTags: ['UserQuestions'],
-        // }),
     }),
 });
 

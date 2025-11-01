@@ -6,7 +6,7 @@ import {
     useCreateUserQuestionWithMediaMutation,
     useDeleteUserQuestionMutation,
     useGetAvailableTopicsQuery,
-    useGetUserQuestionsQuery,
+    useGetUserQuestionsPaginatedQuery,
 } from '../../../entities/QuizState/model/slice/quizApi';
 import {QuestionData, QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, QuestionSource} from "../../../services/wwwGame/questionService.ts";
@@ -74,12 +74,19 @@ export const useQuestionsManager = () => {
 
     // User questions query
     const {
-        data: userQuestions = [],
+        data: userQuestionsResponse,
         isLoading: isLoadingUserQuestions,
         refetch: refetchUserQuestions,
-    } = useGetUserQuestionsQuery(undefined, {
+    } = useGetUserQuestionsPaginatedQuery({
+        page: 0,
+        size: 100,
+        sortBy: 'createdAt',
+        sortDirection: 'DESC',
+    }, {
         skip: questionSource !== 'user',
     });
+
+    const userQuestions = userQuestionsResponse?.content ?? [];
 
     // App questions state
     const [appQuestions, setAppQuestions] = useState<QuestionData[]>([]);
@@ -111,6 +118,10 @@ export const useQuestionsManager = () => {
 
     // Transform user questions to display format
     const transformedUserQuestions = useMemo(() => {
+        if (!userQuestions || !Array.isArray(userQuestions)) {
+            return [];
+        }
+
         return (userQuestions ?? []).map((uq: any) => ({
             id: uq.id?.toString() ?? '',
             question: uq.question ?? '',
@@ -219,7 +230,7 @@ export const useQuestionsManager = () => {
 
     const deleteUserQuestion = async (questionId: string) => {
         try {
-            await deleteQuestion(parseInt(questionId, 10)).unwrap();
+            await deleteQuestion(questionId).unwrap();
             Alert.alert('Success', 'Question deleted successfully');
             refetchUserQuestions();
 
@@ -275,22 +286,57 @@ export const useQuestionsManager = () => {
     };
 
     const getSelectedQuestionsArray = () => {
+        // Helper function to normalize difficulty
+        const normalizeDifficulty = (diff?: 'Easy' | 'Medium' | 'Hard'): 'EASY' | 'MEDIUM' | 'HARD' | 'Easy' | 'Medium' | 'Hard' => {
+            if (!diff) return 'MEDIUM'; // Default to MEDIUM if undefined
+            return diff; // Return as-is since both formats are accepted
+        };
+
+        // Helper function to convert UI difficulty to API difficulty
+        const convertToAPIDifficulty = (diff: 'Easy' | 'Medium' | 'Hard'): 'EASY' | 'MEDIUM' | 'HARD' => {
+            const mapping: Record<'Easy' | 'Medium' | 'Hard', 'EASY' | 'MEDIUM' | 'HARD'> = {
+                'Easy': 'EASY',
+                'Medium': 'MEDIUM',
+                'Hard': 'HARD'
+            };
+            return mapping[diff];
+        };
+
+        // Map selected app questions and ensure difficulty is defined
         const selectedAppQuestions = (appQuestions ?? [])
             .filter((q) => selectedAppQuestionIds.has(q?.id?.toString() ?? ''))
-            .map((q) => ({ ...q, source: 'app' as const }));
+            .map((q) => ({
+                id: q.id,
+                question: q.question,
+                answer: q.answer,
+                difficulty: normalizeDifficulty(q.difficulty),
+                topic: q.topic,
+                additionalInfo: q.additionalInfo,
+                visibility: q.visibility,
+                source: 'app' as const,
+            }));
 
+        // Map selected user questions and convert difficulty format
         const selectedUserQuestionsData = transformedUserQuestions
             .filter((uq) => selectedUserQuestionIds.has(uq.id))
             .map((uq) => ({
-                ...uq,
-                difficulty: uq.difficulty === 'Easy' ? 'EASY' as const :
-                    uq.difficulty === 'Medium' ? 'MEDIUM' as const : 'HARD' as const,
+                id: uq.id,
+                question: uq.question,
+                answer: uq.answer,
+                difficulty: convertToAPIDifficulty(uq.difficulty),
+                topic: uq.topic,
+                additionalInfo: uq.additionalInfo,
                 source: 'user' as const,
             }));
 
+        // Map new custom questions (already in correct format)
         const newCustomQuestionsData = newCustomQuestions.map((q, idx) => ({
-            ...q,
             id: `new-custom-${idx}`,
+            question: q.question,
+            answer: q.answer,
+            difficulty: q.difficulty, // Already in 'EASY' | 'MEDIUM' | 'HARD' format
+            topic: q.topic,
+            additionalInfo: q.additionalInfo,
             source: 'custom' as const,
         }));
 
