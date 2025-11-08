@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {QuestionService, UserQuestion} from '../services/wwwGame/questionService';
+import {APIDifficulty, QuestionService, UserQuestion} from '../services/wwwGame/questionService';
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -36,8 +36,8 @@ const CreateUserQuestionScreen: React.FC = () => {
     // Form state
     const [question, setQuestion] = useState<string>(existingQuestion?.question || '');
     const [answer, setAnswer] = useState<string>(existingQuestion?.answer || '');
-    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(
-        existingQuestion?.difficulty || 'Medium'
+    const [difficulty, setDifficulty] = useState<APIDifficulty>(
+        existingQuestion?.difficulty || 'MEDIUM'
     );
     const [topic, setTopic] = useState<string>(existingQuestion?.topic || '');
     const [additionalInfo, setAdditionalInfo] = useState<string>(
@@ -138,7 +138,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                         <View style={styles.formGroup}>
                             <Text style={styles.label}>Difficulty</Text>
                             <View style={styles.difficultyContainer}>
-                                {(['Easy', 'Medium', 'Hard'] as const).map((diff) => (
+                                {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
                                     <TouchableOpacity
                                         key={diff}
                                         style={[

@@ -10,7 +10,7 @@ import {QuestionVisibility} from "../../entities/QuizState/model/types/question.
 import {QuizQuestion} from '../../entities/QuizState/model/slice/quizApi.ts';
 
 // Types matching backend DTOs
-export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
+export type UIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type QuestionSource = 'app' | 'user';
 // export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
@@ -29,12 +29,6 @@ export enum MediaType {
     VIDEO = 'VIDEO'
 }
 
-// Difficulty mapping
-export const DIFFICULTY_MAPPING = {
-    'Easy': 'EASY' as const,
-    'Medium': 'MEDIUM' as const,
-    'Hard': 'HARD' as const
-};
 
 export interface UserQuestion {
     id: number;
@@ -200,20 +194,6 @@ export class QuestionService {
         return response;
     }
 
-    /**
-     * Convert backend QuizQuestionDTO to frontend QuestionData format
-     */
-    private static convertQuizQuestionToQuestionData(quizQuestion: QuizQuestion): QuizQuestion {
-        return {
-            id: quizQuestion.id,
-            question: quizQuestion.question,
-            answer: quizQuestion.answer,
-            difficulty: DIFFICULTY_MAPPING[quizQuestion.difficulty],
-            source: quizQuestion.source,
-            additionalInfo: quizQuestion.additionalInfo,
-            topic: quizQuestion.topic
-        };
-    }
 
     /**
      * Advanced search using QuizQuestionSearchController.advancedSearch
@@ -248,7 +228,7 @@ export class QuestionService {
 
             const data = await response.json();
             return {
-                content: data.content.map((q: any) => this.convertQuizQuestionToQuestionData(q)),
+                content: data.content,
                 totalElements: data.totalElements,
                 totalPages: data.totalPages
             };
@@ -302,8 +282,7 @@ export class QuestionService {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const questions = await response.json();
-            return questions.map((q: any) => this.convertQuizQuestionToQuestionData(q));
+            return await response.json();
         } catch (error) {
             console.error('❌ Error fetching random questions:', error);
             throw new Error('Failed to fetch questions. Please try again.');
@@ -311,14 +290,51 @@ export class QuestionService {
     }
 
     /**
+     * Search questions by keyword (simple search)
+     * This is a simplified version of advancedSearchQuestions for basic keyword search
+     */
+    static async searchQuestions(
+        keyword: string,
+        count: number = 20,
+        difficulty?: APIDifficulty
+    ): Promise<QuizQuestion[]> {
+        try {
+            const queryParams = new URLSearchParams();
+            queryParams.append('keyword', keyword);
+            queryParams.append('page', '0');
+            queryParams.append('size', count.toString());
+
+            const url = `${this.baseUrl}/quiz-questions/search?${queryParams.toString()}`;
+            const response = await this.fetchWithAuth(url, {
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            let results = await response.json();
+
+            // Filter by difficulty if specified
+            if (difficulty) {
+                results = results.filter((q: QuizQuestion) => q.difficulty === difficulty);
+            }
+
+            return results;
+        } catch (error) {
+            console.error('❌ Error searching questions:', error);
+            throw new Error('Failed to search questions. Please try again.');
+        }
+    }
+
+    /**
      * Get questions by difficulty
      */
     static async getQuestionsByDifficulty(
-        difficulty: UIDifficulty,
+        difficulty: APIDifficulty,
         count: number = 20
     ): Promise<QuizQuestion[]> {
-        const apiDifficulty = DIFFICULTY_MAPPING[difficulty];
-        return this.fetchRandomQuestions(count, apiDifficulty);
+        return this.fetchRandomQuestions(count, difficulty);
     }
 
     /**
