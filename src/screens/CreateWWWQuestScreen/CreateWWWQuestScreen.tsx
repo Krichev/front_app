@@ -1,5 +1,4 @@
 // src/screens/CreateWWWQuestScreen/CreateWWWQuestScreen.tsx
-// FULLY FIXED VERSION - All TypeScript errors resolved
 import React, {useState} from 'react';
 import {
     ActivityIndicator,

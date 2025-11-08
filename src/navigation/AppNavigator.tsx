@@ -27,10 +27,10 @@ import GamesHomeScreen from '../screens/GamesHomeScreen';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {QuestionData} from '../services/wwwGame/questionService';
 import {AuthNavigationHandler} from '../entities/AuthState/ui/AuthNavigationHandler';
 import {GameSettings} from '../services/wwwGame';
 import CreateQuestionWithMedia from "../screens/components/CreateQuestionWithMedia.tsx";
+import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 
 // Navigation types
 export type RootStackParamList = {
@@ -46,7 +46,7 @@ export type RootStackParamList = {
     UserProfile: {userId: string};
     EditProfile: {userId: string};
     WWWGameSetup: {
-        selectedQuestions?: QuestionData[];
+        selectedQuestions?: QuizQuestion[];
         challengeId?: string;
     };
     WWWGamePlay: GameSettings & {

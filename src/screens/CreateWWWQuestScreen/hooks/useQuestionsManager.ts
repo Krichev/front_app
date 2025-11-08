@@ -269,7 +269,7 @@ export const useQuestionsManager = () => {
     const handleUnifiedQuestionSubmit = async (questionData: {
         question: string;
         answer: string;
-        difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+        difficulty: APIDifficulty;
         topic: string;
         additionalInfo: string;
         questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
@@ -288,10 +288,7 @@ export const useQuestionsManager = () => {
                 difficulty: questionData.difficulty,
                 topic: questionData.topic,
                 additionalInfo: questionData.additionalInfo,
-                // Map question types to internal types
-                questionType: questionData.questionType === 'TEXT' ? 'text' :
-                    questionData.questionType === 'IMAGE' ? 'image' :
-                        questionData.questionType === 'VIDEO' ? 'video' : 'audio',
+                questionType: questionData.questionType,
                 // Include media info if present
                 ...(questionData.mediaInfo && {
                     mediaFileId: questionData.mediaInfo.id,
@@ -397,6 +394,7 @@ export const useQuestionsManager = () => {
         // Preview
         isPreviewCollapsed,
         setIsPreviewCollapsed,
+        setNewCustomQuestions,
 
         // Actions
         searchAppQuestions,
