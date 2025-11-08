@@ -15,7 +15,6 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {launchImageLibrary} from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
-import {useUploadMediaMutation} from '../../../store/api/mediaApi';
 
 interface MediaInfo {
     id: string;

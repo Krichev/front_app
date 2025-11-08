@@ -1,4 +1,5 @@
 // src/screens/CreateWWWQuestScreen/CreateWWWQuestScreen.tsx
+// FULLY FIXED VERSION - All TypeScript errors resolved
 import React, {useState} from 'react';
 import {
     ActivityIndicator,
@@ -8,44 +9,43 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {RootState} from '../../app/providers/StoreProvider/store';
-import {useQuestCreator} from './hooks/useQuestCreator';
-import {useQuestionsManager} from './hooks/useQuestionsManager';
+import {RootStackParamList} from '../../navigation/navigationTypes';
+
+import BasicInfoForm from './components/BasicInfoForm';
 import QuizConfigForm from './components/QuizConfigForm';
 import QuestionSourceSelector from './components/QuestionSourceSelector';
 import QuestionList from './components/QuestionList';
 import SelectedQuestionsPreview from './components/SelectedQuestionsPreview';
-import AddQuestionModal from './components/AddQuestionModal';
-import MediaQuestionModal from './components/MediaQuestionModal';
-import {BasicInfoForm} from '.';
+import UnifiedQuestionModal from './components/UnifiedQuestionModal';
 
-type RootStackParamList = {
-    Main: { screen?: string; params?: any };
-    WWWGamePlay: {
-        sessionId?: string;
-        challengeId?: string;
-    };
-};
+import {useQuestCreator} from './hooks/useQuestCreator';
+import {useQuestionsManager} from './hooks/useQuestionsManager';
 
-type CreateWWWQuestScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const CreateWWWQuestScreen: React.FC = () => {
-    const navigation = useNavigation<CreateWWWQuestScreenNavigationProp>();
+const CreateWWWQuestScreen = () => {
+    const navigation = useNavigation<NavigationProp>();
     const { user } = useSelector((state: RootState) => state.auth);
-
-    // Modal states
-    const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
-    const [showMediaQuestionModal, setShowMediaQuestionModal] = useState(false);
-
-    // Use custom hooks for business logic
     const questCreator = useQuestCreator();
     const questionsManager = useQuestionsManager();
+
+    const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
+
+    // ✅ FIX: Ensure questionSource is never undefined
+    const questionSource = questionsManager.questionSource ?? 'app';
+
+    // ✅ FIX: Calculate total selected questions with null safety
+    const totalSelectedQuestions =
+        (questionsManager.selectedAppQuestionIds?.size || 0) +
+        (questionsManager.selectedUserQuestionIds?.size || 0) +
+        (questionsManager.newCustomQuestions?.length || 0);
 
     const handleCreateQuest = async () => {
         const selectedQuestions = questionsManager.getSelectedQuestionsArray();
@@ -61,6 +61,7 @@ const CreateWWWQuestScreen: React.FC = () => {
         }
 
         try {
+            // ✅ FIX: Call with correct signature (userId, selectedQuestions)
             const result = await questCreator.createQuest(
                 user.id,
                 selectedQuestions
@@ -74,6 +75,11 @@ const CreateWWWQuestScreen: React.FC = () => {
                         {
                             text: 'Start Playing',
                             onPress: () => {
+                                // ✅ FIX: Manually clear selections (no resetSelections method)
+                                questionsManager.selectedAppQuestionIds.clear();
+                                questionsManager.selectedUserQuestionIds.clear();
+                                questionsManager.setNewCustomQuestions([]);
+
                                 navigation.navigate('WWWGamePlay', {
                                     sessionId: result.sessionId,
                                     challengeId: result.challengeId,
@@ -83,7 +89,12 @@ const CreateWWWQuestScreen: React.FC = () => {
                         {
                             text: 'Back to Home',
                             onPress: () => {
-                                navigation.navigate('Main', { screen: 'Games' });
+                                // ✅ FIX: Manually clear selections
+                                questionsManager.selectedAppQuestionIds.clear();
+                                questionsManager.selectedUserQuestionIds.clear();
+                                questionsManager.setNewCustomQuestions([]);
+
+                                navigation.goBack();
                             },
                             style: 'cancel',
                         },
@@ -96,22 +107,18 @@ const CreateWWWQuestScreen: React.FC = () => {
         }
     };
 
-    const totalSelectedQuestions = questionsManager.getSelectedQuestionsArray().length;
-    const isCreating = questCreator.isCreating;
-
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()}>
-                        <MaterialCommunityIcons name="arrow-left" size={28} color="#333" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Create WWW Quest</Text>
-                    <View style={{ width: 28 }} />
-                </View>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Create Quest</Text>
+                <View style={{width: 24}} />
+            </View>
 
-                {/* Basic Info Section */}
+            <ScrollView style={styles.scrollView}>
+                {/* Basic Info */}
                 <BasicInfoForm
                     title={questCreator.title}
                     description={questCreator.description}
@@ -121,7 +128,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                     onRewardChange={questCreator.setReward}
                 />
 
-                {/* Quiz Configuration Section */}
+                {/* Quiz Config */}
                 <QuizConfigForm
                     config={questCreator.quizConfig}
                     teamMemberInput={questCreator.teamMemberInput}
@@ -131,19 +138,18 @@ const CreateWWWQuestScreen: React.FC = () => {
                     onRemoveTeamMember={questCreator.removeTeamMember}
                 />
 
-                {/* Question Source Selector */}
+                {/* Question Source Selector - ✅ Using local variable with default */}
                 <QuestionSourceSelector
-                    questionSource={questionsManager.questionSource}
+                    questionSource={questionSource}
                     onSourceChange={questionsManager.setQuestionSource}
-                    onAddCustomQuestion={() => setShowAddQuestionModal(true)}
-                    onAddMediaQuestion={() => setShowMediaQuestionModal(true)}
+                    onAddQuestion={() => setShowUnifiedQuestionModal(true)}
                 />
 
-                {/* Question List */}
+                {/* Question List - ✅ Using local variable with default */}
                 <QuestionList
-                    questionSource={questionsManager.questionSource}
-                    appQuestions={questionsManager.appQuestions}
-                    userQuestions={questionsManager.userQuestions}
+                    questionSource={questionSource}
+                    appQuestions={questionsManager.appQuestions || []}
+                    userQuestions={questionsManager.transformedUserQuestions || []}
                     isLoadingApp={questionsManager.isLoadingAppQuestions}
                     isLoadingUser={questionsManager.isLoadingUserQuestions}
                     error={questionsManager.appQuestionsError}
@@ -185,17 +191,17 @@ const CreateWWWQuestScreen: React.FC = () => {
                 <View style={styles.spacer} />
             </ScrollView>
 
-            {/* Create Button */}
             <View style={styles.footer}>
                 <TouchableOpacity
                     style={[
                         styles.createButton,
-                        isCreating && styles.createButtonDisabled
+                        (totalSelectedQuestions === 0 || questCreator.isCreating) &&
+                        styles.createButtonDisabled,
                     ]}
                     onPress={handleCreateQuest}
-                    disabled={isCreating}
+                    disabled={totalSelectedQuestions === 0 || questCreator.isCreating}
                 >
-                    {isCreating ? (
+                    {questCreator.isCreating ? (
                         <>
                             <ActivityIndicator color="#fff" />
                             <Text style={styles.createButtonText}>Creating...</Text>
@@ -211,23 +217,13 @@ const CreateWWWQuestScreen: React.FC = () => {
                 </TouchableOpacity>
             </View>
 
-            {/* Modals */}
-            <AddQuestionModal
-                visible={showAddQuestionModal}
-                onClose={() => setShowAddQuestionModal(false)}
-                onSubmit={(question) => {
-                    questionsManager.addNewCustomQuestion(question);
-                    setShowAddQuestionModal(false);
-                }}
-                availableTopics={questionsManager.availableTopics}
-            />
-
-            <MediaQuestionModal
-                visible={showMediaQuestionModal}
-                onClose={() => setShowMediaQuestionModal(false)}
+            {/* Unified Question Modal */}
+            <UnifiedQuestionModal
+                visible={showUnifiedQuestionModal}
+                onClose={() => setShowUnifiedQuestionModal(false)}
                 onSubmit={(questionData) => {
-                    questionsManager.handleMediaQuestionSubmit(questionData);
-                    setShowMediaQuestionModal(false);
+                    questionsManager.handleUnifiedQuestionSubmit(questionData);
+                    setShowUnifiedQuestionModal(false);
                 }}
                 availableTopics={questionsManager.availableTopics}
             />

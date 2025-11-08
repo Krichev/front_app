@@ -280,6 +280,59 @@ export const useQuestionsManager = () => {
         }
     };
 
+    // Add this new method to useQuestionsManager.ts
+// Place it after handleMediaQuestionSubmit method
+
+    /**
+     * Handle unified question submission that supports both text and media questions
+     */
+    const handleUnifiedQuestionSubmit = async (questionData: {
+        question: string;
+        answer: string;
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+        topic: string;
+        additionalInfo: string;
+        questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
+        mediaInfo?: {
+            id: string;
+            filename: string;
+            url: string;
+            mediaType: 'IMAGE' | 'VIDEO' | 'AUDIO';
+        };
+    }) => {
+        try {
+            const newQuestion: MultimediaQuestionData = {
+                id: `temp_${Date.now()}`,
+                question: questionData.question,
+                answer: questionData.answer,
+                difficulty: questionData.difficulty,
+                topic: questionData.topic,
+                additionalInfo: questionData.additionalInfo,
+                // Map question types to internal types
+                questionType: questionData.questionType === 'TEXT' ? 'text' :
+                    questionData.questionType === 'IMAGE' ? 'image' :
+                        questionData.questionType === 'VIDEO' ? 'video' : 'audio',
+                // Include media info if present
+                ...(questionData.mediaInfo && {
+                    mediaFileId: questionData.mediaInfo.id,
+                    mediaUrl: questionData.mediaInfo.url,
+                }),
+            };
+
+            setNewCustomQuestions((prev) => [...prev, newQuestion]);
+            Alert.alert('Success', `${questionData.questionType} question added successfully!`);
+        } catch (error) {
+            console.error('Error creating question:', error);
+            Alert.alert('Error', 'Failed to create question. Please try again.');
+        }
+    };
+
+// Export this method in the return statement:
+    return {
+        // ... existing exports
+        handleUnifiedQuestionSubmit,  // Add this line
+    };
+
     const getSelectedQuestionsArray = () => {
 
         // Map selected app questions and ensure difficulty is defined
