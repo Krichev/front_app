@@ -1,15 +1,16 @@
-// src/app/providers/StoreProvider/store.ts - FIXED
+// src/app/providers/StoreProvider/store.ts - UPDATED WITH MEDIA API
 import {configureStore} from '@reduxjs/toolkit';
 import {setupListeners} from '@reduxjs/toolkit/query';
 
 // Import your existing reducers
 import authReducer from '../../../entities/AuthState/model/slice/authSlice';
-import {authApi} from '../../../entities/AuthState/model/slice/authApi'; // ADD THIS IMPORT
+import {authApi} from '../../../entities/AuthState/model/slice/authApi';
 import {userApi} from '../../../entities/UserState/model/slice/userApi';
 import {groupApi} from '../../../entities/GroupState/model/slice/groupApi';
 import {challengeApi} from '../../../entities/ChallengeState/model/slice/challengeApi';
 import {quizApi} from '../../../entities/QuizState/model/slice/quizApi';
 import {tournamentQuestionApi} from '../../../entities/TournamentState/model/slice/tournamentQuestionApi';
+import {mediaApi} from '../../../entities/MediaState/model/slice/mediaApi';
 
 export const store = configureStore({
     reducer: {
@@ -23,6 +24,7 @@ export const store = configureStore({
         [challengeApi.reducerPath]: challengeApi.reducer,
         [quizApi.reducerPath]: quizApi.reducer,
         [tournamentQuestionApi.reducerPath]: tournamentQuestionApi.reducer,
+        [mediaApi.reducerPath]: mediaApi.reducer,
     },
 
     middleware: (getDefaultMiddleware) =>
@@ -33,6 +35,7 @@ export const store = configureStore({
             challengeApi.middleware,
             quizApi.middleware,
             tournamentQuestionApi.middleware,
+            mediaApi.middleware,
         ),
 
     devTools: process.env.NODE_ENV !== 'production', // Enable Redux DevTools in development

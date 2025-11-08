@@ -16,7 +16,6 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../../app/providers/StoreProvider/store';
-import {RootStackParamList} from '../../navigation/navigationTypes';
 
 import BasicInfoForm from './components/BasicInfoForm';
 import QuizConfigForm from './components/QuizConfigForm';
@@ -27,6 +26,7 @@ import UnifiedQuestionModal from './components/UnifiedQuestionModal';
 
 import {useQuestCreator} from './hooks/useQuestCreator';
 import {useQuestionsManager} from './hooks/useQuestionsManager';
+import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -38,10 +38,8 @@ const CreateWWWQuestScreen = () => {
 
     const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
 
-    // ✅ FIX: Ensure questionSource is never undefined
     const questionSource = questionsManager.questionSource ?? 'app';
 
-    // ✅ FIX: Calculate total selected questions with null safety
     const totalSelectedQuestions =
         (questionsManager.selectedAppQuestionIds?.size || 0) +
         (questionsManager.selectedUserQuestionIds?.size || 0) +
@@ -61,7 +59,6 @@ const CreateWWWQuestScreen = () => {
         }
 
         try {
-            // ✅ FIX: Call with correct signature (userId, selectedQuestions)
             const result = await questCreator.createQuest(
                 user.id,
                 selectedQuestions
@@ -75,7 +72,6 @@ const CreateWWWQuestScreen = () => {
                         {
                             text: 'Start Playing',
                             onPress: () => {
-                                // ✅ FIX: Manually clear selections (no resetSelections method)
                                 questionsManager.selectedAppQuestionIds.clear();
                                 questionsManager.selectedUserQuestionIds.clear();
                                 questionsManager.setNewCustomQuestions([]);
@@ -89,7 +85,6 @@ const CreateWWWQuestScreen = () => {
                         {
                             text: 'Back to Home',
                             onPress: () => {
-                                // ✅ FIX: Manually clear selections
                                 questionsManager.selectedAppQuestionIds.clear();
                                 questionsManager.selectedUserQuestionIds.clear();
                                 questionsManager.setNewCustomQuestions([]);
@@ -149,7 +144,7 @@ const CreateWWWQuestScreen = () => {
                 <QuestionList
                     questionSource={questionSource}
                     appQuestions={questionsManager.appQuestions || []}
-                    userQuestions={questionsManager.transformedUserQuestions || []}
+                    userQuestions={questionsManager.userQuestions || []}
                     isLoadingApp={questionsManager.isLoadingAppQuestions}
                     isLoadingUser={questionsManager.isLoadingUserQuestions}
                     error={questionsManager.appQuestionsError}

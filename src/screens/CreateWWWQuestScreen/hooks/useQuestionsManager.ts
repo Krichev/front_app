@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/hooks/useQuestionsManager.ts
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Alert} from 'react-native';
 import {
     QuizQuestion,
@@ -109,26 +109,6 @@ export const useQuestionsManager = () => {
     // Custom questions
     const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
 
-    // Transform user questions to display format
-    const transformedUserQuestions = useMemo(() => {
-        if (!userQuestions || !Array.isArray(userQuestions)) {
-            return [];
-        }
-
-        return (userQuestions ?? []).map((uq: any) => ({
-            id: uq.id?.toString() ?? '',
-            question: uq.question ?? '',
-            answer: uq.answer ?? '',
-            difficulty: uq.difficulty,
-            topic: uq.topic ?? '',
-            additionalInfo: uq.additionalInfo ?? '',
-            visibility: uq.visibility,
-            questionType: uq.questionType,
-            isUserCreated: uq.isUserCreated,
-            isActive: uq.isActive,
-            usageCount: uq.usageCount
-        }));
-    }, [userQuestions]);
 
     // Search app questions on mount
     useEffect(() => {
@@ -327,14 +307,10 @@ export const useQuestionsManager = () => {
         }
     };
 
-// Export this method in the return statement:
-    return {
-        // ... existing exports
-        handleUnifiedQuestionSubmit,  // Add this line
-    };
-
+    /**
+     * Get array of all selected questions from all sources
+     */
     const getSelectedQuestionsArray = () => {
-
         // Map selected app questions and ensure difficulty is defined
         const selectedAppQuestions = (appQuestions ?? [])
             .filter((q) => selectedAppQuestionIds.has(q?.id?.toString() ?? ''))
@@ -350,7 +326,7 @@ export const useQuestionsManager = () => {
             }));
 
         // Map selected user questions and convert difficulty format
-        const selectedUserQuestionsData = transformedUserQuestions
+        const selectedUserQuestionsData = (userQuestions ?? [])
             .filter((uq) => selectedUserQuestionIds.has(uq.id))
             .map((uq) => ({
                 id: uq.id,
@@ -367,7 +343,7 @@ export const useQuestionsManager = () => {
             id: `new-custom-${idx}`,
             question: q.question,
             answer: q.answer,
-            difficulty: q.difficulty, // Already in 'EASY' | 'MEDIUM' | 'HARD' format
+            difficulty: q.difficulty,
             topic: q.topic,
             additionalInfo: q.additionalInfo,
             source: 'custom' as const,
@@ -384,7 +360,6 @@ export const useQuestionsManager = () => {
         // Questions data
         appQuestions,
         userQuestions,
-        transformedUserQuestions,
         newCustomQuestions,
 
         // Loading states
@@ -433,6 +408,7 @@ export const useQuestionsManager = () => {
         addNewCustomQuestion,
         removeNewCustomQuestion,
         handleMediaQuestionSubmit,
+        handleUnifiedQuestionSubmit,
         getSelectedQuestionsArray,
         refetchUserQuestions,
     };
