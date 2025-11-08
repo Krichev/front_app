@@ -1,8 +1,21 @@
 // src/screens/CreateWWWQuestScreen/components/MediaQuestionModal.tsx
 import React, {useState} from 'react';
-import {Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {QuestionFormData, QuestionType} from '../hooks/useQuestionsManager';
+import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
+import MediaUploadService from '../../../services/media/MediaUploadService';
 
 interface MediaQuestionModalProps {
     visible: boolean;
@@ -11,20 +24,246 @@ interface MediaQuestionModalProps {
     availableTopics: string[];
 }
 
+interface MediaInfo {
+    mediaId?: string;
+    mediaUrl?: string;
+    mediaType?: string;
+    thumbnailUrl?: string;
+}
+
 const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                                    visible,
                                                                    onClose,
                                                                    onSubmit,
                                                                    availableTopics,
                                                                }) => {
+    // Form state
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
     const [additionalInfo, setAdditionalInfo] = useState('');
     const [questionType, setQuestionType] = useState<QuestionType>('TEXT');
-    const [mediaUri, setMediaUri] = useState<string | null>(null);
     const [showTopicPicker, setShowTopicPicker] = useState(false);
+
+    // Media state
+    const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | null>(null);
+    const [uploadedMediaInfo, setUploadedMediaInfo] = useState<MediaInfo | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    /**
+     * Handle media selection based on question type
+     */
+    const handleSelectMedia = async () => {
+        try {
+            switch (questionType) {
+                case 'IMAGE':
+                    await handleImagePick();
+                    break;
+                case 'VIDEO':
+                    await handleVideoPick();
+                    break;
+                case 'AUDIO':
+                    await handleAudioPick();
+                    break;
+                default:
+                    Alert.alert('Info', 'Please select a media type first (IMAGE, VIDEO, or AUDIO)');
+            }
+        } catch (error) {
+            console.error('Error in handleSelectMedia:', error);
+            Alert.alert('Error', 'Failed to select media. Please try again.');
+        }
+    };
+
+    /**
+     * Handle image selection
+     */
+    const handleImagePick = async () => {
+        try {
+            const result = await FileService.pickImage({
+                mediaType: 'mixed',
+                allowsEditing: false,
+                quality: 0.8,
+                maxWidth: 1920,
+                maxHeight: 1080,
+            });
+
+            if (!result) {
+                console.log('Image selection cancelled');
+                return;
+            }
+
+            const validation = FileService.validateFile(result);
+            if (!validation.isValid) {
+                Alert.alert('Invalid File', validation.error || 'Please select a valid image');
+                return;
+            }
+
+            setSelectedMedia(result);
+            setUploadedMediaInfo(null); // Clear previous upload
+            console.log('Image selected:', result.name, result.sizeFormatted);
+
+            // Auto-upload after selection
+            await handleUploadMedia(result);
+        } catch (error) {
+            console.error('Error picking image:', error);
+            Alert.alert('Error', 'Failed to select image. Please try again.');
+        }
+    };
+
+    /**
+     * Handle video selection
+     */
+    const handleVideoPick = async () => {
+        try {
+            const result = await FileService.pickVideo({
+                mediaType: 'video',
+                allowsEditing: false,
+                quality: 0.8,
+            });
+
+            if (!result) {
+                console.log('Video selection cancelled');
+                return;
+            }
+
+            const validation = FileService.validateFile(result);
+            if (!validation.isValid) {
+                Alert.alert('Invalid File', validation.error || 'Please select a valid video');
+                return;
+            }
+
+            setSelectedMedia(result);
+            setUploadedMediaInfo(null);
+            console.log('Video selected:', result.name, result.sizeFormatted);
+
+            // Auto-upload after selection
+            await handleUploadMedia(result);
+        } catch (error) {
+            console.error('Error picking video:', error);
+            Alert.alert('Error', 'Failed to select video. Please try again.');
+        }
+    };
+
+    /**
+     * Handle audio selection
+     */
+    const handleAudioPick = async () => {
+        try {
+            // Show options for audio: Record or Pick from library
+            Alert.alert(
+                'Audio Source',
+                'Choose audio source',
+                [
+                    {
+                        text: 'Record Audio',
+                        onPress: async () => {
+                            try {
+                                const audioFile = await FileService.startRecording();
+                                if (audioFile) {
+                                    setSelectedMedia(audioFile);
+                                    setUploadedMediaInfo(null);
+                                    await handleUploadMedia(audioFile);
+                                }
+                            } catch (error) {
+                                console.error('Error recording audio:', error);
+                                Alert.alert('Error', 'Failed to record audio. Please try again.');
+                            }
+                        },
+                    },
+                    {
+                        text: 'Choose from Library',
+                        onPress: () => {
+                            Alert.alert(
+                                'Coming Soon',
+                                'Audio file picker from library is not yet implemented. Please use recording for now.'
+                            );
+                        },
+                    },
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                ]
+            );
+        } catch (error) {
+            console.error('Error handling audio:', error);
+            Alert.alert('Error', 'Failed to handle audio. Please try again.');
+        }
+    };
+    
+    /**
+     * Upload media to server
+     */
+    const handleUploadMedia = async (media: ProcessedFileInfo) => {
+        if (!media) {
+            Alert.alert('No Media', 'Please select media first');
+            return;
+        }
+
+        try {
+            setIsUploading(true);
+            setUploadProgress(0);
+
+            const response = await MediaUploadService.uploadQuizMedia(
+                media,
+                `temp_${Date.now()}`, // Temporary ID until question is saved
+                (progress) => {
+                    setUploadProgress(progress.percentage);
+                    console.log(`Upload progress: ${progress.percentage}%`);
+                }
+            );
+
+            if (response.success && response.mediaId && response.mediaUrl) {
+                const mediaInfo: MediaInfo = {
+                    mediaId: response.mediaId,
+                    mediaUrl: response.mediaUrl,
+                    mediaType: media.type || 'unknown',
+                    thumbnailUrl: response.thumbnailUrl,
+                };
+
+                setUploadedMediaInfo(mediaInfo);
+                Alert.alert('Success', 'Media uploaded successfully!');
+                console.log('Upload response:', response);
+            } else {
+                Alert.alert('Upload Failed', response.error || 'Failed to upload media');
+                setSelectedMedia(null);
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            Alert.alert('Error', 'Failed to upload media. Please try again.');
+            setSelectedMedia(null);
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+        }
+    };
+
+    /**
+     * Remove selected/uploaded media
+     */
+    const handleRemoveMedia = () => {
+        Alert.alert(
+            'Remove Media',
+            'Are you sure you want to remove this media?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: () => {
+                        setSelectedMedia(null);
+                        setUploadedMediaInfo(null);
+                        setUploadProgress(0);
+                    },
+                },
+            ]
+        );
+    };
 
     const handleSubmit = () => {
         if (!question.trim()) {
@@ -36,17 +275,44 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             return;
         }
 
+        // If media type is selected but no media uploaded
+        if (questionType !== 'TEXT' && !uploadedMediaInfo) {
+            Alert.alert(
+                'No Media',
+                'You selected a media question type but haven\'t uploaded any media. Do you want to continue as a text question?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Continue as Text',
+                        onPress: () => submitQuestion('TEXT'),
+                    },
+                ]
+            );
+            return;
+        }
+
+        submitQuestion(questionType);
+    };
+
+    const submitQuestion = (finalQuestionType: QuestionType) => {
         onSubmit({
             question: question.trim(),
             answer: answer.trim(),
             difficulty,
             topic: topic.trim(),
             additionalInfo: additionalInfo.trim(),
-            questionType,
-            media: mediaUri ? {
-                mediaUrl: mediaUri,
-                mediaType: questionType,
-            } : undefined,
+            questionType: finalQuestionType,
+            media: uploadedMediaInfo
+                ? {
+                    mediaUrl: uploadedMediaInfo.mediaUrl,
+                    mediaType: uploadedMediaInfo.mediaType,
+                    mediaId: uploadedMediaInfo.mediaId,
+                    thumbnailUrl: uploadedMediaInfo.thumbnailUrl,
+                }
+                : undefined,
         });
 
         // Reset form
@@ -60,80 +326,167 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
         setTopic('');
         setAdditionalInfo('');
         setQuestionType('TEXT');
-        setMediaUri(null);
+        setSelectedMedia(null);
+        setUploadedMediaInfo(null);
+        setUploadProgress(0);
+        setIsUploading(false);
     };
 
     const handleClose = () => {
-        resetForm();
-        onClose();
+        if (selectedMedia || uploadedMediaInfo) {
+            Alert.alert(
+                'Discard Changes?',
+                'You have unsaved media. Are you sure you want to close?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel',
+                    },
+                    {
+                        text: 'Discard',
+                        style: 'destructive',
+                        onPress: () => {
+                            resetForm();
+                            onClose();
+                        },
+                    },
+                ]
+            );
+        } else {
+            resetForm();
+            onClose();
+        }
     };
 
-    const handleSelectMedia = () => {
-        // This is a placeholder - implement actual media picker
-        Alert.alert(
-            'Media Upload',
-            'Media upload functionality would be implemented here. For now, this creates a question without media.',
-            [{ text: 'OK' }]
+    /**
+     * Render media preview based on type
+     */
+    const renderMediaPreview = () => {
+        if (isUploading) {
+            return (
+                <View style={styles.uploadingContainer}>
+                    <ActivityIndicator size="large" color="#007AFF"/>
+                    <Text style={styles.uploadingText}>
+                        Uploading... {uploadProgress}%
+                    </Text>
+                </View>
+            );
+        }
+
+        if (!uploadedMediaInfo && !selectedMedia) {
+            return null;
+        }
+
+        return (
+            <View style={styles.mediaPreviewContainer}>
+                {questionType === 'IMAGE' && uploadedMediaInfo?.mediaUrl ? (
+                    <Image
+                        source={{uri: uploadedMediaInfo.mediaUrl}}
+                        style={styles.imagePreview}
+                        resizeMode="cover"
+                    />
+                ) : questionType === 'IMAGE' && selectedMedia ? (
+                    <Image
+                        source={{uri: selectedMedia.uri}}
+                        style={styles.imagePreview}
+                        resizeMode="cover"
+                    />
+                ) : (
+                    <View style={styles.mediaPlaceholder}>
+                        <MaterialCommunityIcons
+                            name={questionType === 'VIDEO' ? 'video' : 'music'}
+                            size={48}
+                            color="#007AFF"
+                        />
+                        <Text style={styles.mediaPlaceholderText}>
+                            {uploadedMediaInfo ? 'Media Uploaded' : 'Media Selected'}
+                        </Text>
+                        {selectedMedia && (
+                            <Text style={styles.mediaFileName}>{selectedMedia.name}</Text>
+                        )}
+                    </View>
+                )}
+                <TouchableOpacity
+                    style={styles.removeMediaButton}
+                    onPress={handleRemoveMedia}
+                >
+                    <MaterialCommunityIcons name="close-circle" size={24} color="#FF3B30"/>
+                </TouchableOpacity>
+            </View>
         );
     };
 
     return (
-        <>
-            <Modal
-                visible={visible}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={handleClose}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Add Media Question</Text>
-                            <TouchableOpacity onPress={handleClose}>
-                                <MaterialCommunityIcons name="close" size={28} color="#333" />
-                            </TouchableOpacity>
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={handleClose}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Add Media Question</Text>
+                        <TouchableOpacity onPress={handleClose}>
+                            <MaterialCommunityIcons name="close" size={28} color="#333"/>
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {/* Question Type Selector */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Question Type</Text>
+                            <View style={styles.typeContainer}>
+                                {(['TEXT', 'IMAGE', 'VIDEO', 'AUDIO'] as const).map((type) => (
+                                    <TouchableOpacity
+                                        key={type}
+                                        style={[
+                                            styles.typeChip,
+                                            questionType === type && styles.typeChipSelected,
+                                        ]}
+                                        onPress={() => {
+                                            setQuestionType(type);
+                                            // Clear media when switching types
+                                            if (type === 'TEXT') {
+                                                setSelectedMedia(null);
+                                                setUploadedMediaInfo(null);
+                                            }
+                                        }}
+                                        disabled={isUploading}
+                                    >
+                                        <MaterialCommunityIcons
+                                            name={
+                                                type === 'TEXT'
+                                                    ? 'text'
+                                                    : type === 'IMAGE'
+                                                        ? 'image'
+                                                        : type === 'VIDEO'
+                                                            ? 'video'
+                                                            : 'music'
+                                            }
+                                            size={20}
+                                            color={questionType === type ? '#fff' : '#666'}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.typeChipText,
+                                                questionType === type && styles.typeChipTextSelected,
+                                            ]}
+                                        >
+                                            {type}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Question Type Selector */}
+                        {/* Media Upload Section */}
+                        {questionType !== 'TEXT' && (
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Question Type</Text>
-                                <View style={styles.typeContainer}>
-                                    {(['TEXT', 'IMAGE', 'VIDEO', 'AUDIO'] as const).map((type) => (
-                                        <TouchableOpacity
-                                            key={type}
-                                            style={[
-                                                styles.typeChip,
-                                                questionType === type && styles.typeChipSelected,
-                                            ]}
-                                            onPress={() => setQuestionType(type)}
-                                        >
-                                            <MaterialCommunityIcons
-                                                name={
-                                                    type === 'TEXT' ? 'text' :
-                                                        type === 'IMAGE' ? 'image' :
-                                                            type === 'VIDEO' ? 'video' : 'music'
-                                                }
-                                                size={20}
-                                                color={questionType === type ? '#fff' : '#666'}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.typeChipText,
-                                                    questionType === type && styles.typeChipTextSelected,
-                                                ]}
-                                            >
-                                                {type}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </View>
+                                <Text style={styles.label}>Media</Text>
 
-                            {/* Media Upload */}
-                            {questionType !== 'TEXT' && (
-                                <View style={styles.inputContainer}>
-                                    <Text style={styles.label}>Media</Text>
+                                {/* Upload Button */}
+                                {!uploadedMediaInfo && !isUploading && (
                                     <TouchableOpacity
                                         style={styles.mediaButton}
                                         onPress={handleSelectMedia}
@@ -144,187 +497,135 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                             color="#007AFF"
                                         />
                                         <Text style={styles.mediaButtonText}>
-                                            Upload {questionType}
+                                            {selectedMedia
+                                                ? `Change ${questionType}`
+                                                : `Upload ${questionType}`}
                                         </Text>
                                     </TouchableOpacity>
-                                    {mediaUri && (
-                                        <View style={styles.mediaPreview}>
-                                            {questionType === 'IMAGE' ? (
-                                                <Image
-                                                    source={{ uri: mediaUri }}
-                                                    style={styles.imagePreview}
-                                                />
-                                            ) : (
-                                                <View style={styles.mediaPlaceholder}>
-                                                    <MaterialCommunityIcons
-                                                        name={questionType === 'VIDEO' ? 'video' : 'music'}
-                                                        size={48}
-                                                        color="#007AFF"
-                                                    />
-                                                    <Text style={styles.mediaPlaceholderText}>
-                                                        {questionType} Selected
-                                                    </Text>
-                                                </View>
-                                            )}
-                                        </View>
-                                    )}
-                                </View>
-                            )}
+                                )}
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Question *</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    value={question}
-                                    onChangeText={setQuestion}
-                                    placeholder="Enter your question"
-                                    multiline
-                                    numberOfLines={3}
-                                />
+                                {/* Media Preview */}
+                                {renderMediaPreview()}
                             </View>
+                        )}
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Answer *</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    value={answer}
-                                    onChangeText={setAnswer}
-                                    placeholder="Enter the answer"
-                                    multiline
-                                    numberOfLines={3}
-                                />
-                            </View>
+                        {/* Question Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Question *</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="Enter your question"
+                                value={question}
+                                onChangeText={setQuestion}
+                                multiline
+                                numberOfLines={3}
+                            />
+                        </View>
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Difficulty</Text>
-                                <View style={styles.difficultyContainer}>
-                                    {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
-                                        <TouchableOpacity
-                                            key={diff}
+                        {/* Answer Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Answer *</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="Enter the answer"
+                                value={answer}
+                                onChangeText={setAnswer}
+                                multiline
+                                numberOfLines={2}
+                            />
+                        </View>
+
+                        {/* Difficulty Selector */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Difficulty</Text>
+                            <View style={styles.difficultyContainer}>
+                                {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
+                                    <TouchableOpacity
+                                        key={level}
+                                        style={[
+                                            styles.difficultyChip,
+                                            difficulty === level && styles.difficultyChipSelected,
+                                        ]}
+                                        onPress={() => setDifficulty(level)}
+                                    >
+                                        <Text
                                             style={[
-                                                styles.difficultyChip,
-                                                difficulty === diff && styles.difficultyChipSelected,
+                                                styles.difficultyChipText,
+                                                difficulty === level &&
+                                                styles.difficultyChipTextSelected,
                                             ]}
-                                            onPress={() => setDifficulty(diff)}
                                         >
-                                            <Text
-                                                style={[
-                                                    styles.difficultyChipText,
-                                                    difficulty === diff && styles.difficultyChipTextSelected,
-                                                ]}
-                                            >
-                                                {diff}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
+                                            {level}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
+                        </View>
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Topic (Optional)</Text>
-                                <TouchableOpacity
-                                    style={styles.topicPickerButton}
-                                    onPress={() => setShowTopicPicker(true)}
-                                >
-                                    <Text style={styles.topicPickerText}>
-                                        {topic || 'Select or enter topic'}
-                                    </Text>
-                                    <MaterialCommunityIcons
-                                        name="chevron-down"
-                                        size={24}
-                                        color="#666"
-                                    />
-                                </TouchableOpacity>
-                                <TextInput
-                                    style={[styles.input, { marginTop: 8 }]}
-                                    value={topic}
-                                    onChangeText={setTopic}
-                                    placeholder="Or type custom topic"
-                                />
-                            </View>
+                        {/* Topic Input */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Topic (Optional)</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="e.g., History, Science, Movies"
+                                value={topic}
+                                onChangeText={setTopic}
+                            />
+                        </View>
 
-                            <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Additional Info (Optional)</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea]}
-                                    value={additionalInfo}
-                                    onChangeText={setAdditionalInfo}
-                                    placeholder="Any extra information about this question"
-                                    multiline
-                                    numberOfLines={2}
-                                />
-                            </View>
-                        </ScrollView>
+                        {/* Additional Info */}
+                        <View style={styles.inputContainer}>
+                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <TextInput
+                                style={styles.textInput}
+                                placeholder="Any hints or additional context"
+                                value={additionalInfo}
+                                onChangeText={setAdditionalInfo}
+                                multiline
+                                numberOfLines={2}
+                            />
+                        </View>
 
-                        <View style={styles.modalFooter}>
-                            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
+                        {/* Action Buttons */}
+                        <View style={styles.buttonContainer}>
+                            <TouchableOpacity
+                                style={styles.cancelButton}
+                                onPress={handleClose}
+                                disabled={isUploading}
+                            >
                                 <Text style={styles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                                <MaterialCommunityIcons name="check" size={20} color="#fff" />
-                                <Text style={styles.submitButtonText}>Add Question</Text>
+                            <TouchableOpacity
+                                style={[
+                                    styles.submitButton,
+                                    isUploading && styles.submitButtonDisabled,
+                                ]}
+                                onPress={handleSubmit}
+                                disabled={isUploading}
+                            >
+                                <Text style={styles.submitButtonText}>
+                                    {isUploading ? 'Uploading...' : 'Add Question'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
+                    </ScrollView>
                 </View>
-            </Modal>
-
-            {/* Topic Picker Modal */}
-            <Modal
-                visible={showTopicPicker}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setShowTopicPicker(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxHeight: '60%' }]}>
-                        <Text style={styles.modalTitle}>Select Topic</Text>
-                        <ScrollView>
-                            {availableTopics.map((t) => (
-                                <TouchableOpacity
-                                    key={t}
-                                    style={styles.topicItem}
-                                    onPress={() => {
-                                        setTopic(t);
-                                        setShowTopicPicker(false);
-                                    }}
-                                >
-                                    <Text style={styles.topicItemText}>{t}</Text>
-                                    {topic === t && (
-                                        <MaterialCommunityIcons
-                                            name="check"
-                                            size={24}
-                                            color="#007AFF"
-                                        />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                        <TouchableOpacity
-                            style={styles.modalCloseButton}
-                            onPress={() => setShowTopicPicker(false)}
-                        >
-                            <Text style={styles.modalCloseButtonText}>Close</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
-        </>
+            </View>
+        </Modal>
     );
 };
 
 const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
+        backgroundColor: 'white',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
         padding: 20,
-        width: '90%',
         maxHeight: '90%',
     },
     modalHeader: {
@@ -335,49 +636,44 @@ const styles = StyleSheet.create({
     },
     modalTitle: {
         fontSize: 20,
-        fontWeight: '700',
+        fontWeight: 'bold',
         color: '#333',
     },
     inputContainer: {
-        marginBottom: 16,
+        marginBottom: 20,
     },
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#666',
+        color: '#333',
         marginBottom: 8,
     },
-    input: {
+    textInput: {
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
-        color: '#333',
-        backgroundColor: '#f8f8f8',
-    },
-    textArea: {
-        minHeight: 80,
+        minHeight: 50,
         textAlignVertical: 'top',
     },
     typeContainer: {
         flexDirection: 'row',
-        gap: 8,
+        gap: 10,
     },
     typeChip: {
         flex: 1,
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5',
         paddingVertical: 12,
+        paddingHorizontal: 8,
         borderRadius: 8,
-        backgroundColor: '#f0f0f0',
-        borderWidth: 2,
-        borderColor: '#ddd',
-        gap: 4,
+        gap: 6,
     },
     typeChipSelected: {
         backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
     },
     typeChipText: {
         fontSize: 12,
@@ -391,58 +687,85 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
+        backgroundColor: '#f0f8ff',
+        paddingVertical: 16,
+        paddingHorizontal: 20,
         borderRadius: 8,
-        borderWidth: 2,
-        borderStyle: 'dashed',
+        borderWidth: 1,
         borderColor: '#007AFF',
-        backgroundColor: '#f0f7ff',
-        gap: 8,
+        borderStyle: 'dashed',
+        gap: 10,
     },
     mediaButtonText: {
         fontSize: 16,
         fontWeight: '600',
         color: '#007AFF',
     },
-    mediaPreview: {
-        marginTop: 12,
+    uploadingContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 30,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+        marginTop: 10,
+    },
+    uploadingText: {
+        marginTop: 10,
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '600',
+    },
+    mediaPreviewContainer: {
+        marginTop: 10,
         borderRadius: 8,
         overflow: 'hidden',
+        position: 'relative',
     },
     imagePreview: {
         width: '100%',
         height: 200,
-        resizeMode: 'cover',
+        borderRadius: 8,
     },
     mediaPlaceholder: {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 40,
-        backgroundColor: '#f0f7ff',
+        backgroundColor: '#f5f5f5',
         borderRadius: 8,
     },
     mediaPlaceholderText: {
-        marginTop: 8,
-        fontSize: 16,
+        marginTop: 10,
+        fontSize: 14,
         fontWeight: '600',
-        color: '#007AFF',
+        color: '#666',
+    },
+    mediaFileName: {
+        marginTop: 5,
+        fontSize: 12,
+        color: '#999',
+    },
+    removeMediaButton: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 2,
     },
     difficultyContainer: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 10,
     },
     difficultyChip: {
         flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5',
         paddingVertical: 12,
         borderRadius: 8,
-        backgroundColor: '#f0f0f0',
-        borderWidth: 2,
-        borderColor: '#ddd',
-        alignItems: 'center',
     },
     difficultyChipSelected: {
-        backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
+        backgroundColor: '#34C759',
     },
     difficultyChipText: {
         fontSize: 14,
@@ -452,42 +775,17 @@ const styles = StyleSheet.create({
     difficultyChipTextSelected: {
         color: '#fff',
     },
-    topicPickerButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        backgroundColor: '#f8f8f8',
-    },
-    topicPickerText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    topicItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    topicItemText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    modalFooter: {
+    buttonContainer: {
         flexDirection: 'row',
         gap: 12,
-        marginTop: 20,
+        marginTop: 10,
+        marginBottom: 20,
     },
     cancelButton: {
         flex: 1,
-        padding: 16,
+        backgroundColor: '#f5f5f5',
+        paddingVertical: 16,
         borderRadius: 8,
-        backgroundColor: '#f0f0f0',
         alignItems: 'center',
     },
     cancelButtonText: {
@@ -497,30 +795,18 @@ const styles = StyleSheet.create({
     },
     submitButton: {
         flex: 1,
-        flexDirection: 'row',
-        padding: 16,
+        backgroundColor: '#007AFF',
+        paddingVertical: 16,
         borderRadius: 8,
-        backgroundColor: '#4CAF50',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
+    },
+    submitButtonDisabled: {
+        backgroundColor: '#ccc',
     },
     submitButtonText: {
         fontSize: 16,
         fontWeight: '600',
         color: '#fff',
-    },
-    modalCloseButton: {
-        backgroundColor: '#007AFF',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    modalCloseButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
     },
 });
 

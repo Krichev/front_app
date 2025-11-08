@@ -47,6 +47,7 @@ export interface QuestionFormData {
         mediaId?: string;
         mediaUrl?: string;
         mediaType?: string;
+        thumbnailUrl?: string;
     };
 }
 
