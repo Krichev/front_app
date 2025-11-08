@@ -151,7 +151,7 @@ export interface CreateChallengeRequest {
     // Access control properties
     requiresApproval?: boolean;
     invitedUserIds?: number[];
-    userId: string | number;
+    userId: string;
 }
 
 /**
@@ -177,7 +177,7 @@ export interface GetChallengesParams {
  */
 export interface ChallengeAccessUser {
     /** User ID */
-    id: number;
+    id: string;
     /** Username */
     username: string;
     /** User email */

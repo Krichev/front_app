@@ -15,13 +15,14 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {QuestionData, QuestionService} from '../services/wwwGame/questionService';
+import {QuestionService} from '../services/wwwGame/questionService';
 import {ScrollView} from 'react-native-gesture-handler';
+import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 
 // Define navigation types
 type RootStackParamList = {
     QuestionManagement: undefined;
-    WWWGameSetup: { selectedQuestions?: QuestionData[] };
+    WWWGameSetup: { selectedQuestions?: QuizQuestion[] };
 };
 
 type QuestionManagementNavigationProp = NativeStackNavigationProp<
@@ -33,8 +34,8 @@ const QuestionManagementScreen: React.FC = () => {
     const navigation = useNavigation<QuestionManagementNavigationProp>();
 
     // State variables
-    const [questions, setQuestions] = useState<QuestionData[]>([]);
-    const [selectedQuestions, setSelectedQuestions] = useState<QuestionData[]>([]);
+    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard' | 'All'>('All');
@@ -134,7 +135,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Toggle question selection
-    const toggleQuestionSelection = (question: QuestionData) => {
+    const toggleQuestionSelection = (question: QuizQuestion) => {
         const isSelected = selectedQuestions.some(q => q.id === question.id);
 
         if (isSelected) {
@@ -163,7 +164,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Render each question item
-    const renderQuestionItem = ({item}: { item: QuestionData }) => {
+    const renderQuestionItem = ({item}: { item: QuizQuestion }) => {
         const isSelected = selectedQuestions.some(q => q.id === item.id);
 
         return (
@@ -198,7 +199,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Show detailed question information
-    const showQuestionDetails = (question: QuestionData) => {
+    const showQuestionDetails = (question: QuizQuestion) => {
         Alert.alert(
             'Question Details',
             `Q: ${question.question}\n\nA: ${question.answer}${question.additionalInfo ? `\n\nAdditional Info: ${question.additionalInfo}` : ''}${question.source ? `\n\nSource: ${question.source}` : ''}`,
@@ -210,7 +211,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Show difficulty selection dialog
-    const showDifficultySelection = (question: QuestionData) => {
+    const showDifficultySelection = (question: QuizQuestion) => {
         Alert.alert(
             'Set Difficulty',
             'Choose difficulty level for this question:',
@@ -224,7 +225,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Update question difficulty
-    const updateQuestionDifficulty = (question: QuestionData, newDifficulty: 'Easy' | 'Medium' | 'Hard') => {
+    const updateQuestionDifficulty = (question: QuizQuestion, newDifficulty: 'Easy' | 'Medium' | 'Hard') => {
         // Update in questions list
         const updatedQuestions = questions.map(q =>
             q.id === question.id ? {...q, difficulty: newDifficulty} : q

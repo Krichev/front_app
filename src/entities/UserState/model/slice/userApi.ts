@@ -1,9 +1,7 @@
 // src/entities/UserState/model/slice/userApi.ts - UPDATED
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
-import {updateUser} from '../../../AuthState/model/slice/authSlice';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
-import {TokenRefreshService} from '../../../../services/auth/TokenRefreshService';
 
 export interface UserProfile {
     id: string;
@@ -11,7 +9,7 @@ export interface UserProfile {
     email: string;
     bio?: string;
     avatar?: string;
-    createdAt: string;
+    createdAt: Date;
     statsCompleted?: number;
     statsCreated?: number;
     statsSuccess?: number;

@@ -1,7 +1,8 @@
 // src/entities/QuizState/model/slice/quizApi.ts - FIXED VERSION
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
-import {MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
+import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
+import {QuestionVisibility} from "../types/question.types.ts";
 
 // ============================================================================
 // TYPES
@@ -21,33 +22,34 @@ export interface CreateQuestionWithMediaRequest {
     questionMediaType?: MediaType;
 }
 
-export interface QuizQuestionResponse {
-    id: number;
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    additionalInfo?: string;
-    source?: string;
-    questionType: QuestionType;
-    questionMediaUrl?: string;
-    questionMediaId?: string;
-    questionMediaType?: MediaType;
-    questionThumbnailUrl?: string;
-    isUserCreated: boolean;
-    creatorId?: number;
-    creatorUsername?: string;
-    isActive: boolean;
-    usageCount: number;
-    createdAt: string;
-    updatedAt: string;
-}
+// export interface QuizQuestionResponse {
+//     id: number;
+//     question: string;
+//     answer: string;
+//     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+//     topic?: string;
+//     additionalInfo?: string;
+//     source?: string;
+//     questionType: QuestionType;
+//     questionMediaUrl?: string;
+//     questionMediaId?: string;
+//     questionMediaType?: MediaType;
+//     questionThumbnailUrl?: string;
+//     isUserCreated: boolean;
+//     creatorId?: number;
+//     creatorUsername?: string;
+//     isActive: boolean;
+//     usageCount: number;
+//     createdAt: string;
+//     updatedAt: string;
+// }
 
 export interface QuizQuestion {
-    id: number;
+    id: string;
     question: string;
     answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
+    visibility: QuestionVisibility;
     topic?: string;
     additionalInfo?: string;
     source?: string;
@@ -97,10 +99,10 @@ export interface UpdateQuestionVisibilityRequest {
 }
 
 export interface UserRelationship {
-    id: number;
-    userId: number;
+    id: string;
+    userId: string;
     username: string;
-    relatedUserId: number;
+    relatedUserId: string;
     relatedUsername: string;
     status: 'PENDING' | 'ACCEPTED' | 'BLOCKED';
     createdAt: string;
@@ -448,7 +450,7 @@ export const quizApi = createApi({
             ],
         }),
 
-        createUserQuestionWithMedia: builder.mutation<QuizQuestionResponse, CreateQuestionWithMediaRequest>({
+        createUserQuestionWithMedia: builder.mutation<QuizQuestion, CreateQuestionWithMediaRequest>({
             query: (questionData) => ({
                 url: '/api/quiz/questions',
                 method: 'POST',

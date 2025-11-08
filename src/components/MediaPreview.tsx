@@ -1,289 +1,238 @@
-// src/components/MediaPreview.tsx
-import React, {useEffect, useRef, useState} from 'react';
-import {ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import Video from 'react-native-video';
-import Sound from 'react-native-sound';
+import React, {useEffect, useState} from 'react';
+import {ActivityIndicator, Dimensions, Image, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Audio, AVPlaybackStatus, ResizeMode, Video} from 'expo-av';
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+import MediaUploadService from "../services/media/MediaUploadService.ts";
 
-export type MediaType = 'image' | 'video' | 'audio';
-
-export interface MediaPreviewProps {
-    mediaUrl: string;
-    mediaType: MediaType;
+interface MediaPreviewProps {
+    mediaId?: string | number;
+    mediaUrl?: string;
     thumbnailUrl?: string;
-    duration?: number;
-    fileName?: string;
-    onError?: (error: string) => void;
-    autoPlay?: boolean;
+    mediaType?: 'image' | 'video' | 'audio';
+    style?: any;
+    height?: number;
+    width?: number;
+    resizeMode?: 'cover' | 'contain' | 'stretch';
     showControls?: boolean;
-    maxHeight?: number;
+    autoPlay?: boolean;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
-const defaultMaxHeight = 200;
-
 const MediaPreview: React.FC<MediaPreviewProps> = ({
-                                                       mediaUrl,
-                                                       mediaType,
-                                                       thumbnailUrl,
-                                                       duration,
-                                                       fileName,
-                                                       onError,
-                                                       autoPlay = false,
+                                                       mediaId,
+                                                       mediaUrl: providedMediaUrl,
+                                                       thumbnailUrl: providedThumbnailUrl,
+                                                       mediaType = 'image',
+                                                       style,
+                                                       height = 200,
+                                                       width = Dimensions.get('window').width - 48,
+                                                       resizeMode = 'cover',
                                                        showControls = true,
-                                                       maxHeight = defaultMaxHeight,
+                                                       autoPlay = false,
                                                    }) => {
-    const [isLoading, setIsLoading] = useState(true);
+    const [mediaUrl, setMediaUrl] = useState<string | null>(providedMediaUrl || null);
+    const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(providedThumbnailUrl || null);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [totalDuration, setTotalDuration] = useState(duration || 0);
-    const [volume, setVolume] = useState(1.0);
-    const [showFullscreen, setShowFullscreen] = useState(false);
+    const [isPlaying, setIsPlaying] = useState<boolean>(autoPlay);
+    const videoRef = React.useRef<Video>(null);
+    const [sound, setSound] = React.useState<Audio.Sound | null>(null);
 
-    const videoRef = useRef<Video>(null);
-    const soundRef = useRef<Sound | null>(null);
-
+    // Fetch media URLs if mediaId is provided
     useEffect(() => {
-        if (mediaType === 'audio') {
-            initializeAudio();
-        }
+        const fetchMediaUrls = async () => {
+            if (mediaId && !providedMediaUrl) {
+                try {
+                    setLoading(true);
+                    const urls = await MediaUploadService.getMediaUrl(String(mediaId));
 
-        return () => {
-            cleanupAudio();
-        };
-    }, [mediaUrl, mediaType]);
-
-    const initializeAudio = () => {
-        if (mediaType !== 'audio') return;
-
-        Sound.setCategory('Playback');
-
-        soundRef.current = new Sound(mediaUrl, '', (error) => {
-            if (error) {
-                console.error('Failed to load audio:', error);
-                handleError('Failed to load audio file');
-                return;
-            }
-
-            setTotalDuration(soundRef.current?.getDuration() || 0);
-            setIsLoading(false);
-        });
-    };
-
-    const cleanupAudio = () => {
-        if (soundRef.current) {
-            soundRef.current.stop();
-            soundRef.current.release();
-            soundRef.current = null;
-        }
-    };
-
-    const handleError = (errorMessage: string) => {
-        setError(errorMessage);
-        setIsLoading(false);
-        onError?.(errorMessage);
-    };
-
-    const togglePlayPause = () => {
-        if (mediaType === 'video') {
-            setIsPlaying(!isPlaying);
-        } else if (mediaType === 'audio' && soundRef.current) {
-            if (isPlaying) {
-                soundRef.current.pause();
-            } else {
-                soundRef.current.play((success) => {
-                    if (!success) {
-                        handleError('Failed to play audio');
+                    if (urls) {
+                        setMediaUrl(urls.mediaUrl);
+                        setThumbnailUrl(urls.thumbnailUrl);
+                        setError(null);
+                    } else {
+                        setError('Failed to load media');
                     }
-                });
+                } catch (err) {
+                    console.error('Error fetching media URLs:', err);
+                    setError('Failed to load media');
+                } finally {
+                    setLoading(false);
+                }
+            } else if (providedMediaUrl) {
+                setMediaUrl(providedMediaUrl);
+                setThumbnailUrl(providedThumbnailUrl || null);
+                setLoading(false);
+            } else {
+                setLoading(false);
+            }
+        };
+
+        fetchMediaUrls();
+    }, [mediaId, providedMediaUrl, providedThumbnailUrl]);
+
+    // Cleanup audio on unmount
+    useEffect(() => {
+        return sound
+            ? () => {
+                sound.unloadAsync();
+            }
+            : undefined;
+    }, [sound]);
+
+    const handlePlayPause = async () => {
+        if (mediaType === 'video' && videoRef.current) {
+            if (isPlaying) {
+                await videoRef.current.pauseAsync();
+            } else {
+                await videoRef.current.playAsync();
             }
             setIsPlaying(!isPlaying);
+        } else if (mediaType === 'audio') {
+            if (sound) {
+                if (isPlaying) {
+                    await sound.pauseAsync();
+                } else {
+                    await sound.playAsync();
+                }
+                setIsPlaying(!isPlaying);
+            } else if (mediaUrl) {
+                const { sound: newSound } = await Audio.Sound.createAsync(
+                    { uri: mediaUrl },
+                    { shouldPlay: true }
+                );
+                setSound(newSound);
+                setIsPlaying(true);
+            }
         }
     };
 
-    const handleVideoLoad = (data: any) => {
-        setTotalDuration(data.duration);
-        setIsLoading(false);
-    };
-
-    const handleVideoProgress = (data: any) => {
-        setCurrentTime(data.currentTime);
-    };
-
-    const handleVideoEnd = () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-    };
-
-    const formatTime = (timeInSeconds: number): string => {
-        const minutes = Math.floor(timeInSeconds / 60);
-        const seconds = Math.floor(timeInSeconds % 60);
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    };
-
-    const renderImagePreview = () => (
-        <View style={[styles.mediaContainer, { maxHeight }]}>
-            <Image
-                source={{ uri: mediaUrl }}
-                style={styles.image}
-                onLoad={() => setIsLoading(false)}
-                onError={() => handleError('Failed to load image')}
-                resizeMode="contain"
-            />
-            {isLoading && (
-                <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color="#007AFF" />
-                </View>
-            )}
-        </View>
-    );
-
-    const renderVideoPreview = () => (
-        <View style={[styles.mediaContainer, { maxHeight }]}>
-            <Video
-                ref={videoRef}
-                source={{ uri: mediaUrl }}
-                style={styles.video}
-                onLoad={handleVideoLoad}
-                onProgress={handleVideoProgress}
-                onEnd={handleVideoEnd}
-                onError={() => handleError('Failed to load video')}
-                paused={!isPlaying}
-                volume={volume}
-                resizeMode="contain"
-                poster={thumbnailUrl}
-            />
-
-            {isLoading && (
-                <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color="#007AFF" />
-                </View>
-            )}
-
-            {showControls && !isLoading && (
-                <View style={styles.videoControls}>
-                    <TouchableOpacity onPress={togglePlayPause} style={styles.playButton}>
-                        <MaterialCommunityIcons
-                            name={isPlaying ? 'pause' : 'play'}
-                            size={24}
-                            color="#FFF"
-                        />
-                    </TouchableOpacity>
-
-                    <View style={styles.timeContainer}>
-                        <Text style={styles.timeText}>
-                            {formatTime(currentTime)} / {formatTime(totalDuration)}
-                        </Text>
-                    </View>
-
-                    <TouchableOpacity
-                        onPress={() => setShowFullscreen(true)}
-                        style={styles.fullscreenButton}
-                    >
-                        <MaterialCommunityIcons name="fullscreen" size={20} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {/* Progress bar */}
-            {showControls && !isLoading && totalDuration > 0 && (
-                <View style={styles.progressContainer}>
-                    <View
-                        style={[
-                            styles.progressBar,
-                            { width: `${(currentTime / totalDuration) * 100}%` }
-                        ]}
-                    />
-                </View>
-            )}
-        </View>
-    );
-
-    const renderAudioPreview = () => (
-        <View style={styles.audioContainer}>
-            <View style={styles.audioInfo}>
-                <MaterialCommunityIcons name="music-note" size={32} color="#007AFF" />
-                <View style={styles.audioDetails}>
-                    <Text style={styles.audioFileName} numberOfLines={1}>
-                        {fileName || 'Audio Question'}
-                    </Text>
-                    <Text style={styles.audioDuration}>
-                        {formatTime(currentTime)} / {formatTime(totalDuration)}
-                    </Text>
-                </View>
-            </View>
-
-            {showControls && !isLoading && (
-                <View style={styles.audioControls}>
-                    <TouchableOpacity onPress={togglePlayPause} style={styles.audioPlayButton}>
-                        <MaterialCommunityIcons
-                            name={isPlaying ? 'pause' : 'play'}
-                            size={20}
-                            color="#FFF"
-                        />
-                    </TouchableOpacity>
-                </View>
-            )}
-
-            {isLoading && (
-                <ActivityIndicator size="small" color="#007AFF" style={styles.audioLoader} />
-            )}
-
-            {/* Audio progress bar */}
-            {showControls && !isLoading && totalDuration > 0 && (
-                <View style={styles.audioProgressContainer}>
-                    <View
-                        style={[
-                            styles.audioProgressBar,
-                            { width: `${(currentTime / totalDuration) * 100}%` }
-                        ]}
-                    />
-                </View>
-            )}
+    const renderLoadingState = () => (
+        <View style={[styles.container, { height, width }, style]}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading media...</Text>
         </View>
     );
 
     const renderErrorState = () => (
-        <View style={styles.errorContainer}>
-            <MaterialCommunityIcons name="alert-circle" size={32} color="#FF3B30" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity
-                onPress={() => {
-                    setError(null);
-                    setIsLoading(true);
-                    if (mediaType === 'audio') {
-                        initializeAudio();
-                    }
-                }}
-                style={styles.retryButton}
-            >
-                <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
+        <View style={[styles.container, styles.errorContainer, { height, width }, style]}>
+            <MaterialCommunityIcons name="alert-circle" size={40} color="#F44336" />
+            <Text style={styles.errorText}>{error || 'Failed to load media'}</Text>
         </View>
     );
 
-    if (error) {
+    const renderImage = () => (
+        <View style={[styles.mediaContainer, { height, width }, style]}>
+            <Image
+                source={{ uri: thumbnailUrl || mediaUrl || '' }}
+                style={styles.image}
+                resizeMode={resizeMode}
+                onLoadStart={() => setLoading(true)}
+                onLoadEnd={() => setLoading(false)}
+                onError={() => {
+                    setError('Failed to load image');
+                    setLoading(false);
+                }}
+            />
+            {loading && (
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color="#fff" />
+                </View>
+            )}
+        </View>
+    );
+
+    const renderVideo = () => (
+        <View style={[styles.mediaContainer, { height, width }, style]}>
+            <Video
+                ref={videoRef}
+                source={{ uri: mediaUrl || '' }}
+                style={styles.video}
+                resizeMode={ResizeMode.CONTAIN}
+                useNativeControls={showControls}
+                isLooping={false}
+                onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+                    if (status.isLoaded) {
+                        setIsPlaying(status.isPlaying);
+                        setLoading(false);
+                    }
+                }}
+                onError={() => {
+                    setError('Failed to load video');
+                    setLoading(false);
+                }}
+            />
+            {loading && (
+                <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color="#fff" />
+                </View>
+            )}
+            {!showControls && (
+                <TouchableOpacity
+                    style={styles.playPauseButton}
+                    onPress={handlePlayPause}
+                >
+                    <MaterialCommunityIcons
+                        name={isPlaying ? 'pause-circle' : 'play-circle'}
+                        size={60}
+                        color="rgba(255, 255, 255, 0.9)"
+                    />
+                </TouchableOpacity>
+            )}
+        </View>
+    );
+
+    const renderAudio = () => (
+        <View style={[styles.audioContainer, { width }, style]}>
+            <TouchableOpacity
+                style={styles.audioPlayButton}
+                onPress={handlePlayPause}
+            >
+                <MaterialCommunityIcons
+                    name={isPlaying ? 'pause-circle' : 'play-circle'}
+                    size={50}
+                    color="#007AFF"
+                />
+            </TouchableOpacity>
+            <View style={styles.audioInfo}>
+                <Text style={styles.audioTitle}>Audio Question</Text>
+                <Text style={styles.audioStatus}>
+                    {isPlaying ? 'Playing...' : 'Tap to play'}
+                </Text>
+            </View>
+        </View>
+    );
+
+    if (loading && !mediaUrl) {
+        return renderLoadingState();
+    }
+
+    if (error || !mediaUrl) {
         return renderErrorState();
     }
 
     switch (mediaType) {
         case 'image':
-            return renderImagePreview();
+            return renderImage();
         case 'video':
-            return renderVideoPreview();
+            return renderVideo();
         case 'audio':
-            return renderAudioPreview();
+            return renderAudio();
         default:
             return renderErrorState();
     }
 };
 
 const styles = StyleSheet.create({
+    container: {
+        backgroundColor: '#f5f5f5',
+        borderRadius: 12,
+        overflow: 'hidden',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     mediaContainer: {
-        width: '100%',
         backgroundColor: '#000',
-        borderRadius: 8,
+        borderRadius: 12,
         overflow: 'hidden',
         position: 'relative',
     },
@@ -305,123 +254,53 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    videoControls: {
-        position: 'absolute',
-        bottom: 8,
-        left: 8,
-        right: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        borderRadius: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-    },
-    playButton: {
-        padding: 8,
-    },
-    timeContainer: {
-        flex: 1,
-        marginHorizontal: 8,
-    },
-    timeText: {
-        color: '#FFF',
-        fontSize: 12,
-        fontFamily: 'monospace',
-    },
-    fullscreenButton: {
-        padding: 8,
-    },
-    progressContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 3,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    },
-    progressBar: {
-        height: '100%',
-        backgroundColor: '#007AFF',
-    },
-    audioContainer: {
-        backgroundColor: '#F5F5F7',
-        borderRadius: 8,
-        padding: 12,
-        position: 'relative',
-    },
-    audioInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    audioDetails: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    audioFileName: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#333',
-        marginBottom: 2,
-    },
-    audioDuration: {
-        fontSize: 12,
+    loadingText: {
+        marginTop: 12,
+        fontSize: 14,
         color: '#666',
-        fontFamily: 'monospace',
-    },
-    audioControls: {
-        position: 'absolute',
-        top: 12,
-        right: 12,
-    },
-    audioPlayButton: {
-        backgroundColor: '#007AFF',
-        borderRadius: 20,
-        padding: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    audioLoader: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
-    },
-    audioProgressContainer: {
-        height: 3,
-        backgroundColor: '#E5E5E7',
-        borderRadius: 1.5,
-        marginTop: 8,
-    },
-    audioProgressBar: {
-        height: '100%',
-        backgroundColor: '#007AFF',
-        borderRadius: 1.5,
     },
     errorContainer: {
-        backgroundColor: '#FFF5F5',
-        borderRadius: 8,
-        padding: 16,
-        alignItems: 'center',
+        backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: '#FFE5E5',
+        borderColor: '#F44336',
     },
     errorText: {
+        marginTop: 8,
         fontSize: 14,
-        color: '#FF3B30',
+        color: '#F44336',
         textAlign: 'center',
-        marginVertical: 8,
     },
-    retryButton: {
-        backgroundColor: '#FF3B30',
-        borderRadius: 6,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+    playPauseButton: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        marginTop: -30,
+        marginLeft: -30,
     },
-    retryButtonText: {
-        color: '#FFF',
-        fontSize: 12,
-        fontWeight: '500',
+    audioContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+    },
+    audioPlayButton: {
+        marginRight: 16,
+    },
+    audioInfo: {
+        flex: 1,
+    },
+    audioTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginBottom: 4,
+    },
+    audioStatus: {
+        fontSize: 14,
+        color: '#666',
     },
 });
 

@@ -7,6 +7,7 @@ import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice'
 import {Alert} from 'react-native';
 import KeychainService from "../auth/KeychainService.ts";
 import {QuestionVisibility} from "../../entities/QuizState/model/types/question.types.ts";
+import {QuizQuestion} from '../../entities/QuizState/model/slice/quizApi.ts';
 
 // Types matching backend DTOs
 export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
@@ -32,46 +33,8 @@ export enum MediaType {
 export const DIFFICULTY_MAPPING = {
     'Easy': 'EASY' as const,
     'Medium': 'MEDIUM' as const,
-    'Hard': 'HARD' as const,
-    'EASY': 'Easy' as const,
-    'MEDIUM': 'Medium' as const,
-    'HARD': 'Hard' as const
+    'Hard': 'HARD' as const
 };
-
-// Backend DTO interfaces
-export interface QuizQuestionDTO {
-    id: number;
-    question: string;
-    answer: string;
-    difficulty: APIDifficulty;
-    topic: string;
-    source: string;
-    authors: string;
-    comments: string;
-    passCriteria: string;
-    additionalInfo: string;
-    questionType: QuestionType;
-    questionMediaUrl?: string;
-    questionMediaId?: string;
-    questionMediaType?: MediaType;
-    questionThumbnailUrl?: string;
-    usageCount: number;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-}
-
-// Frontend interface for compatibility
-export interface QuestionData {
-    id: string;
-    question: string;
-    answer: string;
-    difficulty?: UIDifficulty;
-    source?: string;
-    additionalInfo?: string;
-    topic?: string;
-    visibility?: QuestionVisibility;
-}
 
 export interface UserQuestion {
     id: number;
@@ -240,9 +203,9 @@ export class QuestionService {
     /**
      * Convert backend QuizQuestionDTO to frontend QuestionData format
      */
-    private static convertQuizQuestionToQuestionData(quizQuestion: QuizQuestionDTO): QuestionData {
+    private static convertQuizQuestionToQuestionData(quizQuestion: QuizQuestion): QuizQuestion {
         return {
-            id: quizQuestion.id.toString(),
+            id: quizQuestion.id,
             question: quizQuestion.question,
             answer: quizQuestion.answer,
             difficulty: DIFFICULTY_MAPPING[quizQuestion.difficulty],
@@ -263,7 +226,7 @@ export class QuestionService {
         isUserCreated?: boolean;
         page?: number;
         size?: number;
-    }): Promise<{ content: QuestionData[]; totalElements: number; totalPages: number }> {
+    }): Promise<{ content: QuizQuestion[]; totalElements: number; totalPages: number }> {
         try {
             const queryParams = new URLSearchParams();
 
@@ -324,7 +287,7 @@ export class QuestionService {
     static async fetchRandomQuestions(
         count: number = 50,
         difficulty?: APIDifficulty
-    ): Promise<QuestionData[]> {
+    ): Promise<QuizQuestion[]> {
         try {
             const queryParams = new URLSearchParams();
             queryParams.append('count', count.toString());
@@ -353,7 +316,7 @@ export class QuestionService {
     static async getQuestionsByDifficulty(
         difficulty: UIDifficulty,
         count: number = 20
-    ): Promise<QuestionData[]> {
+    ): Promise<QuizQuestion[]> {
         const apiDifficulty = DIFFICULTY_MAPPING[difficulty];
         return this.fetchRandomQuestions(count, apiDifficulty);
     }

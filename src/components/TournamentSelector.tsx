@@ -4,7 +4,7 @@ import {ActivityIndicator, FlatList, Modal, StyleSheet, Text, TextInput, Touchab
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface Tournament {
-    id: number;
+    id: string;
     title: string;
     description?: string;
     questionCount: number;

@@ -7,33 +7,6 @@ export enum QuestionVisibility {
     PUBLIC = 'PUBLIC'
 }
 
-export interface QuizQuestion {
-    id: string;
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    source?: string;
-    additionalInfo?: string;
-    isUserCreated: boolean;
-    creatorId?: number;
-    creatorUsername?: string;
-
-    // Access control
-    visibility: QuestionVisibility;
-    originalQuizId?: number;
-    originalQuizTitle?: string;
-    canEdit: boolean;
-    canDelete: boolean;
-    canUseInQuiz: boolean;
-
-    // Metadata
-    isActive: boolean;
-    usageCount?: number;
-    createdAt: string;
-    updatedAt?: string;
-}
-
 export interface CreateQuizQuestionRequest {
     question: string;
     answer: string;
@@ -73,9 +46,9 @@ export enum RelationshipStatus {
 }
 
 export interface UserRelationship {
-    id: number;
-    userId: number;
-    relatedUserId: number;
+    id: string;
+    userId: string;
+    relatedUserId: string;
     relatedUserUsername: string;
     relatedUserAvatar?: string;
     relationshipType: RelationshipType;

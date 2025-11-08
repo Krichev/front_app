@@ -11,7 +11,7 @@ export { WWWGameServiceWithQuestions } from './wwwGameServiceWithQuestions';
 export { QuestionService } from './questionService';
 
 // Export types
-export type { QuestionData } from './questionService';
+// export type { QuestionData } from './questionService';
 export type {
     GameSettings,
     RoundData,

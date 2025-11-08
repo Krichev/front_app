@@ -6,7 +6,7 @@ export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
 export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface TournamentQuestionSummaryDTO {
-    id: number;
+    id: string;
     quizQuestionId: number;
     tournamentId: number;
     tournamentTitle: string;

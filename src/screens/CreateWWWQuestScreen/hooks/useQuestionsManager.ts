@@ -2,13 +2,14 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Alert} from 'react-native';
 import {
+    QuizQuestion,
     useCreateUserQuestionMutation,
     useCreateUserQuestionWithMediaMutation,
     useDeleteUserQuestionMutation,
     useGetAvailableTopicsQuery,
     useGetUserQuestionsPaginatedQuery,
 } from '../../../entities/QuizState/model/slice/quizApi';
-import {QuestionData, QuestionService} from "../../../services/wwwGame";
+import {QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, QuestionSource} from "../../../services/wwwGame/questionService.ts";
 
 
@@ -16,20 +17,11 @@ import {APIDifficulty, QuestionSource} from "../../../services/wwwGame/questionS
 // export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
 export type QuestionType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
 
-// export interface QuestionData {
-//     id?: string;
-//     question: string;
-//     answer: string;
-//     difficulty: 'Easy' | 'Medium' | 'Hard';
-//     topic?: string;
-//     additionalInfo?: string;
-//     visibility?: QuestionVisibility;
-// }
 
 export interface CustomQuestion {
     question: string;
     answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
     topic?: string;
     additionalInfo?: string;
 }
@@ -38,7 +30,7 @@ export interface MultimediaQuestionData {
     id?: string;
     question: string;
     answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
     topic?: string;
     additionalInfo?: string;
     questionType: string;
@@ -47,7 +39,7 @@ export interface MultimediaQuestionData {
 export interface QuestionFormData {
     question: string;
     answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
     topic?: string;
     additionalInfo?: string;
     questionType: QuestionType;
@@ -89,7 +81,7 @@ export const useQuestionsManager = () => {
     const userQuestions = userQuestionsResponse?.content ?? [];
 
     // App questions state
-    const [appQuestions, setAppQuestions] = useState<QuestionData[]>([]);
+    const [appQuestions, setAppQuestions] = useState<QuizQuestion[]>([]);
     const [isLoadingAppQuestions, setIsLoadingAppQuestions] = useState(false);
     const [appQuestionsError, setAppQuestionsError] = useState<string | null>(null);
 
@@ -126,12 +118,14 @@ export const useQuestionsManager = () => {
             id: uq.id?.toString() ?? '',
             question: uq.question ?? '',
             answer: uq.answer ?? '',
-            difficulty: uq.difficulty === 'EASY' ? 'Easy' as const :
-                uq.difficulty === 'MEDIUM' ? 'Medium' as const :
-                    uq.difficulty === 'HARD' ? 'Hard' as const : 'Medium' as const,
+            difficulty: uq.difficulty,
             topic: uq.topic ?? '',
             additionalInfo: uq.additionalInfo ?? '',
             visibility: uq.visibility,
+            questionType: uq.questionType,
+            isUserCreated: uq.isUserCreated,
+            isActive: uq.isActive,
+            usageCount: uq.usageCount
         }));
     }, [userQuestions]);
 
@@ -247,7 +241,7 @@ export const useQuestionsManager = () => {
     };
 
     const addNewCustomQuestion = (question: CustomQuestion) => {
-        const newQuestion: MultimediaQuestionData = {
+        const newQuestion: MultimediaQuizQuestion = {
             id: `custom_${Date.now()}`,
             question: question.question,
             answer: question.answer,
@@ -286,21 +280,6 @@ export const useQuestionsManager = () => {
     };
 
     const getSelectedQuestionsArray = () => {
-        // Helper function to normalize difficulty
-        const normalizeDifficulty = (diff?: 'Easy' | 'Medium' | 'Hard'): 'EASY' | 'MEDIUM' | 'HARD' | 'Easy' | 'Medium' | 'Hard' => {
-            if (!diff) return 'MEDIUM'; // Default to MEDIUM if undefined
-            return diff; // Return as-is since both formats are accepted
-        };
-
-        // Helper function to convert UI difficulty to API difficulty
-        const convertToAPIDifficulty = (diff: 'Easy' | 'Medium' | 'Hard'): 'EASY' | 'MEDIUM' | 'HARD' => {
-            const mapping: Record<'Easy' | 'Medium' | 'Hard', 'EASY' | 'MEDIUM' | 'HARD'> = {
-                'Easy': 'EASY',
-                'Medium': 'MEDIUM',
-                'Hard': 'HARD'
-            };
-            return mapping[diff];
-        };
 
         // Map selected app questions and ensure difficulty is defined
         const selectedAppQuestions = (appQuestions ?? [])
@@ -309,7 +288,7 @@ export const useQuestionsManager = () => {
                 id: q.id,
                 question: q.question,
                 answer: q.answer,
-                difficulty: normalizeDifficulty(q.difficulty),
+                difficulty: q.difficulty,
                 topic: q.topic,
                 additionalInfo: q.additionalInfo,
                 visibility: q.visibility,
@@ -323,7 +302,7 @@ export const useQuestionsManager = () => {
                 id: uq.id,
                 question: uq.question,
                 answer: uq.answer,
-                difficulty: convertToAPIDifficulty(uq.difficulty),
+                difficulty: uq.difficulty,
                 topic: uq.topic,
                 additionalInfo: uq.additionalInfo,
                 source: 'user' as const,
