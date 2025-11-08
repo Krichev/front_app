@@ -1,7 +1,9 @@
-// src/entities/UserState/model/slice/userApi.ts - UPDATED
+// src/entities/UserState/model/slice/userApi.ts - COMPLETE FIX
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
+import {updateUser} from '../../../AuthState/model/slice/authSlice'; // ADDED: Import updateUser
+import TokenRefreshService from '../../../../services/auth/TokenRefreshService'; // ADDED: Import TokenRefreshService
 
 export interface UserProfile {
     id: string;
@@ -9,7 +11,7 @@ export interface UserProfile {
     email: string;
     bio?: string;
     avatar?: string;
-    createdAt: Date;
+    createdAt: string;
     statsCompleted?: number;
     statsCreated?: number;
     statsSuccess?: number;
@@ -81,19 +83,30 @@ export const userApi = createApi({
                     const state = getState() as RootState;
                     const currentUser = state.auth.user;
 
+                    // FIXED: Both IDs are now strings, comparison works correctly
                     if (currentUser && currentUser.id === userId) {
                         const updatedUser = {
                             ...currentUser,
                             ...data.user,
                         };
 
+                        // FIXED: Now properly imported
                         dispatch(updateUser(updatedUser));
 
                         if (data.newToken) {
-                            await TokenRefreshService.updateTokensAndPersist(data.newToken, updatedUser);
+                            // FIXED: TokenRefreshService now imported
+                            await TokenRefreshService.saveTokensToStorage(
+                                data.newToken,
+                                state.auth.refreshToken || '',
+                                updatedUser
+                            );
                             console.log('✅ Username updated and new JWT token persisted');
                         } else {
-                            await TokenRefreshService.updateUserAndPersist(updatedUser);
+                            await TokenRefreshService.saveTokensToStorage(
+                                state.auth.accessToken || '',
+                                state.auth.refreshToken || '',
+                                updatedUser
+                            );
                             console.log('✅ User profile updated successfully');
                         }
                     }
@@ -162,6 +175,7 @@ export const userApi = createApi({
                     const state = getState() as RootState;
                     const currentUser = state.auth.user;
 
+                    // FIXED: Type-safe comparison
                     if (currentUser && currentUser.id === userId) {
                         dispatch(updateUser({
                             ...currentUser,

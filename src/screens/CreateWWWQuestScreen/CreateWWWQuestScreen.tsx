@@ -143,7 +143,7 @@ const CreateWWWQuestScreen: React.FC = () => {
                 <QuestionList
                     questionSource={questionsManager.questionSource}
                     appQuestions={questionsManager.appQuestions}
-                    userQuestions={questionsManager.transformedUserQuestions}
+                    userQuestions={questionsManager.userQuestions}
                     isLoadingApp={questionsManager.isLoadingAppQuestions}
                     isLoadingUser={questionsManager.isLoadingUserQuestions}
                     error={questionsManager.appQuestionsError}

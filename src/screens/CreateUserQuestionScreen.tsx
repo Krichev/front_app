@@ -14,7 +14,15 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {Picker} from '@react-native-picker/picker';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {APIDifficulty, QuestionService, UserQuestion} from '../services/wwwGame/questionService';
+import {
+    getVisibilityDescription,
+    getVisibilityIcon,
+    getVisibilityLabel,
+    QuestionVisibility
+} from '../entities/QuizState/model/types/question.types';
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -43,6 +51,9 @@ const CreateUserQuestionScreen: React.FC = () => {
     const [additionalInfo, setAdditionalInfo] = useState<string>(
         existingQuestion?.additionalInfo || ''
     );
+    const [visibility, setVisibility] = useState<QuestionVisibility>(
+        existingQuestion?.visibility || QuestionVisibility.PRIVATE
+    );
 
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -62,26 +73,26 @@ const CreateUserQuestionScreen: React.FC = () => {
 
         try {
             if (isEditing && existingQuestion) {
-                // Update existing question
-                await QuestionService.updateUserQuestion({
-                    ...existingQuestion,
-                    question,
-                    answer,
+                // Update existing question - Pass ID as first argument
+                await QuestionService.updateUserQuestion(existingQuestion.id, {
+                    question: question.trim(),
+                    answer: answer.trim(),
                     difficulty,
-                    topic: topic || undefined,
-                    additionalInfo: additionalInfo || undefined,
+                    topic: topic.trim() || undefined,
+                    additionalInfo: additionalInfo.trim() || undefined,
+                    visibility,
                 });
 
                 Alert.alert('Success', 'Question updated successfully');
             } else {
-                // Create new question
+                // Create new question - Use createUserQuestion
                 await QuestionService.createUserQuestion({
-                    visibility: ,
-                    question,
-                    answer,
+                    question: question.trim(),
+                    answer: answer.trim(),
                     difficulty,
-                    topic: topic || undefined,
-                    additionalInfo: additionalInfo || undefined
+                    topic: topic.trim() || undefined,
+                    additionalInfo: additionalInfo.trim() || undefined,
+                    visibility,
                 });
 
                 Alert.alert('Success', 'Question created successfully');
@@ -110,9 +121,9 @@ const CreateUserQuestionScreen: React.FC = () => {
                         </Text>
                     </View>
 
-                    <View style={styles.formContainer}>
-                        {/* Question field */}
-                        <View style={styles.formGroup}>
+                    <View style={styles.form}>
+                        {/* Question Input */}
+                        <View style={styles.inputGroup}>
                             <Text style={styles.label}>Question *</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
@@ -120,95 +131,122 @@ const CreateUserQuestionScreen: React.FC = () => {
                                 onChangeText={setQuestion}
                                 placeholder="Enter your question"
                                 multiline
+                                numberOfLines={4}
                                 textAlignVertical="top"
                             />
                         </View>
 
-                        {/* Answer field */}
-                        <View style={styles.formGroup}>
+                        {/* Answer Input */}
+                        <View style={styles.inputGroup}>
                             <Text style={styles.label}>Answer *</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, styles.textArea]}
                                 value={answer}
                                 onChangeText={setAnswer}
                                 placeholder="Enter the answer"
+                                multiline
+                                numberOfLines={3}
+                                textAlignVertical="top"
                             />
                         </View>
 
-                        {/* Difficulty selection */}
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Difficulty</Text>
-                            <View style={styles.difficultyContainer}>
-                                {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
-                                    <TouchableOpacity
-                                        key={diff}
-                                        style={[
-                                            styles.difficultyButton,
-                                            difficulty === diff && styles.selectedDifficulty,
-                                        ]}
-                                        onPress={() => setDifficulty(diff)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.difficultyText,
-                                                difficulty === diff && styles.selectedDifficultyText,
-                                            ]}
-                                        >
-                                            {diff}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                        {/* Difficulty Picker */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Difficulty *</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={difficulty}
+                                    onValueChange={(value) => setDifficulty(value as APIDifficulty)}
+                                    style={styles.picker}
+                                >
+                                    <Picker.Item label="Easy" value="EASY" />
+                                    <Picker.Item label="Medium" value="MEDIUM" />
+                                    <Picker.Item label="Hard" value="HARD" />
+                                </Picker>
                             </View>
                         </View>
 
-                        {/* Topic field */}
-                        <View style={styles.formGroup}>
+                        {/* Visibility Picker */}
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Who Can See This? *</Text>
+                            <View style={styles.pickerContainer}>
+                                <Picker
+                                    selectedValue={visibility}
+                                    onValueChange={(value) => setVisibility(value as QuestionVisibility)}
+                                    style={styles.picker}
+                                >
+                                    {Object.values(QuestionVisibility).map((vis) => (
+                                        <Picker.Item
+                                            key={vis}
+                                            label={`${getVisibilityIcon(vis)} ${getVisibilityLabel(vis)}`}
+                                            value={vis}
+                                        />
+                                    ))}
+                                </Picker>
+                            </View>
+                            <Text style={styles.helpText}>
+                                {getVisibilityDescription(visibility)}
+                            </Text>
+                        </View>
+
+                        {/* Topic Input (Optional) */}
+                        <View style={styles.inputGroup}>
                             <Text style={styles.label}>Topic (Optional)</Text>
                             <TextInput
                                 style={styles.input}
                                 value={topic}
                                 onChangeText={setTopic}
-                                placeholder="E.g., History, Science, Geography"
+                                placeholder="e.g., History, Science, Geography"
                             />
                         </View>
 
-                        {/* Additional Info field */}
-                        <View style={styles.formGroup}>
+                        {/* Additional Info Input (Optional) */}
+                        <View style={styles.inputGroup}>
                             <Text style={styles.label}>Additional Info (Optional)</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={additionalInfo}
                                 onChangeText={setAdditionalInfo}
-                                placeholder="Add any extra information about this question"
+                                placeholder="Add sources, hints, or extra context"
                                 multiline
+                                numberOfLines={3}
                                 textAlignVertical="top"
                             />
                         </View>
 
-                        {/* Submit button */}
-                        <TouchableOpacity
-                            style={[styles.submitButton, isSubmitting && styles.disabledButton]}
-                            onPress={handleSubmit}
-                            disabled={isSubmitting}
-                        >
-                            <Text style={styles.submitButtonText}>
-                                {isSubmitting
-                                    ? 'Saving...'
-                                    : isEditing
-                                        ? 'Update Question'
-                                        : 'Create Question'
-                                }
-                            </Text>
-                        </TouchableOpacity>
+                        {/* Action Buttons */}
+                        <View style={styles.buttonContainer}>
+                            <TouchableOpacity
+                                style={[styles.button, styles.cancelButton]}
+                                onPress={() => navigation.goBack()}
+                                disabled={isSubmitting}
+                            >
+                                <MaterialCommunityIcons name="close" size={20} color="#666" />
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
 
-                        {/* Cancel button */}
-                        <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() => navigation.goBack()}
-                            disabled={isSubmitting}
-                        >
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.button,
+                                    styles.submitButton,
+                                    isSubmitting && styles.buttonDisabled
+                                ]}
+                                onPress={handleSubmit}
+                                disabled={isSubmitting}
+                            >
+                                <MaterialCommunityIcons
+                                    name={isEditing ? "content-save" : "plus"}
+                                    size={20}
+                                    color="#fff"
+                                />
+                                <Text style={styles.submitButtonText}>
+                                    {isSubmitting
+                                        ? (isEditing ? 'Updating...' : 'Creating...')
+                                        : (isEditing ? 'Update' : 'Create')
+                                    }
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
@@ -228,90 +266,90 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: '#fff',
         padding: 16,
-        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 'bold',
-        color: 'white',
+        color: '#333',
     },
-    formContainer: {
+    form: {
         padding: 16,
     },
-    formGroup: {
-        marginBottom: 16,
+    inputGroup: {
+        marginBottom: 20,
     },
     label: {
         fontSize: 16,
-        fontWeight: '500',
+        fontWeight: '600',
+        color: '#333',
         marginBottom: 8,
-        color: '#555',
     },
     input: {
-        backgroundColor: 'white',
+        backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ddd',
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
+        color: '#333',
     },
     textArea: {
-        minHeight: 100,
-        textAlignVertical: 'top',
+        minHeight: 80,
     },
-    difficultyContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-    },
-    difficultyButton: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        marginHorizontal: 4,
+    pickerContainer: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#ddd',
         borderRadius: 8,
+        overflow: 'hidden',
     },
-    selectedDifficulty: {
-        backgroundColor: '#4CAF50',
+    picker: {
+        height: 50,
     },
-    difficultyText: {
-        fontSize: 14,
-        color: '#555',
+    helpText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
+        fontStyle: 'italic',
     },
-    selectedDifficultyText: {
-        color: 'white',
-        fontWeight: 'bold',
+    buttonContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 24,
     },
-    submitButton: {
-        backgroundColor: '#4CAF50',
+    button: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         padding: 16,
         borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    submitButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
+        gap: 8,
     },
     cancelButton: {
-        backgroundColor: '#f5f5f5',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 12,
+        backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ddd',
     },
     cancelButtonText: {
-        color: '#555',
         fontSize: 16,
+        fontWeight: '600',
+        color: '#666',
     },
-    disabledButton: {
-        backgroundColor: '#A5D6A7',
-        opacity: 0.7,
+    submitButton: {
+        backgroundColor: '#007AFF',
+    },
+    submitButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    buttonDisabled: {
+        opacity: 0.6,
     },
 });
 

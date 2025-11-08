@@ -1,9 +1,9 @@
-// src/entities/AuthState/model/slice/authSlice.ts - FIXED VERSION
+// src/entities/AuthState/model/slice/authSlice.ts - COMPLETE FIX
 import {createSlice, PayloadAction} from '@reduxjs/toolkit';
 import KeychainService from '../../../../services/auth/KeychainService';
 
 export interface User {
-    id: number;
+    id: string; // FIXED: Changed from number to string to match UserProfile
     username: string;
     email: string;
     bio?: string;
@@ -13,7 +13,7 @@ export interface User {
 
 export interface AuthState {
     isAuthenticated: boolean;
-    isInitialized: boolean; // NEW: Track if auth state has been initialized
+    isInitialized: boolean;
     accessToken: string | null;
     refreshToken: string | null;
     user: User | null;
@@ -21,7 +21,7 @@ export interface AuthState {
 
 const initialState: AuthState = {
     isAuthenticated: false,
-    isInitialized: false, // Start as not initialized
+    isInitialized: false,
     accessToken: null,
     refreshToken: null,
     user: null,
@@ -46,7 +46,6 @@ const authSlice = createSlice({
             state.isInitialized = true;
         },
 
-        // NEW: Set initialized state without tokens (for when no stored tokens exist)
         setInitialized: state => {
             state.isInitialized = true;
         },
@@ -55,14 +54,18 @@ const authSlice = createSlice({
             state.accessToken = action.payload;
         },
 
+        // NEW: Add updateUser action to update user data
+        updateUser: (state, action: PayloadAction<User>) => {
+            state.user = action.payload;
+        },
+
         logout: state => {
             state.isAuthenticated = false;
             state.accessToken = null;
             state.refreshToken = null;
             state.user = null;
-            state.isInitialized = true; // Keep initialized as true
+            state.isInitialized = true;
 
-            // Delete tokens from keychain
             KeychainService.deleteAuthTokens().catch(error => {
                 console.error('Error deleting tokens from keychain:', error);
             });
@@ -82,6 +85,7 @@ export const {
     setTokens,
     setInitialized,
     updateAccessToken,
+    updateUser, // EXPORT the new action
     logout,
     clearAuthState,
 } = authSlice.actions;

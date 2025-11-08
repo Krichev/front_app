@@ -72,7 +72,7 @@ export const useQuestCreator = () => {
     };
 
     const createQuest = async (
-        userId: number,
+        userId: string,
         selectedQuestions: SelectedQuestion[]
     ): Promise<{ success: boolean; sessionId?: string; challengeId?: string }> => {
         try {

@@ -241,7 +241,7 @@ export const useQuestionsManager = () => {
     };
 
     const addNewCustomQuestion = (question: CustomQuestion) => {
-        const newQuestion: MultimediaQuizQuestion = {
+        const newQuestion: MultimediaQuestionData = {  // Changed from MultimediaQuizQuestion
             id: `custom_${Date.now()}`,
             question: question.question,
             answer: question.answer,
