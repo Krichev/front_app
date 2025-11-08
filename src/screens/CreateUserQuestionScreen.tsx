@@ -75,12 +75,13 @@ const CreateUserQuestionScreen: React.FC = () => {
                 Alert.alert('Success', 'Question updated successfully');
             } else {
                 // Create new question
-                await QuestionService.saveUserQuestion({
+                await QuestionService.createUserQuestion({
+                    visibility: ,
                     question,
                     answer,
                     difficulty,
                     topic: topic || undefined,
-                    additionalInfo: additionalInfo || undefined,
+                    additionalInfo: additionalInfo || undefined
                 });
 
                 Alert.alert('Success', 'Question created successfully');
