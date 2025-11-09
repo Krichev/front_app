@@ -61,7 +61,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
             <View style={styles.inputContainer}>
                 <Text style={styles.label}>Difficulty</Text>
                 <View style={styles.filterContainer}>
-                    {['Easy', 'Medium', 'Hard'].map((diff) => (
+                    {['EASY', 'MEDIUM', 'HARD'].map((diff) => (
                         <TouchableOpacity
                             key={diff}
                             style={[

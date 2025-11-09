@@ -32,7 +32,7 @@ export const CreateQuizChallengeScreen = () => {
         gameType: 'WWW',
         teamName: '',
         teamMembers: [],
-        difficulty: 'Medium',
+        difficulty: 'MEDIUM',
         roundTime: 60,
         roundCount: 10,
         enableAIHost: true,

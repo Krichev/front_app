@@ -38,7 +38,7 @@ const QuestionManagementScreen: React.FC = () => {
     const [selectedQuestions, setSelectedQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard' | 'All'>('All');
+    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD' | 'All'>('All');
     const [theme, setTheme] = useState('');
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
@@ -89,7 +89,7 @@ const QuestionManagementScreen: React.FC = () => {
                 // In a real app, save to AsyncStorage
             }
 
-            let difficultyFilter: 'Easy' | 'Medium' | 'Hard' | undefined =
+            let difficultyFilter: 'EASY' | 'MEDIUM' | 'HARD' | undefined =
                 difficulty === 'All' ? undefined : difficulty;
 
             const searchResults = await QuestionService.searchQuestions(
@@ -119,7 +119,7 @@ const QuestionManagementScreen: React.FC = () => {
     };
 
     // Load questions by difficulty
-    const loadQuestionsByDifficulty = async (diff: 'Easy' | 'Medium' | 'Hard') => {
+    const loadQuestionsByDifficulty = async (diff: 'EASY' | 'MEDIUM' | 'HARD') => {
         setLoading(true);
 
         try {
@@ -216,16 +216,16 @@ const QuestionManagementScreen: React.FC = () => {
             'Set Difficulty',
             'Choose difficulty level for this question:',
             [
-                {text: 'Easy', onPress: () => updateQuestionDifficulty(question, 'Easy')},
-                {text: 'Medium', onPress: () => updateQuestionDifficulty(question, 'Medium')},
-                {text: 'Hard', onPress: () => updateQuestionDifficulty(question, 'Hard')},
+                {text: 'Easy', onPress: () => updateQuestionDifficulty(question, 'EASY')},
+                {text: 'Medium', onPress: () => updateQuestionDifficulty(question, 'MEDIUM')},
+                {text: 'Hard', onPress: () => updateQuestionDifficulty(question, 'HARD')},
                 {text: 'Cancel', style: 'cancel'}
             ]
         );
     };
 
     // Update question difficulty
-    const updateQuestionDifficulty = (question: QuizQuestion, newDifficulty: 'Easy' | 'Medium' | 'Hard') => {
+    const updateQuestionDifficulty = (question: QuizQuestion, newDifficulty: 'EASY' | 'MEDIUM' | 'HARD') => {
         // Update in questions list
         const updatedQuestions = questions.map(q =>
             q.id === question.id ? {...q, difficulty: newDifficulty} : q
@@ -296,7 +296,7 @@ const QuestionManagementScreen: React.FC = () => {
                 <View style={styles.difficultyFilter}>
                     <Text style={styles.sectionLabel}>Filter by Difficulty:</Text>
                     <View style={styles.difficultyButtons}>
-                        {(['All', 'Easy', 'Medium', 'Hard'] as const).map((diff) => (
+                        {(['All', 'EASY', 'MEDIUM', 'Hard'] as const).map((diff) => (
                             <TouchableOpacity
                                 key={diff}
                                 style={[

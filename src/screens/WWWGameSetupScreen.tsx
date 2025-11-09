@@ -42,7 +42,7 @@ const WWWGameSetupScreen: React.FC = () => {
     const [teamName, setTeamName] = useState('Team Intellect');
     const [teamMembers, setTeamMembers] = useState<string[]>([user?.username || 'Player 1']);
     const [newMember, setNewMember] = useState('');
-    const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>(
+    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>(
         config?.questions?.defaultDifficulty || 'Medium'
     );
     const [roundTime, setRoundTime] = useState(config?.game?.defaultRoundTime || 60);
@@ -405,7 +405,7 @@ const WWWGameSetupScreen: React.FC = () => {
                         <View style={styles.settingItem}>
                             <Text style={styles.settingLabel}>Difficulty</Text>
                             <View style={styles.difficultyButtons}>
-                                {(['Easy', 'Medium', 'Hard'] as const).map((level) => (
+                                {(['EASY', 'MEDIUM', 'HARDHARD'] as const).map((level) => (
                                     <TouchableOpacity
                                         key={level}
                                         style={[

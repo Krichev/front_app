@@ -11,7 +11,7 @@ import {QuestionVisibility} from "../types/question.types.ts";
 export interface CreateQuestionWithMediaRequest {
     question: string;
     answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
     topic?: string;
     additionalInfo?: string;
     source?: string;
@@ -86,7 +86,7 @@ export interface PaginatedQuestionResponse {
 
 export interface QuestionSearchParams {
     keyword?: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty?: APIDifficulty;
     topic?: string;
     page?: number;
     size?: number;
@@ -117,7 +117,7 @@ export interface QuizConfig {
     gameType: 'WWW';
     teamName: string;
     teamMembers: string[];
-    difficulty: 'Easy' | 'Medium' | 'Hard';
+    difficulty: APIDifficulty;
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
@@ -132,7 +132,7 @@ export interface QuizSession {
     hostUsername: string;
     teamName: string;
     teamMembers: string[];
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
     roundTimeSeconds: number;
     totalRounds: number;
     completedRounds: number;
@@ -151,7 +151,7 @@ export interface StartQuizSessionRequest {
     challengeId: string;
     teamName: string;
     teamMembers: string[];
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: APIDifficulty;
     roundTimeSeconds: number;
     totalRounds: number;
     timePerRound: number;
@@ -355,7 +355,7 @@ export const quizApi = createApi({
 
         startQuizSession: builder.mutation<QuizSession, StartQuizSessionRequest>({
             query: (request) => ({
-                url: '/sessions',
+                url: '/quiz/sessions',
                 method: 'POST',
                 body: request,
             }),
@@ -364,7 +364,7 @@ export const quizApi = createApi({
 
         beginQuizSession: builder.mutation<QuizSession, string>({
             query: (sessionId) => ({
-                url: `/sessions/${sessionId}/begin`,
+                url: `/quiz/sessions/${sessionId}/begin`,
                 method: 'POST',
             }),
             invalidatesTags: (result, error, sessionId) => [
@@ -378,7 +378,7 @@ export const quizApi = createApi({
             answer: SubmitRoundAnswerRequest;
         }>({
             query: ({sessionId, roundId, answer}) => ({
-                url: `/sessions/${sessionId}/rounds/${roundId}/submit`,
+                url: `/quiz/sessions/${sessionId}/rounds/${roundId}/submit`,
                 method: 'POST',
                 body: answer,
             }),
@@ -392,7 +392,7 @@ export const quizApi = createApi({
 
         completeQuizSession: builder.mutation<QuizSession, string>({
             query: (sessionId) => ({
-                url: `/sessions/${sessionId}/complete`,
+                url: `/quiz/sessions/${sessionId}/complete`,
                 method: 'POST',
             }),
             invalidatesTags: (result, error, sessionId) => [
@@ -402,7 +402,7 @@ export const quizApi = createApi({
         }),
 
         getQuizSession: builder.query<QuizSession, string>({
-            query: (sessionId) => `/sessions/${sessionId}`,
+            query: (sessionId) => `/quiz/sessions/${sessionId}`,
             providesTags: (result, error, sessionId) => [
                 {type: 'QuizSession', id: sessionId}
             ],
@@ -410,7 +410,7 @@ export const quizApi = createApi({
 
         getUserQuizSessions: builder.query<QuizSession[], {limit?: number}>({
             query: ({limit = 20}) => ({
-                url: '/sessions/me',
+                url: '/quiz/sessions/me',
                 params: {limit},
             }),
             providesTags: (result) =>
@@ -423,14 +423,14 @@ export const quizApi = createApi({
         }),
 
         getQuizRounds: builder.query<QuizRound[], string>({
-            query: (sessionId) => `/sessions/${sessionId}/rounds`,
+            query: (sessionId) => `/quiz/sessions/${sessionId}/rounds`,
             providesTags: (result, error, sessionId) => [
                 {type: 'QuizRound', id: `SESSION_${sessionId}`}
             ],
         }),
 
         getCurrentRound: builder.query<QuizRound, string>({
-            query: (sessionId) => `/sessions/${sessionId}/current-round`,
+            query: (sessionId) => `/quiz/sessions/${sessionId}/current-round`,
             providesTags: (result, error, sessionId) => [
                 {type: 'QuizRound', id: `CURRENT_${sessionId}`}
             ],
@@ -441,7 +441,7 @@ export const quizApi = createApi({
             config: any;
         }>({
             query: ({sessionId, config}) => ({
-                url: `/sessions/${sessionId}/config`,
+                url: `/quiz/sessions/${sessionId}/config`,
                 method: 'PUT',
                 body: config,
             }),

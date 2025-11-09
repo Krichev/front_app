@@ -24,7 +24,7 @@ export interface SelectedQuestion {
     id?: string;
     question: string;
     answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD' | 'Easy' | 'Medium' | 'Hard';
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     topic?: string;
     additionalInfo?: string;
     source: 'app' | 'user' | 'custom';
@@ -44,7 +44,7 @@ export const useQuestCreator = () => {
         gameType: 'WWW',
         teamName: '',
         teamMembers: [],
-        difficulty: 'Medium',
+        difficulty: 'MEDIUM',
         roundTime: 60,
         roundCount: 10,
         enableAIHost: true,
@@ -138,7 +138,7 @@ export const useQuestCreator = () => {
                 challengeId: challengeResult.id,
                 teamName: quizConfig.teamName || 'My Team',
                 teamMembers: quizConfig.teamMembers.length > 0 ? quizConfig.teamMembers : ['Player 1'],
-                difficulty: normalizeDifficulty(quizConfig.difficulty),
+                difficulty: quizConfig.difficulty,
                 totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length),
                 roundTimeSeconds: quizConfig.roundTime,
                 timePerRound: quizConfig.roundTime,

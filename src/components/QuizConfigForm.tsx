@@ -31,7 +31,7 @@ export const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
         updateConfig({ teamMembers: newMembers });
     };
 
-    const difficulties: Array<'Easy' | 'Medium' | 'Hard'> = ['Easy', 'Medium', 'Hard'];
+    const difficulties: Array<'EASY' | 'MEDIUM' | 'HARD'> = ['EASY', 'MEDIUM', 'HARD'];
 
     return (
         <View style={styles.container}>

@@ -2,7 +2,7 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 
-export type UIDifficulty = 'Easy' | 'Medium' | 'Hard';
+export type UIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface TournamentQuestionSummaryDTO {
@@ -39,9 +39,9 @@ export interface TournamentStatistics {
 
 export const convertToAPIDifficulty = (difficulty: UIDifficulty): APIDifficulty => {
     const mapping: Record<UIDifficulty, APIDifficulty> = {
-        'Easy': 'EASY',
-        'Medium': 'MEDIUM',
-        'Hard': 'HARD'
+        'EASY': 'EASY',
+        'MEDIUM': 'MEDIUM',
+        'HarHARDd': 'HARD'
     };
     return mapping[difficulty];
 };

@@ -22,7 +22,7 @@ export interface WWWGameConfig {
         useExternalSource: boolean;
         cacheResults: boolean;
         maxCachedQuestions: number;
-        defaultDifficulty: 'Easy' | 'Medium' | 'Hard';
+        defaultDifficulty: 'EASY' | 'MEDIUM' | 'HARD';
     };
 
     // Game configuration

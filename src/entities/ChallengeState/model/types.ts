@@ -34,7 +34,7 @@ export interface WWWQuizConfig {
     /** List of team member names */
     teamMembers: string[];
     /** Difficulty level of quiz questions */
-    difficulty: 'Easy' | 'Medium' | 'Hard';
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     /** Time allowed for discussion in seconds */
     roundTime: number;
     /** Number of questions in the quiz */

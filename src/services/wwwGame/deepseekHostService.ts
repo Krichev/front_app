@@ -223,7 +223,7 @@ Did the team mention the correct answer or something very close to it? Extract t
     static async generateHint(
         question: string,
         correctAnswer: string,
-        difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium',
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUMMEDIUM',
         previousHints: string[] = []
     ): Promise<string> {
         if (!question || !correctAnswer) {

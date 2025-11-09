@@ -52,10 +52,10 @@ export const mapQuizConfigToBackend = (uiConfig: QuizConfig): QuizChallengeConfi
  */
 export const mapQuizConfigFromBackend = (backendConfig: QuizChallengeConfig): QuizConfig => {
     // Map backend difficulty to UI difficulty format
-    const difficultyMap: Record<'EASY' | 'MEDIUM' | 'HARD', 'Easy' | 'Medium' | 'Hard'> = {
-        'EASY': 'Easy',
-        'MEDIUM': 'Medium',
-        'HARD': 'Hard'
+    const difficultyMap: Record<'EASY' | 'MEDIUM' | 'HARD', 'EASY' | 'MEDIUM' | 'HARD'> = {
+        'EASY': 'EASY',
+        'MEDIUM': 'MEDIUM',
+        'HARD': 'HARD'
     };
 
     // Create complete UI config with ALL fields
@@ -63,7 +63,7 @@ export const mapQuizConfigFromBackend = (backendConfig: QuizChallengeConfig): Qu
         gameType: (backendConfig.gameType || 'WWW') as 'WWW',
         teamName: backendConfig.teamName || 'My Team',
         teamMembers: backendConfig.teamMembers || ['Player 1'],
-        difficulty: difficultyMap[backendConfig.defaultDifficulty] || 'Medium',
+        difficulty: difficultyMap[backendConfig.defaultDifficulty] || 'MEDIUM',
         roundTime: backendConfig.defaultRoundTimeSeconds || 60,
         roundCount: backendConfig.defaultTotalRounds || 10,
         enableAIHost: backendConfig.enableAiHost ?? true,
@@ -82,7 +82,7 @@ export const mapQuizConfigFromBackend = (backendConfig: QuizChallengeConfig): Qu
  * Useful for quick testing or default values
  */
 export const createDefaultQuizChallengeConfig = (
-    difficulty: 'Easy' | 'Medium' | 'Hard' = 'Medium',
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM',
     roundTime: number = 60,
     roundCount: number = 10,
     enableAI: boolean = true,
