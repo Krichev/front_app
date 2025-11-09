@@ -5,6 +5,8 @@
 // WWW QUIZ TYPES (EXISTING)
 // ============================================================================
 
+import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
+
 export enum PaymentType {
     FREE = 'FREE',
     ENTRY_FEE = 'ENTRY_FEE',
@@ -147,7 +149,7 @@ export interface CreateChallengeRequest {
     hasPrize?: boolean;
     prizeAmount?: number;
     prizeCurrency?: CurrencyType;
-
+    difficulty?: APIDifficulty;
     // Access control properties
     requiresApproval?: boolean;
     invitedUserIds?: number[];

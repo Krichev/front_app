@@ -1,15 +1,19 @@
 // src/screens/CreateWWWQuestScreen/hooks/useQuestCreator.ts
 import {useState} from 'react';
 import {Alert} from 'react-native';
-import {useCreateChallengeMutation} from '../../../entities/ChallengeState/model/slice/challengeApi';
+import {
+    CreateChallengeRequest,
+    useCreateChallengeMutation
+} from '../../../entities/ChallengeState/model/slice/challengeApi';
 import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/slice/quizApi';
 import {PaymentType} from '../../../entities/ChallengeState/model/types';
+import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
 
 export interface QuizConfig {
     gameType: string;
     teamName: string;
     teamMembers: string[];
-    difficulty: string;
+    difficulty: APIDifficulty;
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
@@ -64,12 +68,6 @@ export const useQuestCreator = () => {
         setQuizConfig({ ...quizConfig, teamMembers: updatedMembers });
     };
 
-    const normalizeDifficulty = (diff: string): 'EASY' | 'MEDIUM' | 'HARD' => {
-        const normalized = diff.toUpperCase();
-        if (normalized === 'EASY') return 'EASY';
-        if (normalized === 'HARD') return 'HARD';
-        return 'MEDIUM';
-    };
 
     const createQuest = async (
         userId: string,
@@ -78,18 +76,45 @@ export const useQuestCreator = () => {
         try {
             console.log('Creating quest with config:', quizConfig);
 
-            // Step 1: Create Challenge with ALL required fields
-            const challengePayload = {
+            // Step 1: Create Challenge with ALL required fields matching CreateChallengeRequest
+            const challengePayload: CreateChallengeRequest = {
+                // ===== BASIC REQUIRED FIELDS =====
                 title,
                 description,
-                reward,
                 type: 'QUIZ',
                 visibility: 'PUBLIC',
                 status: 'ACTIVE',
                 userId: userId,
-                paymentType: PaymentType.FREE,  // ✅ Use enum instead of string
+
+                // ===== OPTIONAL BASIC FIELDS =====
+                reward,
+                penalty: undefined,
+                verificationMethod: undefined,
+                verificationDetails: undefined,
+                targetGroup: undefined,
+                tags: undefined,
+                quizConfig: undefined,
+
+                // ===== DATE FIELDS =====
                 startDate: new Date().toISOString(),
                 endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                frequency: 'ONE_TIME',
+
+                // ===== PAYMENT FIELDS (matching backend defaults) =====
+                paymentType: PaymentType.FREE,
+                hasEntryFee: false,
+                entryFeeAmount: undefined,
+                entryFeeCurrency: undefined,
+                hasPrize: false,
+                prizeAmount: undefined,
+                prizeCurrency: undefined,
+
+                // ===== ACCESS CONTROL FIELDS =====
+                requiresApproval: false,
+                invitedUserIds: undefined,
+
+                // ===== QUIZ-SPECIFIC FIELDS =====
+                difficulty: quizConfig.difficulty,
             };
 
             const challengeResult = await createChallenge(challengePayload).unwrap();
@@ -115,8 +140,8 @@ export const useQuestCreator = () => {
                 teamMembers: quizConfig.teamMembers.length > 0 ? quizConfig.teamMembers : ['Player 1'],
                 difficulty: normalizeDifficulty(quizConfig.difficulty),
                 totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length),
-                roundTimeSeconds: quizConfig.roundTime,           // ✅ Required field
-                timePerRound: quizConfig.roundTime,               // ✅ Required field (same as roundTimeSeconds)
+                roundTimeSeconds: quizConfig.roundTime,
+                timePerRound: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
                 questionSource: questionSource as 'app' | 'user',
                 customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
