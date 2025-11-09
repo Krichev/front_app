@@ -23,10 +23,10 @@ import MediaUploadService from "../../services/media/MediaUploadService";
 import {QuestionService, UserQuestion} from '../../services/wwwGame/questionService';
 import {
     getVisibilityDescription,
-    getVisibilityIcon,
     getVisibilityLabel,
     QuestionVisibility
-} from '../../entities/QuizState/model/slice/quizApi';
+} from "../../entities/QuizState/model/types/question.types.ts";
+import {getVisibilityIcon} from "../../entities/ChallengeState/model/types.ts";
 
 // ============================================================================
 // TYPES & INTERFACES

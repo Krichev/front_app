@@ -49,10 +49,9 @@ export type RootStackParamList = {
         selectedQuestions?: QuizQuestion[];
         challengeId?: string;
     };
-    WWWGamePlay: GameSettings & {
-        sessionId?: string;
-        challengeId?: string;
-    };
+    WWWGamePlay:
+        | (GameSettings & { sessionId?: string; challengeId?: string })
+        | { sessionId: string|undefined; challengeId?: string|undefined };
     WWWGameResults: {
         score: number;
         totalQuestions: number;
