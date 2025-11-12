@@ -1,8 +1,8 @@
 // src/screens/CreateWWWQuestScreen/components/QuizConfigForm.tsx
 import React from 'react';
-import {StyleSheet, Switch, Text, TextInput, TouchableOpacity, View} from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {QuizConfig} from '../hooks/useQuestCreator';
+import {APIDifficulty} from '../../../services/wwwGame/questionService';
 
 interface QuizConfigFormProps {
     config: QuizConfig;
@@ -21,159 +21,300 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                                                            onAddTeamMember,
                                                            onRemoveTeamMember,
                                                        }) => {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quiz Configuration</Text>
+    const [roundCountInput, setRoundCountInput] = React.useState(
+        config?.roundCount?.toString() || '10'
+    );
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Team Name</Text>
+    // Sync roundCountInput when config changes
+    React.useEffect(() => {
+        if (config?.roundCount) {
+            setRoundCountInput(config.roundCount.toString());
+        }
+    }, [config?.roundCount]);
+
+    const updateConfig = (updates: Partial<QuizConfig>) => {
+        if (!config) return;
+        onConfigChange({ ...config, ...updates });
+    };
+
+    const handleRoundCountChange = (text: string) => {
+        if (!config) return;
+        // Allow empty string or valid numbers only
+        if (text === '' || /^\d+$/.test(text)) {
+            setRoundCountInput(text);
+
+            // Parse and validate the number
+            if (text !== '') {
+                const numValue = parseInt(text, 10);
+                // Apply bounds: minimum 1, maximum 50
+                const boundedValue = Math.max(1, Math.min(50, numValue));
+                updateConfig({ roundCount: boundedValue });
+            }
+        }
+    };
+
+    const handleRoundCountBlur = () => {
+        if (!config) return;
+        // On blur, ensure we have a valid value
+        if (roundCountInput === '' || parseInt(roundCountInput, 10) < 1) {
+            const defaultValue = 1;
+            setRoundCountInput(defaultValue.toString());
+            updateConfig({ roundCount: defaultValue });
+        } else {
+            // Ensure the input matches the actual value (in case of bounds adjustment)
+            setRoundCountInput((config.roundCount || 10).toString());
+        }
+    };
+
+    const incrementRoundCount = () => {
+        if (!config) return;
+        const newValue = Math.min(50, (config.roundCount || 0) + 1);
+        setRoundCountInput(newValue.toString());
+        updateConfig({ roundCount: newValue });
+    };
+
+    const decrementRoundCount = () => {
+        if (!config) return;
+        const newValue = Math.max(1, (config.roundCount || 1) - 1);
+        setRoundCountInput(newValue.toString());
+        updateConfig({ roundCount: newValue });
+    };
+
+    // Use APIDifficulty type (uppercase values)
+    const difficulties: APIDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
+
+    // Helper function to display difficulty with proper capitalization
+    const formatDifficultyDisplay = (difficulty: APIDifficulty): string => {
+        return difficulty.charAt(0) + difficulty.slice(1).toLowerCase();
+    };
+
+    // Early return if config is not provided
+    if (!config) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.section}>
+                    <Text style={styles.label}>Loading configuration...</Text>
+                </View>
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.container}>
+            {/* Game Type */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Game Type</Text>
+                <View style={styles.infoBox}>
+                    <Text style={styles.infoText}>WWW Quiz</Text>
+                </View>
+            </View>
+
+            {/* Team Name */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Team Name *</Text>
                 <TextInput
                     style={styles.input}
-                    value={config.teamName}
-                    onChangeText={(text) => onConfigChange({ ...config, teamName: text })}
-                    placeholder="Enter team name"
+                    value={config?.teamName || ''}
+                    onChangeText={(text) => updateConfig({ teamName: text })}
+                    placeholder="Enter your team name"
+                    placeholderTextColor="#999"
                 />
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Team Members</Text>
-                {config.teamMembers.map((member, index) => (
+            {/* Team Members */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Team Members *</Text>
+
+                {/* Display current members */}
+                {(config?.teamMembers || []).map((member: string, index: number) => (
                     <View key={index} style={styles.memberRow}>
-                        <Text style={styles.memberText}>{member}</Text>
-                        <TouchableOpacity onPress={() => onRemoveTeamMember(index)}>
-                            <MaterialCommunityIcons name="close-circle" size={24} color="#F44336" />
+                        <Text style={styles.memberText}>{index + 1}. {member}</Text>
+                        <TouchableOpacity
+                            onPress={() => onRemoveTeamMember(index)}
+                            style={styles.removeButton}
+                        >
+                            <Text style={styles.removeButtonText}>Remove</Text>
                         </TouchableOpacity>
                     </View>
                 ))}
+
+                {/* Add new member */}
                 <View style={styles.addMemberContainer}>
                     <TextInput
                         style={[styles.input, styles.memberInput]}
                         value={teamMemberInput}
                         onChangeText={onTeamMemberInputChange}
                         placeholder="Add team member"
+                        placeholderTextColor="#999"
                     />
-                    <TouchableOpacity style={styles.addButton} onPress={onAddTeamMember}>
+                    <TouchableOpacity
+                        onPress={onAddTeamMember}
+                        style={styles.addButton}
+                    >
                         <Text style={styles.addButtonText}>Add</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Difficulty</Text>
-                <View style={styles.filterContainer}>
-                    {['EASY', 'MEDIUM', 'HARD'].map((diff) => (
+            {/* Difficulty Selection */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Difficulty *</Text>
+                <View style={styles.difficultyContainer}>
+                    {difficulties.map((diff: APIDifficulty) => (
                         <TouchableOpacity
                             key={diff}
                             style={[
-                                styles.filterChip,
-                                config.difficulty === diff && styles.filterChipSelected,
+                                styles.difficultyButton,
+                                config?.difficulty === diff && styles.difficultyButtonActive
                             ]}
-                            onPress={() => onConfigChange({ ...config, difficulty: diff })}
+                            onPress={() => updateConfig({ difficulty: diff })}
                         >
                             <Text
                                 style={[
-                                    styles.filterChipText,
-                                    config.difficulty === diff && styles.filterChipTextSelected,
+                                    styles.difficultyText,
+                                    config?.difficulty === diff && styles.difficultyTextActive
                                 ]}
                             >
-                                {diff}
+                                {formatDifficultyDisplay(diff)}
                             </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Round Time (seconds): {config.roundTime}</Text>
-                <View style={styles.filterContainer}>
-                    {[30, 60, 90, 120].map((time) => (
-                        <TouchableOpacity
-                            key={time}
+            {/* Round Time */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Discussion Time (seconds) *</Text>
+                <View style={styles.timeContainer}>
+                    <TouchableOpacity
+                        onPress={() => updateConfig({ roundTime: Math.max(10, (config?.roundTime || 60) - 10) })}
+                        style={styles.timeButton}
+                    >
+                        <Text style={styles.timeButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.timeValue}>{config?.roundTime || 60}s</Text>
+                    <TouchableOpacity
+                        onPress={() => updateConfig({ roundTime: Math.min(300, (config?.roundTime || 60) + 10) })}
+                        style={styles.timeButton}
+                    >
+                        <Text style={styles.timeButtonText}>+</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Round Count - NOW MANUALLY EDITABLE */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Number of Questions *</Text>
+                <Text style={styles.helperText}>Enter 1-50 questions</Text>
+                <View style={styles.timeContainer}>
+                    <TouchableOpacity
+                        onPress={decrementRoundCount}
+                        style={styles.timeButton}
+                    >
+                        <Text style={styles.timeButtonText}>-</Text>
+                    </TouchableOpacity>
+                    <TextInput
+                        style={styles.roundCountInput}
+                        value={roundCountInput}
+                        onChangeText={handleRoundCountChange}
+                        onBlur={handleRoundCountBlur}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                        selectTextOnFocus
+                    />
+                    <TouchableOpacity
+                        onPress={incrementRoundCount}
+                        style={styles.timeButton}
+                    >
+                        <Text style={styles.timeButtonText}>+</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* AI Host Toggle */}
+            <View style={styles.section}>
+                <View style={styles.toggleRow}>
+                    <View style={styles.toggleInfo}>
+                        <Text style={styles.label}>Enable AI Host</Text>
+                        <Text style={styles.helperText}>
+                            AI will provide hints and feedback during the quiz
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggle,
+                            config?.enableAIHost && styles.toggleActive
+                        ]}
+                        onPress={() => updateConfig({ enableAIHost: !config?.enableAIHost })}
+                    >
+                        <View
                             style={[
-                                styles.filterChip,
-                                config.roundTime === time && styles.filterChipSelected,
+                                styles.toggleThumb,
+                                config?.enableAIHost && styles.toggleThumbActive
                             ]}
-                            onPress={() => onConfigChange({ ...config, roundTime: time })}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterChipText,
-                                    config.roundTime === time && styles.filterChipTextSelected,
-                                ]}
-                            >
-                                {time}s
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                        />
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Number of Rounds: {config.roundCount}</Text>
-                <View style={styles.filterContainer}>
-                    {[5, 10, 15, 20].map((count) => (
-                        <TouchableOpacity
-                            key={count}
+            {/* Team Based Toggle */}
+            <View style={styles.section}>
+                <View style={styles.toggleRow}>
+                    <View style={styles.toggleInfo}>
+                        <Text style={styles.label}>Team Based Quiz</Text>
+                        <Text style={styles.helperText}>
+                            Enable collaborative gameplay
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggle,
+                            config?.teamBased && styles.toggleActive
+                        ]}
+                        onPress={() => updateConfig({ teamBased: !config?.teamBased })}
+                    >
+                        <View
                             style={[
-                                styles.filterChip,
-                                config.roundCount === count && styles.filterChipSelected,
+                                styles.toggleThumb,
+                                config?.teamBased && styles.toggleThumbActive
                             ]}
-                            onPress={() => onConfigChange({ ...config, roundCount: count })}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterChipText,
-                                    config.roundCount === count && styles.filterChipTextSelected,
-                                ]}
-                            >
-                                {count}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                        />
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            <View style={styles.switchContainer}>
-                <Text style={styles.label}>Enable AI Host</Text>
-                <Switch
-                    value={config.enableAIHost}
-                    onValueChange={(value) => onConfigChange({ ...config, enableAIHost: value })}
-                />
-            </View>
-
-            <View style={styles.switchContainer}>
-                <Text style={styles.label}>Team-Based Game</Text>
-                <Switch
-                    value={config.teamBased}
-                    onValueChange={(value) => onConfigChange({ ...config, teamBased: value })}
-                />
+            {/* Configuration Summary */}
+            <View style={styles.summaryBox}>
+                <Text style={styles.summaryTitle}>Configuration Summary</Text>
+                <Text style={styles.summaryText}>• Team: {config?.teamName || 'Not set'}</Text>
+                <Text style={styles.summaryText}>• Members: {config?.teamMembers?.length || 0}</Text>
+                <Text style={styles.summaryText}>• Difficulty: {config?.difficulty ? formatDifficultyDisplay(config.difficulty) : 'Not set'}</Text>
+                <Text style={styles.summaryText}>• Time per question: {config?.roundTime || 60}s</Text>
+                <Text style={styles.summaryText}>• Total questions: {config?.roundCount || 10}</Text>
+                <Text style={styles.summaryText}>• AI Host: {config?.enableAIHost ? 'Yes' : 'No'}</Text>
+                <Text style={styles.summaryText}>• Team Based: {config?.teamBased ? 'Yes' : 'No'}</Text>
             </View>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    section: {
+    container: {
         padding: 16,
-        backgroundColor: '#fff',
-        marginBottom: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
     },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 16,
-    },
-    inputContainer: {
-        marginBottom: 16,
+    section: {
+        marginBottom: 24,
     },
     label: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
-        color: '#666',
+        color: '#333',
         marginBottom: 8,
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
     },
     input: {
         borderWidth: 1,
@@ -181,8 +322,16 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         padding: 12,
         fontSize: 16,
-        color: '#333',
-        backgroundColor: '#f8f8f8',
+        backgroundColor: '#fff',
+    },
+    infoBox: {
+        backgroundColor: '#f0f0f0',
+        padding: 12,
+        borderRadius: 8,
+    },
+    infoText: {
+        fontSize: 16,
+        color: '#666',
     },
     memberRow: {
         flexDirection: 'row',
@@ -196,6 +345,18 @@ const styles = StyleSheet.create({
     memberText: {
         fontSize: 16,
         color: '#333',
+        flex: 1,
+    },
+    removeButton: {
+        backgroundColor: '#ff4444',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 6,
+    },
+    removeButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
     },
     addMemberContainer: {
         flexDirection: 'row',
@@ -206,8 +367,7 @@ const styles = StyleSheet.create({
     },
     addButton: {
         backgroundColor: '#4CAF50',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 20,
         borderRadius: 8,
         justifyContent: 'center',
     },
@@ -216,36 +376,113 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-    filterContainer: {
+    difficultyContainer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
+        gap: 12,
     },
-    filterChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f0f0f0',
-        borderWidth: 1,
+    difficultyButton: {
+        flex: 1,
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 2,
         borderColor: '#ddd',
+        alignItems: 'center',
     },
-    filterChipSelected: {
-        backgroundColor: '#007AFF',
-        borderColor: '#007AFF',
+    difficultyButtonActive: {
+        borderColor: '#2196F3',
+        backgroundColor: '#2196F3',
     },
-    filterChipText: {
-        fontSize: 14,
+    difficultyText: {
+        fontSize: 16,
         fontWeight: '600',
         color: '#666',
     },
-    filterChipTextSelected: {
+    difficultyTextActive: {
         color: '#fff',
     },
-    switchContainer: {
+    timeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 20,
+    },
+    timeButton: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: '#2196F3',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    timeButtonText: {
+        fontSize: 24,
+        color: '#fff',
+        fontWeight: '600',
+    },
+    timeValue: {
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#333',
+        minWidth: 80,
+        textAlign: 'center',
+    },
+    roundCountInput: {
+        fontSize: 24,
+        fontWeight: '600',
+        color: '#333',
+        minWidth: 80,
+        textAlign: 'center',
+        borderWidth: 2,
+        borderColor: '#2196F3',
+        borderRadius: 8,
+        padding: 8,
+        backgroundColor: '#fff',
+    },
+    toggleRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+    },
+    toggleInfo: {
+        flex: 1,
+    },
+    toggle: {
+        width: 56,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#ddd',
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: '#4CAF50',
+    },
+    toggleThumb: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#fff',
+    },
+    toggleThumbActive: {
+        marginLeft: 24,
+    },
+    summaryBox: {
+        backgroundColor: '#f0f7ff',
+        padding: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#2196F3',
+        marginTop: 8,
+    },
+    summaryTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#2196F3',
+        marginBottom: 8,
+    },
+    summaryText: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 4,
     },
 });
 

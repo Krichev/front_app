@@ -203,6 +203,16 @@ export const useQuestionsManager = () => {
         });
     };
 
+    const expandAllQuestions = () => {
+        const questions = questionSource === 'app' ? appQuestions : userQuestions;
+        const allIndices = questions.map((_, index) => index);
+        setExpandedQuestions(new Set(allIndices));
+    };
+
+    const collapseAllQuestions = () => {
+        setExpandedQuestions(new Set());
+    };
+
     const deleteUserQuestion = async (questionId: string) => {
         try {
             await deleteQuestion(questionId).unwrap();
@@ -408,6 +418,8 @@ export const useQuestionsManager = () => {
         handleMediaQuestionSubmit,
         handleUnifiedQuestionSubmit,
         getSelectedQuestionsArray,
+        expandAllQuestions,
+        collapseAllQuestions,       
         refetchUserQuestions,
     };
 };

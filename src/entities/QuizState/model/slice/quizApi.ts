@@ -154,7 +154,6 @@ export interface StartQuizSessionRequest {
     difficulty: APIDifficulty;
     roundTimeSeconds: number;
     totalRounds: number;
-    timePerRound: number;
     enableAiHost: boolean;
     questionSource: 'app' | 'user';
     customQuestionIds?: number[];

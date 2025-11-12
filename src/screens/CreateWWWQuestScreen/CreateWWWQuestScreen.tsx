@@ -166,6 +166,8 @@ const CreateWWWQuestScreen = () => {
                     onToggleSelection={questionsManager.toggleQuestionSelection}
                     onToggleAnswerVisibility={questionsManager.toggleAnswerVisibility}
                     onToggleExpanded={questionsManager.toggleExpanded}
+                    onExpandAll={questionsManager.expandAllQuestions}
+                    onCollapseAll={questionsManager.collapseAllQuestions} 
                     onDeleteUserQuestion={questionsManager.deleteUserQuestion}
                     showTopicPicker={questionsManager.showTopicPicker}
                     onShowTopicPicker={questionsManager.setShowTopicPicker}

@@ -141,7 +141,6 @@ export const useQuestCreator = () => {
                 difficulty: quizConfig.difficulty,
                 totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length),
                 roundTimeSeconds: quizConfig.roundTime,
-                timePerRound: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
                 questionSource: questionSource as 'app' | 'user',
                 customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,

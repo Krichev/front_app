@@ -41,6 +41,8 @@ interface QuestionListProps {
     onToggleSelection: (questionId: string, source: 'app' | 'user') => void;
     onToggleAnswerVisibility: (questionId: string) => void;
     onToggleExpanded: (index: number) => void;
+    onExpandAll?: () => void;        // ← NEW
+    onCollapseAll?: () => void;      // ← NEW
     onDeleteUserQuestion: (questionId: string) => void;
     showTopicPicker: boolean;
     onShowTopicPicker: (show: boolean) => void;
@@ -110,12 +112,20 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                                        onToggleSelection,
                                                        onToggleAnswerVisibility,
                                                        onToggleExpanded,
+                                                       onExpandAll,           // ← NEW
+                                                       onCollapseAll,         // ← NEW
                                                        onDeleteUserQuestion,
                                                        showTopicPicker,
                                                        onShowTopicPicker,
                                                        availableTopics,
                                                        isLoadingTopics,
                                                    }) => {
+    // ← NEW: Helper to truncate question text for collapsed view
+    const getTruncatedQuestion = (question: string, maxLength: number = 60) => {
+        if (question.length <= maxLength) return question;
+        return question.substring(0, maxLength) + '...';
+    };
+
     const questions = questionSource === 'app' ? appQuestions : userQuestions;
     const selectedQuestionIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
     const isLoading = questionSource === 'app' ? isLoadingApp : isLoadingUser;
@@ -223,6 +233,14 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     </Text>
                                 </View>
                             )}
+
+                            {/* ← NEW: Show question preview when collapsed */}
+                            {!isExpanded && (
+                                <Text style={styles.questionPreviewText} numberOfLines={2}>
+                                    {getTruncatedQuestion(question.question)}
+                                </Text>
+                            )}
+
                             {question.topic && (
                                 <View style={styles.topicBadge}>
                                     <MaterialCommunityIcons name="tag" size={14} color="#007AFF"/>
@@ -376,7 +394,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     <Text style={styles.modalTitle}>Select Topic</Text>
 
                     {isLoadingTopics ? (
-                        <ActivityIndicator size="large" color="#007AFF"/>
+                        <ActivityIndicator size="large" color="#007AFF" style={{marginVertical: 20}}/>
                     ) : (
                         <ScrollView style={styles.topicList}>
                             <TouchableOpacity
@@ -437,7 +455,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                 </View>
             ) : questions.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <MaterialCommunityIcons name="text-box-search" size={64} color="#ccc"/>
+                    <MaterialCommunityIcons name="text-box-search" size={48} color="#ccc"/>
                     <Text style={styles.emptyText}>
                         {questionSource === 'app'
                             ? 'No questions found. Try adjusting your search filters.'
@@ -446,6 +464,36 @@ const QuestionList: React.FC<QuestionListProps> = ({
                 </View>
             ) : (
                 <>
+                    {/* ← NEW: Expand/Collapse All Button */}
+                    {questions.length > 0 && (
+                        <View style={styles.expandCollapseContainer}>
+                            <TouchableOpacity
+                                style={styles.expandCollapseButton}
+                                onPress={() => {
+                                    const allExpanded = questions.every((_, index) => expandedQuestions.has(index));
+                                    if (allExpanded && onCollapseAll) {
+                                        onCollapseAll();
+                                    } else if (onExpandAll) {
+                                        onExpandAll();
+                                    }
+                                }}
+                            >
+                                <MaterialCommunityIcons
+                                    name={questions.every((_, index) => expandedQuestions.has(index))
+                                        ? 'chevron-up-box'
+                                        : 'chevron-down-box'}
+                                    size={20}
+                                    color="#007AFF"
+                                />
+                                <Text style={styles.expandCollapseText}>
+                                    {questions.every((_, index) => expandedQuestions.has(index))
+                                        ? 'Collapse All'
+                                        : 'Expand All'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     <Text style={styles.resultsText}>
                         {totalQuestions} question{totalQuestions !== 1 ? 's' : ''} found
                     </Text>
@@ -539,6 +587,33 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    // ← NEW STYLES
+    expandCollapseContainer: {
+        marginBottom: 12,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    expandCollapseButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F0F8FF',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        gap: 6,
+    },
+    expandCollapseText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    questionPreviewText: {
+        fontSize: 13,
+        color: '#666',
+        flex: 1,
+        marginLeft: 4,
+    },
+    // END NEW STYLES
     resultsText: {
         fontSize: 14,
         color: '#666',
