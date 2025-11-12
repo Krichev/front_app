@@ -1,4 +1,4 @@
-// src/screens/CreateWWWQuestScreen/hooks/useQuestionsManager.ts
+// src/screens/CreateWWWQuestScreen/hooks/useQuestionsManager.ts - FIXED VERSION
 import {useEffect, useState} from 'react';
 import {Alert} from 'react-native';
 import {
@@ -12,11 +12,7 @@ import {
 import {QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, QuestionSource} from "../../../services/wwwGame/questionService.ts";
 
-
-// export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
-// export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
 export type QuestionType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
-
 
 export interface CustomQuestion {
     question: string;
@@ -97,6 +93,14 @@ export const useQuestionsManager = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalQuestions, setTotalQuestions] = useState(0);
 
+    // ✅ NEW: Cache tracking to prevent unnecessary refetches
+    const [lastSearchParams, setLastSearchParams] = useState<{
+        keyword: string;
+        difficulty: APIDifficulty | 'ALL';
+        topic: string;
+        page: number;
+    } | null>(null);
+
     // Selection
     const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<string>>(new Set());
     const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<string>>(new Set());
@@ -109,11 +113,35 @@ export const useQuestionsManager = () => {
     // Custom questions
     const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
 
-
-    // Search app questions on mount
+    // ✅ FIXED: Smart loading that only refetches when necessary
     useEffect(() => {
         if (questionSource === 'app') {
-            searchAppQuestions();
+            const currentParams = {
+                keyword: searchKeyword,
+                difficulty: searchDifficulty,
+                topic: searchTopic,
+                page: currentPage,
+            };
+
+            // Check if parameters have changed
+            const paramsChanged = !lastSearchParams ||
+                lastSearchParams.keyword !== currentParams.keyword ||
+                lastSearchParams.difficulty !== currentParams.difficulty ||
+                lastSearchParams.topic !== currentParams.topic ||
+                lastSearchParams.page !== currentParams.page;
+
+            // Check if we have data
+            const hasData = appQuestions.length > 0;
+
+            // Only search if:
+            // 1. Parameters have changed, OR
+            // 2. We have no data (first load)
+            if (paramsChanged || !hasData) {
+                console.log('🔄 Fetching app questions:', paramsChanged ? 'params changed' : 'first load');
+                searchAppQuestions();
+            } else {
+                console.log('✅ Using cached app questions');
+            }
         }
     }, [questionSource]);
 
@@ -133,6 +161,14 @@ export const useQuestionsManager = () => {
                 setAppQuestions(response.content);
                 setTotalPages(response.totalPages);
                 setTotalQuestions(response.totalElements);
+
+                // ✅ Update cache after successful search
+                setLastSearchParams({
+                    keyword: searchKeyword,
+                    difficulty: searchDifficulty,
+                    topic: searchTopic,
+                    page: currentPage,
+                });
             } else {
                 setAppQuestions([]);
                 setTotalPages(0);
@@ -152,6 +188,8 @@ export const useQuestionsManager = () => {
         setSearchDifficulty('ALL');
         setSearchTopic('');
         setCurrentPage(0);
+        // ✅ Clear cache when clearing search
+        setLastSearchParams(null);
         searchAppQuestions();
     };
 
@@ -203,23 +241,12 @@ export const useQuestionsManager = () => {
         });
     };
 
-    const expandAllQuestions = () => {
-        const questions = questionSource === 'app' ? appQuestions : userQuestions;
-        const allIndices = questions.map((_, index) => index);
-        setExpandedQuestions(new Set(allIndices));
-    };
-
-    const collapseAllQuestions = () => {
-        setExpandedQuestions(new Set());
-    };
-
     const deleteUserQuestion = async (questionId: string) => {
         try {
             await deleteQuestion(questionId).unwrap();
             Alert.alert('Success', 'Question deleted successfully');
             refetchUserQuestions();
 
-            // Remove from selection if it was selected
             setSelectedUserQuestionIds((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(questionId);
@@ -231,51 +258,29 @@ export const useQuestionsManager = () => {
         }
     };
 
-    const addNewCustomQuestion = (question: CustomQuestion) => {
-        const newQuestion: MultimediaQuestionData = {  // Changed from MultimediaQuizQuestion
-            id: `custom_${Date.now()}`,
-            question: question.question,
-            answer: question.answer,
-            difficulty: question.difficulty,
-            topic: question.topic,
-            additionalInfo: question.additionalInfo,
-            questionType: 'text',
-        };
-        setNewCustomQuestions((prev) => [...prev, newQuestion]);
+    const addNewCustomQuestion = (question: MultimediaQuestionData) => {
+        setNewCustomQuestions((prev) => [...prev, question]);
     };
 
     const removeNewCustomQuestion = (index: number) => {
         setNewCustomQuestions((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const handleMediaQuestionSubmit = async (questionData: QuestionFormData) => {
+    const handleMediaQuestionSubmit = async (questionData: MultimediaQuestionData) => {
         try {
             const newQuestion: MultimediaQuestionData = {
                 id: `temp_${Date.now()}`,
-                question: questionData.question,
-                answer: questionData.answer,
-                difficulty: questionData.difficulty,
-                topic: questionData.topic,
-                additionalInfo: questionData.additionalInfo,
-                questionType: questionData.questionType === 'TEXT' ? 'text' :
-                    questionData.questionType === 'IMAGE' ? 'text' :
-                        questionData.questionType === 'VIDEO' ? 'video' : 'audio',
+                ...questionData,
             };
 
             setNewCustomQuestions((prev) => [...prev, newQuestion]);
             Alert.alert('Success', 'Question with media added successfully!');
         } catch (error) {
-            console.error('Error creating question with media:', error);
+            console.error('Error creating question:', error);
             Alert.alert('Error', 'Failed to create question. Please try again.');
         }
     };
 
-    // Add this new method to useQuestionsManager.ts
-// Place it after handleMediaQuestionSubmit method
-
-    /**
-     * Handle unified question submission that supports both text and media questions
-     */
     const handleUnifiedQuestionSubmit = async (questionData: {
         question: string;
         answer: string;
@@ -299,7 +304,6 @@ export const useQuestionsManager = () => {
                 topic: questionData.topic,
                 additionalInfo: questionData.additionalInfo,
                 questionType: questionData.questionType,
-                // Include media info if present
                 ...(questionData.mediaInfo && {
                     mediaFileId: questionData.mediaInfo.id,
                     mediaUrl: questionData.mediaInfo.url,
@@ -314,11 +318,7 @@ export const useQuestionsManager = () => {
         }
     };
 
-    /**
-     * Get array of all selected questions from all sources
-     */
     const getSelectedQuestionsArray = () => {
-        // Map selected app questions and ensure difficulty is defined
         const selectedAppQuestions = (appQuestions ?? [])
             .filter((q) => selectedAppQuestionIds.has(q?.id?.toString() ?? ''))
             .map((q) => ({
@@ -332,7 +332,6 @@ export const useQuestionsManager = () => {
                 source: 'app' as const,
             }));
 
-        // Map selected user questions and convert difficulty format
         const selectedUserQuestionsData = (userQuestions ?? [])
             .filter((uq) => selectedUserQuestionIds.has(uq.id))
             .map((uq) => ({
@@ -345,7 +344,6 @@ export const useQuestionsManager = () => {
                 source: 'user' as const,
             }));
 
-        // Map new custom questions (already in correct format)
         const newCustomQuestionsData = newCustomQuestions.map((q, idx) => ({
             id: `new-custom-${idx}`,
             question: q.question,
@@ -418,8 +416,6 @@ export const useQuestionsManager = () => {
         handleMediaQuestionSubmit,
         handleUnifiedQuestionSubmit,
         getSelectedQuestionsArray,
-        expandAllQuestions,
-        collapseAllQuestions,       
         refetchUserQuestions,
     };
 };
