@@ -1,19 +1,10 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionList.tsx
 import React from 'react';
-import {
-    ActivityIndicator,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import {ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
 import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi.ts";
+import QuestionMediaViewer from './QuestionMediaViewer';
 
 interface QuestionListProps {
     questionSource: QuestionSource;
@@ -41,8 +32,8 @@ interface QuestionListProps {
     onToggleSelection: (questionId: string, source: 'app' | 'user') => void;
     onToggleAnswerVisibility: (questionId: string) => void;
     onToggleExpanded: (index: number) => void;
-    onExpandAll?: () => void;        // ← NEW
-    onCollapseAll?: () => void;      // ← NEW
+    onExpandAll?: () => void;
+    onCollapseAll?: () => void;
     onDeleteUserQuestion: (questionId: string) => void;
     showTopicPicker: boolean;
     onShowTopicPicker: (show: boolean) => void;
@@ -86,6 +77,14 @@ const getMediaColor = (mediaType?: MediaType): string => {
     }
 };
 
+/**
+ * Helper function to truncate question text
+ */
+const getTruncatedQuestion = (text: string, maxLength: number = 80): string => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+};
+
 const QuestionList: React.FC<QuestionListProps> = ({
                                                        questionSource,
                                                        appQuestions,
@@ -112,44 +111,142 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                                        onToggleSelection,
                                                        onToggleAnswerVisibility,
                                                        onToggleExpanded,
-                                                       onExpandAll,           // ← NEW
-                                                       onCollapseAll,         // ← NEW
+                                                       onExpandAll,
+                                                       onCollapseAll,
                                                        onDeleteUserQuestion,
                                                        showTopicPicker,
                                                        onShowTopicPicker,
                                                        availableTopics,
                                                        isLoadingTopics,
                                                    }) => {
-    // ← NEW: Helper to truncate question text for collapsed view
-    const getTruncatedQuestion = (question: string, maxLength: number = 60) => {
-        if (question.length <= maxLength) return question;
-        return question.substring(0, maxLength) + '...';
-    };
-
     const questions = questionSource === 'app' ? appQuestions : userQuestions;
     const selectedQuestionIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
     const isLoading = questionSource === 'app' ? isLoadingApp : isLoadingUser;
 
+    const difficulties: Array<APIDifficulty | 'ALL'> = ['ALL', 'EASY', 'MEDIUM', 'HARD'];
+
+    const renderTopicPicker = () => (
+        <Modal
+            visible={showTopicPicker}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => onShowTopicPicker(false)}
+        >
+            <TouchableOpacity
+                style={styles.modalOverlay}
+                activeOpacity={1}
+                onPress={() => onShowTopicPicker(false)}
+            >
+                <View style={styles.topicPickerContainer}>
+                    <View style={styles.topicPickerHeader}>
+                        <Text style={styles.topicPickerTitle}>Select Topic</Text>
+                        <TouchableOpacity onPress={() => onShowTopicPicker(false)}>
+                            <MaterialCommunityIcons name="close" size={24} color="#333"/>
+                        </TouchableOpacity>
+                    </View>
+
+                    {isLoadingTopics ? (
+                        <ActivityIndicator style={{padding: 20}} size="large" color="#007AFF"/>
+                    ) : (
+                        <ScrollView style={styles.topicList}>
+                            <TouchableOpacity
+                                style={styles.topicItem}
+                                onPress={() => {
+                                    onSearchTopicChange('');
+                                    onShowTopicPicker(false);
+                                }}
+                            >
+                                <Text style={styles.topicItemText}>All Topics</Text>
+                            </TouchableOpacity>
+
+                            {availableTopics.map((topic) => (
+                                <TouchableOpacity
+                                    key={topic}
+                                    style={[
+                                        styles.topicItem,
+                                        searchTopic === topic && styles.topicItemSelected,
+                                    ]}
+                                    onPress={() => {
+                                        onSearchTopicChange(topic);
+                                        onShowTopicPicker(false);
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.topicItemText,
+                                            searchTopic === topic && styles.topicItemTextSelected,
+                                        ]}
+                                    >
+                                        {topic}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    )}
+                </View>
+            </TouchableOpacity>
+        </Modal>
+    );
+
+    const renderPagination = () => {
+        if (totalPages <= 1) return null;
+
+        return (
+            <View style={styles.paginationContainer}>
+                <TouchableOpacity
+                    style={[styles.paginationButton, currentPage === 0 && styles.paginationButtonDisabled]}
+                    onPress={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                >
+                    <MaterialCommunityIcons
+                        name="chevron-left"
+                        size={24}
+                        color={currentPage === 0 ? '#ccc' : '#007AFF'}
+                    />
+                </TouchableOpacity>
+
+                <Text style={styles.paginationText}>
+                    Page {currentPage + 1} of {totalPages}
+                </Text>
+
+                <TouchableOpacity
+                    style={[
+                        styles.paginationButton,
+                        currentPage >= totalPages - 1 && styles.paginationButtonDisabled,
+                    ]}
+                    onPress={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages - 1}
+                >
+                    <MaterialCommunityIcons
+                        name="chevron-right"
+                        size={24}
+                        color={currentPage >= totalPages - 1 ? '#ccc' : '#007AFF'}
+                    />
+                </TouchableOpacity>
+            </View>
+        );
+    };
+
     const renderSearchBar = () => (
         <View style={styles.searchContainer}>
-            <View style={styles.searchInputContainer}>
-                <MaterialCommunityIcons name="magnify" size={24} color="#666"/>
-                <TextInput
-                    style={styles.searchInput}
-                    value={searchKeyword}
-                    onChangeText={onSearchKeywordChange}
-                    placeholder="Search questions..."
-                    placeholderTextColor="#999"
-                />
-                {searchKeyword.length > 0 && (
-                    <TouchableOpacity onPress={onClearSearch}>
-                        <MaterialCommunityIcons name="close-circle" size={20} color="#666"/>
-                    </TouchableOpacity>
-                )}
-            </View>
-
             {questionSource === 'app' && (
                 <>
+                    <View style={styles.searchInputContainer}>
+                        <MaterialCommunityIcons name="magnify" size={24} color="#666"/>
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search questions..."
+                            value={searchKeyword}
+                            onChangeText={onSearchKeywordChange}
+                            placeholderTextColor="#999"
+                        />
+                        {searchKeyword.length > 0 && (
+                            <TouchableOpacity onPress={onClearSearch}>
+                                <MaterialCommunityIcons name="close-circle" size={20} color="#666"/>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
                     <View style={styles.filterRow}>
                         <TouchableOpacity
                             style={styles.filterButton}
@@ -159,11 +256,14 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <Text style={styles.filterButtonText}>
                                 {searchTopic || 'All Topics'}
                             </Text>
-                            <MaterialCommunityIcons name="chevron-down" size={20} color="#007AFF"/>
                         </TouchableOpacity>
 
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.difficultyScroll}>
-                            {(['ALL', 'EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            style={styles.difficultyScroll}
+                        >
+                            {difficulties.map((diff) => (
                                 <TouchableOpacity
                                     key={diff}
                                     style={[
@@ -198,8 +298,16 @@ const QuestionList: React.FC<QuestionListProps> = ({
         const isSelected = selectedQuestionIds.has(question.id.toString());
         const isAnswerVisible = visibleAnswers.has(question.id.toString());
         const isExpanded = expandedQuestions.has(index);
-        const hasMedia = (question as any).questionMediaUrl || (question as any).questionMediaType;
-        const mediaType = (question as any).questionMediaType as MediaType | undefined;
+
+        // Access media properties directly from QuizQuestion
+        const hasMedia = !!question.questionMediaUrl;
+        const mediaType = question.questionMediaType;
+        const mediaUrl = question.questionMediaUrl;
+        const thumbnailUrl = question.questionThumbnailUrl;
+        //
+        // console.log("mediaUrl" + mediaUrl);
+        // console.log("mediaType" + mediaType);
+        // console.log("thumbnailUrl" + thumbnailUrl);
 
         return (
             <View key={question.id} style={styles.questionCard}>
@@ -234,7 +342,6 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                 </View>
                             )}
 
-                            {/* ← NEW: Show question preview when collapsed */}
                             {!isExpanded && (
                                 <Text style={styles.questionPreviewText} numberOfLines={2}>
                                     {getTruncatedQuestion(question.question)}
@@ -247,6 +354,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     <Text style={styles.topicText}>{question.topic}</Text>
                                 </View>
                             )}
+
                             {hasMedia && (
                                 <View style={styles.mediaBadge}>
                                     <MaterialCommunityIcons
@@ -276,27 +384,16 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <Text style={styles.questionText}>{question.question}</Text>
                         </View>
 
-                        {/* Media Preview */}
-                        {hasMedia && (question as any).questionMediaUrl && (
-                            <View style={styles.mediaContainer}>
-                                {mediaType === MediaType.IMAGE ? (
-                                    <Image
-                                        source={{uri: (question as any).questionMediaUrl}}
-                                        style={styles.mediaImage}
-                                        resizeMode="cover"
-                                    />
-                                ) : (
-                                    <View style={styles.mediaPlaceholder}>
-                                        <MaterialCommunityIcons
-                                            name={getMediaIcon(mediaType)}
-                                            size={48}
-                                            color={getMediaColor(mediaType)}
-                                        />
-                                        <Text style={[styles.mediaPlaceholderText, {color: getMediaColor(mediaType)}]}>
-                                            {mediaType === MediaType.VIDEO ? 'Video' : 'Audio'} Content
-                                        </Text>
-                                    </View>
-                                )}
+                        {/* ✅ NEW: Integrated Media Viewer Component */}
+                        {hasMedia && mediaUrl && mediaType && (
+                            <View style={styles.mediaSection}>
+                                <QuestionMediaViewer
+                                    mediaUrl={mediaUrl}
+                                    mediaType={mediaType}
+                                    thumbnailUrl={thumbnailUrl}
+                                    compact={false}
+                                    enableFullscreen={true}
+                                />
                             </View>
                         )}
 
@@ -329,16 +426,12 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             </View>
                         )}
 
-                        {question.source && (
-                            <Text style={styles.sourceText}>Source: {question.source}</Text>
-                        )}
-
                         {questionSource === 'user' && (
                             <TouchableOpacity
                                 style={styles.deleteButton}
                                 onPress={() => onDeleteUserQuestion(question.id.toString())}
                             >
-                                <MaterialCommunityIcons name="delete" size={20} color="#F44336"/>
+                                <MaterialCommunityIcons name="delete" size={20} color="#fff"/>
                                 <Text style={styles.deleteButtonText}>Delete Question</Text>
                             </TouchableOpacity>
                         )}
@@ -348,145 +441,37 @@ const QuestionList: React.FC<QuestionListProps> = ({
         );
     };
 
-    const renderPagination = () => {
-        if (questionSource !== 'app' || totalPages <= 1) return null;
-
-        return (
-            <View style={styles.paginationContainer}>
-                <TouchableOpacity
-                    style={[
-                        styles.paginationButton,
-                        currentPage === 0 && styles.paginationButtonDisabled,
-                    ]}
-                    onPress={() => onPageChange(currentPage - 1)}
-                    disabled={currentPage === 0}
-                >
-                    <Text style={styles.paginationButtonText}>Previous</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.paginationText}>
-                    Page {currentPage + 1} of {totalPages}
-                </Text>
-
-                <TouchableOpacity
-                    style={[
-                        styles.paginationButton,
-                        currentPage >= totalPages - 1 && styles.paginationButtonDisabled,
-                    ]}
-                    onPress={() => onPageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages - 1}
-                >
-                    <Text style={styles.paginationButtonText}>Next</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    };
-
-    const renderTopicPicker = () => (
-        <Modal
-            visible={showTopicPicker}
-            transparent
-            animationType="slide"
-            onRequestClose={() => onShowTopicPicker(false)}
-        >
-            <View style={styles.modalOverlay}>
-                <View style={styles.modalContent}>
-                    <Text style={styles.modalTitle}>Select Topic</Text>
-
-                    {isLoadingTopics ? (
-                        <ActivityIndicator size="large" color="#007AFF" style={{marginVertical: 20}}/>
-                    ) : (
-                        <ScrollView style={styles.topicList}>
-                            <TouchableOpacity
-                                style={styles.topicItem}
-                                onPress={() => {
-                                    onSearchTopicChange('');
-                                    onShowTopicPicker(false);
-                                }}
-                            >
-                                <Text style={styles.topicItemText}>All Topics</Text>
-                                {!searchTopic && (
-                                    <MaterialCommunityIcons name="check" size={24} color="#007AFF"/>
-                                )}
-                            </TouchableOpacity>
-
-                            {availableTopics.map((topic) => (
-                                <TouchableOpacity
-                                    key={topic}
-                                    style={styles.topicItem}
-                                    onPress={() => {
-                                        onSearchTopicChange(topic);
-                                        onShowTopicPicker(false);
-                                    }}
-                                >
-                                    <Text style={styles.topicItemText}>{topic}</Text>
-                                    {searchTopic === topic && (
-                                        <MaterialCommunityIcons name="check" size={24} color="#007AFF"/>
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    )}
-
-                    <TouchableOpacity
-                        style={styles.modalCloseButton}
-                        onPress={() => onShowTopicPicker(false)}
-                    >
-                        <Text style={styles.modalCloseButtonText}>Close</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-        </Modal>
-    );
-
     return (
         <View style={styles.container}>
             {renderSearchBar()}
+
+            {error && (
+                <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={24} color="#F44336"/>
+                    <Text style={styles.errorText}>{error}</Text>
+                </View>
+            )}
 
             {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#007AFF"/>
                     <Text style={styles.loadingText}>Loading questions...</Text>
                 </View>
-            ) : error ? (
-                <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
-                    <Text style={styles.errorText}>{error}</Text>
-                </View>
-            ) : questions.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <MaterialCommunityIcons name="text-box-search" size={48} color="#ccc"/>
-                    <Text style={styles.emptyText}>
-                        {questionSource === 'app'
-                            ? 'No questions found. Try adjusting your search filters.'
-                            : 'You haven\'t created any questions yet. Tap "Add Question" to get started!'}
-                    </Text>
-                </View>
             ) : (
                 <>
-                    {/* ← NEW: Expand/Collapse All Button */}
-                    {questions.length > 0 && (
-                        <View style={styles.expandCollapseContainer}>
+                    {onExpandAll && onCollapseAll && questions.length > 0 && (
+                        <View style={styles.bulkActionsContainer}>
                             <TouchableOpacity
-                                style={styles.expandCollapseButton}
-                                onPress={() => {
-                                    const allExpanded = questions.every((_, index) => expandedQuestions.has(index));
-                                    if (allExpanded && onCollapseAll) {
-                                        onCollapseAll();
-                                    } else if (onExpandAll) {
-                                        onExpandAll();
-                                    }
-                                }}
+                                style={styles.bulkActionButton}
+                                onPress={expandedQuestions.size === questions.length ? onCollapseAll : onExpandAll}
                             >
                                 <MaterialCommunityIcons
-                                    name={questions.every((_, index) => expandedQuestions.has(index))
-                                        ? 'chevron-up-box'
-                                        : 'chevron-down-box'}
+                                    name={expandedQuestions.size === questions.length ? 'chevron-up-circle' : 'chevron-down-circle'}
                                     size={20}
                                     color="#007AFF"
                                 />
-                                <Text style={styles.expandCollapseText}>
-                                    {questions.every((_, index) => expandedQuestions.has(index))
+                                <Text style={styles.bulkActionText}>
+                                    {expandedQuestions.size === questions.length
                                         ? 'Collapse All'
                                         : 'Expand All'}
                                 </Text>
@@ -579,46 +564,34 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         backgroundColor: '#007AFF',
         paddingVertical: 12,
-        borderRadius: 8,
+        borderRadius: 12,
         gap: 8,
     },
     searchButtonText: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
     },
-    // ← NEW STYLES
-    expandCollapseContainer: {
-        marginBottom: 12,
+    bulkActionsContainer: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
+        marginBottom: 12,
     },
-    expandCollapseButton: {
+    bulkActionButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F0F8FF',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 6,
+        gap: 4,
+        padding: 8,
     },
-    expandCollapseText: {
-        color: '#007AFF',
+    bulkActionText: {
         fontSize: 14,
+        color: '#007AFF',
         fontWeight: '600',
     },
-    questionPreviewText: {
-        fontSize: 13,
-        color: '#666',
-        flex: 1,
-        marginLeft: 4,
-    },
-    // END NEW STYLES
     resultsText: {
         fontSize: 14,
         color: '#666',
         marginBottom: 12,
-        fontWeight: '600',
     },
     questionsList: {
         flex: 1,
@@ -627,9 +600,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderRadius: 12,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
     },
     questionHeader: {
         flexDirection: 'row',
@@ -638,14 +613,14 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     questionHeaderLeft: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1,
         gap: 12,
     },
     checkbox: {
-        width: 28,
-        height: 28,
+        width: 24,
+        height: 24,
         borderRadius: 6,
         borderWidth: 2,
         borderColor: '#007AFF',
@@ -656,11 +631,17 @@ const styles = StyleSheet.create({
         backgroundColor: '#007AFF',
     },
     questionInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap',
         flex: 1,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
         gap: 8,
+    },
+    questionPreviewText: {
+        flex: 1,
+        fontSize: 14,
+        color: '#333',
+        lineHeight: 20,
     },
     difficultyBadge: {
         paddingHorizontal: 10,
@@ -727,28 +708,8 @@ const styles = StyleSheet.create({
         color: '#333',
         lineHeight: 24,
     },
-    mediaContainer: {
+    mediaSection: {
         marginBottom: 16,
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    mediaImage: {
-        width: '100%',
-        height: 200,
-        borderRadius: 8,
-    },
-    mediaPlaceholder: {
-        width: '100%',
-        height: 150,
-        backgroundColor: '#F5F5F5',
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-    },
-    mediaPlaceholderText: {
-        fontSize: 14,
-        fontWeight: '600',
     },
     answerContainer: {
         marginBottom: 16,
@@ -776,154 +737,123 @@ const styles = StyleSheet.create({
     },
     answerText: {
         fontSize: 16,
-        color: '#4CAF50',
+        color: '#333',
         lineHeight: 24,
-        fontWeight: '600',
+        backgroundColor: '#F5F5F5',
+        padding: 12,
+        borderRadius: 8,
     },
     additionalInfoContainer: {
-        marginBottom: 12,
-        padding: 12,
-        backgroundColor: '#FFF3E0',
-        borderRadius: 8,
-        borderLeftWidth: 4,
-        borderLeftColor: '#FF9800',
+        marginBottom: 16,
     },
     additionalInfoLabel: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#E65100',
+        color: '#333',
         marginBottom: 4,
     },
     additionalInfoText: {
         fontSize: 14,
-        color: '#E65100',
-    },
-    sourceText: {
-        fontSize: 12,
-        color: '#999',
-        fontStyle: 'italic',
-        marginTop: 8,
+        color: '#666',
+        lineHeight: 20,
     },
     deleteButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FFEBEE',
-        padding: 12,
+        backgroundColor: '#F44336',
+        paddingVertical: 10,
         borderRadius: 8,
-        marginTop: 12,
         gap: 8,
     },
     deleteButtonText: {
-        color: '#F44336',
-        fontWeight: '600',
-    },
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 16,
-        gap: 12,
-    },
-    paginationButton: {
-        flex: 1,
-        padding: 12,
-        backgroundColor: '#007AFF',
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    paginationButtonDisabled: {
-        backgroundColor: '#ccc',
-    },
-    paginationButtonText: {
         color: '#fff',
-        fontWeight: '600',
         fontSize: 14,
+        fontWeight: '700',
     },
-    paginationText: {
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFEBEE',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        gap: 8,
+    },
+    errorText: {
+        flex: 1,
         fontSize: 14,
-        color: '#666',
-        fontWeight: '600',
+        color: '#F44336',
     },
     loadingContainer: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 48,
+        justifyContent: 'center',
+        gap: 12,
     },
     loadingText: {
-        marginTop: 16,
         fontSize: 16,
         color: '#666',
     },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
+    paginationContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 48,
-    },
-    errorText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#F44336',
-        textAlign: 'center',
-    },
-    emptyContainer: {
-        flex: 1,
         justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 48,
+        paddingVertical: 20,
+        gap: 16,
     },
-    emptyText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
-        textAlign: 'center',
-        paddingHorizontal: 32,
+    paginationButton: {
+        padding: 8,
+    },
+    paginationButtonDisabled: {
+        opacity: 0.5,
+    },
+    paginationText: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '600',
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'flex-end',
     },
-    modalContent: {
+    topicPickerContainer: {
         backgroundColor: '#fff',
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        padding: 20,
         maxHeight: '70%',
     },
-    modalTitle: {
-        fontSize: 20,
+    topicPickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#e0e0e0',
+    },
+    topicPickerTitle: {
+        fontSize: 18,
         fontWeight: '700',
         color: '#333',
-        marginBottom: 16,
     },
     topicList: {
         maxHeight: 400,
     },
     topicItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: '#f0f0f0',
+    },
+    topicItemSelected: {
+        backgroundColor: '#E3F2FD',
     },
     topicItemText: {
         fontSize: 16,
         color: '#333',
     },
-    modalCloseButton: {
-        backgroundColor: '#007AFF',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    modalCloseButtonText: {
-        color: '#fff',
-        fontSize: 16,
+    topicItemTextSelected: {
+        color: '#007AFF',
         fontWeight: '600',
     },
 });
