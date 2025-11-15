@@ -296,7 +296,7 @@ const QuestionManagementScreen: React.FC = () => {
                 <View style={styles.difficultyFilter}>
                     <Text style={styles.sectionLabel}>Filter by Difficulty:</Text>
                     <View style={styles.difficultyButtons}>
-                        {(['All', 'EASY', 'MEDIUM', 'Hard'] as const).map((diff) => (
+                        {(['All', 'EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
                             <TouchableOpacity
                                 key={diff}
                                 style={[

@@ -28,7 +28,6 @@ export interface MediaUploadResponse {
     error?: string;
 }
 
-export type MediaType = 'IMAGE' | 'VIDEO' | 'AUDIO';
 
 /**
  * Service for handling media uploads with progress tracking and authentication

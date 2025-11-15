@@ -1,18 +1,20 @@
-// src/screens/CreateWWWQuestScreen/hooks/useQuestionsManager.ts - FIXED VERSION
+// src/screens/CreateWWWQuestScreen/hooks/useQuestionsManager.ts
 import {useEffect, useState} from 'react';
 import {Alert} from 'react-native';
 import {
+    CreateQuestionRequest,
     QuizQuestion,
     useCreateUserQuestionMutation,
-    useCreateUserQuestionWithMediaMutation,
     useDeleteUserQuestionMutation,
     useGetAvailableTopicsQuery,
     useGetUserQuestionsPaginatedQuery,
 } from '../../../entities/QuizState/model/slice/quizApi';
 import {QuestionService} from "../../../services/wwwGame";
-import {APIDifficulty, QuestionSource} from "../../../services/wwwGame/questionService.ts";
+import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService.ts";
 
-export type QuestionType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
+// ============================================================================
+// TYPES
+// ============================================================================
 
 export interface CustomQuestion {
     question: string;
@@ -29,9 +31,12 @@ export interface MultimediaQuestionData {
     difficulty: APIDifficulty;
     topic?: string;
     additionalInfo?: string;
-    questionType: string;
+    questionType: QuestionType;
 }
 
+/**
+ * ✅ Updated to match the unified CreateQuestionRequest interface
+ */
 export interface QuestionFormData {
     question: string;
     answer: string;
@@ -40,18 +45,21 @@ export interface QuestionFormData {
     additionalInfo?: string;
     questionType: QuestionType;
     media?: {
-        mediaId?: string;
-        mediaUrl?: string;
-        mediaType?: string;
+        mediaId: string;
+        mediaUrl: string;
+        mediaType: MediaType;
         thumbnailUrl?: string;
     };
 }
 
+// ============================================================================
+// HOOK
+// ============================================================================
+
 export const useQuestionsManager = () => {
-    // API hooks
-    const [createQuestion, { isLoading: isCreatingQuestion }] = useCreateUserQuestionMutation();
+    // ✅ API hooks - now using single unified mutation
+    const [createQuestion, {isLoading: isCreatingQuestion}] = useCreateUserQuestionMutation();
     const [deleteQuestion] = useDeleteUserQuestionMutation();
-    const [createQuestionWithMedia] = useCreateUserQuestionWithMediaMutation();
 
     const {
         data: availableTopics = [],
@@ -93,7 +101,7 @@ export const useQuestionsManager = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalQuestions, setTotalQuestions] = useState(0);
 
-    // ✅ NEW: Cache tracking to prevent unnecessary refetches
+    // Cache tracking to prevent unnecessary refetches
     const [lastSearchParams, setLastSearchParams] = useState<{
         keyword: string;
         difficulty: APIDifficulty | 'ALL';
@@ -101,19 +109,33 @@ export const useQuestionsManager = () => {
         page: number;
     } | null>(null);
 
-    // Selection
-    const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<string>>(new Set());
-    const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<string>>(new Set());
+    // Selection - ✅ Updated to use number for IDs
+    const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<number>>(new Set());
+    const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<number>>(new Set());
 
     // Preview state
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
     const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
-    const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set());
+    const [visibleAnswers, setVisibleAnswers] = useState<Set<number>>(new Set());
 
     // Custom questions
     const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
 
-    // ✅ FIXED: Smart loading that only refetches when necessary
+    // ============================================================================
+    // EFFECTS
+    // ============================================================================
+
+    // Reset pagination when question source changes
+    useEffect(() => {
+        console.log('📍 Question source changed to:', questionSource);
+        setCurrentPage(0);
+        setTotalPages(0);
+        setTotalQuestions(0);
+        setLastSearchParams(null);
+        setAppQuestionsError(null);
+    }, [questionSource]);
+
+    // Smart loading that only refetches when necessary
     useEffect(() => {
         if (questionSource === 'app') {
             const currentParams = {
@@ -123,19 +145,14 @@ export const useQuestionsManager = () => {
                 page: currentPage,
             };
 
-            // Check if parameters have changed
             const paramsChanged = !lastSearchParams ||
                 lastSearchParams.keyword !== currentParams.keyword ||
                 lastSearchParams.difficulty !== currentParams.difficulty ||
                 lastSearchParams.topic !== currentParams.topic ||
                 lastSearchParams.page !== currentParams.page;
 
-            // Check if we have data
             const hasData = appQuestions.length > 0;
 
-            // Only search if:
-            // 1. Parameters have changed, OR
-            // 2. We have no data (first load)
             if (paramsChanged || !hasData) {
                 console.log('🔄 Fetching app questions:', paramsChanged ? 'params changed' : 'first load');
                 searchAppQuestions();
@@ -143,7 +160,11 @@ export const useQuestionsManager = () => {
                 console.log('✅ Using cached app questions');
             }
         }
-    }, [questionSource]);
+    }, [questionSource, searchKeyword, searchDifficulty, searchTopic, currentPage]);
+
+    // ============================================================================
+    // SEARCH & FILTER FUNCTIONS
+    // ============================================================================
 
     const searchAppQuestions = async () => {
         setIsLoadingAppQuestions(true);
@@ -162,7 +183,6 @@ export const useQuestionsManager = () => {
                 setTotalPages(response.totalPages);
                 setTotalQuestions(response.totalElements);
 
-                // ✅ Update cache after successful search
                 setLastSearchParams({
                     keyword: searchKeyword,
                     difficulty: searchDifficulty,
@@ -188,12 +208,15 @@ export const useQuestionsManager = () => {
         setSearchDifficulty('ALL');
         setSearchTopic('');
         setCurrentPage(0);
-        // ✅ Clear cache when clearing search
         setLastSearchParams(null);
         searchAppQuestions();
     };
 
-    const toggleQuestionSelection = (questionId: string, source: 'app' | 'user') => {
+    // ============================================================================
+    // SELECTION FUNCTIONS - ✅ Updated to use number IDs
+    // ============================================================================
+
+    const toggleQuestionSelection = (questionId: number, source: 'app' | 'user') => {
         if (source === 'app') {
             setSelectedAppQuestionIds((prev) => {
                 const newSet = new Set(prev);
@@ -217,7 +240,7 @@ export const useQuestionsManager = () => {
         }
     };
 
-    const toggleAnswerVisibility = (questionId: string) => {
+    const toggleAnswerVisibility = (questionId: number) => {
         setVisibleAnswers((prev) => {
             const newSet = new Set(prev);
             if (newSet.has(questionId)) {
@@ -241,17 +264,15 @@ export const useQuestionsManager = () => {
         });
     };
 
-    const deleteUserQuestion = async (questionId: string) => {
+    // ============================================================================
+    // QUESTION MANAGEMENT FUNCTIONS
+    // ============================================================================
+
+    const deleteUserQuestion = async (questionId: number) => {
         try {
             await deleteQuestion(questionId).unwrap();
             Alert.alert('Success', 'Question deleted successfully');
             refetchUserQuestions();
-
-            setSelectedUserQuestionIds((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(questionId);
-                return newSet;
-            });
         } catch (error) {
             console.error('Error deleting question:', error);
             Alert.alert('Error', 'Failed to delete question');
@@ -266,61 +287,61 @@ export const useQuestionsManager = () => {
         setNewCustomQuestions((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const handleMediaQuestionSubmit = async (questionData: MultimediaQuestionData) => {
-        try {
-            const newQuestion: MultimediaQuestionData = {
-                id: `temp_${Date.now()}`,
-                ...questionData,
-            };
+    // ============================================================================
+    // ✅ UNIFIED QUESTION SUBMISSION - Works for ALL question types
+    // ============================================================================
 
-            setNewCustomQuestions((prev) => [...prev, newQuestion]);
-            Alert.alert('Success', 'Question with media added successfully!');
-        } catch (error) {
-            console.error('Error creating question:', error);
-            Alert.alert('Error', 'Failed to create question. Please try again.');
-        }
-    };
-
-    const handleUnifiedQuestionSubmit = async (questionData: {
-        question: string;
-        answer: string;
-        difficulty: APIDifficulty;
-        topic: string;
-        additionalInfo: string;
-        questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
-        mediaInfo?: {
-            id: string;
-            filename: string;
-            url: string;
-            mediaType: 'IMAGE' | 'VIDEO' | 'AUDIO';
-        };
-    }) => {
+    /**
+     * ✅ Single unified handler for creating questions (text, image, video, audio)
+     * This replaces both handleMediaQuestionSubmit and the separate logic
+     */
+    const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
         try {
-            const newQuestion: MultimediaQuestionData = {
-                id: `temp_${Date.now()}`,
-                question: questionData.question,
-                answer: questionData.answer,
-                difficulty: questionData.difficulty,
-                topic: questionData.topic,
-                additionalInfo: questionData.additionalInfo,
-                questionType: questionData.questionType,
-                ...(questionData.mediaInfo && {
-                    mediaFileId: questionData.mediaInfo.id,
-                    mediaUrl: questionData.mediaInfo.url,
+            // Build the request object matching CreateQuestionRequest interface
+            const request: CreateQuestionRequest = {
+                question: data.question,
+                answer: data.answer,
+                difficulty: data.difficulty,
+                questionType: data.questionType,
+                topic: data.topic,
+                additionalInfo: data.additionalInfo,
+                source: 'USER', // User-created question
+                // ✅ Media properties (only if media exists)
+                ...(data.media && {
+                    questionMediaId: data.media.mediaId,
+                    questionMediaUrl: data.media.mediaUrl,
+                    questionMediaType: data.media.mediaType,
                 }),
             };
 
-            setNewCustomQuestions((prev) => [...prev, newQuestion]);
-            Alert.alert('Success', `${questionData.questionType} question added successfully!`);
-        } catch (error) {
-            console.error('Error creating question:', error);
-            Alert.alert('Error', 'Failed to create question. Please try again.');
+            console.log('📤 Creating question:', request);
+
+            const result = await createQuestion(request).unwrap();
+
+            Alert.alert(
+                'Success',
+                `${data.questionType} question created successfully!`
+            );
+
+            // Refresh user questions list
+            refetchUserQuestions();
+
+            return result;
+        } catch (error: any) {
+            console.error('❌ Error creating question:', error);
+            const errorMessage = error?.data?.message || 'Failed to create question. Please try again.';
+            Alert.alert('Error', errorMessage);
+            throw error;
         }
     };
 
+    // ============================================================================
+    // HELPER FUNCTIONS
+    // ============================================================================
+
     const getSelectedQuestionsArray = () => {
         const selectedAppQuestions = (appQuestions ?? [])
-            .filter((q) => selectedAppQuestionIds.has(q?.id?.toString() ?? ''))
+            .filter((q) => selectedAppQuestionIds.has(q.id))
             .map((q) => ({
                 id: q.id,
                 question: q.question,
@@ -356,6 +377,10 @@ export const useQuestionsManager = () => {
 
         return [...selectedAppQuestions, ...selectedUserQuestionsData, ...newCustomQuestionsData];
     };
+
+    // ============================================================================
+    // RETURN
+    // ============================================================================
 
     return {
         // Question source
@@ -413,8 +438,7 @@ export const useQuestionsManager = () => {
         deleteUserQuestion,
         addNewCustomQuestion,
         removeNewCustomQuestion,
-        handleMediaQuestionSubmit,
-        handleUnifiedQuestionSubmit,
+        handleUnifiedQuestionSubmit, // ✅ Single unified submission handler
         getSelectedQuestionsArray,
         refetchUserQuestions,
     };

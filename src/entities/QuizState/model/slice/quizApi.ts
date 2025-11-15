@@ -8,7 +8,11 @@ import {QuestionVisibility} from "../types/question.types.ts";
 // TYPES
 // ============================================================================
 
-export interface CreateQuestionWithMediaRequest {
+/**
+ * Request to create a new question (with or without media)
+ * ✅ Aligned with backend CreateQuestionRequest
+ */
+export interface CreateQuestionRequest {
     question: string;
     answer: string;
     difficulty: APIDifficulty;
@@ -16,66 +20,73 @@ export interface CreateQuestionWithMediaRequest {
     additionalInfo?: string;
     source?: string;
     questionType?: QuestionType;
-    mediaFileId?: number;
+    // Media properties - matches backend exactly
     questionMediaUrl?: string;
     questionMediaId?: string;
     questionMediaType?: MediaType;
+    // Access control
+    visibility?: QuestionVisibility;
 }
 
-// export interface QuizQuestionResponse {
-//     id: number;
-//     question: string;
-//     answer: string;
-//     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-//     topic?: string;
-//     additionalInfo?: string;
-//     source?: string;
-//     questionType: QuestionType;
-//     questionMediaUrl?: string;
-//     questionMediaId?: string;
-//     questionMediaType?: MediaType;
-//     questionThumbnailUrl?: string;
-//     isUserCreated: boolean;
-//     creatorId?: number;
-//     creatorUsername?: string;
-//     isActive: boolean;
-//     usageCount: number;
-//     createdAt: string;
-//     updatedAt: string;
-// }
-
+/**
+ * Complete Quiz Question response from backend
+ * ✅ Aligned with backend QuizQuestionDTO
+ */
 export interface QuizQuestion {
-    id: string;
+    // Basic identifiers
+    id: number;  // ✅ Changed from string to number (matches backend Long)
+    externalId?: string;
+    legacyQuestionId?: number;
+
+    // Core question content
     question: string;
     answer: string;
+
+    // Classification
     difficulty: APIDifficulty;
-    visibility: QuestionVisibility;
-    topic?: string;
-    additionalInfo?: string;
-    source?: string;
     questionType: QuestionType;
+    topic?: string;
+    source?: string;
+
+    // Enhanced metadata
+    authors?: string;
+    comments?: string;
+    passCriteria?: string;
+    additionalInfo?: string;
+
+    // Media properties
     questionMediaUrl?: string;
     questionMediaId?: string;
     questionMediaType?: MediaType;
     questionThumbnailUrl?: string;
+
+    // User creation tracking
     isUserCreated: boolean;
     creatorId?: number;
     creatorUsername?: string;
+
+    // Access control
+    visibility: QuestionVisibility;
+    originalQuizId?: number;
+    originalQuizTitle?: string;
+
+    // Access information for current user
+    canEdit?: boolean;
+    canDelete?: boolean;
+    canUseInQuiz?: boolean;
+
+    // Status and usage
     isActive: boolean;
     usageCount: number;
+
+    // Timestamps
     createdAt: string;
     updatedAt: string;
 }
 
-export interface CreateQuizQuestionRequest {
-    question: string;
-    answer: string;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-    topic?: string;
-    additionalInfo?: string;
-    source?: string;
-}
-
+/**
+ * Paginated response for questions
+ */
 export interface PaginatedQuestionResponse {
     content: QuizQuestion[];
     totalPages: number;
@@ -84,6 +95,9 @@ export interface PaginatedQuestionResponse {
     pageSize: number;
 }
 
+/**
+ * Search parameters for questions
+ */
 export interface QuestionSearchParams {
     keyword?: string;
     difficulty?: APIDifficulty;
@@ -94,8 +108,12 @@ export interface QuestionSearchParams {
     sortDirection?: 'ASC' | 'DESC';
 }
 
+/**
+ * Request to update question visibility
+ */
 export interface UpdateQuestionVisibilityRequest {
-    isPublic: boolean;
+    visibility: QuestionVisibility;
+    originalQuizId?: number;  // Required if visibility is QUIZ_ONLY
 }
 
 export interface UserRelationship {
@@ -190,22 +208,63 @@ export const quizApi = createApi({
     tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions', 'Topics'],
     endpoints: (builder) => ({
 
-        createUserQuestion: builder.mutation<QuizQuestion, CreateQuizQuestionRequest>({
+        /**
+         * Create a new user question (text only or with media)
+         * ✅ Now uses unified CreateQuestionRequest interface
+         */
+        createUserQuestion: builder.mutation<QuizQuestion, CreateQuestionRequest>({
             query: (request) => ({
                 url: '/questions',
                 method: 'POST',
                 body: request,
             }),
-            invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}],
+            invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}, 'Topics'],
         }),
 
-        getAvailableTopics: builder.query<string[], void>({
-            query: () => '/quiz-questions/topics',
-            providesTags: ['Topics'],
+        /**
+         * @deprecated Use createUserQuestion instead
+         * This endpoint is kept for backward compatibility
+         */
+        createUserQuestionWithMedia: builder.mutation<QuizQuestion, CreateQuestionRequest>({
+            query: (request) => ({
+                url: '/questions',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}, 'Topics'],
         }),
 
+        /**
+         * Get paginated user questions
+         */
+        getUserQuestionsPaginated: builder.query<PaginatedQuestionResponse, QuestionSearchParams>({
+            query: (params) => ({
+                url: '/questions/me',
+                params: {
+                    page: params.page ?? 0,
+                    size: params.size ?? 20,
+                    sortBy: params.sortBy ?? 'createdAt',
+                    sortDirection: params.sortDirection ?? 'DESC',
+                    ...(params.keyword && {keyword: params.keyword}),
+                    ...(params.difficulty && {difficulty: params.difficulty}),
+                    ...(params.topic && {topic: params.topic}),
+                },
+            }),
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.content.map(({id}) => ({type: 'QuizQuestion' as const, id})),
+                        {type: 'QuizQuestion', id: 'USER_LIST'},
+                    ]
+                    : [{type: 'QuizQuestion', id: 'USER_LIST'}],
+        }),
+
+        /**
+         * Get all user questions (non-paginated)
+         */
         getUserQuestions: builder.query<QuizQuestion[], void>({
-            query: () => '/quiz/questions/me',
+            query: () => '/questions/me?size=1000',
+            transformResponse: (response: PaginatedQuestionResponse) => response.content,
             providesTags: (result) =>
                 result && Array.isArray(result)
                     ? [
@@ -215,33 +274,60 @@ export const quizApi = createApi({
                     : [{type: 'QuizQuestion', id: 'USER_LIST'}],
         }),
 
-        deleteUserQuestion: builder.mutation<{message: string}, string>({
+        /**
+         * Delete a user question
+         */
+        deleteUserQuestion: builder.mutation<{ message: string }, number>({
             query: (questionId) => ({
                 url: `/questions/${questionId}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}],
-        }),
-
-        getQuestionsByDifficulty: builder.query<QuizQuestion[], {
-            difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-            count?: number;
-        }>({
-            query: ({difficulty, count = 10}) => ({
-                url: `/questions/difficulty/${difficulty}`,
-                params: {count},
-            }),
-            providesTags: (result, error, {difficulty}) => [
-                {type: 'QuizQuestion', id: `DIFFICULTY_${difficulty}`}
+            invalidatesTags: (result, error, questionId) => [
+                {type: 'QuizQuestion', id: questionId},
+                {type: 'QuizQuestion', id: 'USER_LIST'},
             ],
         }),
 
-        searchQuestions: builder.query<QuizQuestion[], {keyword: string; limit?: number}>({
-            query: ({keyword, limit = 20}) => ({
-                url: '/questions/search',
-                params: {keyword, limit},
+        /**
+         * Update question visibility
+         */
+        updateQuestionVisibility: builder.mutation <{questionId: number, request: UpdateQuestionVisibilityRequest }>({
+            query: ({questionId, request}) => ({
+                url: `/questions/${questionId}/visibility`,
+                method: 'PATCH',
+                body: request,
             }),
-            providesTags: [{type: 'QuizQuestion', id: 'SEARCH'}],
+            invalidatesTags: (result, error, {questionId}) => [
+                {type: 'QuizQuestion', id: questionId},
+                {type: 'QuizQuestion', id: 'USER_LIST'},
+            ],
+        }),
+
+        /**
+         * Get available topics
+         */
+        getAvailableTopics: builder.query<string[], void>({
+            query: () => '/quiz-questions/topics',
+            providesTags: ['Topics'],
+        }),
+
+        /**
+         * Search questions (app questions)
+         */
+        searchQuestions: builder.query<PaginatedQuestionResponse, QuestionSearchParams>({
+            query: (params) => ({
+                url: '/quiz-questions/search',
+                params: {
+                    page: params.page ?? 0,
+                    size: params.size ?? 20,
+                    sortBy: params.sortBy ?? 'createdAt',
+                    sortDirection: params.sortDirection ?? 'DESC',
+                    ...(params.keyword && {keyword: params.keyword}),
+                    ...(params.difficulty && {difficulty: params.difficulty}),
+                    ...(params.topic && {topic: params.topic}),
+                },
+            }),
+            providesTags: ['QuizQuestion'],
         }),
 
         // ========================================================================
@@ -344,7 +430,7 @@ export const quizApi = createApi({
             invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}],
         }),
 
-        checkConnection: builder.query<{connected: boolean; status?: string}, string>({
+        checkConnection: builder.query<{ connected: boolean; status?: string }, string>({
             query: (username) => `../relationships/check/${username}`,
         }),
 
@@ -407,7 +493,7 @@ export const quizApi = createApi({
             ],
         }),
 
-        getUserQuizSessions: builder.query<QuizSession[], {limit?: number}>({
+        getUserQuizSessions: builder.query<QuizSession[], { limit?: number }>({
             query: ({limit = 20}) => ({
                 url: '/quiz/sessions/me',
                 params: {limit},
