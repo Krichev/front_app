@@ -1,6 +1,17 @@
 // src/screens/CreateWWWQuestScreen/components/MediaQuestionModal.tsx
 import React, {useState} from 'react';
-import {Alert, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
@@ -44,14 +55,41 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
     const [additionalInfo, setAdditionalInfo] = useState('');
-    const [questionType, setQuestionType] = useState<QuestionType>('TEXT');
     const [showTopicPicker, setShowTopicPicker] = useState(false);
 
-    // Media state - ✅ Changed from null to undefined
+    // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
     const [uploadedMediaInfo, setUploadedMediaInfo] = useState<MediaInfo | undefined>(undefined);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+
+    /**
+     * Determine question type based on selected media (IMPLICIT)
+     * Returns TEXT if no media selected
+     */
+    const getQuestionType = (): QuestionType => {
+        if (!selectedMedia && !uploadedMediaInfo) {
+            return 'TEXT';
+        }
+
+        // Check uploaded media first
+        if (uploadedMediaInfo) {
+            return uploadedMediaInfo.mediaType as QuestionType;
+        }
+
+        // Otherwise detect from selected file
+        if (selectedMedia) {
+            if (selectedMedia.type.startsWith('image/')) {
+                return 'IMAGE';
+            } else if (selectedMedia.type.startsWith('video/')) {
+                return 'VIDEO';
+            } else if (selectedMedia.type.startsWith('audio/')) {
+                return 'AUDIO';
+            }
+        }
+
+        return 'TEXT';
+    };
 
     /**
      * Convert question type to MediaType enum
@@ -70,23 +108,20 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     };
 
     /**
-     * Handle media selection based on question type
-     * Automatically uploads after selection from library
+     * Handle media selection based on type
      */
-    const handleSelectMedia = async () => {
+    const handleSelectMedia = async (type: 'image' | 'video' | 'audio') => {
         try {
-            switch (questionType) {
-                case 'IMAGE':
+            switch (type) {
+                case 'image':
                     await handleImagePick();
                     break;
-                case 'VIDEO':
+                case 'video':
                     await handleVideoPick();
                     break;
-                case 'AUDIO':
+                case 'audio':
                     await handleAudioPick();
                     break;
-                default:
-                    Alert.alert('Info', 'Please select a media type first (IMAGE, VIDEO, or AUDIO)');
             }
         } catch (error) {
             console.error('Error in handleSelectMedia:', error);
@@ -95,139 +130,104 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     };
 
     /**
-     * Handle image selection and automatic upload
+     * Handle image picking from library
      */
     const handleImagePick = async () => {
         try {
-            const result = await FileService.pickImage({
-                mediaType: 'mixed',
-                allowsEditing: false,
-                quality: 0.8,
-            });
-
+            const result = await FileService.pickImage();
             if (result) {
-                console.log('📸 Image selected:', result);
+                console.log('📷 Image selected:', result.name);
                 setSelectedMedia(result);
-                // Automatically upload after selection
-                await handleUploadMedia(result);
+                // Clear any previously uploaded media
+                setUploadedMediaInfo(undefined);
             }
         } catch (error) {
-            console.error('Error in handleImagePick:', error);
-            Alert.alert('Error', 'Failed to select image. Please try again.');
+            console.error('Error picking image:', error);
+            Alert.alert('Error', 'Failed to pick image. Please try again.');
         }
     };
 
     /**
-     * Handle video selection and automatic upload
+     * Handle video picking from library
      */
     const handleVideoPick = async () => {
         try {
-            const result = await FileService.pickVideo({
-                mediaType: 'video',
-                allowsEditing: false,
-                quality: 0.8,
-            });
-
+            const result = await FileService.pickVideo();
             if (result) {
-                console.log('🎥 Video selected:', result);
+                console.log('🎥 Video selected:', result.name);
                 setSelectedMedia(result);
-                // Automatically upload after selection
-                await handleUploadMedia(result);
+                // Clear any previously uploaded media
+                setUploadedMediaInfo(undefined);
             }
         } catch (error) {
-            console.error('Error in handleVideoPick:', error);
-            Alert.alert('Error', 'Failed to select video. Please try again.');
+            console.error('Error picking video:', error);
+            Alert.alert('Error', 'Failed to pick video. Please try again.');
         }
     };
 
     /**
-     * Handle audio selection with confirmation
+     * Handle audio picking from library
      */
     const handleAudioPick = async () => {
         try {
             const result = await FileService.pickAudio();
             if (result) {
-                console.log('🎵 Audio selected:', result);
+                console.log('🎵 Audio selected:', result.name);
                 setSelectedMedia(result);
-
-                Alert.alert(
-                    'Audio Selected',
-                    `Selected: ${result.name}\nSize: ${(result.size / 1024 / 1024).toFixed(2)} MB\n\nUpload this audio?`,
-                    [
-                        {
-                            text: 'Upload',
-                            onPress: async () => {
-                                await handleUploadMedia(result);
-                            },
-                        },
-                        {
-                            text: 'Cancel',
-                            style: 'cancel',
-                        },
-                    ]
-                );
+                // Clear any previously uploaded media
+                setUploadedMediaInfo(undefined);
             }
         } catch (error) {
-            console.error('Error in handleAudioPick:', error);
-            Alert.alert('Error', 'Failed to select audio. Please try again.');
+            console.error('Error picking audio:', error);
+            Alert.alert('Error', 'Failed to pick audio. Please try again.');
         }
     };
 
     /**
-     * ✅ FIXED: Upload media file to backend with progress tracking
-     * Now passes the correct parameters to uploadQuizMedia
+     * Upload media file to backend with progress tracking
      */
-    const handleUploadMedia = async (file: ProcessedFileInfo) => {
-        try {
-            setIsUploading(true);
-            setUploadProgress(0);
+    const uploadMedia = async (file: ProcessedFileInfo): Promise<MediaInfo> => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                console.log('🚀 Starting media upload:', {
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                });
 
-            console.log('🚀 Starting media upload:', {
-                fileName: file.name,
-                fileType: file.type,
-                fileSize: file.size,
-            });
+                const uploadResult: MediaUploadResponse = await MediaUploadService.uploadQuizMedia(
+                    file,
+                    undefined, // questionId - optional, not needed for new questions
+                    (progress) => {
+                        const percentage = Math.round((progress.loaded / progress.total) * 100);
+                        setUploadProgress(percentage);
+                        console.log(`📊 Upload progress: ${percentage}%`);
+                    }
+                );
 
-            // ✅ FIXED: Call with correct parameters (file object and progress callback)
-            const uploadResult: MediaUploadResponse = await MediaUploadService.uploadQuizMedia(
-                file,
-                undefined, // questionId - optional, not needed for new questions
-                (progress) => {
-                    const percentage = Math.round((progress.loaded / progress.total) * 100);
-                    setUploadProgress(percentage);
-                    console.log(`📊 Upload progress: ${percentage}%`);
+                console.log('✅ Media uploaded successfully:', uploadResult);
+
+                // Ensure the upload was successful and has required fields
+                if (!uploadResult.success || !uploadResult.mediaId || !uploadResult.mediaUrl) {
+                    throw new Error(uploadResult.error || 'Upload failed - missing required fields');
                 }
-            );
 
-            console.log('✅ Media uploaded successfully:', uploadResult);
+                const questionType = getQuestionType();
+                const mediaType = questionTypeToMediaType(questionType);
 
-            // ✅ Ensure the upload was successful and has required fields
-            if (!uploadResult.success || !uploadResult.mediaId || !uploadResult.mediaUrl) {
-                throw new Error(uploadResult.error || 'Upload failed - missing required fields');
+                const mediaInfo: MediaInfo = {
+                    mediaId: uploadResult.mediaId,
+                    mediaUrl: uploadResult.mediaUrl,
+                    mediaType: mediaType,
+                    thumbnailUrl: uploadResult.thumbnailUrl,
+                };
+
+                resolve(mediaInfo);
+            } catch (error) {
+                console.error('❌ Error uploading media:', error);
+                reject(error);
             }
-
-            const mediaType = questionTypeToMediaType(questionType);
-
-            const mediaInfo: MediaInfo = {
-                mediaId: uploadResult.mediaId,
-                mediaUrl: uploadResult.mediaUrl,
-                mediaType: mediaType,
-                thumbnailUrl: uploadResult.thumbnailUrl,
-            };
-
-            setUploadedMediaInfo(mediaInfo);
-            Alert.alert('Success', 'Media uploaded successfully!');
-        } catch (error) {
-            console.error('❌ Error uploading media:', error);
-            Alert.alert(
-                'Upload Failed',
-                error instanceof Error ? error.message : 'Failed to upload media. Please try again.'
-            );
-            setSelectedMedia(undefined); // ✅ Changed from null to undefined
-        } finally {
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
+        });
     };
 
     /**
@@ -246,8 +246,8 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                     text: 'Remove',
                     style: 'destructive',
                     onPress: () => {
-                        setSelectedMedia(undefined); // ✅ Changed from null to undefined
-                        setUploadedMediaInfo(undefined); // ✅ Changed from null to undefined
+                        setSelectedMedia(undefined);
+                        setUploadedMediaInfo(undefined);
                         setUploadProgress(0);
                     },
                 },
@@ -257,8 +257,9 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
     /**
      * Validate and submit the question
+     * Automatically uploads media if selected but not yet uploaded
      */
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         // Validate required fields
         if (!question.trim()) {
             Alert.alert('Error', 'Please enter a question');
@@ -273,26 +274,54 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             return;
         }
 
-        // Validate media upload for media questions
-        if (questionType !== 'TEXT' && !uploadedMediaInfo) {
-            Alert.alert('Error', 'Please select and upload media for this question type');
-            return;
+        const questionType = getQuestionType();
+
+        try {
+            let finalMediaInfo = uploadedMediaInfo;
+
+            // If media is selected but not uploaded yet, upload it now
+            if (selectedMedia && !uploadedMediaInfo) {
+                setIsUploading(true);
+                console.log('📤 Auto-uploading media before saving question...');
+
+                try {
+                    finalMediaInfo = await uploadMedia(selectedMedia);
+                    setUploadedMediaInfo(finalMediaInfo);
+                    console.log('✅ Media auto-upload completed successfully');
+                } catch (uploadError) {
+                    console.error('❌ Auto-upload failed:', uploadError);
+                    Alert.alert(
+                        'Upload Failed',
+                        uploadError instanceof Error
+                            ? uploadError.message
+                            : 'Failed to upload media. Please try again.'
+                    );
+                    setIsUploading(false);
+                    setUploadProgress(0);
+                    return; // Abort save if upload fails
+                }
+            }
+
+            // Submit the question with properly typed data
+            const questionData: QuestionFormData = {
+                question: question.trim(),
+                answer: answer.trim(),
+                difficulty,
+                topic: topic.trim(),
+                additionalInfo: additionalInfo.trim(),
+                questionType,
+                media: finalMediaInfo,
+            };
+
+            console.log('📝 Submitting question:', questionData);
+            onSubmit(questionData);
+
+            // Reset form after successful submission
+            handleReset();
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
         }
-
-        // Submit the question with properly typed data
-        const questionData: QuestionFormData = {
-            question: question.trim(),
-            answer: answer.trim(),
-            difficulty,
-            topic: topic.trim(),
-            additionalInfo: additionalInfo.trim(),
-            questionType,
-            media: uploadedMediaInfo, // ✅ Now properly typed as MediaInfo | undefined
-        };
-
-        console.log('📝 Submitting question:', questionData);
-        onSubmit(questionData);
-        handleReset();
     };
 
     /**
@@ -304,9 +333,8 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
         setDifficulty('MEDIUM');
         setTopic('');
         setAdditionalInfo('');
-        setQuestionType('TEXT');
-        setSelectedMedia(undefined); // ✅ Changed from null to undefined
-        setUploadedMediaInfo(undefined); // ✅ Changed from null to undefined
+        setSelectedMedia(undefined);
+        setUploadedMediaInfo(undefined);
         setUploadProgress(0);
         setShowTopicPicker(false);
     };
@@ -347,12 +375,14 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             return null;
         }
 
+        const currentQuestionType = getQuestionType();
+
         return (
             <View style={styles.mediaPreviewContainer}>
                 <Text style={styles.sectionTitle}>Media Preview</Text>
 
                 {/* Image Preview */}
-                {questionType === 'IMAGE' && selectedMedia && (
+                {currentQuestionType === 'IMAGE' && selectedMedia && (
                     <Image
                         source={{uri: selectedMedia.uri}}
                         style={styles.imagePreview}
@@ -361,22 +391,28 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 )}
 
                 {/* Video/Audio Placeholder */}
-                {(questionType === 'VIDEO' || questionType === 'AUDIO') && (
+                {(currentQuestionType === 'VIDEO' || currentQuestionType === 'AUDIO') && (
                     <View style={styles.mediaPlaceholder}>
                         <MaterialCommunityIcons
-                            name={questionType === 'VIDEO' ? 'video' : 'music'}
+                            name={currentQuestionType === 'VIDEO' ? 'video' : 'music'}
                             size={48}
                             color="#007AFF"
                         />
                         <Text style={styles.mediaPlaceholderText}>
-                            {uploadedMediaInfo ? 'Media Uploaded Successfully' : selectedMedia?.name}
+                            {uploadedMediaInfo ? 'Media Ready' : selectedMedia?.name}
                         </Text>
+                        {selectedMedia && (
+                            <Text style={styles.mediaFileSize}>
+                                {(selectedMedia.size / 1024 / 1024).toFixed(2)} MB
+                            </Text>
+                        )}
                     </View>
                 )}
 
-                {/* Upload Progress */}
+                {/* Upload Progress - shown during save */}
                 {isUploading && (
                     <View style={styles.progressContainer}>
+                        <ActivityIndicator size="small" color="#007AFF" />
                         <Text style={styles.progressText}>Uploading: {uploadProgress}%</Text>
                         <View style={styles.progressBar}>
                             <View style={[styles.progressFill, {width: `${uploadProgress}%`}]}/>
@@ -385,22 +421,23 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 )}
 
                 {/* Upload Status */}
-                {uploadedMediaInfo && (
+                {uploadedMediaInfo && !isUploading && (
                     <View style={styles.uploadedBadge}>
                         <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50"/>
-                        <Text style={styles.uploadedText}>Uploaded</Text>
+                        <Text style={styles.uploadedText}>Media Ready</Text>
                     </View>
                 )}
 
                 {/* Remove Button */}
-                <TouchableOpacity
-                    style={styles.removeMediaButton}
-                    onPress={handleRemoveMedia}
-                    disabled={isUploading}
-                >
-                    <MaterialCommunityIcons name="delete" size={20} color="#FF3B30"/>
-                    <Text style={styles.removeMediaText}>Remove Media</Text>
-                </TouchableOpacity>
+                {!isUploading && (
+                    <TouchableOpacity
+                        style={styles.removeMediaButton}
+                        onPress={handleRemoveMedia}
+                    >
+                        <MaterialCommunityIcons name="delete" size={20} color="#FF3B30"/>
+                        <Text style={styles.removeMediaText}>Remove Media</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         );
     };
@@ -415,80 +452,72 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             <View style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={handleClose}>
+                    <TouchableOpacity onPress={handleClose} disabled={isUploading}>
                         <MaterialCommunityIcons name="close" size={24} color="#007AFF"/>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Add Media Question</Text>
+                    <Text style={styles.headerTitle}>Add Question</Text>
                     <TouchableOpacity onPress={handleSubmit} disabled={isUploading}>
-                        <Text style={[styles.saveButton, isUploading && styles.saveButtonDisabled]}>
-                            Save
-                        </Text>
+                        {isUploading ? (
+                            <ActivityIndicator size="small" color="#007AFF" />
+                        ) : (
+                            <Text style={styles.saveButton}>Save</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
 
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                    {/* Question Type Selector */}
+                    {/* Media Selection - Inline Buttons */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Question Type *</Text>
-                        <View style={styles.questionTypeContainer}>
-                            {(['TEXT', 'IMAGE', 'VIDEO', 'AUDIO'] as QuestionType[]).map((type) => (
-                                <TouchableOpacity
-                                    key={type}
-                                    style={[
-                                        styles.questionTypeButton,
-                                        questionType === type && styles.questionTypeButtonActive,
-                                    ]}
-                                    onPress={() => setQuestionType(type)}
-                                    disabled={isUploading}
-                                >
-                                    <MaterialCommunityIcons
-                                        name={
-                                            type === 'TEXT' ? 'text' :
-                                                type === 'IMAGE' ? 'image' :
-                                                    type === 'VIDEO' ? 'video' :
-                                                        'music'
-                                        }
-                                        size={24}
-                                        color={questionType === type ? '#FFF' : '#007AFF'}
-                                    />
-                                    <Text
-                                        style={[
-                                            styles.questionTypeText,
-                                            questionType === type && styles.questionTypeTextActive,
-                                        ]}
-                                    >
-                                        {type}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-
-                    {/* Media Selection for non-TEXT questions */}
-                    {questionType !== 'TEXT' && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Media *</Text>
+                        <Text style={styles.sectionTitle}>Add Media (Optional)</Text>
+                        <View style={styles.mediaButtonsContainer}>
                             <TouchableOpacity
-                                style={styles.selectMediaButton}
-                                onPress={handleSelectMedia}
-                                disabled={isUploading || !!uploadedMediaInfo}
+                                style={styles.mediaButton}
+                                onPress={() => handleSelectMedia('image')}
+                                disabled={isUploading}
                             >
-                                <MaterialCommunityIcons
-                                    name={
-                                        questionType === 'IMAGE' ? 'image-plus' :
-                                            questionType === 'VIDEO' ? 'video-plus' :
-                                                'music-note-plus'
-                                    }
-                                    size={24}
-                                    color={uploadedMediaInfo ? '#4CAF50' : '#007AFF'}
-                                />
-                                <Text style={styles.selectMediaText}>
-                                    {uploadedMediaInfo ? 'Media Uploaded' : `Select ${questionType}`}
-                                </Text>
+                                <MaterialCommunityIcons name="image" size={24} color="#007AFF" />
+                                <Text style={styles.mediaButtonText}>Image</Text>
                             </TouchableOpacity>
-                            {renderMediaPreview()}
+                            <TouchableOpacity
+                                style={styles.mediaButton}
+                                onPress={() => handleSelectMedia('video')}
+                                disabled={isUploading}
+                            >
+                                <MaterialCommunityIcons name="video" size={24} color="#007AFF" />
+                                <Text style={styles.mediaButtonText}>Video</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.mediaButton}
+                                onPress={() => handleSelectMedia('audio')}
+                                disabled={isUploading}
+                            >
+                                <MaterialCommunityIcons name="music" size={24} color="#007AFF" />
+                                <Text style={styles.mediaButtonText}>Audio</Text>
+                            </TouchableOpacity>
                         </View>
-                    )}
+
+                        {/* Media Status Text */}
+                        {(selectedMedia || uploadedMediaInfo) && (
+                            <View style={styles.mediaStatusBadge}>
+                                <MaterialCommunityIcons
+                                    name={uploadedMediaInfo ? "check-circle" : "file-upload"}
+                                    size={16}
+                                    color={uploadedMediaInfo ? "#4CAF50" : "#007AFF"}
+                                />
+                                <Text style={[
+                                    styles.mediaStatusText,
+                                    uploadedMediaInfo && styles.mediaStatusTextUploaded
+                                ]}>
+                                    {uploadedMediaInfo
+                                        ? `${getQuestionType()} Question Ready`
+                                        : `${getQuestionType()} Selected (will upload on save)`}
+                                </Text>
+                            </View>
+                        )}
+
+                        {/* Media Preview */}
+                        {renderMediaPreview()}
+                    </View>
 
                     {/* Question Field */}
                     <View style={styles.section}>
@@ -550,38 +579,48 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                     {/* Topic Field */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Topic *</Text>
-                        <TextInput
-                            style={styles.textInput}
-                            placeholder="Enter topic or select from suggestions..."
-                            placeholderTextColor="#999"
-                            value={topic}
-                            onChangeText={setTopic}
-                            editable={!isUploading}
-                        />
-                        {availableTopics.length > 0 && (
-                            <TouchableOpacity
-                                style={styles.showTopicsButton}
-                                onPress={() => setShowTopicPicker(!showTopicPicker)}
-                            >
-                                <Text style={styles.showTopicsText}>
-                                    {showTopicPicker ? 'Hide' : 'Show'} available topics
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-                        {showTopicPicker && (
-                            <View style={styles.topicSuggestions}>
-                                {availableTopics.map((suggestedTopic) => (
-                                    <TouchableOpacity
-                                        key={suggestedTopic}
-                                        style={styles.topicChip}
-                                        onPress={() => {
-                                            setTopic(suggestedTopic);
-                                            setShowTopicPicker(false);
-                                        }}
-                                    >
-                                        <Text style={styles.topicChipText}>{suggestedTopic}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                        <View style={styles.topicInputContainer}>
+                            <TextInput
+                                style={styles.topicInput}
+                                placeholder="Enter or select a topic..."
+                                placeholderTextColor="#999"
+                                value={topic}
+                                onChangeText={setTopic}
+                                editable={!isUploading}
+                            />
+                            {availableTopics.length > 0 && (
+                                <TouchableOpacity
+                                    style={styles.topicPickerButton}
+                                    onPress={() => setShowTopicPicker(!showTopicPicker)}
+                                    disabled={isUploading}
+                                >
+                                    <MaterialCommunityIcons
+                                        name={showTopicPicker ? 'chevron-up' : 'chevron-down'}
+                                        size={24}
+                                        color="#007AFF"
+                                    />
+                                </TouchableOpacity>
+                            )}
+                        </View>
+
+                        {/* Topic Picker */}
+                        {showTopicPicker && availableTopics.length > 0 && (
+                            <View style={styles.topicPicker}>
+                                <ScrollView style={styles.topicPickerScroll}>
+                                    {availableTopics.map((topicOption, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={styles.topicOption}
+                                            onPress={() => {
+                                                setTopic(topicOption);
+                                                setShowTopicPicker(false);
+                                            }}
+                                            disabled={isUploading}
+                                        >
+                                            <Text style={styles.topicOptionText}>{topicOption}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
                             </View>
                         )}
                     </View>
@@ -591,13 +630,13 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                         <Text style={styles.sectionTitle}>Additional Info (Optional)</Text>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Enter additional context or hints..."
+                            placeholder="Add any helpful context or hints..."
                             placeholderTextColor="#999"
                             value={additionalInfo}
                             onChangeText={setAdditionalInfo}
                             multiline
                             numberOfLines={3}
-                            editable ={!isUploading}
+                            editable={!isUploading}
                         />
                     </View>
                 </ScrollView>
@@ -613,125 +652,127 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: '#F5F5F5',
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         backgroundColor: '#FFF',
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
+        borderBottomColor: '#E5E5E5',
     },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '600',
         color: '#000',
     },
     saveButton: {
         fontSize: 17,
-        color: '#007AFF',
         fontWeight: '600',
-    },
-    saveButtonDisabled: {
-        color: '#999',
+        color: '#007AFF',
     },
     scrollView: {
         flex: 1,
     },
     section: {
         backgroundColor: '#FFF',
-        padding: 16,
-        marginBottom: 16,
+        marginTop: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '600',
         color: '#000',
         marginBottom: 12,
     },
-    questionTypeContainer: {
+    mediaButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        gap: 12,
     },
-    questionTypeButton: {
+    mediaButton: {
         flex: 1,
-        flexDirection: 'row',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 12,
-        marginHorizontal: 4,
+        paddingVertical: 16,
         borderRadius: 8,
+        backgroundColor: '#F8F9FA',
         borderWidth: 1,
-        borderColor: '#007AFF',
-        backgroundColor: '#FFF',
+        borderColor: '#E5E5E5',
     },
-    questionTypeButtonActive: {
-        backgroundColor: '#007AFF',
-    },
-    questionTypeText: {
-        marginLeft: 8,
-        fontSize: 14,
+    mediaButtonText: {
+        fontSize: 12,
         color: '#007AFF',
+        marginTop: 6,
         fontWeight: '500',
     },
-    questionTypeTextActive: {
-        color: '#FFF',
-    },
-    selectMediaButton: {
+    mediaStatusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderStyle: 'dashed',
-        borderColor: '#007AFF',
+        marginTop: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         backgroundColor: '#F0F8FF',
+        borderRadius: 6,
+        gap: 6,
     },
-    selectMediaText: {
-        marginLeft: 8,
-        fontSize: 16,
+    mediaStatusText: {
+        fontSize: 13,
         color: '#007AFF',
         fontWeight: '500',
+    },
+    mediaStatusTextUploaded: {
+        color: '#4CAF50',
     },
     mediaPreviewContainer: {
         marginTop: 16,
-        padding: 12,
-        borderRadius: 8,
-        backgroundColor: '#F8F9FA',
     },
     imagePreview: {
         width: '100%',
         height: 200,
         borderRadius: 8,
-        marginBottom: 12,
+        backgroundColor: '#F0F0F0',
     },
     mediaPlaceholder: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
+        width: '100%',
+        height: 150,
         borderRadius: 8,
-        backgroundColor: '#F0F8FF',
+        backgroundColor: '#F8F9FA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
     },
     mediaPlaceholderText: {
-        marginTop: 8,
         fontSize: 14,
-        color: '#007AFF',
+        color: '#666',
+        marginTop: 8,
+        textAlign: 'center',
+    },
+    mediaFileSize: {
+        fontSize: 12,
+        color: '#999',
+        marginTop: 4,
     },
     progressContainer: {
         marginTop: 12,
+        alignItems: 'center',
     },
     progressText: {
         fontSize: 14,
         color: '#666',
         marginBottom: 8,
-        textAlign: 'center',
+        marginTop: 8,
     },
     progressBar: {
+        width: '100%',
         height: 4,
-        backgroundColor: '#E5E5EA',
+        backgroundColor: '#E5E5E5',
         borderRadius: 2,
         overflow: 'hidden',
     },
@@ -743,42 +784,44 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 8,
         marginTop: 12,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         backgroundColor: '#E8F5E9',
         borderRadius: 8,
     },
     uploadedText: {
-        marginLeft: 8,
         fontSize: 14,
+        fontWeight: '500',
         color: '#4CAF50',
-        fontWeight: '600',
+        marginLeft: 6,
     },
     removeMediaButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 12,
         marginTop: 12,
+        paddingVertical: 10,
+        paddingHorizontal: 16,
         borderRadius: 8,
         backgroundColor: '#FFF',
         borderWidth: 1,
         borderColor: '#FF3B30',
     },
     removeMediaText: {
-        marginLeft: 8,
         fontSize: 14,
-        color: '#FF3B30',
         fontWeight: '500',
+        color: '#FF3B30',
+        marginLeft: 6,
     },
     textInput: {
-        borderWidth: 1,
-        borderColor: '#E5E5EA',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        fontSize: 15,
         color: '#000',
-        backgroundColor: '#FFF',
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        borderRadius: 8,
+        backgroundColor: '#FAFAFA',
         textAlignVertical: 'top',
     },
     difficultyContainer: {
@@ -787,7 +830,7 @@ const styles = StyleSheet.create({
     },
     difficultyButton: {
         flex: 1,
-        padding: 12,
+        paddingVertical: 10,
         marginHorizontal: 4,
         borderRadius: 8,
         borderWidth: 1,
@@ -800,34 +843,49 @@ const styles = StyleSheet.create({
     },
     difficultyText: {
         fontSize: 14,
-        color: '#007AFF',
         fontWeight: '500',
+        color: '#007AFF',
     },
     difficultyTextActive: {
         color: '#FFF',
     },
-    showTopicsButton: {
-        marginTop: 8,
-        padding: 8,
-    },
-    showTopicsText: {
-        fontSize: 14,
-        color: '#007AFF',
-    },
-    topicSuggestions: {
+    topicInputContainer: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 8,
+        alignItems: 'center',
     },
-    topicChip: {
+    topicInput: {
+        flex: 1,
+        fontSize: 15,
+        color: '#000',
+        padding: 12,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        borderRadius: 8,
+        backgroundColor: '#FAFAFA',
+    },
+    topicPickerButton: {
+        marginLeft: 8,
         padding: 8,
-        marginRight: 8,
-        marginBottom: 8,
-        borderRadius: 16,
-        backgroundColor: '#E5E5EA',
     },
-    topicChipText: {
-        fontSize: 14,
+    topicPicker: {
+        marginTop: 8,
+        maxHeight: 200,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+        borderRadius: 8,
+        backgroundColor: '#FFF',
+    },
+    topicPickerScroll: {
+        maxHeight: 200,
+    },
+    topicOption: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    topicOptionText: {
+        fontSize: 15,
         color: '#000',
     },
 });

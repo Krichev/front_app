@@ -21,11 +21,11 @@ import QuizConfigForm from './components/QuizConfigForm';
 import QuestionSourceSelector from './components/QuestionSourceSelector';
 import QuestionList from './components/QuestionList';
 import SelectedQuestionsPreview from './components/SelectedQuestionsPreview';
-import UnifiedQuestionModal from './components/UnifiedQuestionModal';
 
 import {useQuestCreator} from './hooks/useQuestCreator';
 import {useQuestionsManager} from './hooks/useQuestionsManager';
 import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
+import MediaQuestionModal from "./components/MediaQuestionModal.tsx";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -167,7 +167,7 @@ const CreateWWWQuestScreen = () => {
                     onToggleAnswerVisibility={questionsManager.toggleAnswerVisibility}
                     onToggleExpanded={questionsManager.toggleExpanded}
                     onExpandAll={questionsManager.expandAllQuestions}
-                    onCollapseAll={questionsManager.collapseAllQuestions} 
+                    onCollapseAll={questionsManager.collapseAllQuestions}
                     onDeleteUserQuestion={questionsManager.deleteUserQuestion}
                     showTopicPicker={questionsManager.showTopicPicker}
                     onShowTopicPicker={questionsManager.setShowTopicPicker}
@@ -214,7 +214,7 @@ const CreateWWWQuestScreen = () => {
             </View>
 
             {/* Unified Question Modal */}
-            <UnifiedQuestionModal
+            <MediaQuestionModal
                 visible={showUnifiedQuestionModal}
                 onClose={() => setShowUnifiedQuestionModal(false)}
                 onSubmit={(questionData) => {
