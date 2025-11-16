@@ -2,24 +2,19 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {MultimediaQuestionData} from '../hooks/useQuestionsManager';
 
 interface SelectedQuestionsPreviewProps {
     questions: any[];
-    newCustomQuestions: MultimediaQuestionData[];
     isCollapsed: boolean;
     onToggleCollapse: () => void;
-    onRemoveCustomQuestion: (index: number) => void;
 }
 
 const QUESTIONS_PER_PAGE = 5;
 
 const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                                                                questions,
-                                                                               newCustomQuestions,
                                                                                isCollapsed,
                                                                                onToggleCollapse,
-                                                                               onRemoveCustomQuestion,
                                                                            }) => {
     const [previewPage, setPreviewPage] = useState(1);
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
@@ -90,7 +85,6 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                     {visibleQuestions.map((question, displayIndex) => {
                         const globalIndex = startIndex + displayIndex;
                         const isExpanded = expandedQuestions.has(globalIndex);
-                        const isCustom = question.source === 'custom';
 
                         return (
                             <View key={globalIndex} style={styles.previewCard}>
@@ -112,7 +106,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                         <View style={styles.sourceBadge}>
                                             <Text style={styles.sourceText}>
                                                 {question.source === 'app' ? 'App' :
-                                                    question.source === 'user' ? 'User' : 'Custom'}
+                                                     'User'}
                                             </Text>
                                         </View>
                                     </View>
@@ -127,18 +121,6 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                                 color="#007AFF"
                                             />
                                         </TouchableOpacity>
-                                        {isCustom && (
-                                            <TouchableOpacity
-                                                onPress={() => onRemoveCustomQuestion(globalIndex)}
-                                                style={styles.removeButton}
-                                            >
-                                                <MaterialCommunityIcons
-                                                    name="close-circle"
-                                                    size={20}
-                                                    color="#F44336"
-                                                />
-                                            </TouchableOpacity>
-                                        )}
                                     </View>
                                 </View>
 

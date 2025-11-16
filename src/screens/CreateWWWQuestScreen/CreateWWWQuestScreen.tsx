@@ -41,8 +41,7 @@ const CreateWWWQuestScreen = () => {
 
     const totalSelectedQuestions =
         (questionsManager.selectedAppQuestionIds?.size || 0) +
-        (questionsManager.selectedUserQuestionIds?.size || 0) +
-        (questionsManager.newCustomQuestions?.length || 0);
+        (questionsManager.selectedUserQuestionIds?.size || 0);
 
     const handleCreateQuest = async () => {
         const selectedQuestions = questionsManager.getSelectedQuestionsArray();
@@ -73,7 +72,6 @@ const CreateWWWQuestScreen = () => {
                             onPress: () => {
                                 questionsManager.selectedAppQuestionIds.clear();
                                 questionsManager.selectedUserQuestionIds.clear();
-                                questionsManager.setNewCustomQuestions([]);
 
                                 navigation.navigate('WWWGamePlay', {
                                     sessionId: result.sessionId,
@@ -86,7 +84,6 @@ const CreateWWWQuestScreen = () => {
                             onPress: () => {
                                 questionsManager.selectedAppQuestionIds.clear();
                                 questionsManager.selectedUserQuestionIds.clear();
-                                questionsManager.setNewCustomQuestions([]);
 
                                 navigation.goBack();
                             },
@@ -178,10 +175,8 @@ const CreateWWWQuestScreen = () => {
                 {/* Selected Questions Preview */}
                 <SelectedQuestionsPreview
                     questions={questionsManager.getSelectedQuestionsArray()}
-                    newCustomQuestions={questionsManager.newCustomQuestions}
                     isCollapsed={questionsManager.isPreviewCollapsed}
                     onToggleCollapse={() => questionsManager.setIsPreviewCollapsed(!questionsManager.isPreviewCollapsed)}
-                    onRemoveCustomQuestion={questionsManager.removeNewCustomQuestion}
                 />
 
                 <View style={styles.spacer} />

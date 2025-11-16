@@ -19,9 +19,9 @@ interface QuestionListProps {
     currentPage: number;
     totalPages: number;
     totalQuestions: number;
-    selectedAppQuestionIds: Set<string>;
-    selectedUserQuestionIds: Set<string>;
-    visibleAnswers: Set<string>;
+    selectedAppQuestionIds: Set<number>;
+    selectedUserQuestionIds: Set<number>;
+    visibleAnswers: Set<number>;
     expandedQuestions: Set<number>;
     onSearchKeywordChange: (text: string) => void;
     onSearchDifficultyChange: (difficulty: APIDifficulty | 'ALL') => void;
@@ -29,12 +29,12 @@ interface QuestionListProps {
     onSearch: () => void;
     onClearSearch: () => void;
     onPageChange: (page: number) => void;
-    onToggleSelection: (questionId: string, source: 'app' | 'user') => void;
-    onToggleAnswerVisibility: (questionId: string) => void;
+    onToggleSelection: (questionId: number, source: 'app' | 'user') => void;
+    onToggleAnswerVisibility: (questionId: number) => void;
     onToggleExpanded: (index: number) => void;
     onExpandAll?: () => void;
     onCollapseAll?: () => void;
-    onDeleteUserQuestion: (questionId: string) => void;
+    onDeleteUserQuestion: (questionId: number) => void;
     showTopicPicker: boolean;
     onShowTopicPicker: (show: boolean) => void;
     availableTopics: string[];
@@ -295,8 +295,8 @@ const QuestionList: React.FC<QuestionListProps> = ({
     );
 
     const renderQuestionItem = (question: QuizQuestion, index: number) => {
-        const isSelected = selectedQuestionIds.has(question.id.toString());
-        const isAnswerVisible = visibleAnswers.has(question.id.toString());
+        const isSelected = selectedQuestionIds.has(question.id);
+        const isAnswerVisible = visibleAnswers.has(question.id);
         const isExpanded = expandedQuestions.has(index);
 
         // Access media properties directly from QuizQuestion
@@ -319,7 +319,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     <View style={styles.questionHeaderLeft}>
                         <TouchableOpacity
                             style={[styles.checkbox, isSelected && styles.checkboxSelected]}
-                            onPress={() => onToggleSelection(question.id.toString(), questionSource)}
+                            onPress={() => onToggleSelection(question.id, questionSource)}
                         >
                             {isSelected && (
                                 <MaterialCommunityIcons name="check" size={18} color="#fff"/>
@@ -401,7 +401,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <View style={styles.answerHeader}>
                                 <Text style={styles.answerLabel}>Answer:</Text>
                                 <TouchableOpacity
-                                    onPress={() => onToggleAnswerVisibility(question.id.toString())}
+                                    onPress={() => onToggleAnswerVisibility(question.id)}
                                     style={styles.toggleAnswerButton}
                                 >
                                     <MaterialCommunityIcons
@@ -429,7 +429,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                         {questionSource === 'user' && (
                             <TouchableOpacity
                                 style={styles.deleteButton}
-                                onPress={() => onDeleteUserQuestion(question.id.toString())}
+                                onPress={() => onDeleteUserQuestion(question.id)}
                             >
                                 <MaterialCommunityIcons name="delete" size={20} color="#fff"/>
                                 <Text style={styles.deleteButtonText}>Delete Question</Text>

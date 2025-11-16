@@ -11,6 +11,7 @@ import {
 } from '../../../entities/QuizState/model/slice/quizApi';
 import {QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService.ts";
+import {BaseQuestionForQuest, toBaseQuestion} from "../types/question.types.ts";
 
 // ============================================================================
 // TYPES
@@ -118,8 +119,6 @@ export const useQuestionsManager = () => {
     const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
     const [visibleAnswers, setVisibleAnswers] = useState<Set<number>>(new Set());
 
-    // Custom questions
-    const [newCustomQuestions, setNewCustomQuestions] = useState<MultimediaQuestionData[]>([]);
 
     // ============================================================================
     // EFFECTS
@@ -264,6 +263,16 @@ export const useQuestionsManager = () => {
         });
     };
 
+    const expandAllQuestions = () => {
+        const questions = questionSource === 'app' ? appQuestions : userQuestions;
+        const allIndices = questions.map((_, index) => index);
+        setExpandedQuestions(new Set(allIndices));
+    };
+
+    const collapseAllQuestions = () => {
+        setExpandedQuestions(new Set());
+    };
+
     // ============================================================================
     // QUESTION MANAGEMENT FUNCTIONS
     // ============================================================================
@@ -277,14 +286,6 @@ export const useQuestionsManager = () => {
             console.error('Error deleting question:', error);
             Alert.alert('Error', 'Failed to delete question');
         }
-    };
-
-    const addNewCustomQuestion = (question: MultimediaQuestionData) => {
-        setNewCustomQuestions((prev) => [...prev, question]);
-    };
-
-    const removeNewCustomQuestion = (index: number) => {
-        setNewCustomQuestions((prev) => prev.filter((_, i) => i !== index));
     };
 
     // ============================================================================
@@ -339,7 +340,7 @@ export const useQuestionsManager = () => {
     // HELPER FUNCTIONS
     // ============================================================================
 
-    const getSelectedQuestionsArray = () => {
+    const getSelectedQuestionsArray = ():BaseQuestionForQuest[] => {
         const selectedAppQuestions = (appQuestions ?? [])
             .filter((q) => selectedAppQuestionIds.has(q.id))
             .map((q) => ({
@@ -355,27 +356,10 @@ export const useQuestionsManager = () => {
 
         const selectedUserQuestionsData = (userQuestions ?? [])
             .filter((uq) => selectedUserQuestionIds.has(uq.id))
-            .map((uq) => ({
-                id: uq.id,
-                question: uq.question,
-                answer: uq.answer,
-                difficulty: uq.difficulty,
-                topic: uq.topic,
-                additionalInfo: uq.additionalInfo,
-                source: 'user' as const,
-            }));
+            .map((uq) => toBaseQuestion(uq, 'user'));
 
-        const newCustomQuestionsData = newCustomQuestions.map((q, idx) => ({
-            id: `new-custom-${idx}`,
-            question: q.question,
-            answer: q.answer,
-            difficulty: q.difficulty,
-            topic: q.topic,
-            additionalInfo: q.additionalInfo,
-            source: 'custom' as const,
-        }));
 
-        return [...selectedAppQuestions, ...selectedUserQuestionsData, ...newCustomQuestionsData];
+        return [...selectedAppQuestions, ...selectedUserQuestionsData];
     };
 
     // ============================================================================
@@ -390,8 +374,6 @@ export const useQuestionsManager = () => {
         // Questions data
         appQuestions,
         userQuestions,
-        newCustomQuestions,
-
         // Loading states
         isLoadingAppQuestions,
         isLoadingUserQuestions,
@@ -427,7 +409,6 @@ export const useQuestionsManager = () => {
         // Preview
         isPreviewCollapsed,
         setIsPreviewCollapsed,
-        setNewCustomQuestions,
 
         // Actions
         searchAppQuestions,
@@ -436,9 +417,9 @@ export const useQuestionsManager = () => {
         toggleAnswerVisibility,
         toggleExpanded,
         deleteUserQuestion,
-        addNewCustomQuestion,
-        removeNewCustomQuestion,
-        handleUnifiedQuestionSubmit, // ✅ Single unified submission handler
+        handleUnifiedQuestionSubmit,
+        expandAllQuestions,
+        collapseAllQuestions,
         getSelectedQuestionsArray,
         refetchUserQuestions,
     };

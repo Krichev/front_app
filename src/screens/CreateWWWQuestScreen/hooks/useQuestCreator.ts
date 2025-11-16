@@ -8,6 +8,7 @@ import {
 import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/slice/quizApi';
 import {PaymentType} from '../../../entities/ChallengeState/model/types';
 import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
+import {BaseQuestionForQuest, extractQuestionIds} from "../types/question.types.ts";
 
 export interface QuizConfig {
     gameType: string;
@@ -27,7 +28,7 @@ export interface SelectedQuestion {
     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     topic?: string;
     additionalInfo?: string;
-    source: 'app' | 'user' | 'custom';
+    source: 'app' | 'user';
 }
 
 export const useQuestCreator = () => {
@@ -71,7 +72,7 @@ export const useQuestCreator = () => {
 
     const createQuest = async (
         userId: string,
-        selectedQuestions: SelectedQuestion[]
+        selectedQuestions: BaseQuestionForQuest[]
     ): Promise<{ success: boolean; sessionId?: string; challengeId?: string }> => {
         try {
             console.log('Creating quest with config:', quizConfig);
@@ -125,13 +126,10 @@ export const useQuestCreator = () => {
             }
 
             // Step 2: Prepare custom question IDs (if questions have IDs from app/user)
-            const customQuestionIds: number[] = selectedQuestions
-                .filter(q => (q.source === 'app' || q.source === 'user') && q.id)
-                .map(q => parseInt(q.id!, 10))
-                .filter(id => !isNaN(id));
+            const customQuestionIds: number[] = extractQuestionIds(selectedQuestions);
 
-            // Step 3: Determine question source
-            const questionSource = customQuestionIds.length > 0 ? 'user' : 'app';
+            const hasUserQuestions = selectedQuestions.some(q => q.source === 'user');
+            const questionSource = hasUserQuestions ? 'user' : 'app';
 
             // Step 4: Create session payload with ALL required fields
             const sessionPayload = {
