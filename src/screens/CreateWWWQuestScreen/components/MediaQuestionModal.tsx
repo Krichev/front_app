@@ -556,7 +556,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             placeholderTextColor="#999"
                             value={topic}
                             onChangeText={setTopic}
-                            disabled={isUploading}
+                            editable={!isUploading}
                         />
                         {availableTopics.length > 0 && (
                             <TouchableOpacity

@@ -1,4 +1,4 @@
-// src/services/speech/FileService.ts - COMPLETE FIXED VERSION
+// src/services/speech/FileService.ts - COMPLETE VERSION WITH pickAudio
 import {Alert, PermissionsAndroid, Platform} from 'react-native';
 import {
     CameraOptions,
@@ -10,6 +10,7 @@ import {
     PhotoQuality
 } from 'react-native-image-picker';
 import AudioRecord from 'react-native-audio-record';
+import DocumentPicker from 'react-native-document-picker';
 
 // Type definitions
 export interface FileInfo {
@@ -69,7 +70,7 @@ export class FileService {
 
     static readonly SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     static readonly SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/avi', 'video/quicktime'];
-    static readonly SUPPORTED_AUDIO_TYPES = ['audio/mp3', 'audio/wav', 'audio/aac', 'audio/m4a', 'audio/ogg'];
+    static readonly SUPPORTED_AUDIO_TYPES = ['audio/mp3', 'audio/wav', 'audio/aac', 'audio/m4a', 'audio/ogg', 'audio/mpeg'];
     static readonly SUPPORTED_DOCUMENT_TYPES = ['application/pdf', 'text/plain', 'application/msword'];
 
     // Audio recording state
@@ -97,23 +98,16 @@ export class FileService {
                 const date = timestamp > 1000000000000
                     ? new Date(timestamp)
                     : new Date(timestamp * 1000);
-
-                if (!isNaN(date.getTime())) {
-                    return date.toISOString();
-                }
-                return new Date().toISOString();
+                return date.toISOString();
             }
 
             if (timestamp instanceof Date) {
-                if (!isNaN(timestamp.getTime())) {
-                    return timestamp.toISOString();
-                }
-                return new Date().toISOString();
+                return timestamp.toISOString();
             }
 
             return new Date().toISOString();
         } catch (error) {
-            console.error('Error converting timestamp to ISO string:', error);
+            console.error('Error converting timestamp:', error);
             return new Date().toISOString();
         }
     }
@@ -142,96 +136,17 @@ export class FileService {
     }
 
     /**
-     * Get file extension from filename
-     */
-    static getFileExtension(filename: string): string {
-        const parts = filename.split('.');
-        return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
-    }
-
-    /**
-     * Get MIME type from file extension
-     */
-    static getMimeType(extension: string): string {
-        const mimeTypes: Record<string, string> = {
-            jpg: 'image/jpeg',
-            jpeg: 'image/jpeg',
-            png: 'image/png',
-            gif: 'image/gif',
-            webp: 'image/webp',
-            mp4: 'video/mp4',
-            mov: 'video/quicktime',
-            avi: 'video/avi',
-            mp3: 'audio/mp3',
-            wav: 'audio/wav',
-            aac: 'audio/aac',
-            m4a: 'audio/m4a',
-            ogg: 'audio/ogg',
-            pdf: 'application/pdf',
-            txt: 'text/plain',
-            doc: 'application/msword',
-            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        };
-
-        return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
-    }
-
-    /**
-     * Format file size for display
-     */
-    static formatFileSize(bytes: number): string {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    /**
-     * Validate file
-     */
-    static validateFile(file: ProcessedFileInfo): { isValid: boolean; error?: string } {
-        if (file.isImage && !this.SUPPORTED_IMAGE_TYPES.includes(file.type)) {
-            return { isValid: false, error: 'Unsupported image type' };
-        }
-
-        if (file.isVideo && !this.SUPPORTED_VIDEO_TYPES.includes(file.type)) {
-            return { isValid: false, error: 'Unsupported video type' };
-        }
-
-        if (file.type.startsWith('audio/') && !this.SUPPORTED_AUDIO_TYPES.includes(file.type)) {
-            return { isValid: false, error: 'Unsupported audio type' };
-        }
-
-        if (file.isImage && file.size > this.MAX_IMAGE_SIZE) {
-            return { isValid: false, error: 'Image size exceeds maximum limit (10MB)' };
-        }
-
-        if (file.isVideo && file.size > this.MAX_VIDEO_SIZE) {
-            return { isValid: false, error: 'Video size exceeds maximum limit (100MB)' };
-        }
-
-        if (file.type.startsWith('audio/') && file.size > this.MAX_AUDIO_SIZE) {
-            return { isValid: false, error: 'Audio size exceeds maximum limit (50MB)' };
-        }
-
-        return { isValid: true };
-    }
-
-    /**
      * Request camera permission
      */
     static async requestCameraPermission(): Promise<boolean> {
-        if (Platform.OS === 'ios') {
-            return true;
-        }
+        if (Platform.OS !== 'android') return true;
 
         try {
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.CAMERA,
                 {
                     title: 'Camera Permission',
-                    message: 'App needs access to your camera',
+                    message: 'App needs camera permission',
                     buttonNeutral: 'Ask Me Later',
                     buttonNegative: 'Cancel',
                     buttonPositive: 'OK',
@@ -248,16 +163,14 @@ export class FileService {
      * Request microphone permission
      */
     static async requestMicrophonePermission(): Promise<boolean> {
-        if (Platform.OS === 'ios') {
-            return true;
-        }
+        if (Platform.OS !== 'android') return true;
 
         try {
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
                 {
                     title: 'Microphone Permission',
-                    message: 'App needs access to your microphone',
+                    message: 'App needs microphone permission',
                     buttonNeutral: 'Ask Me Later',
                     buttonNegative: 'Cancel',
                     buttonPositive: 'OK',
@@ -274,15 +187,12 @@ export class FileService {
      * Request storage permission
      */
     static async requestStoragePermission(): Promise<boolean> {
-        if (Platform.OS === 'ios') {
-            return true;
-        }
+        if (Platform.OS !== 'android') return true;
 
         try {
-            // Platform.Version is a number on Android, convert to number for comparison
-            const androidVersion = typeof Platform.Version === 'number'
-                ? Platform.Version
-                : parseInt(Platform.Version, 10);
+            const androidVersion = typeof Platform.Version === 'string'
+                ? parseInt(Platform.Version, 10)
+                : Platform.Version;
 
             if (androidVersion >= 33) {
                 const readGranted = await PermissionsAndroid.request(
@@ -370,6 +280,7 @@ export class FileService {
                                 maxWidth,
                                 maxHeight,
                                 includeBase64,
+                                selectionLimit: 1,
                             };
 
                             launchImageLibrary(
@@ -390,7 +301,7 @@ export class FileService {
     }
 
     /**
-     * Pick video from camera or gallery - NEW METHOD
+     * Pick video from camera or gallery
      */
     static async pickVideo(options: FilePickerOptions = {}): Promise<ProcessedFileInfo | null> {
         const {
@@ -460,7 +371,70 @@ export class FileService {
     }
 
     /**
-     * Start audio recording - NEW METHOD
+     * ✅ NEW: Pick audio file from device storage
+     * Uses DocumentPicker to select audio files
+     */
+    static async pickAudio(): Promise<ProcessedFileInfo | null> {
+        try {
+            // Request storage permission if needed
+            const hasPermission = await this.requestStoragePermission();
+            if (!hasPermission) {
+                Alert.alert('Permission Denied', 'Storage permission is required to select audio files');
+                return null;
+            }
+
+            // Pick audio file using DocumentPicker
+            const result = await DocumentPicker.pick({
+                type: [DocumentPicker.types.audio],
+                copyTo: 'cachesDirectory', // Copy file to app cache for access
+            });
+
+            // Handle result (DocumentPicker returns an array)
+            const pickedFile = Array.isArray(result) ? result[0] : result;
+
+            if (!pickedFile) {
+                return null;
+            }
+
+            // Extract file info from DocumentPicker response
+            const fileInfo: FileInfo = {
+                name: pickedFile.name || `audio_${Date.now()}.mp3`,
+                size: pickedFile.size || 0,
+                type: pickedFile.type || 'audio/mpeg',
+                uri: pickedFile.fileCopyUri || pickedFile.uri,
+                ctime: Date.now(),
+                mtime: Date.now(),
+            };
+
+            // Process file info
+            const processedFile = this.processFileInfo(fileInfo);
+
+            // Validate file
+            const validation = this.validateFile(processedFile);
+            if (!validation.isValid) {
+                Alert.alert('Invalid File', validation.error || 'Selected file is not a valid audio file');
+                return null;
+            }
+
+            console.log('Audio file selected:', processedFile.name, processedFile.sizeFormatted);
+            return processedFile;
+
+        } catch (error: any) {
+            // Handle user cancellation
+            if (DocumentPicker.isCancel(error)) {
+                console.log('Audio selection cancelled by user');
+                return null;
+            }
+
+            // Handle other errors
+            console.error('Error picking audio file:', error);
+            Alert.alert('Error', 'Failed to select audio file. Please try again.');
+            return null;
+        }
+    }
+
+    /**
+     * Start audio recording
      */
     static async startRecording(): Promise<ProcessedFileInfo | null> {
         try {
@@ -487,47 +461,31 @@ export class FileService {
                     'Start recording audio?',
                     [
                         {
-                            text: 'Start Recording',
-                            onPress: async () => {
+                            text: 'Start',
+                            onPress: () => {
                                 try {
                                     AudioRecord.start();
                                     this.isRecording = true;
                                     this.recordingStartTime = Date.now();
 
-                                    // Show stop recording dialog
-                                    setTimeout(() => {
-                                        if (this.isRecording) {
-                                            Alert.alert(
-                                                'Recording...',
-                                                'Press Stop when finished',
-                                                [
-                                                    {
-                                                        text: 'Stop Recording',
-                                                        onPress: async () => {
-                                                            const audioFile = await AudioRecord.stop();
-                                                            this.isRecording = false;
-
-                                                            if (audioFile) {
-                                                                const processedFile: ProcessedFileInfo = {
-                                                                    name: `audio_${Date.now()}.wav`,
-                                                                    size: 0,
-                                                                    type: 'audio/wav',
-                                                                    uri: audioFile,
-                                                                    createdAt: new Date().toISOString(),
-                                                                    modifiedAt: new Date().toISOString(),
-                                                                    sizeFormatted: 'Unknown',
-                                                                    isImage: false,
-                                                                    isVideo: false,
-                                                                    extension: 'wav',
-                                                                };
-                                                                resolve(processedFile);
-                                                            } else {
-                                                                resolve(null);
-                                                            }
-                                                        },
-                                                    },
-                                                ]
-                                            );
+                                    setTimeout(async () => {
+                                        const audioFile = await this.stopRecording();
+                                        if (audioFile) {
+                                            const processedFile: ProcessedFileInfo = {
+                                                name: `audio_${Date.now()}.wav`,
+                                                size: 0,
+                                                type: 'audio/wav',
+                                                uri: audioFile,
+                                                createdAt: new Date().toISOString(),
+                                                modifiedAt: new Date().toISOString(),
+                                                sizeFormatted: 'Unknown',
+                                                isImage: false,
+                                                isVideo: false,
+                                                extension: 'wav',
+                                            };
+                                            resolve(processedFile);
+                                        } else {
+                                            resolve(null);
                                         }
                                     }, 500);
                                 } catch (error) {
@@ -614,7 +572,7 @@ export class FileService {
     }
 
     /**
-     * Handle video picker response - NEW METHOD
+     * Handle video picker response
      */
     private static handleVideoPickerResponse(
         resolve: (value: ProcessedFileInfo | null) => void,
@@ -754,6 +712,84 @@ export class FileService {
                 'Dimensions': `${file.width} × ${file.height}`,
             }),
         };
+    }
+
+    /**
+     * Get file extension
+     */
+    private static getFileExtension(filename: string): string {
+        const parts = filename.split('.');
+        return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+    }
+
+    /**
+     * Get MIME type from file extension
+     */
+    static getMimeType(extension: string): string {
+        const mimeTypes: Record<string, string> = {
+            jpg: 'image/jpeg',
+            jpeg: 'image/jpeg',
+            png: 'image/png',
+            gif: 'image/gif',
+            webp: 'image/webp',
+            mp4: 'video/mp4',
+            mov: 'video/quicktime',
+            avi: 'video/avi',
+            mp3: 'audio/mp3',
+            wav: 'audio/wav',
+            aac: 'audio/aac',
+            m4a: 'audio/m4a',
+            ogg: 'audio/ogg',
+            mpeg: 'audio/mpeg',
+            pdf: 'application/pdf',
+            txt: 'text/plain',
+            doc: 'application/msword',
+            docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        };
+
+        return mimeTypes[extension.toLowerCase()] || 'application/octet-stream';
+    }
+
+    /**
+     * Format file size for display
+     */
+    static formatFileSize(bytes: number): string {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    /**
+     * Validate file
+     */
+    static validateFile(file: ProcessedFileInfo): { isValid: boolean; error?: string } {
+        if (file.isImage && !this.SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+            return { isValid: false, error: 'Unsupported image type' };
+        }
+
+        if (file.isVideo && !this.SUPPORTED_VIDEO_TYPES.includes(file.type)) {
+            return { isValid: false, error: 'Unsupported video type' };
+        }
+
+        if (file.type.startsWith('audio/') && !this.SUPPORTED_AUDIO_TYPES.includes(file.type)) {
+            return { isValid: false, error: 'Unsupported audio type' };
+        }
+
+        if (file.isImage && file.size > this.MAX_IMAGE_SIZE) {
+            return { isValid: false, error: 'Image size exceeds maximum limit (10MB)' };
+        }
+
+        if (file.isVideo && file.size > this.MAX_VIDEO_SIZE) {
+            return { isValid: false, error: 'Video size exceeds maximum limit (100MB)' };
+        }
+
+        if (file.type.startsWith('audio/') && file.size > this.MAX_AUDIO_SIZE) {
+            return { isValid: false, error: 'Audio size exceeds maximum limit (50MB)' };
+        }
+
+        return { isValid: true };
     }
 
     /**
