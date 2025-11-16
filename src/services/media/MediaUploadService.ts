@@ -3,7 +3,10 @@ import {RootState, store} from '../../app/providers/StoreProvider/store';
 
 const __DEV__ = process.env.NODE_ENV !== 'production';
 
-// Types
+// ============================================================================
+// TYPES
+// ============================================================================
+
 export interface ProcessedFileInfo {
     uri: string;
     type: string;
@@ -28,16 +31,15 @@ export interface MediaUploadResponse {
     error?: string;
 }
 
+// ============================================================================
+// SERVICE
+// ============================================================================
 
 /**
  * Service for handling media uploads with progress tracking and authentication
  */
 export class MediaUploadService {
-    // private static readonly API_BASE_URL = __DEV__
-    //     ? 'http://10.0.2.2:8082/challenger'  // Android emulator
-    //     : 'https://your-production-api.com'; // Production URL
-
-    private static readonly API_BASE_URL = 'http://10.0.2.2:8082/challenger'; // Production URL
+    private static readonly API_BASE_URL = 'http://10.0.2.2:8082/challenger';
 
     /**
      * Get authorization headers with JWT token from Redux store
@@ -64,6 +66,11 @@ export class MediaUploadService {
 
     /**
      * Upload media file for quiz questions with progress tracking
+     *
+     * @param file - The file to upload (ProcessedFileInfo with uri, type, name, size)
+     * @param questionId - Optional question ID to associate with the media
+     * @param onProgress - Optional callback for upload progress updates
+     * @returns Promise with MediaUploadResponse
      */
     static async uploadQuizMedia(
         file: ProcessedFileInfo,
@@ -71,136 +78,154 @@ export class MediaUploadService {
         onProgress?: (progress: UploadProgress) => void
     ): Promise<MediaUploadResponse> {
         try {
-            // Validate file before upload
-            const validation = this.validateMediaFile(file);
-            if (!validation.isValid) {
-                return {
-                    success: false,
-                    error: validation.error || 'Invalid file'
-                };
-            }
+            console.log('📤 Uploading quiz media:', {
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                questionId,
+            });
 
+            // Create FormData for multipart upload
             const formData = new FormData();
 
-            // Add file with proper type casting for React Native
+            // Append file with proper structure for React Native
             formData.append('file', {
                 uri: file.uri,
                 type: file.type,
                 name: file.name,
             } as any);
 
-            // Add question ID if provided
+            // Add questionId if provided
             if (questionId) {
                 formData.append('questionId', questionId);
             }
 
-            // Add metadata
-            formData.append('mediaCategory', 'QUIZ_QUESTION');
+            // Get auth headers
+            const headers = this.getAuthHeaders();
 
-            const xhr = new XMLHttpRequest();
-            console.log('URL');
-            console.log(`${this.API_BASE_URL}/api/media/upload/quiz-media`);
+            // Create XMLHttpRequest for progress tracking
             return new Promise<MediaUploadResponse>((resolve, reject) => {
-                // Track upload progress
+                const xhr = new XMLHttpRequest();
+
+                // Setup progress tracking
                 if (onProgress) {
                     xhr.upload.addEventListener('progress', (event) => {
                         if (event.lengthComputable) {
                             const progress: UploadProgress = {
                                 loaded: event.loaded,
                                 total: event.total,
-                                percentage: Math.round((event.loaded / event.total) * 100)
+                                percentage: Math.round((event.loaded / event.total) * 100),
                             };
                             onProgress(progress);
                         }
                     });
                 }
 
+                // Setup response handlers
                 xhr.addEventListener('load', () => {
                     try {
-                        const response = JSON.parse(xhr.responseText);
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            const response = JSON.parse(xhr.responseText);
+                            console.log('✅ Media upload successful:', response);
 
-                        if (xhr.status === 200) {
-                            resolve(response as MediaUploadResponse);
-                        } else if (xhr.status === 401) {
-                            reject(new Error('Authentication failed. Please login again.'));
-                        } else if (xhr.status === 403) {
-                            reject(new Error('Access denied. You do not have permission to upload media.'));
+                            // Transform backend response to our format
+                            const uploadResponse: MediaUploadResponse = {
+                                success: true,
+                                mediaId: response.id || response.mediaId,
+                                mediaUrl: response.url || response.mediaUrl,
+                                thumbnailUrl: response.thumbnailUrl,
+                                mediaType: response.mediaType,
+                                processingStatus: response.processingStatus,
+                                message: response.message || 'Media uploaded successfully',
+                            };
+
+                            resolve(uploadResponse);
                         } else {
-                            reject(new Error(response.error || response.message || `Upload failed with status ${xhr.status}`));
+                            console.error('❌ Upload failed with status:', xhr.status);
+                            const errorResponse = JSON.parse(xhr.responseText || '{}');
+                            reject(new Error(errorResponse.message || `Upload failed with status ${xhr.status}`));
                         }
                     } catch (error) {
-                        reject(new Error('Invalid response format from server'));
+                        console.error('❌ Error parsing response:', error);
+                        reject(new Error('Failed to parse server response'));
                     }
                 });
 
                 xhr.addEventListener('error', () => {
-                    reject(new Error('Network error during upload. Please check your connection.'));
+                    console.error('❌ Network error during upload');
+                    reject(new Error('Network error during upload'));
                 });
 
-                xhr.addEventListener('timeout', () => {
-                    reject(new Error('Upload timeout. The file may be too large or connection is slow.'));
+                xhr.addEventListener('abort', () => {
+                    console.warn('⚠️ Upload aborted');
+                    reject(new Error('Upload aborted'));
                 });
 
+                // Open connection and set headers
                 xhr.open('POST', `${this.API_BASE_URL}/api/media/upload/quiz-media`);
 
-                // Get auth headers and set them
-                const authHeaders = this.getAuthHeaders();
-                Object.keys(authHeaders).forEach(key => {
-                    xhr.setRequestHeader(key, authHeaders[key]);
-                });
+                // Set authorization header
+                if (headers['Authorization']) {
+                    xhr.setRequestHeader('Authorization', headers['Authorization']);
+                }
 
-                // Don't set Content-Type for FormData - browser will set it with boundary
-                // Set timeout (60 seconds for large files)
-                xhr.timeout = 60000;
+                // Accept JSON response
+                xhr.setRequestHeader('Accept', 'application/json');
 
-                console.log('📤 Uploading quiz media:', file.name);
-                xhr.send(formData);
+                // Send the request
+                xhr.send(formData as any);
             });
+
         } catch (error) {
-            console.error('❌ Media upload error:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown upload error'
-            };
+            console.error('❌ Error in uploadQuizMedia:', error);
+            throw error;
         }
     }
 
     /**
      * Upload avatar/profile picture
+     *
+     * @param file - The image file to upload
+     * @param onProgress - Optional callback for upload progress updates
+     * @returns Promise with MediaUploadResponse
      */
     static async uploadAvatar(
         file: ProcessedFileInfo,
         onProgress?: (progress: UploadProgress) => void
     ): Promise<MediaUploadResponse> {
         try {
-            // Validate file before upload
-            const validation = this.validateMediaFile(file);
-            if (!validation.isValid) {
-                return {
-                    success: false,
-                    error: validation.error || 'Invalid file'
-                };
+            console.log('📤 Uploading avatar:', {
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+            });
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                throw new Error('Avatar must be an image file');
             }
 
+            // Create FormData
             const formData = new FormData();
-
-            // Add file
             formData.append('file', {
                 uri: file.uri,
                 type: file.type,
                 name: file.name,
             } as any);
 
-            const xhr = new XMLHttpRequest();
+            const headers = this.getAuthHeaders();
 
+            // Create XMLHttpRequest for progress tracking
             return new Promise<MediaUploadResponse>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
                 if (onProgress) {
                     xhr.upload.addEventListener('progress', (event) => {
                         if (event.lengthComputable) {
                             const progress: UploadProgress = {
                                 loaded: event.loaded,
                                 total: event.total,
-                                percentage: Math.round((event.loaded / event.total) * 100)
+                                percentage: Math.round((event.loaded / event.total) * 100),
                             };
                             onProgress(progress);
                         }
@@ -209,17 +234,27 @@ export class MediaUploadService {
 
                 xhr.addEventListener('load', () => {
                     try {
-                        const response = JSON.parse(xhr.responseText);
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            const response = JSON.parse(xhr.responseText);
+                            console.log('✅ Avatar upload successful:', response);
 
-                        if (xhr.status === 200) {
-                            resolve(response as MediaUploadResponse);
-                        } else if (xhr.status === 401) {
-                            reject(new Error('Authentication failed. Please login again.'));
+                            const uploadResponse: MediaUploadResponse = {
+                                success: true,
+                                mediaId: response.id || response.mediaId,
+                                mediaUrl: response.url || response.mediaUrl,
+                                thumbnailUrl: response.thumbnailUrl,
+                                mediaType: response.mediaType,
+                                processingStatus: response.processingStatus,
+                                message: response.message || 'Avatar uploaded successfully',
+                            };
+
+                            resolve(uploadResponse);
                         } else {
-                            reject(new Error(response.error || response.message || `Upload failed with status ${xhr.status}`));
+                            const errorResponse = JSON.parse(xhr.responseText || '{}');
+                            reject(new Error(errorResponse.message || `Upload failed with status ${xhr.status}`));
                         }
                     } catch (error) {
-                        reject(new Error('Invalid response format from server'));
+                        reject(new Error('Failed to parse server response'));
                     }
                 });
 
@@ -227,212 +262,85 @@ export class MediaUploadService {
                     reject(new Error('Network error during upload'));
                 });
 
-                xhr.addEventListener('timeout', () => {
-                    reject(new Error('Upload timeout'));
+                xhr.addEventListener('abort', () => {
+                    reject(new Error('Upload aborted'));
                 });
 
                 xhr.open('POST', `${this.API_BASE_URL}/api/media/upload/avatar`);
 
-                // Set auth headers
-                const authHeaders = this.getAuthHeaders();
-                Object.keys(authHeaders).forEach(key => {
-                    xhr.setRequestHeader(key, authHeaders[key]);
-                });
+                if (headers['Authorization']) {
+                    xhr.setRequestHeader('Authorization', headers['Authorization']);
+                }
 
-                xhr.timeout = 30000;
-
-                console.log('📤 Uploading avatar:', file.name);
-                xhr.send(formData);
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.send(formData as any);
             });
+
         } catch (error) {
-            console.error('❌ Avatar upload error:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown avatar upload error'
-            };
+            console.error('❌ Error in uploadAvatar:', error);
+            throw error;
         }
     }
 
     /**
-     * Delete media file
+     * Get media URL by ID
+     *
+     * @param mediaId - The media ID
+     * @returns Promise with media URL
+     */
+    static async getMediaUrl(mediaId: string): Promise<string> {
+        try {
+            const headers = this.getAuthHeaders();
+
+            const response = await fetch(
+                `${this.API_BASE_URL}/api/media/url/${mediaId}`,
+                {
+                    method: 'GET',
+                    headers,
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed to get media URL: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data.mediaUrl;
+
+        } catch (error) {
+            console.error('❌ Error getting media URL:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Delete media by ID
+     *
+     * @param mediaId - The media ID to delete
+     * @returns Promise with success status
      */
     static async deleteMedia(mediaId: string): Promise<boolean> {
         try {
-            const authHeaders = this.getAuthHeaders();
+            const headers = this.getAuthHeaders();
 
-            const response = await fetch(`${this.API_BASE_URL}/api/media/${mediaId}`, {
-                method: 'DELETE',
-                headers: authHeaders,
-            });
+            const response = await fetch(
+                `${this.API_BASE_URL}/api/media/${mediaId}`,
+                {
+                    method: 'DELETE',
+                    headers,
+                }
+            );
 
-            if (response.status === 401) {
-                console.error('❌ Authentication failed during media deletion');
-                return false;
+            if (!response.ok) {
+                throw new Error(`Failed to delete media: ${response.status}`);
             }
 
-            if (response.ok) {
-                const result = await response.json();
-                return result.success || true;
-            }
-            return false;
+            const data = await response.json();
+            return data.success;
+
         } catch (error) {
-            console.error('❌ Media deletion error:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Get media info by ID
-     */
-    static async getMediaInfo(mediaId: string): Promise<MediaUploadResponse | null> {
-        try {
-            const authHeaders = this.getAuthHeaders();
-
-            const response = await fetch(`${this.API_BASE_URL}/api/media/${mediaId}`, {
-                method: 'GET',
-                headers: authHeaders,
-            });
-
-            if (response.ok) {
-                return await response.json() as MediaUploadResponse;
-            }
-            return null;
-        } catch (error) {
-            console.error('❌ Get media info error:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Get media URL by media ID
-     */
-    static async getMediaUrl(mediaId: string): Promise<{ mediaUrl: string; thumbnailUrl: string } | null> {
-        try {
-            const authHeaders = this.getAuthHeaders();
-
-            const response = await fetch(`${this.API_BASE_URL}/api/media/url/${mediaId}`, {
-                method: 'GET',
-                headers: authHeaders,
-            });
-
-            if (response.ok) {
-                return await response.json();
-            }
-            return null;
-        } catch (error) {
-            console.error('❌ Get media URL error:', error);
-            return null;
-        }
-    }
-
-    /**
-     * Validate media file before upload
-     */
-    static validateMediaFile(file: ProcessedFileInfo): { isValid: boolean; error?: string } {
-        // Check if file exists
-        if (!file || !file.uri) {
-            return {isValid: false, error: 'No file selected'};
-        }
-
-        // Check file size limits
-        const maxSizes = {
-            image: 10 * 1024 * 1024,  // 10MB
-            video: 100 * 1024 * 1024, // 100MB
-            audio: 50 * 1024 * 1024,  // 50MB
-        };
-
-        let mediaType: 'image' | 'video' | 'audio';
-
-        if (file.type.startsWith('image/')) {
-            mediaType = 'image';
-        } else if (file.type.startsWith('video/')) {
-            mediaType = 'video';
-        } else if (file.type.startsWith('audio/')) {
-            mediaType = 'audio';
-        } else {
-            return {isValid: false, error: 'Unsupported file type'};
-        }
-
-        if (file.size > maxSizes[mediaType]) {
-            const maxSizeMB = Math.round(maxSizes[mediaType] / (1024 * 1024));
-            return {
-                isValid: false,
-                error: `File too large. Maximum size for ${mediaType} is ${maxSizeMB}MB`
-            };
-        }
-
-        // Check supported formats
-        const supportedTypes = {
-            image: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-            video: ['video/mp4', 'video/mov', 'video/avi', 'video/quicktime'],
-            audio: ['audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/m4a', 'audio/ogg']
-        };
-
-        if (!supportedTypes[mediaType].includes(file.type.toLowerCase())) {
-            return {
-                isValid: false,
-                error: `Unsupported ${mediaType} format. Supported formats: ${supportedTypes[mediaType].join(', ')}`
-            };
-        }
-
-        return {isValid: true};
-    }
-
-    /**
-     * Get file type category from MIME type
-     */
-    static getFileCategory(mimeType: string): 'image' | 'video' | 'audio' | 'unknown' {
-        if (mimeType.startsWith('image/')) return 'image';
-        if (mimeType.startsWith('video/')) return 'video';
-        if (mimeType.startsWith('audio/')) return 'audio';
-        return 'unknown';
-    }
-
-    /**
-     * Format file size for display
-     */
-    static formatFileSize(bytes: number): string {
-        if (bytes === 0) return '0 Bytes';
-
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    /**
-     * Generate thumbnail for video (placeholder - requires native implementation)
-     */
-    static async generateVideoThumbnail(videoUri: string): Promise<string | null> {
-        // This would require native implementation or a library like react-native-video-processing
-        console.log('⚠️ Video thumbnail generation not implemented yet:', videoUri);
-        return null;
-    }
-
-    /**
-     * Check if user is authenticated
-     */
-    static isAuthenticated(): boolean {
-        try {
-            const state = store.getState() as RootState;
-            return !!state.auth?.accessToken;
-        } catch (error) {
-            console.error('❌ Error checking authentication:', error);
-            return false;
-        }
-    }
-
-    /**
-     * Get current user ID from store
-     */
-    static getCurrentUserId(): string | null {
-        try {
-            const state = store.getState() as RootState;
-            return state.auth?.user?.id || null;
-        } catch (error) {
-            console.error('❌ Error getting current user ID:', error);
-            return null;
+            console.error('❌ Error deleting media:', error);
+            throw error;
         }
     }
 }
