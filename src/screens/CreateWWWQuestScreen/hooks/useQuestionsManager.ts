@@ -2,9 +2,8 @@
 import {useEffect, useState} from 'react';
 import {Alert} from 'react-native';
 import {
-    CreateQuestionRequest,
     QuizQuestion,
-    useCreateUserQuestionMutation,
+    useCreateQuestionWithMediaMutation,
     useDeleteUserQuestionMutation,
     useGetAvailableTopicsQuery,
     useGetUserQuestionsPaginatedQuery,
@@ -12,6 +11,8 @@ import {
 import {QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService.ts";
 import {BaseQuestionForQuest, toBaseQuestion} from "../types/question.types.ts";
+import {CreateQuizQuestionRequest} from "../../../entities/QuizState/model/types/question.types.ts";
+import createQuestionWithMedia from "../../components/CreateQuestionWithMedia.tsx";
 
 // ============================================================================
 // TYPES
@@ -59,7 +60,7 @@ export interface QuestionFormData {
 
 export const useQuestionsManager = () => {
     // ✅ API hooks - now using single unified mutation
-    const [createQuestion, {isLoading: isCreatingQuestion}] = useCreateUserQuestionMutation();
+    const [createQuestion, {isLoading}] = useCreateQuestionWithMediaMutation()
     const [deleteQuestion] = useDeleteUserQuestionMutation();
 
     const {
@@ -297,43 +298,27 @@ export const useQuestionsManager = () => {
      * This replaces both handleMediaQuestionSubmit and the separate logic
      */
     const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
-        try {
-            // Build the request object matching CreateQuestionRequest interface
-            const request: CreateQuestionRequest = {
-                question: data.question,
-                answer: data.answer,
-                difficulty: data.difficulty,
-                questionType: data.questionType,
-                topic: data.topic,
-                additionalInfo: data.additionalInfo,
-                source: 'USER', // User-created question
-                // ✅ Media properties (only if media exists)
-                ...(data.media && {
-                    questionMediaId: data.media.mediaId,
-                    questionMediaUrl: data.media.mediaUrl,
-                    questionMediaType: data.media.mediaType,
-                }),
-            };
+        const questionData: CreateQuizQuestionRequest = {
+            question: data.question,
+            answer: data.answer,
+            difficulty: data.difficulty,
+            topic: data.topic,
+            visibility: 'PRIVATE',
+        };
 
-            console.log('📤 Creating question:', request);
+        const mediaFile = data.media ? {
+            uri: data.media.mediaUrl,
+            name: `question_${Date.now()}.jpg`,
+            type: 'image/jpeg',
+        } : undefined;
 
-            const result = await createQuestion(request).unwrap();
+        const result = await createQuestionWithMedia({
+            questionData,
+            mediaFile
+        }).unwrap();
 
-            Alert.alert(
-                'Success',
-                `${data.questionType} question created successfully!`
-            );
-
-            // Refresh user questions list
-            refetchUserQuestions();
-
-            return result;
-        } catch (error: any) {
-            console.error('❌ Error creating question:', error);
-            const errorMessage = error?.data?.message || 'Failed to create question. Please try again.';
-            Alert.alert('Error', errorMessage);
-            throw error;
-        }
+        Alert.alert('Success', 'Question created!');
+        refetchUserQuestions();
     };
 
     // ============================================================================
