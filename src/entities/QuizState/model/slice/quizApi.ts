@@ -2,7 +2,7 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
-import {QuestionVisibility} from "../types/question.types.ts";
+import {CreateQuizQuestionRequest, QuestionVisibility} from "../types/question.types.ts";
 
 // ============================================================================
 // TYPES
@@ -542,6 +542,41 @@ export const quizApi = createApi({
                 body: questionData,
             }),
             invalidatesTags: ['UserQuestions'],
+        }),
+
+        createQuestionWithMedia: builder.mutation<
+            QuizQuestion,
+            {
+                questionData: CreateQuizQuestionRequest;
+                mediaFile?: { uri: string; name: string; type: string };
+            }
+        >({
+            query: ({ questionData, mediaFile }) => {
+                const formData = new FormData();
+
+                // Add question as JSON blob
+                const questionBlob = new Blob([JSON.stringify(questionData)], {
+                    type: 'application/json',
+                });
+                formData.append('questionData', questionBlob);
+
+                // Add media if present
+                if (mediaFile) {
+                    formData.append('mediaFile', {
+                        uri: mediaFile.uri,
+                        name: mediaFile.name,
+                        type: mediaFile.type,
+                    } as any);
+                }
+
+                return {
+                    url: '/api/quiz/questions/with-media',
+                    method: 'POST',
+                    body: formData,
+                    formData: true,
+                };
+            },
+            invalidatesTags: ['Question'],
         }),
     }),
 });
