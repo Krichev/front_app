@@ -202,6 +202,7 @@ export interface SubmitRoundAnswerRequest {
 // API DEFINITION
 // ============================================================================
 
+
 export const quizApi = createApi({
     reducerPath: 'quizApi',
     baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
@@ -209,12 +210,12 @@ export const quizApi = createApi({
     endpoints: (builder) => ({
 
         /**
-         * Create a new user question (text only or with media)
-         * ✅ Now uses unified CreateQuestionRequest interface
+         * ✅ Create a new user question (unified endpoint)
+         * This handles both text-only and questions with media
          */
         createUserQuestion: builder.mutation<QuizQuestion, CreateQuestionRequest>({
             query: (request) => ({
-                url: '/questions',
+                url: '/quiz/questions',
                 method: 'POST',
                 body: request,
             }),
@@ -222,15 +223,41 @@ export const quizApi = createApi({
         }),
 
         /**
-         * @deprecated Use createUserQuestion instead
-         * This endpoint is kept for backward compatibility
+         * ✅ NEW: Create question with media using multipart/form-data
+         * This is the NEW unified endpoint that handles media upload + question creation atomically
          */
-        createUserQuestionWithMedia: builder.mutation<QuizQuestion, CreateQuestionRequest>({
-            query: (request) => ({
-                url: '/questions',
-                method: 'POST',
-                body: request,
-            }),
+        createQuestionWithMedia: builder.mutation<
+            QuizQuestion,
+            {
+                questionData: CreateQuizQuestionRequest;
+                mediaFile?: { uri: string; name: string; type: string };
+            }
+        >({
+            query: ({ questionData, mediaFile }) => {
+                const formData = new FormData();
+
+                // Add question as JSON blob
+                const questionBlob = new Blob([JSON.stringify(questionData)], {
+                    type: 'application/json',
+                });
+                formData.append('questionData', questionBlob);
+
+                // Add media if present
+                if (mediaFile) {
+                    formData.append('mediaFile', {
+                        uri: mediaFile.uri,
+                        name: mediaFile.name,
+                        type: mediaFile.type,
+                    } as any);
+                }
+
+                return {
+                    url: '/quiz/questions/with-media',
+                    method: 'POST',
+                    body: formData,
+                    formData: true,
+                };
+            },
             invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}, 'Topics'],
         }),
 
@@ -239,7 +266,7 @@ export const quizApi = createApi({
          */
         getUserQuestionsPaginated: builder.query<PaginatedQuestionResponse, QuestionSearchParams>({
             query: (params) => ({
-                url: '/questions/me',
+                url: '/quiz/questions/me',
                 params: {
                     page: params.page ?? 0,
                     size: params.size ?? 20,
@@ -263,7 +290,7 @@ export const quizApi = createApi({
          * Get all user questions (non-paginated)
          */
         getUserQuestions: builder.query<QuizQuestion[], void>({
-            query: () => '/questions/me?size=1000',
+            query: () => '/quiz/questions/me?size=1000',
             transformResponse: (response: PaginatedQuestionResponse) => response.content,
             providesTags: (result) =>
                 result && Array.isArray(result)
@@ -279,7 +306,7 @@ export const quizApi = createApi({
          */
         deleteUserQuestion: builder.mutation<{ message: string }, number>({
             query: (questionId) => ({
-                url: `/questions/${questionId}`,
+                url: `/quiz/questions/${questionId}`,
                 method: 'DELETE',
             }),
             invalidatesTags: (result, error, questionId) => [
@@ -291,9 +318,9 @@ export const quizApi = createApi({
         /**
          * Update question visibility
          */
-        updateQuestionVisibility: builder.mutation <{questionId: number, request: UpdateQuestionVisibilityRequest }>({
+        updateQuestionVisibility: builder.mutation<QuizQuestion, { questionId: number, request: UpdateQuestionVisibilityRequest }>({
             query: ({questionId, request}) => ({
-                url: `/questions/${questionId}/visibility`,
+                url: `/quiz/questions/${questionId}/visibility`,
                 method: 'PATCH',
                 body: request,
             }),
@@ -327,65 +354,42 @@ export const quizApi = createApi({
                     ...(params.topic && {topic: params.topic}),
                 },
             }),
-            providesTags: ['QuizQuestion'],
-        }),
-
-        // ========================================================================
-        // NEW QUESTION ENDPOINTS (for access control)
-        // ========================================================================
-
-        getUserQuestionsPaginated: builder.query<PaginatedQuestionResponse, {
-            page?: number;
-            size?: number;
-            sortBy?: string;
-            sortDirection?: 'ASC' | 'DESC';
-        }>({
-            query: ({page = 0, size = 20, sortBy = 'createdAt', sortDirection = 'DESC'}) => ({
-                url: '/quiz/questions/me',
-                params: {page, size, sortBy, sortDirection},
-            }),
             providesTags: (result) =>
-                result?.content && Array.isArray(result.content)
+                result
                     ? [
                         ...result.content.map(({id}) => ({type: 'QuizQuestion' as const, id})),
-                        {type: 'QuizQuestion', id: 'USER_LIST'},
+                        {type: 'QuizQuestion', id: 'LIST'},
                     ]
-                    : [{type: 'QuizQuestion', id: 'USER_LIST'}],
+                    : [{type: 'QuizQuestion', id: 'LIST'}],
         }),
 
-        searchAccessibleQuestions: builder.query<PaginatedQuestionResponse, QuestionSearchParams>({
+        /**
+         * Search accessible questions (public + friends + quiz-specific)
+         */
+        searchAccessibleQuestions: builder.query<PaginatedQuestionResponse, QuestionSearchParams & { quizId?: number }>({
             query: (params) => ({
-                url: '/questions/accessible',
-                params,
+                url: '/quiz/questions/accessible',
+                params: {
+                    page: params.page ?? 0,
+                    size: params.size ?? 20,
+                    ...(params.keyword && {keyword: params.keyword}),
+                    ...(params.difficulty && {difficulty: params.difficulty}),
+                    ...(params.topic && {topic: params.topic}),
+                    ...(params.quizId && {quizId: params.quizId}),
+                },
             }),
             providesTags: [{type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'}],
         }),
 
-        updateQuestionVisibility: builder.mutation<QuizQuestion, {
-            questionId: number;
-            request: UpdateQuestionVisibilityRequest;
-        }>({
-            query: ({questionId, request}) => ({
-                url: `/questions/${questionId}/visibility`,
-                method: 'PUT',
-                params: request,
-            }),
-            invalidatesTags: (result, error, {questionId}) => [
-                {type: 'QuizQuestion', id: questionId.toString()},
-                {type: 'QuizQuestion', id: 'USER_LIST'},
-                {type: 'QuizQuestion', id: 'ACCESSIBLE_LIST'},
-            ],
-        }),
-
         // ========================================================================
-        // RELATIONSHIP ENDPOINTS (NEW)
+        // RELATIONSHIP ENDPOINTS
         // ========================================================================
 
-        createRelationship: builder.mutation<UserRelationship, CreateRelationshipRequest>({
-            query: (request) => ({
+        createRelationship: builder.mutation<UserRelationship, string>({
+            query: (username) => ({
                 url: '../relationships',
                 method: 'POST',
-                body: request,
+                body: { username },
             }),
             invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}],
         }),
@@ -534,71 +538,27 @@ export const quizApi = createApi({
                 {type: 'QuizSession', id: sessionId}
             ],
         }),
-
-        createUserQuestionWithMedia: builder.mutation<QuizQuestion, CreateQuestionWithMediaRequest>({
-            query: (questionData) => ({
-                url: '/api/quiz/questions',
-                method: 'POST',
-                body: questionData,
-            }),
-            invalidatesTags: ['UserQuestions'],
-        }),
-
-        createQuestionWithMedia: builder.mutation<
-            QuizQuestion,
-            {
-                questionData: CreateQuizQuestionRequest;
-                mediaFile?: { uri: string; name: string; type: string };
-            }
-        >({
-            query: ({ questionData, mediaFile }) => {
-                const formData = new FormData();
-
-                // Add question as JSON blob
-                const questionBlob = new Blob([JSON.stringify(questionData)], {
-                    type: 'application/json',
-                });
-                formData.append('questionData', questionBlob);
-
-                // Add media if present
-                if (mediaFile) {
-                    formData.append('mediaFile', {
-                        uri: mediaFile.uri,
-                        name: mediaFile.name,
-                        type: mediaFile.type,
-                    } as any);
-                }
-
-                return {
-                    url: '/api/quiz/questions/with-media',
-                    method: 'POST',
-                    body: formData,
-                    formData: true,
-                };
-            },
-            invalidatesTags: ['Question'],
-        }),
     }),
 });
 
 // ============================================================================
-// EXPORT HOOKS
+// EXPORT HOOKS - FIXED (Removed duplicate)
 // ============================================================================
 
 export const {
-    // Existing question hooks
+    // ✅ Question hooks (no more duplicate!)
     useCreateUserQuestionMutation,
+    useCreateQuestionWithMediaMutation, // ✅ NEW unified endpoint
     useGetUserQuestionsQuery,
     useDeleteUserQuestionMutation,
-    useGetQuestionsByDifficultyQuery,
     useSearchQuestionsQuery,
 
-    // NEW: Question access control hooks
+    // Question access control hooks
     useGetUserQuestionsPaginatedQuery,
     useSearchAccessibleQuestionsQuery,
     useUpdateQuestionVisibilityMutation,
 
-    // NEW: Relationship hooks
+    // Relationship hooks
     useCreateRelationshipMutation,
     useGetMyRelationshipsQuery,
     useGetPendingRequestsQuery,
@@ -607,7 +567,7 @@ export const {
     useRemoveRelationshipMutation,
     useCheckConnectionQuery,
 
-    // Existing quiz session hooks
+    // Quiz session hooks
     useStartQuizSessionMutation,
     useBeginQuizSessionMutation,
     useSubmitRoundAnswerMutation,
@@ -619,5 +579,5 @@ export const {
     useGetCurrentRoundQuery,
     useUpdateQuizSessionConfigMutation,
 
-    useCreateUserQuestionWithMediaMutation,
+    // ❌ REMOVED: useCreateUserQuestionWithMediaMutation (was duplicate)
 } = quizApi;
