@@ -10,9 +10,8 @@ import {
 } from '../../../entities/QuizState/model/slice/quizApi';
 import {QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService.ts";
-import {BaseQuestionForQuest, toBaseQuestion} from "../types/question.types.ts";
-import {CreateQuizQuestionRequest} from "../../../entities/QuizState/model/types/question.types.ts";
-import createQuestionWithMedia from "../../components/CreateQuestionWithMedia.tsx";
+import {BaseQuestionForQuest} from "../types/question.types.ts";
+import {CreateQuizQuestionRequest, QuestionVisibility} from "../../../entities/QuizState/model/types/question.types.ts";
 
 // ============================================================================
 // TYPES
@@ -87,138 +86,52 @@ export const useQuestionsManager = () => {
 
     const userQuestions = userQuestionsResponse?.content ?? [];
 
-    // App questions state
+    // App questions
     const [appQuestions, setAppQuestions] = useState<QuizQuestion[]>([]);
     const [isLoadingAppQuestions, setIsLoadingAppQuestions] = useState(false);
-    const [appQuestionsError, setAppQuestionsError] = useState<string | null>(null);
 
-    // Search filters
-    const [searchKeyword, setSearchKeyword] = useState('');
-    const [searchDifficulty, setSearchDifficulty] = useState<APIDifficulty | 'ALL'>('ALL');
-    const [searchTopic, setSearchTopic] = useState('');
-    const [showTopicPicker, setShowTopicPicker] = useState(false);
-
-    // Pagination
-    const [currentPage, setCurrentPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalQuestions, setTotalQuestions] = useState(0);
-
-    // Cache tracking to prevent unnecessary refetches
-    const [lastSearchParams, setLastSearchParams] = useState<{
-        keyword: string;
-        difficulty: APIDifficulty | 'ALL';
-        topic: string;
-        page: number;
-    } | null>(null);
-
-    // Selection - ✅ Updated to use number for IDs
+    // Selection state
     const [selectedAppQuestionIds, setSelectedAppQuestionIds] = useState<Set<number>>(new Set());
     const [selectedUserQuestionIds, setSelectedUserQuestionIds] = useState<Set<number>>(new Set());
 
-    // Preview state
+    const [showTopicPicker, setShowTopicPicker] = useState(false);
+    // UI state
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
-    const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
-    const [visibleAnswers, setVisibleAnswers] = useState<Set<number>>(new Set());
-
 
     // ============================================================================
     // EFFECTS
     // ============================================================================
 
-    // Reset pagination when question source changes
-    useEffect(() => {
-        console.log('📍 Question source changed to:', questionSource);
-        setCurrentPage(0);
-        setTotalPages(0);
-        setTotalQuestions(0);
-        setLastSearchParams(null);
-        setAppQuestionsError(null);
-    }, [questionSource]);
-
-    // Smart loading that only refetches when necessary
     useEffect(() => {
         if (questionSource === 'app') {
-            const currentParams = {
-                keyword: searchKeyword,
-                difficulty: searchDifficulty,
-                topic: searchTopic,
-                page: currentPage,
-            };
-
-            const paramsChanged = !lastSearchParams ||
-                lastSearchParams.keyword !== currentParams.keyword ||
-                lastSearchParams.difficulty !== currentParams.difficulty ||
-                lastSearchParams.topic !== currentParams.topic ||
-                lastSearchParams.page !== currentParams.page;
-
-            const hasData = appQuestions.length > 0;
-
-            if (paramsChanged || !hasData) {
-                console.log('🔄 Fetching app questions:', paramsChanged ? 'params changed' : 'first load');
-                searchAppQuestions();
-            } else {
-                console.log('✅ Using cached app questions');
-            }
+            loadAppQuestions();
         }
-    }, [questionSource, searchKeyword, searchDifficulty, searchTopic, currentPage]);
+    }, [questionSource]);
 
     // ============================================================================
-    // SEARCH & FILTER FUNCTIONS
+    // QUESTION LOADING
     // ============================================================================
 
-    const searchAppQuestions = async () => {
+    const loadAppQuestions = async () => {
         setIsLoadingAppQuestions(true);
-        setAppQuestionsError(null);
         try {
-            const response = await QuestionService.advancedSearchQuestions({
-                keyword: searchKeyword || undefined,
-                difficulty: searchDifficulty === 'ALL' ? undefined : searchDifficulty,
-                topic: searchTopic || undefined,
-                page: currentPage,
-                size: 20,
-            });
-
-            if (response.content && response.content.length > 0) {
-                setAppQuestions(response.content);
-                setTotalPages(response.totalPages);
-                setTotalQuestions(response.totalElements);
-
-                setLastSearchParams({
-                    keyword: searchKeyword,
-                    difficulty: searchDifficulty,
-                    topic: searchTopic,
-                    page: currentPage,
-                });
-            } else {
-                setAppQuestions([]);
-                setTotalPages(0);
-                setTotalQuestions(0);
-                setAppQuestionsError('No questions found. Try different search criteria.');
-            }
+            const questions = await QuestionService.advancedSearchQuestions({page: 0, size: 100});
+            setAppQuestions(questions.content || []);
         } catch (error) {
-            console.error('Error searching questions:', error);
-            setAppQuestionsError('Failed to load questions. Please try again.');
+            console.error('Error loading app questions:', error);
+            Alert.alert('Error', 'Failed to load questions');
         } finally {
             setIsLoadingAppQuestions(false);
         }
     };
 
-    const clearSearch = () => {
-        setSearchKeyword('');
-        setSearchDifficulty('ALL');
-        setSearchTopic('');
-        setCurrentPage(0);
-        setLastSearchParams(null);
-        searchAppQuestions();
-    };
-
     // ============================================================================
-    // SELECTION FUNCTIONS - ✅ Updated to use number IDs
+    // SELECTION MANAGEMENT
     // ============================================================================
 
-    const toggleQuestionSelection = (questionId: number, source: 'app' | 'user') => {
-        if (source === 'app') {
-            setSelectedAppQuestionIds((prev) => {
+    const toggleQuestionSelection = (questionId: number) => {
+        if (questionSource === 'app') {
+            setSelectedAppQuestionIds(prev => {
                 const newSet = new Set(prev);
                 if (newSet.has(questionId)) {
                     newSet.delete(questionId);
@@ -228,7 +141,7 @@ export const useQuestionsManager = () => {
                 return newSet;
             });
         } else {
-            setSelectedUserQuestionIds((prev) => {
+            setSelectedUserQuestionIds(prev => {
                 const newSet = new Set(prev);
                 if (newSet.has(questionId)) {
                     newSet.delete(questionId);
@@ -240,20 +153,8 @@ export const useQuestionsManager = () => {
         }
     };
 
-    const toggleAnswerVisibility = (questionId: number) => {
-        setVisibleAnswers((prev) => {
-            const newSet = new Set(prev);
-            if (newSet.has(questionId)) {
-                newSet.delete(questionId);
-            } else {
-                newSet.add(questionId);
-            }
-            return newSet;
-        });
-    };
-
-    const toggleExpanded = (index: number) => {
-        setExpandedQuestions((prev) => {
+    const toggleQuestionExpansion = (index: number) => {
+        setExpandedQuestions(prev => {
             const newSet = new Set(prev);
             if (newSet.has(index)) {
                 newSet.delete(index);
@@ -262,6 +163,11 @@ export const useQuestionsManager = () => {
             }
             return newSet;
         });
+    };
+
+    const clearAllSelections = () => {
+        setSelectedAppQuestionIds(new Set());
+        setSelectedUserQuestionIds(new Set());
     };
 
     const expandAllQuestions = () => {
@@ -298,34 +204,75 @@ export const useQuestionsManager = () => {
      * This replaces both handleMediaQuestionSubmit and the separate logic
      */
     const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
-        const questionData: CreateQuizQuestionRequest = {
-            question: data.question,
-            answer: data.answer,
-            difficulty: data.difficulty,
-            topic: data.topic,
-            visibility: 'PRIVATE',
-        };
+        try {
+            const questionData: CreateQuizQuestionRequest = {
+                question: data.question,
+                answer: data.answer,
+                difficulty: data.difficulty,
+                topic: data.topic,
+                visibility: QuestionVisibility.PRIVATE,
+            };
 
-        const mediaFile = data.media ? {
-            uri: data.media.mediaUrl,
-            name: `question_${Date.now()}.jpg`,
-            type: 'image/jpeg',
-        } : undefined;
+            // ✅ FIX: Properly handle optional media file with explicit null check
+            const mediaFile = data.media ? {
+                uri: data.media.mediaUrl,
+                name: `question_${Date.now()}.${getFileExtension(data.media.mediaType)}`,
+                type: getMediaMimeType(data.media.mediaType),
+            } : null;
 
-        const result = await createQuestionWithMedia({
-            questionData,
-            mediaFile
-        }).unwrap();
+            // ✅ FIX: Use null instead of undefined for optional parameter
+            const result = await createQuestion({
+                questionData,
+                mediaFile: mediaFile ?? undefined, // Convert null to undefined for API
+            }).unwrap();
 
-        Alert.alert('Success', 'Question created!');
-        refetchUserQuestions();
+            Alert.alert('Success', 'Question created successfully!');
+            await refetchUserQuestions();
+            return result;
+        } catch (error) {
+            console.error('Error creating question:', error);
+            Alert.alert('Error', 'Failed to create question. Please try again.');
+            throw error;
+        }
     };
 
     // ============================================================================
     // HELPER FUNCTIONS
     // ============================================================================
 
-    const getSelectedQuestionsArray = ():BaseQuestionForQuest[] => {
+    /**
+     * Get file extension based on media type
+     */
+    const getFileExtension = (mediaType: MediaType): string => {
+        switch (mediaType) {
+            case MediaType.IMAGE:
+                return 'jpg';
+            case MediaType.VIDEO:
+                return 'mp4';
+            case MediaType.AUDIO:
+                return 'mp3';
+            default:
+                return 'bin';
+        }
+    };
+
+    /**
+     * Get MIME type based on media type
+     */
+    const getMediaMimeType = (mediaType: MediaType): string => {
+        switch (mediaType) {
+            case MediaType.IMAGE:
+                return 'image/jpeg';
+            case MediaType.VIDEO:
+                return 'video/mp4';
+            case MediaType.AUDIO:
+                return 'audio/mpeg';
+            default:
+                return 'application/octet-stream';
+        }
+    };
+
+    const getSelectedQuestionsArray = (): BaseQuestionForQuest[] => {
         const selectedAppQuestions = (appQuestions ?? [])
             .filter((q) => selectedAppQuestionIds.has(q.id))
             .map((q) => ({
@@ -340,9 +287,17 @@ export const useQuestionsManager = () => {
             }));
 
         const selectedUserQuestionsData = (userQuestions ?? [])
-            .filter((uq) => selectedUserQuestionIds.has(uq.id))
-            .map((uq) => toBaseQuestion(uq, 'user'));
-
+            .filter((q) => selectedUserQuestionIds.has(q.id))
+            .map((q) => ({
+                id: q.id,
+                question: q.question,
+                answer: q.answer,
+                difficulty: q.difficulty,
+                topic: q.topic,
+                additionalInfo: q.additionalInfo,
+                visibility: q.visibility,
+                source: 'user' as const,
+            }));
 
         return [...selectedAppQuestions, ...selectedUserQuestionsData];
     };
@@ -352,60 +307,40 @@ export const useQuestionsManager = () => {
     // ============================================================================
 
     return {
-        // Question source
+        // State
         questionSource,
         setQuestionSource,
 
-        // Questions data
+        // Questions
         appQuestions,
         userQuestions,
+        availableTopics,
+
         // Loading states
+        isLoading,
         isLoadingAppQuestions,
         isLoadingUserQuestions,
         isLoadingTopics,
-        isCreatingQuestion,
-
-        // Error states
-        appQuestionsError,
-
-        // Search & filters
-        searchKeyword,
-        searchDifficulty,
-        searchTopic,
-        showTopicPicker,
-        availableTopics,
-        setSearchKeyword,
-        setSearchDifficulty,
-        setSearchTopic,
-        setShowTopicPicker,
-
-        // Pagination
-        currentPage,
-        totalPages,
-        totalQuestions,
-        setCurrentPage,
 
         // Selection
         selectedAppQuestionIds,
         selectedUserQuestionIds,
-        visibleAnswers,
-        expandedQuestions,
-
-        // Preview
-        isPreviewCollapsed,
-        setIsPreviewCollapsed,
-
-        // Actions
-        searchAppQuestions,
-        clearSearch,
         toggleQuestionSelection,
-        toggleAnswerVisibility,
-        toggleExpanded,
-        deleteUserQuestion,
-        handleUnifiedQuestionSubmit,
+        clearAllSelections,
+
+        // Expansion
+        expandedQuestions,
+        toggleQuestionExpansion,
         expandAllQuestions,
         collapseAllQuestions,
-        getSelectedQuestionsArray,
+
+        // Actions
+        handleUnifiedQuestionSubmit,
+        deleteUserQuestion,
         refetchUserQuestions,
+        loadAppQuestions,
+        getSelectedQuestionsArray,
+        showTopicPicker,
+        setShowTopicPicker,
     };
 };

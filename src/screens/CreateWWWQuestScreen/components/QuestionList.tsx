@@ -240,7 +240,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             onChangeText={onSearchKeywordChange}
                             placeholderTextColor="#999"
                         />
-                        {searchKeyword.length > 0 && (
+                        {searchKeyword?.length > 0 && (
                             <TouchableOpacity onPress={onClearSearch}>
                                 <MaterialCommunityIcons name="close-circle" size={20} color="#666"/>
                             </TouchableOpacity>
@@ -295,9 +295,9 @@ const QuestionList: React.FC<QuestionListProps> = ({
     );
 
     const renderQuestionItem = (question: QuizQuestion, index: number) => {
-        const isSelected = selectedQuestionIds.has(question.id);
-        const isAnswerVisible = visibleAnswers.has(question.id);
-        const isExpanded = expandedQuestions.has(index);
+        const isSelected = selectedQuestionIds?.has(question.id);
+        const isAnswerVisible = visibleAnswers?.has(question.id);
+        const isExpanded = expandedQuestions?.has(index);
 
         // Access media properties directly from QuizQuestion
         const hasMedia = !!question.questionMediaUrl;
