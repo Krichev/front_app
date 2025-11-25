@@ -1,8 +1,9 @@
 // src/entities/QuizState/model/slice/quizApi.ts - FIXED VERSION
-import {createApi} from '@reduxjs/toolkit/query/react';
+import {BaseQueryArg, createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
 import {CreateQuizQuestionRequest, QuestionVisibility} from "../types/question.types.ts";
+import {RootState} from '../../../../app/providers/StoreProvider/store';
 
 // ============================================================================
 // TYPES
@@ -223,8 +224,8 @@ export const quizApi = createApi({
         }),
 
         /**
-         * ✅ NEW: Create question with media using multipart/form-data
-         * This is the NEW unified endpoint that handles media upload + question creation atomically
+         * ✅ FIXED: Create question with optional media
+         * Uses native fetch() for React Native FormData compatibility
          */
         createQuestionWithMedia: builder.mutation<
             QuizQuestion,
@@ -233,32 +234,105 @@ export const quizApi = createApi({
                 mediaFile?: { uri: string; name: string; type: string };
             }
         >({
-            query: ({ questionData, mediaFile }) => {
-                const formData = new FormData();
+            queryFn: async ({ questionData, mediaFile }, api) => {
+                try {
+                    // Get auth token from Redux store
+                    const state = api.getState() as RootState;
+                    const token = state.auth.accessToken;
 
-                // Add question as JSON blob
-                const questionBlob = new Blob([JSON.stringify(questionData)], {
-                    type: 'application/json',
-                });
-                formData.append('questionData', questionBlob);
+                    // If no media, use simple JSON endpoint (more reliable)
+                    if (!mediaFile) {
+                        const response = await fetch(
+                            'http://10.0.2.2:8082/challenger/api/quiz/questions',
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                                },
+                                body: JSON.stringify(questionData),
+                            }
+                        );
 
-                // Add media if present
-                if (mediaFile) {
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('❌ Create question failed:', response.status, errorText);
+                            return {
+                                error: {
+                                    status: response.status,
+                                    data: errorText,
+                                },
+                            };
+                        }
+
+                        const data = await response.json();
+                        console.log('✅ Question created (no media):', data);
+                        return { data: data as QuizQuestion };
+                    }
+
+                    // With media: use native fetch with FormData
+                    console.log('📤 Creating question with media:', {
+                        question: questionData.question?.substring(0, 50),
+                        mediaUri: mediaFile.uri,
+                        mediaType: mediaFile.type,
+                    });
+
+                    const formData = new FormData();
+
+                    // ✅ Append JSON as string - backend will parse it
+                    formData.append('questionData', JSON.stringify(questionData));
+
+                    // ✅ Append media file (React Native style - object with uri/name/type)
                     formData.append('mediaFile', {
                         uri: mediaFile.uri,
                         name: mediaFile.name,
                         type: mediaFile.type,
                     } as any);
-                }
 
-                return {
-                    url: '/quiz/questions/with-media',
-                    method: 'POST',
-                    body: formData,
-                    formData: true,
-                };
+                    // ✅ Use native fetch - DO NOT set Content-Type header!
+                    // React Native's fetch will automatically set multipart/form-data with boundary
+                    const response = await fetch(
+                        'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                // ⚠️ DO NOT set Content-Type - let fetch handle it for FormData
+                                ...(token && { 'Authorization': `Bearer ${token}` }),
+                            },
+                            body: formData,
+                        }
+                    );
+
+                    console.log('📥 Response status:', response.status);
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('❌ Create question with media failed:', response.status, errorText);
+                        return {
+                            error: {
+                                status: response.status,
+                                data: errorText,
+                            },
+                        };
+                    }
+
+                    const data = await response.json();
+                    console.log('✅ Question created with media:', data);
+                    return { data: data as QuizQuestion };
+
+                } catch (error) {
+                    console.error('❌ createQuestionWithMedia exception:', error);
+                    return {
+                        error: {
+                            status: 'FETCH_ERROR',
+                            error: error instanceof Error ? error.message : String(error),
+                        },
+                    };
+                }
             },
-            invalidatesTags: [{type: 'QuizQuestion', id: 'USER_LIST'}, 'Topics'],
+            invalidatesTags: [{ type: 'QuizQuestion', id: 'USER_LIST' }, 'Topics'],
         }),
 
         /**
