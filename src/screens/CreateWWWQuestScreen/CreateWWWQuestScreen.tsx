@@ -37,11 +37,43 @@ const CreateWWWQuestScreen = () => {
 
     const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
 
+    // Local state for features not yet in hook
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [searchDifficulty, setSearchDifficulty] = useState<string | undefined>();
+    const [searchTopic, setSearchTopic] = useState<string | undefined>();
+    const [currentPage, setCurrentPage] = useState(0);
+    const [visibleAnswers, setVisibleAnswers] = useState<Set<number>>(new Set());
+    const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
+
     const questionSource = questionsManager.questionSource ?? 'app';
 
     const totalSelectedQuestions =
         (questionsManager.selectedAppQuestionIds?.size || 0) +
         (questionsManager.selectedUserQuestionIds?.size || 0);
+
+    // Helper functions for features not yet in hook
+    const toggleAnswerVisibility = (questionId: number) => {
+        setVisibleAnswers(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(questionId)) {
+                newSet.delete(questionId);
+            } else {
+                newSet.add(questionId);
+            }
+            return newSet;
+        });
+    };
+
+    const searchAppQuestions = () => {
+        // TODO: Implement search functionality
+        console.log('Search:', { searchKeyword, searchDifficulty, searchTopic });
+    };
+
+    const clearSearch = () => {
+        setSearchKeyword('');
+        setSearchDifficulty(undefined);
+        setSearchTopic(undefined);
+    };
 
     const handleCreateQuest = async () => {
         const selectedQuestions = questionsManager.getSelectedQuestionsArray();
@@ -143,26 +175,26 @@ const CreateWWWQuestScreen = () => {
                     userQuestions={questionsManager.userQuestions || []}
                     isLoadingApp={questionsManager.isLoadingAppQuestions}
                     isLoadingUser={questionsManager.isLoadingUserQuestions}
-                    error={questionsManager.appQuestionsError}
-                    searchKeyword={questionsManager.searchKeyword}
-                    searchDifficulty={questionsManager.searchDifficulty}
-                    searchTopic={questionsManager.searchTopic}
-                    currentPage={questionsManager.currentPage}
-                    totalPages={questionsManager.totalPages}
-                    totalQuestions={questionsManager.totalQuestions}
+                    error={undefined}
+                    searchKeyword={searchKeyword}
+                    searchDifficulty={searchDifficulty}
+                    searchTopic={searchTopic}
+                    currentPage={currentPage}
+                    totalPages={1}
+                    totalQuestions={(questionsManager.appQuestions || []).length}
                     selectedAppQuestionIds={questionsManager.selectedAppQuestionIds}
                     selectedUserQuestionIds={questionsManager.selectedUserQuestionIds}
-                    visibleAnswers={questionsManager.visibleAnswers}
+                    visibleAnswers={visibleAnswers}
                     expandedQuestions={questionsManager.expandedQuestions}
-                    onSearchKeywordChange={questionsManager.setSearchKeyword}
-                    onSearchDifficultyChange={questionsManager.setSearchDifficulty}
-                    onSearchTopicChange={questionsManager.setSearchTopic}
-                    onSearch={questionsManager.searchAppQuestions}
-                    onClearSearch={questionsManager.clearSearch}
-                    onPageChange={questionsManager.setCurrentPage}
+                    onSearchKeywordChange={setSearchKeyword}
+                    onSearchDifficultyChange={setSearchDifficulty}
+                    onSearchTopicChange={setSearchTopic}
+                    onSearch={searchAppQuestions}
+                    onClearSearch={clearSearch}
+                    onPageChange={setCurrentPage}
                     onToggleSelection={questionsManager.toggleQuestionSelection}
-                    onToggleAnswerVisibility={questionsManager.toggleAnswerVisibility}
-                    onToggleExpanded={questionsManager.toggleExpanded}
+                    onToggleAnswerVisibility={toggleAnswerVisibility}
+                    onToggleExpanded={questionsManager.toggleQuestionExpansion}
                     onExpandAll={questionsManager.expandAllQuestions}
                     onCollapseAll={questionsManager.collapseAllQuestions}
                     onDeleteUserQuestion={questionsManager.deleteUserQuestion}
@@ -175,8 +207,8 @@ const CreateWWWQuestScreen = () => {
                 {/* Selected Questions Preview */}
                 <SelectedQuestionsPreview
                     questions={questionsManager.getSelectedQuestionsArray()}
-                    isCollapsed={questionsManager.isPreviewCollapsed}
-                    onToggleCollapse={() => questionsManager.setIsPreviewCollapsed(!questionsManager.isPreviewCollapsed)}
+                    isCollapsed={isPreviewCollapsed}
+                    onToggleCollapse={() => setIsPreviewCollapsed(!isPreviewCollapsed)}
                 />
 
                 <View style={styles.spacer} />

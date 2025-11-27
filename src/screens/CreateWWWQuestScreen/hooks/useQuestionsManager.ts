@@ -9,9 +9,9 @@ import {
     useGetUserQuestionsPaginatedQuery,
 } from '../../../entities/QuizState/model/slice/quizApi';
 import {QuestionService} from "../../../services/wwwGame";
-import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService.ts";
-import {BaseQuestionForQuest} from "../types/question.types.ts";
-import {CreateQuizQuestionRequest, QuestionVisibility} from "../../../entities/QuizState/model/types/question.types.ts";
+import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService";
+import {BaseQuestionForQuest} from "../types/question.types";
+import {CreateQuizQuestionRequest, QuestionVisibility} from "../../../entities/QuizState/model/types/question.types";
 
 // ============================================================================
 // TYPES
@@ -227,7 +227,10 @@ export const useQuestionsManager = () => {
             }).unwrap();
 
             Alert.alert('Success', 'Question created successfully!');
-            await refetchUserQuestions();
+            // Only refetch if user questions tab is active (query was started)
+            if (questionSource === 'user') {
+                await refetchUserQuestions();
+            }
             return result;
         } catch (error) {
             console.error('Error creating question:', error);
