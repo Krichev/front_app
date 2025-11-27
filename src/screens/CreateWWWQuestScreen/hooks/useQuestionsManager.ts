@@ -200,37 +200,43 @@ export const useQuestionsManager = () => {
     // ============================================================================
 
     /**
-     * ✅ Single unified handler for creating questions (text, image, video, audio)
-     * This replaces both handleMediaQuestionSubmit and the separate logic
+     * ✅ FIXED: Unified handler for creating questions (text, image, video, audio)
+     * Media is ALREADY uploaded by MediaQuestionModal, so we just pass the IDs
      */
     const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
         try {
+            // Build question data with media info if available
             const questionData: CreateQuizQuestionRequest = {
                 question: data.question,
                 answer: data.answer,
                 difficulty: data.difficulty,
                 topic: data.topic,
                 visibility: QuestionVisibility.PRIVATE,
+                questionType: data.questionType,
+                // Include media info if media was already uploaded
+                ...(data.media && {
+                    questionMediaId: data.media.mediaId,
+                    questionMediaUrl: data.media.mediaUrl,
+                    questionMediaType: data.media.mediaType,
+                }),
             };
 
-            // ✅ FIX: Properly handle optional media file with explicit null check
-            const mediaFile = data.media ? {
-                uri: data.media.mediaUrl,
-                name: `question_${Date.now()}.${getFileExtension(data.media.mediaType)}`,
-                type: getMediaMimeType(data.media.mediaType),
-            } : null;
+            console.log('📝 Creating question with data:', questionData);
 
-            // ✅ FIX: Use null instead of undefined for optional parameter
+            // ✅ FIX: Media is already uploaded by MediaQuestionModal
+            // Just create the question with media references (no file upload needed)
             const result = await createQuestion({
                 questionData,
-                mediaFile: mediaFile ?? undefined, // Convert null to undefined for API
+                mediaFile: undefined, // No re-upload needed - media already on server
             }).unwrap();
 
             Alert.alert('Success', 'Question created successfully!');
-            // Only refetch if user questions tab is active (query was started)
+
+            // Only refetch if user questions tab is active
             if (questionSource === 'user') {
                 await refetchUserQuestions();
             }
+
             return result;
         } catch (error) {
             console.error('Error creating question:', error);
@@ -242,38 +248,6 @@ export const useQuestionsManager = () => {
     // ============================================================================
     // HELPER FUNCTIONS
     // ============================================================================
-
-    /**
-     * Get file extension based on media type
-     */
-    const getFileExtension = (mediaType: MediaType): string => {
-        switch (mediaType) {
-            case MediaType.IMAGE:
-                return 'jpg';
-            case MediaType.VIDEO:
-                return 'mp4';
-            case MediaType.AUDIO:
-                return 'mp3';
-            default:
-                return 'bin';
-        }
-    };
-
-    /**
-     * Get MIME type based on media type
-     */
-    const getMediaMimeType = (mediaType: MediaType): string => {
-        switch (mediaType) {
-            case MediaType.IMAGE:
-                return 'image/jpeg';
-            case MediaType.VIDEO:
-                return 'video/mp4';
-            case MediaType.AUDIO:
-                return 'audio/mpeg';
-            default:
-                return 'application/octet-stream';
-        }
-    };
 
     const getSelectedQuestionsArray = (): BaseQuestionForQuest[] => {
         const selectedAppQuestions = (appQuestions ?? [])

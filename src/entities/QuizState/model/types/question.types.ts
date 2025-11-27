@@ -16,6 +16,11 @@ export interface CreateQuizQuestionRequest {
     additionalInfo?: string;
     visibility: QuestionVisibility;
     originalQuizId?: number;
+    // Media fields - for questions with images/videos/audio
+    questionType?: string; // QuestionType enum value
+    questionMediaId?: string;
+    questionMediaUrl?: string;
+    questionMediaType?: string; // MediaType enum value
 }
 
 export interface UpdateQuestionVisibilityRequest {
