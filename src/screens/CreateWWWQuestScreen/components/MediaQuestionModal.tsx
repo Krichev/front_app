@@ -15,22 +15,11 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
-import MediaUploadService, {MediaUploadResponse} from '../../../services/media/MediaUploadService';
-import {MediaType, QuestionType} from "../../../services/wwwGame/questionService.ts";
+import {MediaType, QuestionType} from "../../../services/wwwGame/questionService";
 
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================
-
-/**
- * Media information for uploaded files - matches QuestionFormData media type
- */
-interface MediaInfo {
-    mediaId: string;
-    mediaUrl: string;
-    mediaType: MediaType;
-    thumbnailUrl?: string;
-}
 
 interface MediaQuestionModalProps {
     visible: boolean;
@@ -59,52 +48,26 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
-    const [uploadedMediaInfo, setUploadedMediaInfo] = useState<MediaInfo | undefined>(undefined);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
 
     /**
      * Determine question type based on selected media (IMPLICIT)
      * Returns TEXT if no media selected
      */
     const getQuestionType = (): QuestionType => {
-        if (!selectedMedia && !uploadedMediaInfo) {
+        if (!selectedMedia) {
             return 'TEXT';
         }
 
-        // Check uploaded media first
-        if (uploadedMediaInfo) {
-            return uploadedMediaInfo.mediaType as QuestionType;
-        }
-
-        // Otherwise detect from selected file
-        if (selectedMedia) {
-            if (selectedMedia.type.startsWith('image/')) {
-                return 'IMAGE';
-            } else if (selectedMedia.type.startsWith('video/')) {
-                return 'VIDEO';
-            } else if (selectedMedia.type.startsWith('audio/')) {
-                return 'AUDIO';
-            }
+        // Detect from selected file type
+        if (selectedMedia.type.startsWith('image/')) {
+            return 'IMAGE';
+        } else if (selectedMedia.type.startsWith('video/')) {
+            return 'VIDEO';
+        } else if (selectedMedia.type.startsWith('audio/')) {
+            return 'AUDIO';
         }
 
         return 'TEXT';
-    };
-
-    /**
-     * Convert question type to MediaType enum
-     */
-    const questionTypeToMediaType = (type: QuestionType): MediaType => {
-        switch (type) {
-            case 'IMAGE':
-                return MediaType.IMAGE;
-            case 'VIDEO':
-                return MediaType.VIDEO;
-            case 'AUDIO':
-                return MediaType.AUDIO;
-            default:
-                return MediaType.IMAGE;
-        }
     };
 
     /**
@@ -138,8 +101,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             if (result) {
                 console.log('📷 Image selected:', result.name);
                 setSelectedMedia(result);
-                // Clear any previously uploaded media
-                setUploadedMediaInfo(undefined);
             }
         } catch (error) {
             console.error('Error picking image:', error);
@@ -156,8 +117,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             if (result) {
                 console.log('🎥 Video selected:', result.name);
                 setSelectedMedia(result);
-                // Clear any previously uploaded media
-                setUploadedMediaInfo(undefined);
             }
         } catch (error) {
             console.error('Error picking video:', error);
@@ -174,8 +133,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             if (result) {
                 console.log('🎵 Audio selected:', result.name);
                 setSelectedMedia(result);
-                // Clear any previously uploaded media
-                setUploadedMediaInfo(undefined);
             }
         } catch (error) {
             console.error('Error picking audio:', error);
@@ -184,54 +141,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     };
 
     /**
-     * Upload media file to backend with progress tracking
-     */
-    const uploadMedia = async (file: ProcessedFileInfo): Promise<MediaInfo> => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                console.log('🚀 Starting media upload:', {
-                    fileName: file.name,
-                    fileType: file.type,
-                    fileSize: file.size,
-                });
-
-                const uploadResult: MediaUploadResponse = await MediaUploadService.uploadQuizMedia(
-                    file,
-                    undefined, // questionId - optional, not needed for new questions
-                    (progress) => {
-                        const percentage = Math.round((progress.loaded / progress.total) * 100);
-                        setUploadProgress(percentage);
-                        console.log(`📊 Upload progress: ${percentage}%`);
-                    }
-                );
-
-                console.log('✅ Media uploaded successfully:', uploadResult);
-
-                // Ensure the upload was successful and has required fields
-                if (!uploadResult.success || !uploadResult.mediaId || !uploadResult.mediaUrl) {
-                    throw new Error(uploadResult.error || 'Upload failed - missing required fields');
-                }
-
-                const questionType = getQuestionType();
-                const mediaType = questionTypeToMediaType(questionType);
-
-                const mediaInfo: MediaInfo = {
-                    mediaId: uploadResult.mediaId,
-                    mediaUrl: uploadResult.mediaUrl,
-                    mediaType: mediaType,
-                    thumbnailUrl: uploadResult.thumbnailUrl,
-                };
-
-                resolve(mediaInfo);
-            } catch (error) {
-                console.error('❌ Error uploading media:', error);
-                reject(error);
-            }
-        });
-    };
-
-    /**
-     * Remove selected/uploaded media
+     * Remove selected media
      */
     const handleRemoveMedia = () => {
         Alert.alert(
@@ -247,8 +157,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                     style: 'destructive',
                     onPress: () => {
                         setSelectedMedia(undefined);
-                        setUploadedMediaInfo(undefined);
-                        setUploadProgress(0);
                     },
                 },
             ]
@@ -257,7 +165,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
     /**
      * Validate and submit the question
-     * Automatically uploads media if selected but not yet uploaded
+     * Passes raw file info - backend handles upload atomically
      */
     const handleSubmit = async () => {
         // Validate required fields
@@ -276,52 +184,29 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
         const questionType = getQuestionType();
 
-        try {
-            let finalMediaInfo = uploadedMediaInfo;
+        // Build question data with raw file info (no pre-upload)
+        const questionData: QuestionFormData = {
+            question: question.trim(),
+            answer: answer.trim(),
+            difficulty,
+            topic: topic.trim(),
+            additionalInfo: additionalInfo.trim(),
+            questionType,
+            // Pass raw file info - backend will handle upload
+            mediaFile: selectedMedia ? {
+                uri: selectedMedia.uri,
+                name: selectedMedia.name,
+                type: selectedMedia.type,
+            } : undefined,
+        };
 
-            // If media is selected but not uploaded yet, upload it now
-            if (selectedMedia && !uploadedMediaInfo) {
-                setIsUploading(true);
-                console.log('📤 Auto-uploading media before saving question...');
+        console.log('📝 Submitting question with file:', {
+            ...questionData,
+            mediaFile: questionData.mediaFile ? { name: questionData.mediaFile.name } : undefined
+        });
 
-                try {
-                    finalMediaInfo = await uploadMedia(selectedMedia);
-                    setUploadedMediaInfo(finalMediaInfo);
-                    console.log('✅ Media auto-upload completed successfully');
-                } catch (uploadError) {
-                    console.error('❌ Auto-upload failed:', uploadError);
-                    Alert.alert(
-                        'Upload Failed',
-                        uploadError instanceof Error
-                            ? uploadError.message
-                            : 'Failed to upload media. Please try again.'
-                    );
-                    setIsUploading(false);
-                    setUploadProgress(0);
-                    return; // Abort save if upload fails
-                }
-            }
-
-            // Submit the question with properly typed data
-            const questionData: QuestionFormData = {
-                question: question.trim(),
-                answer: answer.trim(),
-                difficulty,
-                topic: topic.trim(),
-                additionalInfo: additionalInfo.trim(),
-                questionType,
-                media: finalMediaInfo,
-            };
-
-            console.log('📝 Submitting question:', questionData);
-            onSubmit(questionData);
-
-            // Reset form after successful submission
-            handleReset();
-        } finally {
-            setIsUploading(false);
-            setUploadProgress(0);
-        }
+        onSubmit(questionData);
+        handleReset();
     };
 
     /**
@@ -334,8 +219,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
         setTopic('');
         setAdditionalInfo('');
         setSelectedMedia(undefined);
-        setUploadedMediaInfo(undefined);
-        setUploadProgress(0);
         setShowTopicPicker(false);
     };
 
@@ -371,7 +254,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      * Render media preview section
      */
     const renderMediaPreview = () => {
-        if (!selectedMedia && !uploadedMediaInfo) {
+        if (!selectedMedia) {
             return null;
         }
 
@@ -399,45 +282,34 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             color="#007AFF"
                         />
                         <Text style={styles.mediaPlaceholderText}>
-                            {uploadedMediaInfo ? 'Media Ready' : selectedMedia?.name}
+                            {selectedMedia.name}
                         </Text>
-                        {selectedMedia && (
-                            <Text style={styles.mediaFileSize}>
-                                {(selectedMedia.size / 1024 / 1024).toFixed(2)} MB
-                            </Text>
-                        )}
+                        <Text style={styles.mediaFileSize}>
+                            {(selectedMedia.size / 1024 / 1024).toFixed(2)} MB
+                        </Text>
                     </View>
                 )}
 
-                {/* Upload Progress - shown during save */}
-                {isUploading && (
-                    <View style={styles.progressContainer}>
-                        <ActivityIndicator size="small" color="#007AFF" />
-                        <Text style={styles.progressText}>Uploading: {uploadProgress}%</Text>
-                        <View style={styles.progressBar}>
-                            <View style={[styles.progressFill, {width: `${uploadProgress}%`}]}/>
-                        </View>
-                    </View>
-                )}
-
-                {/* Upload Status */}
-                {uploadedMediaInfo && !isUploading && (
-                    <View style={styles.uploadedBadge}>
-                        <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50"/>
-                        <Text style={styles.uploadedText}>Media Ready</Text>
-                    </View>
-                )}
+                {/* Media Status Badge */}
+                <View style={styles.mediaStatusContainer}>
+                    <MaterialCommunityIcons
+                        name="file-upload"
+                        size={16}
+                        color="#007AFF"
+                    />
+                    <Text style={styles.mediaStatusText}>
+                        {`${getQuestionType()} Selected - will upload when saved`}
+                    </Text>
+                </View>
 
                 {/* Remove Button */}
-                {!isUploading && (
-                    <TouchableOpacity
-                        style={styles.removeMediaButton}
-                        onPress={handleRemoveMedia}
-                    >
-                        <MaterialCommunityIcons name="delete" size={20} color="#FF3B30"/>
-                        <Text style={styles.removeMediaText}>Remove Media</Text>
-                    </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                    style={styles.removeMediaButton}
+                    onPress={handleRemoveMedia}
+                >
+                    <MaterialCommunityIcons name="delete" size={20} color="#FF3B30"/>
+                    <Text style={styles.removeMediaText}>Remove Media</Text>
+                </TouchableOpacity>
             </View>
         );
     };
@@ -452,16 +324,12 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             <View style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={handleClose} disabled={isUploading}>
+                    <TouchableOpacity onPress={handleClose}>
                         <MaterialCommunityIcons name="close" size={24} color="#007AFF"/>
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Add Question</Text>
-                    <TouchableOpacity onPress={handleSubmit} disabled={isUploading}>
-                        {isUploading ? (
-                            <ActivityIndicator size="small" color="#007AFF" />
-                        ) : (
-                            <Text style={styles.saveButton}>Save</Text>
-                        )}
+                    <TouchableOpacity onPress={handleSubmit}>
+                        <Text style={styles.saveButton}>Save</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -473,7 +341,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             <TouchableOpacity
                                 style={styles.mediaButton}
                                 onPress={() => handleSelectMedia('image')}
-                                disabled={isUploading}
                             >
                                 <MaterialCommunityIcons name="image" size={24} color="#007AFF" />
                                 <Text style={styles.mediaButtonText}>Image</Text>
@@ -481,7 +348,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             <TouchableOpacity
                                 style={styles.mediaButton}
                                 onPress={() => handleSelectMedia('video')}
-                                disabled={isUploading}
                             >
                                 <MaterialCommunityIcons name="video" size={24} color="#007AFF" />
                                 <Text style={styles.mediaButtonText}>Video</Text>
@@ -489,31 +355,11 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             <TouchableOpacity
                                 style={styles.mediaButton}
                                 onPress={() => handleSelectMedia('audio')}
-                                disabled={isUploading}
                             >
                                 <MaterialCommunityIcons name="music" size={24} color="#007AFF" />
                                 <Text style={styles.mediaButtonText}>Audio</Text>
                             </TouchableOpacity>
                         </View>
-
-                        {/* Media Status Text */}
-                        {(selectedMedia || uploadedMediaInfo) && (
-                            <View style={styles.mediaStatusBadge}>
-                                <MaterialCommunityIcons
-                                    name={uploadedMediaInfo ? "check-circle" : "file-upload"}
-                                    size={16}
-                                    color={uploadedMediaInfo ? "#4CAF50" : "#007AFF"}
-                                />
-                                <Text style={[
-                                    styles.mediaStatusText,
-                                    uploadedMediaInfo && styles.mediaStatusTextUploaded
-                                ]}>
-                                    {uploadedMediaInfo
-                                        ? `${getQuestionType()} Question Ready`
-                                        : `${getQuestionType()} Selected (will upload on save)`}
-                                </Text>
-                            </View>
-                        )}
 
                         {/* Media Preview */}
                         {renderMediaPreview()}
@@ -530,7 +376,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             onChangeText={setQuestion}
                             multiline
                             numberOfLines={3}
-                            editable={!isUploading}
                         />
                     </View>
 
@@ -545,7 +390,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             onChangeText={setAnswer}
                             multiline
                             numberOfLines={2}
-                            editable={!isUploading}
                         />
                     </View>
 
@@ -561,7 +405,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                         difficulty === level && styles.difficultyButtonActive,
                                     ]}
                                     onPress={() => setDifficulty(level)}
-                                    disabled={isUploading}
                                 >
                                     <Text
                                         style={[
@@ -586,13 +429,11 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                 placeholderTextColor="#999"
                                 value={topic}
                                 onChangeText={setTopic}
-                                editable={!isUploading}
-                            />
+                                />
                             {availableTopics.length > 0 && (
                                 <TouchableOpacity
                                     style={styles.topicPickerButton}
                                     onPress={() => setShowTopicPicker(!showTopicPicker)}
-                                    disabled={isUploading}
                                 >
                                     <MaterialCommunityIcons
                                         name={showTopicPicker ? 'chevron-up' : 'chevron-down'}
@@ -615,8 +456,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                 setTopic(topicOption);
                                                 setShowTopicPicker(false);
                                             }}
-                                            disabled={isUploading}
-                                        >
+                                                >
                                             <Text style={styles.topicOptionText}>{topicOption}</Text>
                                         </TouchableOpacity>
                                     ))}
@@ -636,7 +476,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             onChangeText={setAdditionalInfo}
                             multiline
                             numberOfLines={3}
-                            editable={!isUploading}
                         />
                     </View>
                 </ScrollView>

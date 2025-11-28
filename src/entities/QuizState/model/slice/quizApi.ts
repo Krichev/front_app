@@ -224,8 +224,8 @@ export const quizApi = createApi({
         }),
 
         /**
-         * ✅ FIXED: Create question with optional media
-         * Uses native fetch() for React Native FormData compatibility
+         * ✅ UNIFIED: Create question with or without media in single atomic operation
+         * ALWAYS uses FormData endpoint - backend handles both cases
          */
         createQuestionWithMedia: builder.mutation<
             QuizQuestion,
@@ -241,49 +241,26 @@ export const quizApi = createApi({
                 baseQuery
             ) => {
                 try {
-                    // Explicitly type the state access
                     const state = api.getState() as RootStateForApi;
                     const token: string | null = state.auth.accessToken;
 
-                    // If no media, use simple JSON endpoint
-                    if (!mediaFile) {
-                        const response: Response = await fetch(
-                            'http://10.0.2.2:8082/challenger/api/quiz/questions',
-                            {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Accept': 'application/json',
-                                    ...(token && { 'Authorization': `Bearer ${token}` }),
-                                },
-                                body: JSON.stringify(questionData),
-                            }
-                        );
+                    // ALWAYS use FormData - backend handles both cases
+                    const formData = new FormData();
 
-                        if (!response.ok) {
-                            const errorText: string = await response.text();
-                            console.error('❌ Create question failed:', response.status, errorText);
-                            return {
-                                error: {
-                                    status: response.status,
-                                    data: errorText,
-                                },
-                            };
-                        }
+                    // Append question data as JSON blob
+                    formData.append('questionData', JSON.stringify(questionData));
 
-                        const data: QuizQuestion = await response.json();
-                        console.log('✅ Question created (no media):', data);
-                        return { data };
+                    // Append media file if provided
+                    if (mediaFile) {
+                        formData.append('mediaFile', {
+                            uri: mediaFile.uri,
+                            name: mediaFile.name,
+                            type: mediaFile.type,
+                        } as any);
+                        console.log('📎 Attaching media file:', mediaFile.name);
                     }
 
-                    // With media: use native fetch with FormData
-                    const formData = new FormData();
-                    formData.append('questionData', JSON.stringify(questionData));
-                    formData.append('mediaFile', {
-                        uri: mediaFile.uri,
-                        name: mediaFile.name,
-                        type: mediaFile.type,
-                    } as any);
+                    console.log('🚀 Sending request to /quiz/questions/with-media');
 
                     const response: Response = await fetch(
                         'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
@@ -292,6 +269,7 @@ export const quizApi = createApi({
                             headers: {
                                 'Accept': 'application/json',
                                 ...(token && { 'Authorization': `Bearer ${token}` }),
+                                // DON'T set Content-Type - let fetch set it with boundary for FormData
                             },
                             body: formData,
                         }
@@ -299,7 +277,7 @@ export const quizApi = createApi({
 
                     if (!response.ok) {
                         const errorText: string = await response.text();
-                        console.error('❌ Create question with media failed:', response.status, errorText);
+                        console.error('❌ Create question failed:', response.status, errorText);
                         return {
                             error: {
                                 status: response.status,
@@ -309,7 +287,7 @@ export const quizApi = createApi({
                     }
 
                     const data: QuizQuestion = await response.json();
-                    console.log('✅ Question created with media:', data);
+                    console.log('✅ Question created:', data.id, 'Type:', data.questionType);
                     return { data };
 
                 } catch (error) {

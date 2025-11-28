@@ -45,11 +45,18 @@ export interface QuestionFormData {
     topic?: string;
     additionalInfo?: string;
     questionType: QuestionType;
+    // DEPRECATED: Remove after migration - media is uploaded separately (old flow)
     media?: {
         mediaId: string;
         mediaUrl: string;
         mediaType: MediaType;
         thumbnailUrl?: string;
+    };
+    // NEW: Raw file for direct upload in atomic operation
+    mediaFile?: {
+        uri: string;
+        name: string;
+        type: string;
     };
 }
 
@@ -200,46 +207,45 @@ export const useQuestionsManager = () => {
     // ============================================================================
 
     /**
-     * ✅ FIXED: Unified handler for creating questions (text, image, video, audio)
-     * Media is ALREADY uploaded by MediaQuestionModal, so we just pass the IDs
+     * UNIFIED: Single method for creating questions with or without media
+     * Media file is uploaded together with question data in one atomic operation
      */
     const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
         try {
-            // Build question data with media info if available
+            console.log('📝 Creating question:', {
+                question: data.question.substring(0, 50),
+                questionType: data.questionType,
+                hasMediaFile: !!data.mediaFile,
+            });
+
+            // Build request data for backend
             const questionData: CreateQuizQuestionRequest = {
                 question: data.question,
                 answer: data.answer,
                 difficulty: data.difficulty,
                 topic: data.topic,
+                additionalInfo: data.additionalInfo,
                 visibility: QuestionVisibility.PRIVATE,
                 questionType: data.questionType,
-                // Include media info if media was already uploaded
-                ...(data.media && {
-                    questionMediaId: data.media.mediaId,
-                    questionMediaUrl: data.media.mediaUrl,
-                    questionMediaType: data.media.mediaType,
-                }),
             };
 
-            console.log('📝 Creating question with data:', questionData);
-
-            // ✅ FIX: Media is already uploaded by MediaQuestionModal
-            // Just create the question with media references (no file upload needed)
+            // ALWAYS use createQuestionWithMedia - it handles both cases
             const result = await createQuestion({
                 questionData,
-                mediaFile: undefined, // No re-upload needed - media already on server
+                mediaFile: data.mediaFile, // Pass raw file or undefined
             }).unwrap();
 
+            console.log('✅ Question created successfully:', result.id);
             Alert.alert('Success', 'Question created successfully!');
 
-            // Only refetch if user questions tab is active
+            // Refetch if on user questions tab
             if (questionSource === 'user') {
                 await refetchUserQuestions();
             }
 
             return result;
         } catch (error) {
-            console.error('Error creating question:', error);
+            console.error('❌ Error creating question:', error);
             Alert.alert('Error', 'Failed to create question. Please try again.');
             throw error;
         }
