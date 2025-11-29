@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionList.tsx
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
@@ -134,6 +134,51 @@ const QuestionList: React.FC<QuestionListProps> = ({
     const isLoading = questionSource === 'app' ? isLoadingApp : isLoadingUser;
 
     const difficulties: Array<APIDifficulty | 'ALL'> = ['ALL', 'EASY', 'MEDIUM', 'HARD'];
+
+    // Debug: Log questions data on mount and when props change
+    useEffect(() => {
+        console.log('📋 [QuestionList] Props received:', {
+            questionSource,
+            appQuestionsCount: appQuestions?.length ?? 0,
+            userQuestionsCount: userQuestions?.length ?? 0,
+            selectedAppIds: Array.from(selectedAppQuestionIds),
+            selectedUserIds: Array.from(selectedUserQuestionIds),
+            expandedIndices: Array.from(expandedQuestions),
+        });
+
+        // Log questions with media
+        const questionsWithMedia = (questionSource === 'app' ? appQuestions : userQuestions)
+            ?.filter(q => q.questionMediaUrl || q.questionMediaType) ?? [];
+
+        console.log('🎬 [QuestionList] Questions with media:', questionsWithMedia.map(q => ({
+            id: q.id,
+            mediaType: q.questionMediaType,
+            mediaUrl: q.questionMediaUrl?.substring(0, 80) + '...',
+            thumbnailUrl: q.questionThumbnailUrl?.substring(0, 80) + '...',
+            isValidUrl: isValidMediaUrl(q.questionMediaUrl),
+        })));
+    }, [questionSource, appQuestions, userQuestions, selectedAppQuestionIds, selectedUserQuestionIds, expandedQuestions]);
+
+    // Debug: Log when selection changes - show selected questions' media state
+    useEffect(() => {
+        const currentQuestions = questionSource === 'app' ? appQuestions : userQuestions;
+        const selectedIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
+
+        if (selectedIds.size > 0) {
+            const selectedQuestions = currentQuestions?.filter(q => selectedIds.has(q.id)) ?? [];
+            console.log('✅ [QuestionList] Selected questions media state:',
+                selectedQuestions.map(q => ({
+                    id: q.id,
+                    question: q.question?.substring(0, 40) + '...',
+                    hasMedia: !!q.questionMediaUrl,
+                    mediaType: q.questionMediaType ?? 'NONE',
+                    mediaUrl: q.questionMediaUrl ?? 'EMPTY',
+                    isPresignedUrl: q.questionMediaUrl?.includes('X-Amz-Signature') ?? false,
+                    isValidUrl: isValidMediaUrl(q.questionMediaUrl),
+                }))
+            );
+        }
+    }, [questionSource, appQuestions, userQuestions, selectedAppQuestionIds, selectedUserQuestionIds]);
 
     const renderTopicPicker = () => (
         <Modal
@@ -405,16 +450,29 @@ const QuestionList: React.FC<QuestionListProps> = ({
         const mediaUrl = question.questionMediaUrl;
         const thumbnailUrl = question.questionThumbnailUrl;
 
-        // Debug logging for media URLs (helps verify presigned URLs are received)
+        // Enhanced debug logging for media URLs
         if (hasMedia) {
-            console.log(`Question ${question.id} media: URL=${mediaUrl}, Type=${mediaType}, Thumbnail=${thumbnailUrl}`);
+            console.log(`🔍 [Question ${question.id}] Media debug:`, {
+                hasMedia,
+                mediaType,
+                mediaUrlLength: mediaUrl?.length ?? 0,
+                mediaUrlStart: mediaUrl?.substring(0, 100),
+                thumbnailUrlStart: thumbnailUrl?.substring(0, 100),
+                isValidMediaUrl: isValidMediaUrl(mediaUrl),
+                isValidThumbnailUrl: isValidMediaUrl(thumbnailUrl),
+                urlStartsWithHttp: mediaUrl?.startsWith('http'),
+                containsS3Signature: mediaUrl?.includes('X-Amz-'),
+                isSelected,
+                isExpanded,
+            });
 
-            // Validate that URLs are properly enriched presigned URLs
-            if (!isValidMediaUrl(mediaUrl)) {
-                console.warn(`⚠️ Question ${question.id}: Media URL is not a valid presigned URL (backend enrichment may have failed)`);
-            }
-            if (thumbnailUrl && !isValidMediaUrl(thumbnailUrl)) {
-                console.warn(`⚠️ Question ${question.id}: Thumbnail URL is not a valid presigned URL`);
+            // Specific warning if URL looks like an S3 key instead of presigned URL
+            if (mediaUrl && !mediaUrl.startsWith('http')) {
+                console.error(`❌ [Question ${question.id}] CRITICAL: mediaUrl is S3 key, not presigned URL!`, {
+                    rawUrl: mediaUrl,
+                    expectedFormat: 'https://minio.../bucket/key?X-Amz-Signature=...',
+                    possibleCause: 'Backend QuizQuestionDTOEnricher not enriching URLs with presigned signatures',
+                });
             }
         }
 
@@ -495,6 +553,19 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <Text style={styles.questionLabel}>Question:</Text>
                             <Text style={styles.questionText}>{question.question}</Text>
                         </View>
+
+                        {/* Log media rendering decision */}
+                        {(() => {
+                            console.log(`🎥 [Question ${question.id}] Media render decision:`, {
+                                hasMedia,
+                                mediaUrl: mediaUrl?.substring(0, 50),
+                                mediaType,
+                                isValidUrl: isValidMediaUrl(mediaUrl),
+                                willRenderViewer: hasMedia && mediaUrl && mediaType && isValidMediaUrl(mediaUrl),
+                                willShowError: hasMedia && !isValidMediaUrl(mediaUrl),
+                            });
+                            return null;
+                        })()}
 
                         {/* ✅ Integrated Media Viewer Component with URL validation */}
                         {hasMedia && mediaUrl && mediaType && isValidMediaUrl(mediaUrl) ? (
@@ -603,6 +674,19 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     </Text>
                     <ScrollView style={styles.questionsList} showsVerticalScrollIndicator={false}>
                         {questions.map((question, index) => renderQuestionItem(question, index))}
+
+                        {/* Debug: Summary log */}
+                        {(() => {
+                            const withMedia = questions?.filter(q => q.questionMediaUrl) ?? [];
+                            const withValidMedia = withMedia.filter(q => isValidMediaUrl(q.questionMediaUrl));
+                            console.log('📊 [QuestionList] Render summary:', {
+                                totalQuestions: questions?.length ?? 0,
+                                questionsWithMedia: withMedia.length,
+                                questionsWithValidUrls: withValidMedia.length,
+                                invalidUrlQuestions: withMedia.length - withValidMedia.length,
+                            });
+                            return null;
+                        })()}
                     </ScrollView>
                     {renderPagination()}
                 </>
