@@ -7,6 +7,7 @@ import {APIDifficulty} from '../../../services/wwwGame/questionService';
 interface QuizConfigFormProps {
     config: QuizConfig;
     teamMemberInput: string;
+    selectedQuestionsCount: number;
     onConfigChange: (config: QuizConfig) => void;
     onTeamMemberInputChange: (text: string) => void;
     onAddTeamMember: () => void;
@@ -16,68 +17,15 @@ interface QuizConfigFormProps {
 const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                                                            config,
                                                            teamMemberInput,
+                                                           selectedQuestionsCount,
                                                            onConfigChange,
                                                            onTeamMemberInputChange,
                                                            onAddTeamMember,
                                                            onRemoveTeamMember,
                                                        }) => {
-    const [roundCountInput, setRoundCountInput] = React.useState(
-        config?.roundCount?.toString() || '10'
-    );
-
-    // Sync roundCountInput when config changes
-    React.useEffect(() => {
-        if (config?.roundCount) {
-            setRoundCountInput(config.roundCount.toString());
-        }
-    }, [config?.roundCount]);
-
     const updateConfig = (updates: Partial<QuizConfig>) => {
         if (!config) return;
         onConfigChange({ ...config, ...updates });
-    };
-
-    const handleRoundCountChange = (text: string) => {
-        if (!config) return;
-        // Allow empty string or valid numbers only
-        if (text === '' || /^\d+$/.test(text)) {
-            setRoundCountInput(text);
-
-            // Parse and validate the number
-            if (text !== '') {
-                const numValue = parseInt(text, 10);
-                // Apply bounds: minimum 1, maximum 50
-                const boundedValue = Math.max(1, Math.min(50, numValue));
-                updateConfig({ roundCount: boundedValue });
-            }
-        }
-    };
-
-    const handleRoundCountBlur = () => {
-        if (!config) return;
-        // On blur, ensure we have a valid value
-        if (roundCountInput === '' || parseInt(roundCountInput, 10) < 1) {
-            const defaultValue = 1;
-            setRoundCountInput(defaultValue.toString());
-            updateConfig({ roundCount: defaultValue });
-        } else {
-            // Ensure the input matches the actual value (in case of bounds adjustment)
-            setRoundCountInput((config.roundCount || 10).toString());
-        }
-    };
-
-    const incrementRoundCount = () => {
-        if (!config) return;
-        const newValue = Math.min(50, (config.roundCount || 0) + 1);
-        setRoundCountInput(newValue.toString());
-        updateConfig({ roundCount: newValue });
-    };
-
-    const decrementRoundCount = () => {
-        if (!config) return;
-        const newValue = Math.max(1, (config.roundCount || 1) - 1);
-        setRoundCountInput(newValue.toString());
-        updateConfig({ roundCount: newValue });
     };
 
     // Use APIDifficulty type (uppercase values)
@@ -202,32 +150,15 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                 </View>
             </View>
 
-            {/* Round Count - NOW MANUALLY EDITABLE */}
+            {/* Selected Questions Count - READ ONLY */}
             <View style={styles.section}>
-                <Text style={styles.label}>Number of Questions *</Text>
-                <Text style={styles.helperText}>Enter 1-50 questions</Text>
-                <View style={styles.timeContainer}>
-                    <TouchableOpacity
-                        onPress={decrementRoundCount}
-                        style={styles.timeButton}
-                    >
-                        <Text style={styles.timeButtonText}>-</Text>
-                    </TouchableOpacity>
-                    <TextInput
-                        style={styles.roundCountInput}
-                        value={roundCountInput}
-                        onChangeText={handleRoundCountChange}
-                        onBlur={handleRoundCountBlur}
-                        keyboardType="number-pad"
-                        maxLength={2}
-                        selectTextOnFocus
-                    />
-                    <TouchableOpacity
-                        onPress={incrementRoundCount}
-                        style={styles.timeButton}
-                    >
-                        <Text style={styles.timeButtonText}>+</Text>
-                    </TouchableOpacity>
+                <Text style={styles.label}>Number of Questions</Text>
+                <View style={[styles.infoBox, selectedQuestionsCount === 0 && styles.warningBox]}>
+                    <Text style={[styles.infoText, selectedQuestionsCount === 0 && styles.warningText]}>
+                        {selectedQuestionsCount === 0
+                            ? 'No questions selected - choose questions below'
+                            : `${selectedQuestionsCount} question${selectedQuestionsCount !== 1 ? 's' : ''} selected`}
+                    </Text>
                 </View>
             </View>
 
@@ -290,7 +221,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                 <Text style={styles.summaryText}>• Members: {config?.teamMembers?.length || 0}</Text>
                 <Text style={styles.summaryText}>• Difficulty: {config?.difficulty ? formatDifficultyDisplay(config.difficulty) : 'Not set'}</Text>
                 <Text style={styles.summaryText}>• Time per question: {config?.roundTime || 60}s</Text>
-                <Text style={styles.summaryText}>• Total questions: {config?.roundCount || 10}</Text>
+                <Text style={styles.summaryText}>• Total questions: {selectedQuestionsCount}</Text>
                 <Text style={styles.summaryText}>• AI Host: {config?.enableAIHost ? 'Yes' : 'No'}</Text>
                 <Text style={styles.summaryText}>• Team Based: {config?.teamBased ? 'Yes' : 'No'}</Text>
             </View>
@@ -332,6 +263,14 @@ const styles = StyleSheet.create({
     infoText: {
         fontSize: 16,
         color: '#666',
+    },
+    warningBox: {
+        backgroundColor: '#fff3cd',
+        borderColor: '#ffc107',
+        borderWidth: 1,
+    },
+    warningText: {
+        color: '#856404',
     },
     memberRow: {
         flexDirection: 'row',
@@ -425,18 +364,6 @@ const styles = StyleSheet.create({
         color: '#333',
         minWidth: 80,
         textAlign: 'center',
-    },
-    roundCountInput: {
-        fontSize: 24,
-        fontWeight: '600',
-        color: '#333',
-        minWidth: 80,
-        textAlign: 'center',
-        borderWidth: 2,
-        borderColor: '#2196F3',
-        borderRadius: 8,
-        padding: 8,
-        backgroundColor: '#fff',
     },
     toggleRow: {
         flexDirection: 'row',

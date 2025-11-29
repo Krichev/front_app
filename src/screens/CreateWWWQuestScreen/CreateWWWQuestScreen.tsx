@@ -155,6 +155,7 @@ const CreateWWWQuestScreen = () => {
                 <QuizConfigForm
                     config={questCreator.quizConfig}
                     teamMemberInput={questCreator.teamMemberInput}
+                    selectedQuestionsCount={totalSelectedQuestions}
                     onConfigChange={questCreator.setQuizConfig}
                     onTeamMemberInputChange={questCreator.setTeamMemberInput}
                     onAddTeamMember={questCreator.addTeamMember}

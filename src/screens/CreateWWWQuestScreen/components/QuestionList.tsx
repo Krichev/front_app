@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionList.tsx
-import React from 'react';
+import React, {useState} from 'react';
 import {ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
@@ -40,6 +40,16 @@ interface QuestionListProps {
     availableTopics: string[];
     isLoadingTopics: boolean;
 }
+
+/**
+ * Validate that media URL is a proper presigned URL (not an S3 key)
+ * Presigned URLs should start with http:// or https://
+ * S3 keys that weren't enriched will be relative paths like "quiz-questions/123/image.jpg"
+ */
+const isValidMediaUrl = (url?: string): boolean => {
+    if (!url || url.trim() === '') return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+};
 
 /**
  * Helper function to get the appropriate icon for media type
@@ -295,13 +305,28 @@ const QuestionList: React.FC<QuestionListProps> = ({
     );
 
     /**
-     * Render collapsed media thumbnail for question header
+     * Render collapsed media thumbnail for question header with loading/error states
      */
-    const renderMediaThumbnail = (question: QuizQuestion) => {
-        if (!question.questionMediaUrl) return null;
+    const MediaThumbnail: React.FC<{question: QuizQuestion}> = ({question}) => {
+        const [isLoading, setIsLoading] = useState(true);
+        const [hasError, setHasError] = useState(false);
 
         const mediaType = question.questionMediaType;
         const thumbnailUrl = question.questionThumbnailUrl || question.questionMediaUrl;
+
+        // Validate URL before attempting to render
+        if (!isValidMediaUrl(thumbnailUrl)) {
+            console.warn(`Question ${question.id}: Invalid media URL (S3 key not enriched?): ${thumbnailUrl}`);
+            return (
+                <View style={styles.mediaThumbnailPlaceholder}>
+                    <MaterialCommunityIcons
+                        name="alert-circle"
+                        size={24}
+                        color="#FF9800"
+                    />
+                </View>
+            );
+        }
 
         // Show image thumbnail for images, or video thumbnail if available
         if (mediaType === MediaType.IMAGE || (mediaType === MediaType.VIDEO && question.questionThumbnailUrl)) {
@@ -311,14 +336,40 @@ const QuestionList: React.FC<QuestionListProps> = ({
                         source={{ uri: thumbnailUrl }}
                         style={styles.mediaThumbnail}
                         resizeMode="cover"
+                        onLoadStart={() => {
+                            setIsLoading(true);
+                            setHasError(false);
+                        }}
+                        onLoadEnd={() => setIsLoading(false)}
+                        onError={(error) => {
+                            console.error(`Question ${question.id}: Failed to load thumbnail:`, error.nativeEvent.error);
+                            setIsLoading(false);
+                            setHasError(true);
+                        }}
                     />
-                    <View style={styles.mediaTypeOverlay}>
-                        <MaterialCommunityIcons
-                            name={getMediaIcon(mediaType)}
-                            size={12}
-                            color="#fff"
-                        />
-                    </View>
+                    {isLoading && (
+                        <View style={styles.thumbnailLoadingOverlay}>
+                            <ActivityIndicator size="small" color="#007AFF" />
+                        </View>
+                    )}
+                    {hasError && (
+                        <View style={styles.thumbnailErrorOverlay}>
+                            <MaterialCommunityIcons
+                                name="image-broken"
+                                size={20}
+                                color="#F44336"
+                            />
+                        </View>
+                    )}
+                    {!hasError && !isLoading && (
+                        <View style={styles.mediaTypeOverlay}>
+                            <MaterialCommunityIcons
+                                name={getMediaIcon(mediaType)}
+                                size={12}
+                                color="#fff"
+                            />
+                        </View>
+                    )}
                 </View>
             );
         }
@@ -335,6 +386,14 @@ const QuestionList: React.FC<QuestionListProps> = ({
         );
     };
 
+    /**
+     * Render collapsed media thumbnail for question header
+     */
+    const renderMediaThumbnail = (question: QuizQuestion) => {
+        if (!question.questionMediaUrl) return null;
+        return <MediaThumbnail question={question} />;
+    };
+
     const renderQuestionItem = (question: QuizQuestion, index: number) => {
         const isSelected = selectedQuestionIds?.has(question.id);
         const isAnswerVisible = visibleAnswers?.has(question.id);
@@ -345,10 +404,19 @@ const QuestionList: React.FC<QuestionListProps> = ({
         const mediaType = question.questionMediaType;
         const mediaUrl = question.questionMediaUrl;
         const thumbnailUrl = question.questionThumbnailUrl;
-        //
-        // console.log("mediaUrl" + mediaUrl);
-        // console.log("mediaType" + mediaType);
-        // console.log("thumbnailUrl" + thumbnailUrl);
+
+        // Debug logging for media URLs (helps verify presigned URLs are received)
+        if (hasMedia) {
+            console.log(`Question ${question.id} media: URL=${mediaUrl}, Type=${mediaType}, Thumbnail=${thumbnailUrl}`);
+
+            // Validate that URLs are properly enriched presigned URLs
+            if (!isValidMediaUrl(mediaUrl)) {
+                console.warn(`⚠️ Question ${question.id}: Media URL is not a valid presigned URL (backend enrichment may have failed)`);
+            }
+            if (thumbnailUrl && !isValidMediaUrl(thumbnailUrl)) {
+                console.warn(`⚠️ Question ${question.id}: Thumbnail URL is not a valid presigned URL`);
+            }
+        }
 
         return (
             <View key={question.id} style={styles.questionCard}>
@@ -428,8 +496,8 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <Text style={styles.questionText}>{question.question}</Text>
                         </View>
 
-                        {/* ✅ NEW: Integrated Media Viewer Component */}
-                        {hasMedia && mediaUrl && mediaType && (
+                        {/* ✅ Integrated Media Viewer Component with URL validation */}
+                        {hasMedia && mediaUrl && mediaType && isValidMediaUrl(mediaUrl) ? (
                             <View style={styles.mediaSection}>
                                 <QuestionMediaViewer
                                     mediaUrl={mediaUrl}
@@ -439,7 +507,14 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     enableFullscreen={true}
                                 />
                             </View>
-                        )}
+                        ) : hasMedia && !isValidMediaUrl(mediaUrl) ? (
+                            <View style={styles.mediaErrorSection}>
+                                <MaterialCommunityIcons name="alert-circle" size={32} color="#F44336" />
+                                <Text style={styles.mediaErrorText}>
+                                    Media URL is invalid or expired. Please refresh the question list.
+                                </Text>
+                            </View>
+                        ) : null}
 
                         <View style={styles.answerContainer}>
                             <View style={styles.answerHeader}>
@@ -693,6 +768,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 12,
     },
+    thumbnailLoadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    thumbnailErrorOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: '#FFEBEE',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 8,
+    },
     mediaTypeOverlay: {
         position: 'absolute',
         bottom: 2,
@@ -781,6 +878,21 @@ const styles = StyleSheet.create({
     },
     mediaSection: {
         marginBottom: 16,
+    },
+    mediaErrorSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFEBEE',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 16,
+        gap: 12,
+    },
+    mediaErrorText: {
+        flex: 1,
+        fontSize: 14,
+        color: '#F44336',
+        lineHeight: 20,
     },
     answerContainer: {
         marginBottom: 16,
