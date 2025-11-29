@@ -1,9 +1,9 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionList.tsx
 import React from 'react';
-import {ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
-import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi.ts";
+import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi";
 import QuestionMediaViewer from './QuestionMediaViewer';
 
 interface QuestionListProps {
@@ -294,6 +294,47 @@ const QuestionList: React.FC<QuestionListProps> = ({
         </View>
     );
 
+    /**
+     * Render collapsed media thumbnail for question header
+     */
+    const renderMediaThumbnail = (question: QuizQuestion) => {
+        if (!question.questionMediaUrl) return null;
+
+        const mediaType = question.questionMediaType;
+        const thumbnailUrl = question.questionThumbnailUrl || question.questionMediaUrl;
+
+        // Show image thumbnail for images, or video thumbnail if available
+        if (mediaType === MediaType.IMAGE || (mediaType === MediaType.VIDEO && question.questionThumbnailUrl)) {
+            return (
+                <View style={styles.mediaThumbnailContainer}>
+                    <Image
+                        source={{ uri: thumbnailUrl }}
+                        style={styles.mediaThumbnail}
+                        resizeMode="cover"
+                    />
+                    <View style={styles.mediaTypeOverlay}>
+                        <MaterialCommunityIcons
+                            name={getMediaIcon(mediaType)}
+                            size={12}
+                            color="#fff"
+                        />
+                    </View>
+                </View>
+            );
+        }
+
+        // Audio or video without thumbnail - show icon placeholder
+        return (
+            <View style={styles.mediaThumbnailPlaceholder}>
+                <MaterialCommunityIcons
+                    name={getMediaIcon(mediaType)}
+                    size={24}
+                    color={getMediaColor(mediaType)}
+                />
+            </View>
+        );
+    };
+
     const renderQuestionItem = (question: QuizQuestion, index: number) => {
         const isSelected = selectedQuestionIds?.has(question.id);
         const isAnswerVisible = visibleAnswers?.has(question.id);
@@ -325,6 +366,9 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                 <MaterialCommunityIcons name="check" size={18} color="#fff"/>
                             )}
                         </TouchableOpacity>
+
+                        {/* Media Thumbnail - shown when collapsed and media exists */}
+                        {!isExpanded && renderMediaThumbnail(question)}
 
                         <View style={styles.questionInfo}>
                             {question.difficulty && (
@@ -629,6 +673,33 @@ const styles = StyleSheet.create({
     },
     checkboxSelected: {
         backgroundColor: '#007AFF',
+    },
+    mediaThumbnailContainer: {
+        position: 'relative',
+        marginRight: 12,
+    },
+    mediaThumbnail: {
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        backgroundColor: '#f5f5f5',
+    },
+    mediaThumbnailPlaceholder: {
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        backgroundColor: '#f0f0f0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    mediaTypeOverlay: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 10,
+        padding: 2,
     },
     questionInfo: {
         flex: 1,
