@@ -5,6 +5,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
 import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi";
 import QuestionMediaViewer from './QuestionMediaViewer';
+import AuthenticatedImage from '../../../components/AuthenticatedImage';
 
 interface QuestionListProps {
     questionSource: QuestionSource;
@@ -351,17 +352,14 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
     /**
      * Render collapsed media thumbnail for question header with loading/error states
+     * Uses AuthenticatedImage with proxy URLs - no more direct MinIO URLs!
      */
     const MediaThumbnail: React.FC<{question: QuizQuestion}> = ({question}) => {
-        const [isLoading, setIsLoading] = useState(true);
-        const [hasError, setHasError] = useState(false);
-
         const mediaType = question.questionMediaType;
-        const thumbnailUrl = question.questionThumbnailUrl || question.questionMediaUrl;
 
-        // Validate URL before attempting to render
-        if (!isValidMediaUrl(thumbnailUrl)) {
-            console.warn(`Question ${question.id}: Invalid media URL (S3 key not enriched?): ${thumbnailUrl}`);
+        // Must have question.id for proxy URL
+        if (!question.id) {
+            console.warn('MediaThumbnail: Question has no ID');
             return (
                 <View style={styles.mediaThumbnailPlaceholder}>
                     <MaterialCommunityIcons
@@ -373,53 +371,45 @@ const QuestionList: React.FC<QuestionListProps> = ({
             );
         }
 
-        // Show image thumbnail for images, or video thumbnail if available
-        if (mediaType === MediaType.IMAGE || (mediaType === MediaType.VIDEO && question.questionThumbnailUrl)) {
+        // Show image thumbnail for images and videos
+        if (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO) {
             return (
                 <View style={styles.mediaThumbnailContainer}>
-                    <Image
-                        source={{ uri: thumbnailUrl }}
+                    <AuthenticatedImage
+                        questionId={question.id}
+                        isThumbnail={true}
                         style={styles.mediaThumbnail}
-                        resizeMode="cover"
-                        onLoadStart={() => {
-                            setIsLoading(true);
-                            setHasError(false);
-                        }}
-                        onLoadEnd={() => setIsLoading(false)}
-                        onError={(error) => {
-                            console.error(`Question ${question.id}: Failed to load thumbnail:`, error.nativeEvent.error);
-                            setIsLoading(false);
-                            setHasError(true);
-                        }}
+                        containerStyle={styles.mediaThumbnailWrapper}
+                        fallbackIcon={getMediaIcon(mediaType)}
+                        fallbackIconSize={20}
+                        fallbackIconColor={getMediaColor(mediaType)}
                     />
-                    {isLoading && (
-                        <View style={styles.thumbnailLoadingOverlay}>
-                            <ActivityIndicator size="small" color="#007AFF" />
-                        </View>
-                    )}
-                    {hasError && (
-                        <View style={styles.thumbnailErrorOverlay}>
-                            <MaterialCommunityIcons
-                                name="image-broken"
-                                size={20}
-                                color="#F44336"
-                            />
-                        </View>
-                    )}
-                    {!hasError && !isLoading && (
-                        <View style={styles.mediaTypeOverlay}>
-                            <MaterialCommunityIcons
-                                name={getMediaIcon(mediaType)}
-                                size={12}
-                                color="#fff"
-                            />
-                        </View>
-                    )}
+                    {/* Media type indicator overlay */}
+                    <View style={styles.mediaTypeOverlay}>
+                        <MaterialCommunityIcons
+                            name={getMediaIcon(mediaType)}
+                            size={12}
+                            color="#fff"
+                        />
+                    </View>
                 </View>
             );
         }
 
-        // Audio or video without thumbnail - show icon placeholder
+        // Audio - show icon placeholder
+        if (mediaType === MediaType.AUDIO) {
+            return (
+                <View style={styles.mediaThumbnailPlaceholder}>
+                    <MaterialCommunityIcons
+                        name="music"
+                        size={24}
+                        color="#9C27B0"
+                    />
+                </View>
+            );
+        }
+
+        // Unknown type - show generic icon
         return (
             <View style={styles.mediaThumbnailPlaceholder}>
                 <MaterialCommunityIcons
@@ -567,22 +557,21 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             return null;
                         })()}
 
-                        {/* ✅ Integrated Media Viewer Component with URL validation */}
-                        {hasMedia && mediaUrl && mediaType && isValidMediaUrl(mediaUrl) ? (
+                        {/* ✅ Integrated Media Viewer Component with proxy URLs */}
+                        {hasMedia && mediaType && question.id ? (
                             <View style={styles.mediaSection}>
                                 <QuestionMediaViewer
-                                    mediaUrl={mediaUrl}
+                                    questionId={question.id}
                                     mediaType={mediaType}
-                                    thumbnailUrl={thumbnailUrl}
                                     compact={false}
                                     enableFullscreen={true}
                                 />
                             </View>
-                        ) : hasMedia && !isValidMediaUrl(mediaUrl) ? (
+                        ) : hasMedia && !question.id ? (
                             <View style={styles.mediaErrorSection}>
                                 <MaterialCommunityIcons name="alert-circle" size={32} color="#F44336" />
                                 <Text style={styles.mediaErrorText}>
-                                    Media URL is invalid or expired. Please refresh the question list.
+                                    Cannot load media: Question ID missing.
                                 </Text>
                             </View>
                         ) : null}
@@ -836,6 +825,12 @@ const styles = StyleSheet.create({
     mediaThumbnailContainer: {
         position: 'relative',
         marginRight: 12,
+    },
+    mediaThumbnailWrapper: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 6,
+        overflow: 'hidden',
     },
     mediaThumbnail: {
         width: 48,
