@@ -86,7 +86,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
                     questionId={questionId}
                     mediaId={mediaId}
                     uri={mediaUrl}
-                    containerStyle={[containerStyle, style]}
+                    containerStyle={style}
                     style={{ height, width: width || '100%' }}
                     resizeMode={resizeMode === 'cover' ? 'cover' : resizeMode === 'contain' ? 'contain' : 'stretch'}
                     onLoad={onLoad}
@@ -100,7 +100,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
                     questionId={questionId}
                     mediaId={mediaId}
                     uri={mediaUrl}
-                    containerStyle={[containerStyle, style]}
+                    containerStyle={style}
                     style={{ height }}
                     useNativeControls={showControls}
                     shouldPlay={autoPlay}

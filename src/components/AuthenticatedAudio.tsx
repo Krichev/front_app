@@ -1,5 +1,5 @@
 // src/components/AuthenticatedAudio.tsx
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
     View,
     StyleSheet,
@@ -8,7 +8,7 @@ import {
     ViewStyle,
     ActivityIndicator
 } from 'react-native';
-import { Audio, AVPlaybackStatus } from 'expo-av';
+import Video, { VideoRef, OnLoadData, OnProgressData } from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Slider from '@react-native-community/slider';
 import MediaUrlService from '../services/media/MediaUrlService';
@@ -19,14 +19,13 @@ interface AuthenticatedAudioProps {
     uri?: string;
     style?: ViewStyle;
     showWaveform?: boolean;
-    onPlaybackStatusUpdate?: (status: AVPlaybackStatus) => void;
     onLoad?: () => void;
     onError?: (error: any) => void;
 }
 
 /**
  * Audio component that handles authentication for media proxy
- * Uses expo-av Audio API with auth headers
+ * Uses react-native-video in audio mode with custom controls
  */
 const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
     questionId,
@@ -34,11 +33,10 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
     uri,
     style,
     showWaveform = false,
-    onPlaybackStatusUpdate,
     onLoad,
     onError,
 }) => {
-    const soundRef = useRef<Audio.Sound | null>(null);
+    const audioRef = useRef<VideoRef>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -46,6 +44,7 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
     const [position, setPosition] = useState(0);
     const [hasError, setHasError] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [isSeeking, setIsSeeking] = useState(false);
 
     const mediaService = MediaUrlService.getInstance();
 
@@ -72,113 +71,60 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
 
     const audioUrl = getAudioUrl();
 
-    // Cleanup on unmount
-    useEffect(() => {
-        return () => {
-            if (soundRef.current) {
-                soundRef.current.unloadAsync().catch(console.error);
-            }
-        };
+    const handleLoad = useCallback((data: OnLoadData) => {
+        setDuration(data.duration);
+        setIsLoaded(true);
+        setIsLoading(false);
+        setHasError(false);
+        onLoad?.();
+    }, [onLoad]);
+
+    const handleProgress = useCallback((data: OnProgressData) => {
+        if (!isSeeking) {
+            setPosition(data.currentTime);
+        }
+    }, [isSeeking]);
+
+    const handleEnd = useCallback(() => {
+        setIsPlaying(false);
+        setPosition(0);
+        audioRef.current?.seek(0);
     }, []);
 
-    const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-        if (status.isLoaded) {
-            setIsPlaying(status.isPlaying);
-            setDuration(status.durationMillis || 0);
-            setPosition(status.positionMillis || 0);
+    const handleError = useCallback((error: any) => {
+        const errorMsg = error?.error?.errorString || 'Unknown error';
+        console.error('🎵 Failed to load audio:', errorMsg, 'URL:', audioUrl);
+        setIsLoading(false);
+        setHasError(true);
+        setErrorMessage(errorMsg);
+        onError?.({ message: errorMsg, url: audioUrl });
+    }, [audioUrl, onError]);
 
-            // Auto-reset when finished
-            if (status.didJustFinish && !status.isLooping) {
-                setIsPlaying(false);
-                setPosition(0);
-            }
-        }
-        onPlaybackStatusUpdate?.(status);
-    }, [onPlaybackStatusUpdate]);
-
-    const loadAudio = useCallback(async () => {
-        if (!audioUrl) return false;
-
-        try {
+    const togglePlayPause = useCallback(() => {
+        if (!isLoaded) {
             setIsLoading(true);
-            setHasError(false);
-            setErrorMessage('');
-
-            // Unload previous sound if exists
-            if (soundRef.current) {
-                await soundRef.current.unloadAsync();
-                soundRef.current = null;
-            }
-
-            // Set audio mode for playback
-            await Audio.setAudioModeAsync({
-                allowsRecordingIOS: false,
-                playsInSilentModeIOS: true,
-                staysActiveInBackground: false,
-                shouldDuckAndroid: true,
-            });
-
-            // Create and load the sound
-            const { sound } = await Audio.Sound.createAsync(
-                {
-                    uri: audioUrl,
-                    headers: mediaService.getAuthHeaders(),
-                },
-                { shouldPlay: false },
-                handlePlaybackStatusUpdate
-            );
-
-            soundRef.current = sound;
-            setIsLoaded(true);
-            setIsLoading(false);
-            onLoad?.();
-            return true;
-
-        } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            console.error('🎵 Failed to load audio:', errorMsg, 'URL:', audioUrl);
-            setIsLoading(false);
-            setHasError(true);
-            setErrorMessage(errorMsg);
-            onError?.({ message: errorMsg, url: audioUrl });
-            return false;
-        }
-    }, [audioUrl, mediaService, handlePlaybackStatusUpdate, onLoad, onError]);
-
-    const togglePlayPause = useCallback(async () => {
-        // Load audio if not loaded yet
-        if (!isLoaded && !isLoading) {
-            const loaded = await loadAudio();
-            if (loaded && soundRef.current) {
-                await soundRef.current.playAsync();
-            }
+            // The video will start loading on mount
             return;
         }
 
-        if (!soundRef.current) return;
+        setIsPlaying(!isPlaying);
+    }, [isLoaded, isPlaying]);
 
-        if (isPlaying) {
-            await soundRef.current.pauseAsync();
-        } else {
-            // If at the end, restart from beginning
-            if (position >= duration - 100) {
-                await soundRef.current.setPositionAsync(0);
-            }
-            await soundRef.current.playAsync();
-        }
-    }, [isLoaded, isLoading, isPlaying, position, duration, loadAudio]);
+    const handleSeek = useCallback((value: number) => {
+        setIsSeeking(true);
+        setPosition(value);
+    }, []);
 
-    const handleSeek = useCallback(async (value: number) => {
-        if (soundRef.current && isLoaded) {
-            await soundRef.current.setPositionAsync(value);
-        }
-    }, [isLoaded]);
+    const handleSlidingComplete = useCallback((value: number) => {
+        audioRef.current?.seek(value);
+        setIsSeeking(false);
+    }, []);
 
-    const formatTime = (millis: number): string => {
-        const totalSeconds = Math.floor(millis / 1000);
+    const formatTime = (seconds: number): string => {
+        const totalSeconds = Math.floor(seconds);
         const minutes = Math.floor(totalSeconds / 60);
-        const seconds = totalSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const secs = totalSeconds % 60;
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
     };
 
     // No valid URL - show error
@@ -197,7 +143,10 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
             <View style={[styles.container, styles.errorContainer, style]}>
                 <MaterialCommunityIcons name="music-off" size={32} color="#F44336" />
                 <Text style={styles.errorText}>Failed to load audio</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={loadAudio}>
+                <TouchableOpacity style={styles.retryButton} onPress={() => {
+                    setHasError(false);
+                    setIsLoading(true);
+                }}>
                     <Text style={styles.retryText}>Tap to retry</Text>
                 </TouchableOpacity>
             </View>
@@ -206,6 +155,23 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
 
     return (
         <View style={[styles.container, style]}>
+            {/* Hidden video component for audio playback */}
+            <Video
+                ref={audioRef}
+                source={{
+                    uri: audioUrl,
+                    headers: mediaService.getAuthHeaders(),
+                }}
+                paused={!isPlaying}
+                onLoad={handleLoad}
+                onProgress={handleProgress}
+                onEnd={handleEnd}
+                onError={handleError}
+                style={{ height: 0, width: 0 }}
+                playInBackground={false}
+                playWhenInactive={false}
+            />
+
             {/* Play/Pause Button */}
             <TouchableOpacity
                 style={styles.playButton}
@@ -232,7 +198,8 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
                     minimumValue={0}
                     maximumValue={duration || 1}
                     value={position}
-                    onSlidingComplete={handleSeek}
+                    onValueChange={handleSeek}
+                    onSlidingComplete={handleSlidingComplete}
                     minimumTrackTintColor="#007AFF"
                     maximumTrackTintColor="#ddd"
                     thumbTintColor="#007AFF"

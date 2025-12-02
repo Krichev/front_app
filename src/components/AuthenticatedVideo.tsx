@@ -8,7 +8,7 @@ import {
     ViewStyle,
     Text
 } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import Video, { VideoRef, OnLoadData, OnProgressData } from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MediaUrlService from '../services/media/MediaUrlService';
 
@@ -18,19 +18,19 @@ interface AuthenticatedVideoProps {
     uri?: string;
     style?: ViewStyle;
     containerStyle?: ViewStyle;
-    resizeMode?: ResizeMode;
+    resizeMode?: 'contain' | 'cover' | 'stretch' | 'none';
     shouldPlay?: boolean;
     isLooping?: boolean;
     useNativeControls?: boolean;
     showPlayButton?: boolean;
-    onPlaybackStatusUpdate?: (status: AVPlaybackStatus) => void;
-    onLoad?: () => void;
+    onProgress?: (data: OnProgressData) => void;
+    onLoad?: (data: OnLoadData) => void;
     onError?: (error: any) => void;
 }
 
 /**
  * Video component that handles authentication for media proxy
- * Uses expo-av Video with auth headers in source
+ * Uses react-native-video (bare RN compatible) with auth headers
  */
 const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
     questionId,
@@ -38,16 +38,16 @@ const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
     uri,
     style,
     containerStyle,
-    resizeMode = ResizeMode.CONTAIN,
+    resizeMode = 'contain',
     shouldPlay = false,
     isLooping = false,
     useNativeControls = true,
     showPlayButton = true,
-    onPlaybackStatusUpdate,
+    onProgress,
     onLoad,
     onError,
 }) => {
-    const videoRef = useRef<Video>(null);
+    const videoRef = useRef<VideoRef>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [hasError, setHasError] = useState(false);
     const [isPlaying, setIsPlaying] = useState(shouldPlay);
@@ -82,41 +82,39 @@ const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
 
     const videoUrl = getVideoUrl();
 
-    const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-        if (status.isLoaded) {
-            setIsLoading(false);
-            setIsPlaying(status.isPlaying);
-            setHasError(false);
-        } else if (status.error) {
-            setHasError(true);
-            setErrorMessage(status.error);
-            setIsLoading(false);
-        }
-        onPlaybackStatusUpdate?.(status);
-    }, [onPlaybackStatusUpdate]);
-
-    const handleLoad = useCallback(() => {
+    const handleLoad = useCallback((data: OnLoadData) => {
         setIsLoading(false);
         setHasError(false);
-        onLoad?.();
+        onLoad?.(data);
     }, [onLoad]);
 
-    const handleError = useCallback((error: string) => {
+    const handleError = useCallback((error: any) => {
         setIsLoading(false);
         setHasError(true);
-        setErrorMessage(error);
-        console.error('🎬 Video playback error:', error, 'URL:', videoUrl);
-        onError?.({ message: error, url: videoUrl });
+        const errorMsg = error?.error?.errorString || 'Unknown error';
+        setErrorMessage(errorMsg);
+        console.error('🎬 Video playback error:', errorMsg, 'URL:', videoUrl);
+        onError?.({ message: errorMsg, url: videoUrl });
     }, [onError, videoUrl]);
 
-    const togglePlayPause = useCallback(async () => {
-        if (videoRef.current) {
-            if (isPlaying) {
-                await videoRef.current.pauseAsync();
-            } else {
-                await videoRef.current.playAsync();
-            }
+    const handleProgress = useCallback((data: OnProgressData) => {
+        // Update playing state based on actual playback
+        onProgress?.(data);
+    }, [onProgress]);
+
+    const handleEnd = useCallback(() => {
+        if (!isLooping) {
+            setIsPlaying(false);
         }
+    }, [isLooping]);
+
+    const togglePlayPause = useCallback(() => {
+        if (isPlaying) {
+            videoRef.current?.pause();
+        } else {
+            videoRef.current?.resume();
+        }
+        setIsPlaying(!isPlaying);
     }, [isPlaying]);
 
     // No valid URL - show fallback
@@ -141,12 +139,13 @@ const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
                             headers: mediaService.getAuthHeaders(),
                         }}
                         resizeMode={resizeMode}
-                        shouldPlay={shouldPlay}
-                        isLooping={isLooping}
-                        useNativeControls={useNativeControls}
-                        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+                        paused={!isPlaying}
+                        repeat={isLooping}
+                        controls={useNativeControls}
                         onLoad={handleLoad}
-                        onError={(e) => handleError(e)}
+                        onError={handleError}
+                        onProgress={handleProgress}
+                        onEnd={handleEnd}
                     />
 
                     {/* Custom play button overlay when not using native controls */}

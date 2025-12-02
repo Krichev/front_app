@@ -2,7 +2,7 @@
   "extends": "@react-native/typescript-config/tsconfig.json",
   "compilerOptions": {
     "module": "esnext", // Enable ES module syntax
-    "moduleResolution": "node", // Use Node.js-style module resolution
+    "moduleResolution": "bundler", // Use bundler resolution for React Native
     "target": "es2020", // Optional: Match your React Native version
     "esModuleInterop": true // Recommended for compatibility
   }
