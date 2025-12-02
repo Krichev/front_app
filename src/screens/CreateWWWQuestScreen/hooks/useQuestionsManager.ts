@@ -212,10 +212,11 @@ export const useQuestionsManager = () => {
      */
     const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
         try {
-            console.log('📝 Creating question:', {
-                question: data.question.substring(0, 50),
+            console.log('📝 handleUnifiedQuestionSubmit called:', {
+                question: data.question.substring(0, 30) + '...',
                 questionType: data.questionType,
                 hasMediaFile: !!data.mediaFile,
+                mediaFileUri: data.mediaFile?.uri?.substring(0, 50),
             });
 
             // Build request data for backend
@@ -229,13 +230,15 @@ export const useQuestionsManager = () => {
                 questionType: data.questionType,
             };
 
+            console.log('🚀 Calling createQuestion mutation with mediaFile:', !!data.mediaFile);
+
             // ALWAYS use createQuestionWithMedia - it handles both cases
             const result = await createQuestion({
                 questionData,
                 mediaFile: data.mediaFile, // Pass raw file or undefined
             }).unwrap();
 
-            console.log('✅ Question created successfully:', result.id);
+            console.log('✅ Question created successfully:', result.id, 'mediaId:', result.questionMediaId);
             Alert.alert('Success', 'Question created successfully!');
 
             // Refetch if on user questions tab

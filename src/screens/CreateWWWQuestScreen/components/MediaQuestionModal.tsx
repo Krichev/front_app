@@ -221,6 +221,14 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
         const questionType = getQuestionType();
 
+        // Log the file info being submitted
+        console.log('🎬 Selected media for submission:', selectedMedia ? {
+            uri: selectedMedia.uri,
+            name: selectedMedia.name,
+            type: selectedMedia.type,
+            size: selectedMedia.size,
+        } : 'none');
+
         // Build question data with raw file info (no pre-upload)
         const questionData: QuestionFormData = {
             question: question.trim(),
@@ -237,9 +245,10 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             } : undefined,
         };
 
-        console.log('📝 Submitting question with file:', {
-            ...questionData,
-            mediaFile: questionData.mediaFile ? { name: questionData.mediaFile.name } : undefined
+        console.log('📝 Submitting question:', {
+            questionType: questionData.questionType,
+            hasMediaFile: !!questionData.mediaFile,
+            mediaFileName: questionData.mediaFile?.name,
         });
 
         onSubmit(questionData);

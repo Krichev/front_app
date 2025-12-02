@@ -4,6 +4,7 @@ import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
 import {CreateQuizQuestionRequest, QuestionVisibility} from "../types/question.types";
 import {RootStateForApi} from '../../../../app/providers/StoreProvider/storeTypes';
+import {Platform} from 'react-native';
 
 // ============================================================================
 // TYPES
@@ -252,15 +253,36 @@ export const quizApi = createApi({
 
                     // Append media file if provided
                     if (mediaFile) {
-                        formData.append('mediaFile', {
-                            uri: mediaFile.uri,
-                            name: mediaFile.name,
-                            type: mediaFile.type,
-                        } as any);
-                        console.log('📎 Attaching media file:', mediaFile.name);
+                        // Ensure URI has proper prefix for Android
+                        let fileUri = mediaFile.uri;
+                        if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+                            fileUri = 'file://' + fileUri;
+                        }
+
+                        // React Native FormData requires this specific format
+                        const fileObject = {
+                            uri: fileUri,
+                            name: mediaFile.name || `media_${Date.now()}.${mediaFile.type.split('/')[1] || 'mp4'}`,
+                            type: mediaFile.type || 'video/mp4',
+                        };
+
+                        formData.append('mediaFile', fileObject as any);
+
+                        console.log('📎 Attaching media file:', JSON.stringify({
+                            name: fileObject.name,
+                            type: fileObject.type,
+                            originalUri: mediaFile.uri,
+                            processedUri: fileUri,
+                            platform: Platform.OS
+                        }));
+                    } else {
+                        console.log('⚠️ No media file provided');
                     }
 
-                    console.log('🚀 Sending request to /quiz/questions/with-media');
+                    console.log('🚀 Sending request to /quiz/questions/with-media', {
+                        hasMedia: !!mediaFile,
+                        platform: Platform.OS
+                    });
 
                     const response: Response = await fetch(
                         'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
