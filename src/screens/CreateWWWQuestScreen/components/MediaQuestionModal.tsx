@@ -26,6 +26,7 @@ interface MediaQuestionModalProps {
     onClose: () => void;
     onSubmit: (questionData: QuestionFormData) => void;
     availableTopics: string[];
+    isSubmitting?: boolean;
 }
 
 // ============================================================================
@@ -37,6 +38,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                                    onClose,
                                                                    onSubmit,
                                                                    availableTopics,
+                                                                   isSubmitting = false,
                                                                }) => {
     // Form state
     const [question, setQuestion] = useState('');
@@ -48,6 +50,8 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
+    const [isSelectingMedia, setIsSelectingMedia] = useState(false);
+    const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
 
     /**
      * Determine question type based on selected media (IMPLICIT)
@@ -97,14 +101,25 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      */
     const handleImagePick = async () => {
         try {
+            setIsSelectingMedia(true);
+            setMediaSelectionType('image');
             const result = await FileService.pickImage();
             if (result) {
-                console.log('📷 Image selected:', result.name);
+                // Validate file
+                const validation = FileService.validateFile(result);
+                if (!validation.isValid) {
+                    Alert.alert('Invalid File', validation.error || 'Please select a valid image');
+                    return;
+                }
+                console.log('📷 Image selected:', result.name, result.sizeFormatted);
                 setSelectedMedia(result);
             }
         } catch (error) {
             console.error('Error picking image:', error);
             Alert.alert('Error', 'Failed to pick image. Please try again.');
+        } finally {
+            setIsSelectingMedia(false);
+            setMediaSelectionType(null);
         }
     };
 
@@ -113,14 +128,25 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      */
     const handleVideoPick = async () => {
         try {
+            setIsSelectingMedia(true);
+            setMediaSelectionType('video');
             const result = await FileService.pickVideo();
             if (result) {
-                console.log('🎥 Video selected:', result.name);
+                // Validate file
+                const validation = FileService.validateFile(result);
+                if (!validation.isValid) {
+                    Alert.alert('Invalid File', validation.error || 'Please select a valid video');
+                    return;
+                }
+                console.log('🎥 Video selected:', result.name, result.sizeFormatted);
                 setSelectedMedia(result);
             }
         } catch (error) {
             console.error('Error picking video:', error);
             Alert.alert('Error', 'Failed to pick video. Please try again.');
+        } finally {
+            setIsSelectingMedia(false);
+            setMediaSelectionType(null);
         }
     };
 
@@ -129,14 +155,25 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      */
     const handleAudioPick = async () => {
         try {
+            setIsSelectingMedia(true);
+            setMediaSelectionType('audio');
             const result = await FileService.pickAudio();
             if (result) {
-                console.log('🎵 Audio selected:', result.name);
+                // Validate file
+                const validation = FileService.validateFile(result);
+                if (!validation.isValid) {
+                    Alert.alert('Invalid File', validation.error || 'Please select a valid audio');
+                    return;
+                }
+                console.log('🎵 Audio selected:', result.name, result.sizeFormatted);
                 setSelectedMedia(result);
             }
         } catch (error) {
             console.error('Error picking audio:', error);
             Alert.alert('Error', 'Failed to pick audio. Please try again.');
+        } finally {
+            setIsSelectingMedia(false);
+            setMediaSelectionType(null);
         }
     };
 
@@ -274,24 +311,29 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 )}
 
                 {/* Video/Audio Placeholder */}
-                {(currentQuestionType === 'VIDEO' || currentQuestionType === 'AUDIO') && (
+                {(currentQuestionType === 'VIDEO' || currentQuestionType === 'AUDIO') && selectedMedia && (
                     <View style={styles.mediaPlaceholder}>
                         <MaterialCommunityIcons
                             name={currentQuestionType === 'VIDEO' ? 'video' : 'music'}
                             size={48}
                             color="#007AFF"
                         />
-                        <Text style={styles.mediaPlaceholderText}>
+                        <Text style={styles.mediaPlaceholderText} numberOfLines={2}>
                             {selectedMedia.name}
                         </Text>
                         <Text style={styles.mediaFileSize}>
-                            {(selectedMedia.size / 1024 / 1024).toFixed(2)} MB
+                            {selectedMedia.sizeFormatted || `${(selectedMedia.size / 1024 / 1024).toFixed(2)} MB`}
                         </Text>
+                        <View style={styles.mediaTypeBadge}>
+                            <Text style={styles.mediaTypeBadgeText}>
+                                {selectedMedia.type?.split('/')[1]?.toUpperCase() || currentQuestionType}
+                            </Text>
+                        </View>
                     </View>
                 )}
 
                 {/* Media Status Badge */}
-                <View style={styles.mediaStatusContainer}>
+                <View style={styles.mediaStatusBadge}>
                     <MaterialCommunityIcons
                         name="file-upload"
                         size={16}
@@ -324,12 +366,16 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             <View style={styles.container}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={handleClose}>
-                        <MaterialCommunityIcons name="close" size={24} color="#007AFF"/>
+                    <TouchableOpacity onPress={handleClose} disabled={isSubmitting}>
+                        <MaterialCommunityIcons name="close" size={24} color={isSubmitting ? "#999" : "#007AFF"}/>
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Add Question</Text>
-                    <TouchableOpacity onPress={handleSubmit}>
-                        <Text style={styles.saveButton}>Save</Text>
+                    <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? (
+                            <ActivityIndicator size="small" color="#007AFF" />
+                        ) : (
+                            <Text style={styles.saveButton}>Save</Text>
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -339,24 +385,39 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                         <Text style={styles.sectionTitle}>Add Media (Optional)</Text>
                         <View style={styles.mediaButtonsContainer}>
                             <TouchableOpacity
-                                style={styles.mediaButton}
+                                style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
                                 onPress={() => handleSelectMedia('image')}
+                                disabled={isSelectingMedia}
                             >
-                                <MaterialCommunityIcons name="image" size={24} color="#007AFF" />
+                                {isSelectingMedia && mediaSelectionType === 'image' ? (
+                                    <ActivityIndicator size="small" color="#007AFF" />
+                                ) : (
+                                    <MaterialCommunityIcons name="image" size={24} color="#007AFF" />
+                                )}
                                 <Text style={styles.mediaButtonText}>Image</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.mediaButton}
+                                style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
                                 onPress={() => handleSelectMedia('video')}
+                                disabled={isSelectingMedia}
                             >
-                                <MaterialCommunityIcons name="video" size={24} color="#007AFF" />
+                                {isSelectingMedia && mediaSelectionType === 'video' ? (
+                                    <ActivityIndicator size="small" color="#007AFF" />
+                                ) : (
+                                    <MaterialCommunityIcons name="video" size={24} color="#007AFF" />
+                                )}
                                 <Text style={styles.mediaButtonText}>Video</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.mediaButton}
+                                style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
                                 onPress={() => handleSelectMedia('audio')}
+                                disabled={isSelectingMedia}
                             >
-                                <MaterialCommunityIcons name="music" size={24} color="#007AFF" />
+                                {isSelectingMedia && mediaSelectionType === 'audio' ? (
+                                    <ActivityIndicator size="small" color="#007AFF" />
+                                ) : (
+                                    <MaterialCommunityIcons name="music" size={24} color="#007AFF" />
+                                )}
                                 <Text style={styles.mediaButtonText}>Audio</Text>
                             </TouchableOpacity>
                         </View>
@@ -543,6 +604,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E5E5E5',
     },
+    mediaButtonDisabled: {
+        opacity: 0.5,
+    },
     mediaButtonText: {
         fontSize: 12,
         color: '#007AFF',
@@ -597,6 +661,18 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#999',
         marginTop: 4,
+    },
+    mediaTypeBadge: {
+        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 12,
+    },
+    mediaTypeBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#666',
     },
     progressContainer: {
         marginTop: 12,
