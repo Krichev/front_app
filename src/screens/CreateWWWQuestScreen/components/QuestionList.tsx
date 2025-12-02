@@ -797,18 +797,21 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        overflow: 'hidden',
     },
     questionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 16,
+        minHeight: 72,
     },
     questionHeaderLeft: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        overflow: 'hidden',
     },
     checkbox: {
         width: 24,
@@ -823,13 +826,17 @@ const styles = StyleSheet.create({
         backgroundColor: '#007AFF',
     },
     mediaThumbnailContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 8,
+        overflow: 'hidden',
+        backgroundColor: '#f5f5f5',
         position: 'relative',
-        marginRight: 12,
     },
     mediaThumbnailWrapper: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 6,
+        width: 48,
+        height: 48,
+        borderRadius: 8,
         overflow: 'hidden',
     },
     mediaThumbnail: {
@@ -845,7 +852,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#f0f0f0',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
     },
     thumbnailLoadingOverlay: {
         position: 'absolute',
@@ -879,16 +885,18 @@ const styles = StyleSheet.create({
     },
     questionInfo: {
         flex: 1,
+        flexShrink: 1,
+        minWidth: 0,
         flexDirection: 'row',
         flexWrap: 'wrap',
         alignItems: 'center',
         gap: 8,
     },
     questionPreviewText: {
-        flex: 1,
         fontSize: 14,
         color: '#333',
         lineHeight: 20,
+        flexShrink: 1,
     },
     difficultyBadge: {
         paddingHorizontal: 10,
