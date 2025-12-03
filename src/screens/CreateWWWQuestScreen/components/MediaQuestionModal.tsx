@@ -221,15 +221,18 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
         const questionType = getQuestionType();
 
-        // Log the file info being submitted
-        console.log('🎬 Selected media for submission:', selectedMedia ? {
-            uri: selectedMedia.uri,
+        // DETAILED LOGGING for debugging
+        console.log('🎬 [MediaQuestionModal] handleSubmit called');
+        console.log('🎬 [MediaQuestionModal] selectedMedia:', selectedMedia ? {
+            uri: selectedMedia.uri?.substring(0, 100),
             name: selectedMedia.name,
             type: selectedMedia.type,
             size: selectedMedia.size,
-        } : 'none');
+            isVideo: selectedMedia.type?.startsWith('video/'),
+        } : 'null');
+        console.log('🎬 [MediaQuestionModal] Detected questionType:', questionType);
 
-        // Build question data with raw file info (no pre-upload)
+        // Build question data
         const questionData: QuestionFormData = {
             question: question.trim(),
             answer: answer.trim(),
@@ -237,19 +240,15 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             topic: topic.trim(),
             additionalInfo: additionalInfo.trim(),
             questionType,
-            // Pass raw file info - backend will handle upload
+            // CRITICAL: Pass the raw file info for the mutation to handle
             mediaFile: selectedMedia ? {
                 uri: selectedMedia.uri,
-                name: selectedMedia.name,
-                type: selectedMedia.type,
+                name: selectedMedia.name || `media_${Date.now()}.${selectedMedia.type?.split('/')[1] || 'mp4'}`,
+                type: selectedMedia.type || 'video/mp4',
             } : undefined,
         };
 
-        console.log('📝 Submitting question:', {
-            questionType: questionData.questionType,
-            hasMediaFile: !!questionData.mediaFile,
-            mediaFileName: questionData.mediaFile?.name,
-        });
+        console.log('📤 [MediaQuestionModal] Submitting with mediaFile:', !!questionData.mediaFile);
 
         onSubmit(questionData);
         handleReset();

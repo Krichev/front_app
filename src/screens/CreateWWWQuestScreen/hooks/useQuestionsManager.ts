@@ -212,14 +212,16 @@ export const useQuestionsManager = () => {
      */
     const handleUnifiedQuestionSubmit = async (data: QuestionFormData) => {
         try {
-            console.log('📝 handleUnifiedQuestionSubmit called:', {
-                question: data.question.substring(0, 30) + '...',
+            console.log('📝 [useQuestionsManager] handleUnifiedQuestionSubmit:', {
+                question: data.question.substring(0, 30),
                 questionType: data.questionType,
                 hasMediaFile: !!data.mediaFile,
                 mediaFileUri: data.mediaFile?.uri?.substring(0, 50),
+                mediaFileName: data.mediaFile?.name,
+                mediaFileType: data.mediaFile?.type,
             });
 
-            // Build request data for backend
+            // Build request for backend
             const questionData: CreateQuizQuestionRequest = {
                 question: data.question,
                 answer: data.answer,
@@ -230,25 +232,34 @@ export const useQuestionsManager = () => {
                 questionType: data.questionType,
             };
 
-            console.log('🚀 Calling createQuestion mutation with mediaFile:', !!data.mediaFile);
+            console.log('🚀 [useQuestionsManager] Calling createQuestion mutation');
+            console.log('🚀 [useQuestionsManager] mediaFile:', data.mediaFile ? {
+                uri: data.mediaFile.uri?.substring(0, 50),
+                name: data.mediaFile.name,
+                type: data.mediaFile.type,
+            } : 'undefined');
 
-            // ALWAYS use createQuestionWithMedia - it handles both cases
+            // Call the mutation
             const result = await createQuestion({
                 questionData,
-                mediaFile: data.mediaFile, // Pass raw file or undefined
+                mediaFile: data.mediaFile, // Pass raw file
             }).unwrap();
 
-            console.log('✅ Question created successfully:', result.id, 'mediaId:', result.questionMediaId);
+            console.log('✅ [useQuestionsManager] Question created:', {
+                id: result.id,
+                questionType: result.questionType,
+                mediaId: result.questionMediaId,
+            });
+
             Alert.alert('Success', 'Question created successfully!');
 
-            // Refetch if on user questions tab
             if (questionSource === 'user') {
                 await refetchUserQuestions();
             }
 
             return result;
         } catch (error) {
-            console.error('❌ Error creating question:', error);
+            console.error('❌ [useQuestionsManager] Error:', error);
             Alert.alert('Error', 'Failed to create question. Please try again.');
             throw error;
         }

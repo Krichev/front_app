@@ -251,55 +251,74 @@ export const quizApi = createApi({
                     // Append question data as JSON blob
                     formData.append('questionData', JSON.stringify(questionData));
 
-                    // Append media file if provided
-                    if (mediaFile) {
-                        // Ensure URI has proper prefix for Android
+                    // CRITICAL FIX: Properly format file for React Native
+                    if (mediaFile && mediaFile.uri) {
+                        // Normalize URI for the platform
                         let fileUri = mediaFile.uri;
-                        if (Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
-                            fileUri = 'file://' + fileUri;
+
+                        // Android content:// URIs should work as-is
+                        // Android file:// URIs should work as-is
+                        // If it's a bare path, add file:// prefix
+                        if (Platform.OS === 'android') {
+                            if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+                                fileUri = 'file://' + fileUri;
+                            }
                         }
 
-                        // React Native FormData requires this specific format
-                        const fileObject = {
+                        // iOS URIs typically work as-is
+                        // But if they start with 'ph://' (Photos), we need to handle differently
+                        // For now, assume the URI from FileService is already correct
+
+                        // Determine file extension and type
+                        const fileName = mediaFile.name || `video_${Date.now()}.mp4`;
+                        const mimeType = mediaFile.type || 'video/mp4';
+
+                        // CRITICAL: This is the React Native FormData format
+                        const file = {
                             uri: fileUri,
-                            name: mediaFile.name || `media_${Date.now()}.${mediaFile.type.split('/')[1] || 'mp4'}`,
-                            type: mediaFile.type || 'video/mp4',
+                            type: mimeType,
+                            name: fileName,
                         };
 
-                        formData.append('mediaFile', fileObject as any);
+                        console.log('📎 [createQuestionWithMedia] Attaching file:', {
+                            uri: fileUri.substring(0, 100) + '...',
+                            type: mimeType,
+                            name: fileName,
+                            platform: Platform.OS,
+                        });
 
-                        console.log('📎 Attaching media file:', JSON.stringify({
-                            name: fileObject.name,
-                            type: fileObject.type,
-                            originalUri: mediaFile.uri,
-                            processedUri: fileUri,
-                            platform: Platform.OS
-                        }));
+                        // Append as 'mediaFile' to match @RequestPart("mediaFile")
+                        formData.append('mediaFile', file as any);
                     } else {
-                        console.log('⚠️ No media file provided');
+                        console.log('⚠️ [createQuestionWithMedia] No media file to attach');
                     }
 
-                    console.log('🚀 Sending request to /quiz/questions/with-media', {
-                        hasMedia: !!mediaFile,
-                        platform: Platform.OS
+                    // Log the request
+                    console.log('🚀 [createQuestionWithMedia] Sending request:', {
+                        url: 'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
+                        hasToken: !!token,
+                        hasMediaFile: !!mediaFile,
+                        questionType: questionData.questionType,
                     });
 
-                    const response: Response = await fetch(
+                    const response = await fetch(
                         'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
                         {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
                                 ...(token && { 'Authorization': `Bearer ${token}` }),
-                                // DON'T set Content-Type - let fetch set it with boundary for FormData
+                                // DO NOT set Content-Type - fetch will set it with boundary
                             },
                             body: formData,
                         }
                     );
 
+                    console.log('📬 [createQuestionWithMedia] Response status:', response.status);
+
                     if (!response.ok) {
-                        const errorText: string = await response.text();
-                        console.error('❌ Create question failed:', response.status, errorText);
+                        const errorText = await response.text();
+                        console.error('❌ [createQuestionWithMedia] Failed:', response.status, errorText);
                         return {
                             error: {
                                 status: response.status,
@@ -309,11 +328,17 @@ export const quizApi = createApi({
                     }
 
                     const data: QuizQuestion = await response.json();
-                    console.log('✅ Question created:', data.id, 'Type:', data.questionType);
+                    console.log('✅ [createQuestionWithMedia] Success:', {
+                        id: data.id,
+                        questionType: data.questionType,
+                        mediaId: data.questionMediaId,
+                        mediaUrl: data.questionMediaUrl?.substring(0, 50),
+                    });
+
                     return { data };
 
                 } catch (error) {
-                    console.error('❌ createQuestionWithMedia exception:', error);
+                    console.error('❌ [createQuestionWithMedia] Exception:', error);
                     return {
                         error: {
                             status: 'FETCH_ERROR',
