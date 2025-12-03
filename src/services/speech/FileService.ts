@@ -194,30 +194,56 @@ export class FileService {
                 ? parseInt(Platform.Version, 10)
                 : Platform.Version;
 
+            console.log('📱 [FileService] Android version:', androidVersion);
+
             if (androidVersion >= 33) {
-                const readGranted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES
-                );
-                const videoGranted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO
-                );
-                return readGranted === PermissionsAndroid.RESULTS.GRANTED ||
-                    videoGranted === PermissionsAndroid.RESULTS.GRANTED;
+                // Android 13+ requires granular media permissions
+                console.log('📱 [FileService] Requesting Android 13+ media permissions...');
+
+                const permissions = [
+                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+                    PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+                ];
+
+                const results = await PermissionsAndroid.requestMultiple(permissions);
+
+                console.log('📱 [FileService] Permission results:', results);
+
+                const imageGranted = results[PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES] === PermissionsAndroid.RESULTS.GRANTED;
+                const videoGranted = results[PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO] === PermissionsAndroid.RESULTS.GRANTED;
+                const audioGranted = results[PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
+
+                // Return true if at least video or image permission is granted
+                const hasPermission = imageGranted || videoGranted;
+
+                if (!hasPermission) {
+                    console.warn('📱 [FileService] Media permissions denied');
+                }
+
+                return hasPermission;
             }
+
+            // Android 12 and below
+            console.log('📱 [FileService] Requesting legacy storage permission...');
 
             const granted = await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
                 {
                     title: 'Storage Permission',
-                    message: 'App needs access to your storage',
+                    message: 'App needs access to your storage to select media files',
                     buttonNeutral: 'Ask Me Later',
                     buttonNegative: 'Cancel',
                     buttonPositive: 'OK',
                 }
             );
-            return granted === PermissionsAndroid.RESULTS.GRANTED;
+
+            const hasPermission = granted === PermissionsAndroid.RESULTS.GRANTED;
+            console.log('📱 [FileService] Storage permission:', hasPermission ? 'granted' : 'denied');
+
+            return hasPermission;
         } catch (err) {
-            console.warn('Storage permission error:', err);
+            console.error('📱 [FileService] Storage permission error:', err);
             return false;
         }
     }
@@ -317,24 +343,37 @@ export class FileService {
                     {
                         text: 'Record Video',
                         onPress: async () => {
-                            const hasPermission = await this.requestCameraPermission();
-                            if (!hasPermission) {
-                                Alert.alert('Permission Denied', 'Camera permission is required');
+                            // Request BOTH camera and audio permissions for video recording
+                            const hasCameraPermission = await this.requestCameraPermission();
+                            const hasMicPermission = await this.requestMicrophonePermission();
+
+                            if (!hasCameraPermission) {
+                                Alert.alert('Permission Denied', 'Camera permission is required to record video');
                                 resolve(null);
                                 return;
                             }
+
+                            if (!hasMicPermission) {
+                                Alert.alert('Permission Denied', 'Microphone permission is required to record video with audio');
+                                // Continue anyway - some users may want silent video
+                            }
+
+                            console.log('🎬 [FileService] Launching camera for video recording...');
 
                             const cameraOptions: CameraOptions = {
                                 mediaType: 'video',
                                 quality,
                                 includeBase64,
                                 videoQuality: 'high',
+                                durationLimit: 300, // 5 minutes max
+                                saveToPhotos: false, // Don't save to gallery, just return the file
+                                cameraType: 'back',
+                                formatAsMp4: true, // Ensure MP4 format
                             };
 
-                            launchCamera(
-                                cameraOptions,
-                                this.handleVideoPickerResponse.bind(this, resolve)
-                            );
+                            launchCamera(cameraOptions, (response) => {
+                                this.handleVideoPickerResponse(resolve, response);
+                            });
                         },
                     },
                     {
@@ -342,21 +381,23 @@ export class FileService {
                         onPress: async () => {
                             const hasPermission = await this.requestStoragePermission();
                             if (!hasPermission) {
-                                Alert.alert('Permission Denied', 'Storage permission is required');
+                                Alert.alert('Permission Denied', 'Storage permission is required to select videos');
                                 resolve(null);
                                 return;
                             }
+
+                            console.log('🎬 [FileService] Launching gallery for video selection...');
 
                             const libraryOptions: ImageLibraryOptions = {
                                 mediaType: 'video',
                                 quality,
                                 includeBase64,
+                                selectionLimit: 1,
                             };
 
-                            launchImageLibrary(
-                                libraryOptions,
-                                this.handleVideoPickerResponse.bind(this, resolve)
-                            );
+                            launchImageLibrary(libraryOptions, (response) => {
+                                this.handleVideoPickerResponse(resolve, response);
+                            });
                         },
                     },
                     {
@@ -578,22 +619,46 @@ export class FileService {
         resolve: (value: ProcessedFileInfo | null) => void,
         response: ImagePickerResponse
     ): void {
-        if (response.didCancel || response.errorMessage) {
+        console.log('🎬 [FileService] Video picker response:', {
+            didCancel: response.didCancel,
+            errorCode: response.errorCode,
+            errorMessage: response.errorMessage,
+            assetsCount: response.assets?.length || 0,
+        });
+
+        if (response.didCancel) {
+            console.log('🎬 [FileService] Video selection cancelled by user');
+            resolve(null);
+            return;
+        }
+
+        if (response.errorCode || response.errorMessage) {
+            console.error('🎬 [FileService] Video picker error:', response.errorCode, response.errorMessage);
+            Alert.alert('Error', response.errorMessage || 'Failed to capture video');
             resolve(null);
             return;
         }
 
         const asset = response.assets?.[0];
-        if (!asset) {
+        if (!asset || !asset.uri) {
+            console.error('🎬 [FileService] No video asset in response');
             resolve(null);
             return;
         }
+
+        console.log('🎬 [FileService] Video asset:', {
+            uri: asset.uri?.substring(0, 100),
+            fileName: asset.fileName,
+            type: asset.type,
+            fileSize: asset.fileSize,
+            duration: asset.duration,
+        });
 
         const fileInfo: FileInfo = {
             name: asset.fileName || `video_${Date.now()}.mp4`,
             size: asset.fileSize || 0,
             type: asset.type || 'video/mp4',
-            uri: asset.uri || '',
+            uri: asset.uri,
             width: asset.width,
             height: asset.height,
             ctime: Date.now(),
@@ -604,11 +669,13 @@ export class FileService {
         const validation = this.validateFile(processedFile);
 
         if (!validation.isValid) {
+            console.error('🎬 [FileService] Video validation failed:', validation.error);
             Alert.alert('Invalid File', validation.error || 'File validation failed');
             resolve(null);
             return;
         }
 
+        console.log('🎬 [FileService] Video processed successfully:', processedFile.name);
         resolve(processedFile);
     }
 

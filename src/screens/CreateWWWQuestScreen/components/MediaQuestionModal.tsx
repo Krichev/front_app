@@ -15,7 +15,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
-import {MediaType, QuestionType} from "../../../services/wwwGame/questionService";
+import {QuestionType} from "../../../services/wwwGame/questionService";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -128,6 +128,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      */
     const handleVideoPick = async () => {
         try {
+            console.log('🎥 Video start');
             setIsSelectingMedia(true);
             setMediaSelectionType('video');
             const result = await FileService.pickVideo();
