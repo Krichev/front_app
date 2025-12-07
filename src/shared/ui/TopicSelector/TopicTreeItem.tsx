@@ -1,12 +1,18 @@
 // src/shared/ui/TopicSelector/TopicTreeItem.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    StyleSheet,
+    ActivityIndicator,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { TopicTreeNode } from '../../../entities/TopicState/model/types/topic.types';
+import { Topic } from '../../../entities/TopicState/model/types/topic.types';
 import ValidationStatusBadge from '../ValidationStatusBadge/ValidationStatusBadge';
 
 interface TopicTreeItemProps {
-    topic: TopicTreeNode & { level: number; isExpanded: boolean };
+    topic: Topic & { level: number; isExpanded: boolean; isLoading: boolean };
     isSelected: boolean;
     onPress: () => void;
     onToggleExpand: () => void;
@@ -31,14 +37,21 @@ const TopicTreeItem: React.FC<TopicTreeItemProps> = ({
             {hasChildren ? (
                 <TouchableOpacity
                     style={styles.chevronButton}
-                    onPress={onToggleExpand}
+                    onPress={(e) => {
+                        e?.stopPropagation?.();
+                        onToggleExpand();
+                    }}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                    <MaterialCommunityIcons
-                        name={topic.isExpanded ? 'chevron-down' : 'chevron-right'}
-                        size={20}
-                        color="#666"
-                    />
+                    {topic.isLoading ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                    ) : (
+                        <MaterialCommunityIcons
+                            name={topic.isExpanded ? 'chevron-down' : 'chevron-right'}
+                            size={20}
+                            color="#666"
+                        />
+                    )}
                 </TouchableOpacity>
             ) : (
                 <View style={styles.chevronPlaceholder} />

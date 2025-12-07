@@ -4,3 +4,4 @@ export { default as TopicTreeItem } from './TopicTreeItem';
 export { default as TopicBreadcrumb } from './TopicBreadcrumb';
 export { default as CreateTopicModal } from './CreateTopicModal';
 export { useTopicTree } from './hooks/useTopicTree';
+export { useLazyTopicTree } from './hooks/useLazyTopicTree';

@@ -14,11 +14,11 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { SelectableTopic } from '../../../entities/TopicState/model/types/topic.types';
 import {
-    useGetTopicTreeQuery,
+    useGetRootTopicsQuery,
     useGetSelectableTopicsQuery,
     useCreateTopicMutation,
 } from '../../../entities/TopicState/model/slice/topicApi';
-import { useTopicTree } from './hooks/useTopicTree';
+import { useLazyTopicTree } from './hooks/useLazyTopicTree';
 import TopicTreeItem from './TopicTreeItem';
 import TopicBreadcrumb from './TopicBreadcrumb';
 import CreateTopicModal from './CreateTopicModal';
@@ -50,11 +50,11 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
     const [createModalVisible, setCreateModalVisible] = useState(false);
 
     // Fetch topics from API
-    const { data: topicTree = [], isLoading: isLoadingTree } = useGetTopicTreeQuery();
+    const { data: rootTopics = [], isLoading: isLoadingRoots } = useGetRootTopicsQuery();
     const { data: selectableTopics = [], isLoading: isLoadingSelectable } = useGetSelectableTopicsQuery();
     const [createTopic, { isLoading: isCreating }] = useCreateTopicMutation();
 
-    // Tree state management
+    // Tree state management with lazy loading
     const {
         flattenedTopics,
         searchTerm,
@@ -64,7 +64,7 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
         selectTopic,
         clearSelection,
         findTopicById,
-    } = useTopicTree(topicTree);
+    } = useLazyTopicTree(rootTopics);
 
     // Initialize selected ID from props
     useEffect(() => {
@@ -128,7 +128,7 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
     };
 
     const renderItem = ({ item }: any) => {
-        const hasChildren = item.children && item.children.length > 0;
+        const hasChildren = (item.childCount ?? 0) > 0;
 
         return (
             <TopicTreeItem
@@ -215,7 +215,7 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
                     </View>
 
                     {/* Topic tree */}
-                    {isLoadingTree || isLoadingSelectable ? (
+                    {isLoadingRoots || isLoadingSelectable ? (
                         <View style={styles.loadingContainer}>
                             <ActivityIndicator size="large" color="#007AFF" />
                             <Text style={styles.loadingText}>Loading topics...</Text>

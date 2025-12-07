@@ -86,6 +86,7 @@ export const {
     useGetSelectableTopicsQuery,
     useGetTopicByIdQuery,
     useGetTopicChildrenQuery,
+    useLazyGetTopicChildrenQuery,
     useSearchTopicsQuery,
     useCreateTopicMutation,
     useGetRootTopicsQuery,
