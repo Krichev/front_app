@@ -1,5 +1,5 @@
 // src/shared/ui/TopicSelector/CreateTopicModal.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Modal,
     View,
@@ -12,13 +12,21 @@ import {
     ScrollView,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { CreateTopicRequest } from '../../../entities/TopicState/model/types/topic.types';
+import {
+    CreateTopicRequest,
+    Topic,
+} from '../../../entities/TopicState/model/types/topic.types';
+import {
+    useGetRootTopicsQuery,
+    useLazyGetTopicChildrenQuery,
+} from '../../../entities/TopicState/model/slice/topicApi';
 
 interface CreateTopicModalProps {
     visible: boolean;
     onClose: () => void;
     onSubmit: (topic: CreateTopicRequest) => void;
     initialParentId?: number;
+    initialParentName?: string;
     isLoading?: boolean;
 }
 
@@ -27,10 +35,82 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
     onClose,
     onSubmit,
     initialParentId,
+    initialParentName,
     isLoading = false,
 }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+
+    // Parent selection state
+    const [selectedParentId, setSelectedParentId] = useState<number | undefined>(initialParentId);
+    const [selectedParentName, setSelectedParentName] = useState<string>(initialParentName || '');
+    const [selectedParentPath, setSelectedParentPath] = useState<string>('');
+    const [showParentSelector, setShowParentSelector] = useState(false);
+
+    // Tree state for parent selection
+    const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+    const [loadingIds, setLoadingIds] = useState<Set<number>>(new Set());
+    const [loadedChildren, setLoadedChildren] = useState<Map<number, Topic[]>>(new Map());
+
+    // RTK Query hooks
+    const { data: rootTopics = [], isLoading: isLoadingRoots } = useGetRootTopicsQuery(undefined, {
+        skip: !showParentSelector,
+    });
+    const [fetchChildren] = useLazyGetTopicChildrenQuery();
+
+    // Initialize from props when modal becomes visible
+    useEffect(() => {
+        if (visible) {
+            setSelectedParentId(initialParentId);
+            setSelectedParentName(initialParentName || '');
+        }
+    }, [visible, initialParentId, initialParentName]);
+
+    // Toggle expand and load children
+    const handleToggleExpand = async (topicId: number) => {
+        if (expandedIds.has(topicId)) {
+            // Collapse
+            setExpandedIds(prev => {
+                const next = new Set(prev);
+                next.delete(topicId);
+                return next;
+            });
+        } else {
+            // Expand - load children if needed
+            if (!loadedChildren.has(topicId)) {
+                setLoadingIds(prev => new Set(prev).add(topicId));
+                try {
+                    const children = await fetchChildren(topicId).unwrap();
+                    setLoadedChildren(prev => new Map(prev).set(topicId, children));
+                } catch (error) {
+                    console.error('Failed to load children:', error);
+                } finally {
+                    setLoadingIds(prev => {
+                        const next = new Set(prev);
+                        next.delete(topicId);
+                        return next;
+                    });
+                }
+            }
+            setExpandedIds(prev => new Set(prev).add(topicId));
+        }
+    };
+
+    // Select parent topic
+    const handleSelectParent = (topic: Topic) => {
+        setSelectedParentId(topic.id);
+        setSelectedParentName(topic.name);
+        // Build path from parent names if available
+        setSelectedParentPath(topic.parentName ? `${topic.parentName} > ${topic.name}` : topic.name);
+        setShowParentSelector(false);
+    };
+
+    // Clear parent selection
+    const handleClearParent = () => {
+        setSelectedParentId(undefined);
+        setSelectedParentName('');
+        setSelectedParentPath('');
+    };
 
     const handleSubmit = () => {
         // Validate name
@@ -53,7 +133,7 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
         const request: CreateTopicRequest = {
             name: name.trim(),
             description: description.trim() || undefined,
-            parentId: initialParentId,
+            parentId: selectedParentId,
         };
 
         onSubmit(request);
@@ -62,7 +142,106 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
     const handleClose = () => {
         setName('');
         setDescription('');
+        setSelectedParentId(initialParentId);
+        setSelectedParentName(initialParentName || '');
+        setSelectedParentPath('');
+        setShowParentSelector(false);
+        setExpandedIds(new Set());
+        setLoadedChildren(new Map());
         onClose();
+    };
+
+    // Inline component for rendering tree nodes
+    interface ParentTreeNodeProps {
+        topic: Topic;
+        level: number;
+        selectedId?: number;
+        expandedIds: Set<number>;
+        loadingIds: Set<number>;
+        loadedChildren: Map<number, Topic[]>;
+        onSelect: (topic: Topic) => void;
+        onToggleExpand: (id: number) => void;
+    }
+
+    const ParentTreeNode: React.FC<ParentTreeNodeProps> = ({
+        topic,
+        level,
+        selectedId,
+        expandedIds,
+        loadingIds,
+        loadedChildren,
+        onSelect,
+        onToggleExpand,
+    }) => {
+        const isExpanded = expandedIds.has(topic.id);
+        const isLoading = loadingIds.has(topic.id);
+        const isSelected = selectedId === topic.id;
+        const hasChildren = (topic.childCount ?? 0) > 0;
+        const children = loadedChildren.get(topic.id) || [];
+        const indentation = level * 20;
+
+        return (
+            <>
+                <TouchableOpacity
+                    style={[
+                        styles.treeNode,
+                        isSelected && styles.treeNodeSelected,
+                    ]}
+                    onPress={() => onSelect(topic)}
+                >
+                    <View style={[styles.treeNodeContent, { paddingLeft: 12 + indentation }]}>
+                        {/* Expand button */}
+                        {hasChildren ? (
+                            <TouchableOpacity
+                                onPress={(e) => {
+                                    e.stopPropagation?.();
+                                    onToggleExpand(topic.id);
+                                }}
+                                style={styles.expandButton}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator size="small" color="#007AFF" />
+                                ) : (
+                                    <MaterialCommunityIcons
+                                        name={isExpanded ? 'chevron-down' : 'chevron-right'}
+                                        size={18}
+                                        color="#666"
+                                    />
+                                )}
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={styles.expandPlaceholder} />
+                        )}
+
+                        {/* Topic name */}
+                        <Text style={[styles.treeNodeName, isSelected && styles.treeNodeNameSelected]}>
+                            {topic.name}
+                        </Text>
+
+                        {/* Selection indicator */}
+                        {isSelected && (
+                            <MaterialCommunityIcons name="check-circle" size={18} color="#007AFF" />
+                        )}
+                    </View>
+                </TouchableOpacity>
+
+                {/* Render children if expanded */}
+                {isExpanded && children.map(child => (
+                    <ParentTreeNode
+                        key={child.id}
+                        topic={child}
+                        level={level + 1}
+                        selectedId={selectedId}
+                        expandedIds={expandedIds}
+                        loadingIds={loadingIds}
+                        loadedChildren={loadedChildren}
+                        onSelect={onSelect}
+                        onToggleExpand={onToggleExpand}
+                    />
+                ))}
+            </>
+        );
     };
 
     return (
