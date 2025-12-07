@@ -4,6 +4,7 @@ export enum QuestionVisibility {
     PRIVATE = 'PRIVATE',
     FRIENDS_FAMILY = 'FRIENDS_FAMILY',
     QUIZ_ONLY = 'QUIZ_ONLY',
+    PENDING_PUBLIC = 'PENDING_PUBLIC',
     PUBLIC = 'PUBLIC'
 }
 
@@ -75,6 +76,8 @@ export const getVisibilityLabel = (visibility: QuestionVisibility): string => {
             return 'Friends & Family';
         case QuestionVisibility.QUIZ_ONLY:
             return 'This Quiz Only';
+        case QuestionVisibility.PENDING_PUBLIC:
+            return 'Public (Pending Review)';
         case QuestionVisibility.PUBLIC:
             return 'Everyone (Public)';
         default:
@@ -90,6 +93,8 @@ export const getVisibilityDescription = (visibility: QuestionVisibility): string
             return 'You and your friends/family can use this question';
         case QuestionVisibility.QUIZ_ONLY:
             return 'Only accessible in the quiz where it was added';
+        case QuestionVisibility.PENDING_PUBLIC:
+            return 'Submitted for public access - awaiting moderator review';
         case QuestionVisibility.PUBLIC:
             return 'Everyone can find and use this question';
         default:

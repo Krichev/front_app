@@ -23,6 +23,8 @@ import {
     getVisibilityLabel,
     QuestionVisibility
 } from '../entities/QuizState/model/types/question.types';
+import {TopicTreeSelector} from '../shared/ui/TopicSelector';
+import {SelectableTopic} from '../entities/TopicState';
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -48,6 +50,7 @@ const CreateUserQuestionScreen: React.FC = () => {
         existingQuestion?.difficulty || 'MEDIUM'
     );
     const [topic, setTopic] = useState<string>(existingQuestion?.topic || '');
+    const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState<string>(
         existingQuestion?.additionalInfo || ''
     );
@@ -56,6 +59,17 @@ const CreateUserQuestionScreen: React.FC = () => {
     );
 
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+    // Handle topic selection
+    const handleSelectTopic = (selectedTopic: SelectableTopic | null) => {
+        if (selectedTopic) {
+            setTopic(selectedTopic.name);
+            setSelectedTopicId(selectedTopic.id);
+        } else {
+            setTopic('');
+            setSelectedTopicId(undefined);
+        }
+    };
 
     const handleSubmit = async () => {
         // Validate inputs
@@ -191,12 +205,14 @@ const CreateUserQuestionScreen: React.FC = () => {
 
                         {/* Topic Input (Optional) */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Topic (Optional)</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={topic}
-                                onChangeText={setTopic}
-                                placeholder="e.g., History, Science, Geography"
+                            <TopicTreeSelector
+                                selectedTopicId={selectedTopicId}
+                                selectedTopicName={topic}
+                                onSelectTopic={handleSelectTopic}
+                                allowCreate={true}
+                                placeholder="Select or create a topic..."
+                                label="Topic (Optional)"
+                                required={false}
                             />
                         </View>
 

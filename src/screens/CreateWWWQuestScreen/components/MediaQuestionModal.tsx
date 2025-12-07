@@ -16,6 +16,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {QuestionType} from "../../../services/wwwGame/questionService";
+import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
+import {SelectableTopic} from '../../../entities/TopicState';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -25,7 +27,6 @@ interface MediaQuestionModalProps {
     visible: boolean;
     onClose: () => void;
     onSubmit: (questionData: QuestionFormData) => void;
-    availableTopics: string[];
     isSubmitting?: boolean;
 }
 
@@ -37,7 +38,6 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                                    visible,
                                                                    onClose,
                                                                    onSubmit,
-                                                                   availableTopics,
                                                                    isSubmitting = false,
                                                                }) => {
     // Form state
@@ -45,8 +45,8 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const [answer, setAnswer] = useState('');
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
+    const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState('');
-    const [showTopicPicker, setShowTopicPicker] = useState(false);
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
@@ -256,6 +256,19 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     };
 
     /**
+     * Handle topic selection
+     */
+    const handleSelectTopic = (selectedTopic: SelectableTopic | null) => {
+        if (selectedTopic) {
+            setTopic(selectedTopic.name);
+            setSelectedTopicId(selectedTopic.id);
+        } else {
+            setTopic('');
+            setSelectedTopicId(undefined);
+        }
+    };
+
+    /**
      * Reset form to initial state
      */
     const handleReset = () => {
@@ -263,9 +276,9 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
         setAnswer('');
         setDifficulty('MEDIUM');
         setTopic('');
+        setSelectedTopicId(undefined);
         setAdditionalInfo('');
         setSelectedMedia(undefined);
-        setShowTopicPicker(false);
     };
 
     /**
@@ -491,48 +504,15 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
                     {/* Topic Field */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Topic *</Text>
-                        <View style={styles.topicInputContainer}>
-                            <TextInput
-                                style={styles.topicInput}
-                                placeholder="Enter or select a topic..."
-                                placeholderTextColor="#999"
-                                value={topic}
-                                onChangeText={setTopic}
-                                />
-                            {availableTopics.length > 0 && (
-                                <TouchableOpacity
-                                    style={styles.topicPickerButton}
-                                    onPress={() => setShowTopicPicker(!showTopicPicker)}
-                                >
-                                    <MaterialCommunityIcons
-                                        name={showTopicPicker ? 'chevron-up' : 'chevron-down'}
-                                        size={24}
-                                        color="#007AFF"
-                                    />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        {/* Topic Picker */}
-                        {showTopicPicker && availableTopics.length > 0 && (
-                            <View style={styles.topicPicker}>
-                                <ScrollView style={styles.topicPickerScroll}>
-                                    {availableTopics.map((topicOption, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={styles.topicOption}
-                                            onPress={() => {
-                                                setTopic(topicOption);
-                                                setShowTopicPicker(false);
-                                            }}
-                                                >
-                                            <Text style={styles.topicOptionText}>{topicOption}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
-                        )}
+                        <TopicTreeSelector
+                            selectedTopicId={selectedTopicId}
+                            selectedTopicName={topic}
+                            onSelectTopic={handleSelectTopic}
+                            allowCreate={true}
+                            placeholder="Select or create a topic..."
+                            label="Topic"
+                            required={true}
+                        />
                     </View>
 
                     {/* Additional Info Field */}
@@ -772,45 +752,6 @@ const styles = StyleSheet.create({
     },
     difficultyTextActive: {
         color: '#FFF',
-    },
-    topicInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    topicInput: {
-        flex: 1,
-        fontSize: 15,
-        color: '#000',
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#E5E5E5',
-        borderRadius: 8,
-        backgroundColor: '#FAFAFA',
-    },
-    topicPickerButton: {
-        marginLeft: 8,
-        padding: 8,
-    },
-    topicPicker: {
-        marginTop: 8,
-        maxHeight: 200,
-        borderWidth: 1,
-        borderColor: '#E5E5E5',
-        borderRadius: 8,
-        backgroundColor: '#FFF',
-    },
-    topicPickerScroll: {
-        maxHeight: 200,
-    },
-    topicOption: {
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    topicOptionText: {
-        fontSize: 15,
-        color: '#000',
     },
 });
 

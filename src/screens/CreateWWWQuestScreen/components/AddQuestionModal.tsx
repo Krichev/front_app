@@ -3,26 +3,37 @@ import React, {useState} from 'react';
 import {Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {CustomQuestion} from '../hooks/useQuestionsManager';
+import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
+import {SelectableTopic} from '../../../entities/TopicState';
 
 interface AddQuestionModalProps {
     visible: boolean;
     onClose: () => void;
     onSubmit: (question: CustomQuestion) => void;
-    availableTopics: string[];
 }
 
 const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                                                                visible,
                                                                onClose,
                                                                onSubmit,
-                                                               availableTopics,
                                                            }) => {
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
+    const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState('');
-    const [showTopicPicker, setShowTopicPicker] = useState(false);
+
+    // Handle topic selection
+    const handleSelectTopic = (selectedTopic: SelectableTopic | null) => {
+        if (selectedTopic) {
+            setTopic(selectedTopic.name);
+            setSelectedTopicId(selectedTopic.id);
+        } else {
+            setTopic('');
+            setSelectedTopicId(undefined);
+        }
+    };
 
     const handleSubmit = () => {
         if (!question.trim()) {
@@ -47,6 +58,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         setAnswer('');
         setDifficulty('MEDIUM');
         setTopic('');
+        setSelectedTopicId(undefined);
         setAdditionalInfo('');
     };
 
@@ -55,6 +67,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         setAnswer('');
         setDifficulty('MEDIUM');
         setTopic('');
+        setSelectedTopicId(undefined);
         setAdditionalInfo('');
         onClose();
     };
@@ -127,25 +140,14 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Topic (Optional)</Text>
-                                <TouchableOpacity
-                                    style={styles.topicPickerButton}
-                                    onPress={() => setShowTopicPicker(true)}
-                                >
-                                    <Text style={styles.topicPickerText}>
-                                        {topic || 'Select or enter topic'}
-                                    </Text>
-                                    <MaterialCommunityIcons
-                                        name="chevron-down"
-                                        size={24}
-                                        color="#666"
-                                    />
-                                </TouchableOpacity>
-                                <TextInput
-                                    style={[styles.input, { marginTop: 8 }]}
-                                    value={topic}
-                                    onChangeText={setTopic}
-                                    placeholder="Or type custom topic"
+                                <TopicTreeSelector
+                                    selectedTopicId={selectedTopicId}
+                                    selectedTopicName={topic}
+                                    onSelectTopic={handleSelectTopic}
+                                    allowCreate={true}
+                                    placeholder="Select or create a topic..."
+                                    label="Topic (Optional)"
+                                    required={false}
                                 />
                             </View>
 
@@ -171,47 +173,6 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                                 <Text style={styles.submitButtonText}>Add Question</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* Topic Picker Modal */}
-            <Modal
-                visible={showTopicPicker}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setShowTopicPicker(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalContent, { maxHeight: '60%' }]}>
-                        <Text style={styles.modalTitle}>Select Topic</Text>
-                        <ScrollView>
-                            {availableTopics.map((t) => (
-                                <TouchableOpacity
-                                    key={t}
-                                    style={styles.topicItem}
-                                    onPress={() => {
-                                        setTopic(t);
-                                        setShowTopicPicker(false);
-                                    }}
-                                >
-                                    <Text style={styles.topicItemText}>{t}</Text>
-                                    {topic === t && (
-                                        <MaterialCommunityIcons
-                                            name="check"
-                                            size={24}
-                                            color="#007AFF"
-                                        />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                        <TouchableOpacity
-                            style={styles.modalCloseButton}
-                            onPress={() => setShowTopicPicker(false)}
-                        >
-                            <Text style={styles.modalCloseButtonText}>Close</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
@@ -290,32 +251,6 @@ const styles = StyleSheet.create({
     },
     difficultyChipTextSelected: {
         color: '#fff',
-    },
-    topicPickerButton: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        backgroundColor: '#f8f8f8',
-    },
-    topicPickerText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    topicItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    topicItemText: {
-        fontSize: 16,
-        color: '#333',
     },
     modalFooter: {
         flexDirection: 'row',

@@ -27,6 +27,8 @@ import {
     QuestionVisibility
 } from "../../entities/QuizState/model/types/question.types.ts";
 import {getVisibilityIcon} from "../../entities/ChallengeState/model/types.ts";
+import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
+import {SelectableTopic} from '../../entities/TopicState';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -96,11 +98,23 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
         existingQuestion?.difficulty || 'MEDIUM'
     );
     const [topic, setTopic] = useState(existingQuestion?.topic || '');
+    const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState(existingQuestion?.additionalInfo || '');
     const [questionType, setQuestionType] = useState<'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO'>('TEXT');
     const [visibility, setVisibility] = useState<QuestionVisibility>(
         (existingQuestion?.visibility as QuestionVisibility) || QuestionVisibility.PRIVATE
     );
+
+    // Handle topic selection
+    const handleSelectTopic = (selectedTopic: SelectableTopic | null) => {
+        if (selectedTopic) {
+            setTopic(selectedTopic.name);
+            setSelectedTopicId(selectedTopic.id);
+        } else {
+            setTopic('');
+            setSelectedTopicId(undefined);
+        }
+    };
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | null>(null);
@@ -432,13 +446,14 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
                         {/* Topic */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Topic</Text>
-                            <TextInput
-                                style={styles.input}
-                                value={topic}
-                                onChangeText={setTopic}
-                                placeholder="e.g., Science, History, Sports..."
-                                placeholderTextColor="#999"
+                            <TopicTreeSelector
+                                selectedTopicId={selectedTopicId}
+                                selectedTopicName={topic}
+                                onSelectTopic={handleSelectTopic}
+                                allowCreate={true}
+                                placeholder="Select or create a topic..."
+                                label="Topic (Optional)"
+                                required={false}
                             />
                         </View>
 
