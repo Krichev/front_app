@@ -21,6 +21,8 @@ import QuizConfigForm from './components/QuizConfigForm';
 import QuestionSourceSelector from './components/QuestionSourceSelector';
 import QuestionList from './components/QuestionList';
 import SelectedQuestionsPreview from './components/SelectedQuestionsPreview';
+import AudioSegmentPicker from './components/AudioSegmentPicker';
+import MinimumScoreSelector from './components/MinimumScoreSelector';
 
 import {useQuestCreator} from './hooks/useQuestCreator';
 import {useQuestionsManager} from './hooks/useQuestionsManager';
@@ -162,6 +164,37 @@ const CreateWWWQuestScreen = () => {
                     onRemoveTeamMember={questCreator.removeTeamMember}
                 />
 
+                {/* Audio Track Section */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <MaterialCommunityIcons name="music-note" size={24} color="#4CAF50" />
+                        <Text style={styles.sectionTitle}>Audio Track (Optional)</Text>
+                    </View>
+                    <AudioSegmentPicker
+                        value={questCreator.audioConfig}
+                        onChange={questCreator.setAudioConfig}
+                    />
+                </View>
+
+                {/* Minimum Score Section - Only show if audio is configured */}
+                {questCreator.audioConfig && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <MaterialCommunityIcons name="trophy" size={24} color="#FF9800" />
+                            <Text style={styles.sectionTitle}>Minimum Score Requirement</Text>
+                        </View>
+                        <MinimumScoreSelector
+                            value={questCreator.audioConfig.minimumScorePercentage || 0}
+                            onChange={(percentage) =>
+                                questCreator.setAudioConfig({
+                                    ...questCreator.audioConfig!,
+                                    minimumScorePercentage: percentage,
+                                })
+                            }
+                        />
+                    </View>
+                )}
+
                 {/* Question Source Selector - ✅ Using local variable with default */}
                 <QuestionSourceSelector
                     questionSource={questionSource}
@@ -302,6 +335,21 @@ const styles = StyleSheet.create({
     },
     spacer: {
         height: 100,
+    },
+    section: {
+        marginTop: 16,
+        marginHorizontal: 16,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 8,
+    },
+    sectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#333',
     },
 });
 

@@ -15,6 +15,11 @@ import type {
     PaymentType,
     PhotoVerificationRequest,
     VerificationResponse,
+    QuestAudioConfig,
+    QuestAudioResponse,
+    UpdateQuestAudioConfigRequest,
+    UploadQuestAudioRequest,
+    UploadAudioResponse,
 } from '../types';
 
 
@@ -24,7 +29,7 @@ const BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
 export const challengeApi = createApi({
     reducerPath: 'challengeApi',
     baseQuery: createBaseQueryWithAuth(BASE_URL),
-    tagTypes: ['Challenge', 'Verification', 'QuizQuestion', 'ChallengeAccess'],
+    tagTypes: ['Challenge', 'Verification', 'QuizQuestion', 'ChallengeAccess', 'Quest'],
     endpoints: (builder) => ({
         // Existing endpoints
         getChallenges: builder.query<ApiChallenge[], GetChallengesParams>({
@@ -248,6 +253,63 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
                 {type: 'QuizQuestion', id: `CHALLENGE_${challengeId}`}
             ],
         }),
+
+        // =============================================================================
+        // QUEST AUDIO ENDPOINTS
+        // =============================================================================
+
+        updateQuestAudioConfig: builder.mutation<QuestAudioResponse, UpdateQuestAudioConfigRequest>({
+            query: ({ questId, audioConfig }) => ({
+                url: `/quests/${questId}/audio-config`,
+                method: 'PUT',
+                body: audioConfig,
+            }),
+            invalidatesTags: (result, error, { questId }) => [
+                { type: 'Quest', id: questId },
+                { type: 'Quest', id: 'LIST' },
+            ],
+        }),
+
+        getQuestAudioConfig: builder.query<QuestAudioResponse | null, number>({
+            query: (questId) => `/quests/${questId}/audio-config`,
+            providesTags: (result, error, questId) => [
+                { type: 'Quest', id: questId },
+            ],
+        }),
+
+        removeQuestAudioConfig: builder.mutation<void, number>({
+            query: (questId) => ({
+                url: `/quests/${questId}/audio-config`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, questId) => [
+                { type: 'Quest', id: questId },
+                { type: 'Quest', id: 'LIST' },
+            ],
+        }),
+
+        uploadQuestAudio: builder.mutation<UploadAudioResponse, UploadQuestAudioRequest>({
+            query: ({ questId, audioFile }) => {
+                const formData = new FormData();
+                formData.append('file', {
+                    uri: audioFile.uri,
+                    name: audioFile.name,
+                    type: audioFile.type,
+                } as any);
+
+                return {
+                    url: `/quests/${questId}/audio`,
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                };
+            },
+            invalidatesTags: (result, error, { questId }) => [
+                { type: 'Quest', id: questId },
+            ],
+        }),
     }),
 });
 
@@ -277,6 +339,12 @@ export const {
     useGrantAccessMutation,
     useRevokeAccessMutation,
     useGetChallengeAccessListQuery,
+
+    // Quest audio hooks
+    useUpdateQuestAudioConfigMutation,
+    useGetQuestAudioConfigQuery,
+    useRemoveQuestAudioConfigMutation,
+    useUploadQuestAudioMutation,
 } = enhancedChallengeApi;
 
 // Re-export types for convenience

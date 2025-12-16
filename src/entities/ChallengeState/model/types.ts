@@ -413,3 +413,88 @@ export const isChallengeWWWQuiz = (challenge: ApiChallenge): boolean => {
     const config = parseQuizConfig(challenge.quizConfig);
     return isWWWQuiz(config);
 };
+
+// ============================================================================
+// QUEST AUDIO TYPES
+// ============================================================================
+
+/**
+ * Quest audio configuration
+ */
+export interface QuestAudioConfig {
+    /** ID of the audio file in media_files table */
+    audioMediaId?: number;
+    /** URL to stream the audio file */
+    audioUrl?: string;
+    /** Audio segment start time in seconds */
+    audioStartTime: number;
+    /** Audio segment end time in seconds (null means full duration) */
+    audioEndTime?: number;
+    /** Total duration of the audio file in seconds */
+    totalDuration?: number;
+    /** Minimum score percentage (0-100) required to complete the quest */
+    minimumScorePercentage: number;
+}
+
+/**
+ * Request to update quest audio configuration
+ */
+export interface UpdateQuestAudioConfigRequest {
+    /** Quest ID */
+    questId: number;
+    /** Audio configuration */
+    audioConfig: {
+        audioMediaId?: number;
+        audioStartTime?: number;
+        audioEndTime?: number;
+        minimumScorePercentage?: number;
+    };
+}
+
+/**
+ * Response from quest audio configuration API
+ */
+export interface QuestAudioResponse {
+    /** ID of the audio file in media_files table */
+    audioMediaId: number;
+    /** URL to stream the audio file */
+    audioUrl: string;
+    /** Audio segment start time in seconds */
+    audioStartTime: number;
+    /** Audio segment end time in seconds (null means full duration) */
+    audioEndTime?: number;
+    /** Total duration of the audio file in seconds */
+    totalDuration: number;
+    /** Minimum score percentage (0-100) required to complete the quest */
+    minimumScorePercentage: number;
+}
+
+/**
+ * Request to upload quest audio file
+ */
+export interface UploadQuestAudioRequest {
+    /** Quest ID */
+    questId: number;
+    /** Audio file to upload */
+    audioFile: {
+        uri: string;
+        name: string;
+        type: string;
+    };
+}
+
+/**
+ * Response from audio upload
+ */
+export interface UploadAudioResponse {
+    /** Whether upload was successful */
+    success: boolean;
+    /** ID of the uploaded media file */
+    mediaId: string;
+    /** URL to access the media file */
+    mediaUrl: string;
+    /** Duration of the audio in seconds */
+    duration?: number;
+    /** Processing status of the media file */
+    processingStatus: string;
+}
