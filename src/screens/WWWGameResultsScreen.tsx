@@ -16,7 +16,11 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {WWWGameService} from "../services/wwwGame/wwwGameService.ts";
-import {useSubmitChallengeCompletionMutation} from '../entities/ChallengeState/model/slice/challengeApi';
+import {
+    useGetQuestAudioConfigQuery,
+    useSubmitChallengeCompletionMutation
+} from '../entities/ChallengeState/model/slice/challengeApi';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -58,6 +62,12 @@ const WWWGameResultsScreen: React.FC = () => {
     const { user } = useSelector((state: RootState) => state.auth);
     const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
 
+    // Fetch quest audio configuration if challengeId exists
+    const { data: audioConfig } = useGetQuestAudioConfigQuery(
+        challengeId ? Number(challengeId) : 0,
+        { skip: !challengeId }
+    );
+
     // State variables
     const [showEndGameModal, setShowEndGameModal] = useState(false);
     const [submittingChallenge, setSubmittingChallenge] = useState(false);
@@ -71,6 +81,10 @@ const WWWGameResultsScreen: React.FC = () => {
 
     // Calculate player performance using the game service
     const performances = WWWGameService.calculatePlayerPerformance(roundsData);
+
+    // Check if minimum score requirement is met
+    const minimumScoreRequired = audioConfig?.minimumScorePercentage || 0;
+    const meetsMinimumScore = minimumScoreRequired === 0 || correctPercentage >= minimumScoreRequired;
 
     // Result message based on score
     const getResultMessage = () => {
@@ -241,6 +255,36 @@ const WWWGameResultsScreen: React.FC = () => {
                     <Text style={styles.scorePercentage}>{correctPercentage.toFixed(0)}% Correct</Text>
                     <Text style={styles.resultMessage}>{getResultMessage()}</Text>
                 </View>
+
+                {/* Minimum Score Requirement Status */}
+                {minimumScoreRequired > 0 && (
+                    <View style={[
+                        styles.scoreRequirementContainer,
+                        meetsMinimumScore ? styles.scoreRequirementMet : styles.scoreRequirementNotMet
+                    ]}>
+                        <MaterialCommunityIcons
+                            name={meetsMinimumScore ? "check-circle" : "alert-circle"}
+                            size={24}
+                            color={meetsMinimumScore ? "#4CAF50" : "#F44336"}
+                        />
+                        <View style={styles.scoreRequirementContent}>
+                            <Text style={[
+                                styles.scoreRequirementTitle,
+                                meetsMinimumScore ? styles.scoreRequirementMetText : styles.scoreRequirementNotMetText
+                            ]}>
+                                {meetsMinimumScore ? 'Quest Requirement Met!' : 'Quest Requirement Not Met'}
+                            </Text>
+                            <Text style={styles.scoreRequirementDescription}>
+                                Minimum score required: {minimumScoreRequired}% | Your score: {correctPercentage.toFixed(0)}%
+                            </Text>
+                            {!meetsMinimumScore && (
+                                <Text style={styles.scoreRequirementHelp}>
+                                    You need to score at least {minimumScoreRequired}% to complete this quest. Try again!
+                                </Text>
+                            )}
+                        </View>
+                    </View>
+                )}
 
                 <View style={styles.feedbackContainer}>
                     <Text style={styles.sectionTitle}>AI Host Analysis</Text>
@@ -658,6 +702,53 @@ const styles = StyleSheet.create({
     },
     disabledButton: {
         opacity: 0.7,
+    },
+    scoreRequirementContainer: {
+        flexDirection: 'row',
+        margin: 16,
+        marginTop: 0,
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 16,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        gap: 12,
+        borderLeftWidth: 4,
+    },
+    scoreRequirementMet: {
+        borderLeftColor: '#4CAF50',
+        backgroundColor: '#f1f8f4',
+    },
+    scoreRequirementNotMet: {
+        borderLeftColor: '#F44336',
+        backgroundColor: '#fef5f5',
+    },
+    scoreRequirementContent: {
+        flex: 1,
+    },
+    scoreRequirementTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    scoreRequirementMetText: {
+        color: '#4CAF50',
+    },
+    scoreRequirementNotMetText: {
+        color: '#F44336',
+    },
+    scoreRequirementDescription: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 4,
+    },
+    scoreRequirementHelp: {
+        fontSize: 13,
+        color: '#999',
+        fontStyle: 'italic',
     },
 });
 

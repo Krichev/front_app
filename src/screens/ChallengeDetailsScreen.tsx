@@ -13,6 +13,7 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {
     useGetChallengeByIdQuery,
+    useGetQuestAudioConfigQuery,
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
@@ -23,6 +24,7 @@ import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
 import {navigateToTab} from "../utils/navigation.ts";
 import {QuestionService} from "../services/wwwGame";
+import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -77,6 +79,10 @@ const ChallengeDetailsScreen: React.FC = () => {
     const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId!, {
         skip: !challengeId, // Skip the query if challengeId is undefined
     });
+    const { data: audioConfig } = useGetQuestAudioConfigQuery(
+        challengeId ? Number(challengeId) : 0,
+        { skip: !challengeId }
+    );
     const [joinChallenge, {isLoading: isJoining}] = useJoinChallengeMutation();
     const [submitCompletion, {isLoading: isSubmitting}] = useSubmitChallengeCompletionMutation();
 
@@ -462,6 +468,25 @@ const ChallengeDetailsScreen: React.FC = () => {
                     {/* Render Quiz Content if applicable */}
                     {renderQuizContent()}
 
+                    {/* Quest Audio Section */}
+                    {audioConfig && (
+                        <View style={styles.audioContainer}>
+                            <Text style={styles.sectionTitle}>Quest Audio Track</Text>
+                            <QuestAudioPlayer
+                                audioConfig={audioConfig}
+                                autoPlay={false}
+                            />
+                            {audioConfig.minimumScorePercentage > 0 && (
+                                <View style={styles.audioRequirement}>
+                                    <MaterialCommunityIcons name="trophy" size={20} color="#FF9800" />
+                                    <Text style={styles.audioRequirementText}>
+                                        You must score at least {audioConfig.minimumScorePercentage}% to complete this quest
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
                     {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
                     <View style={styles.actionSection}>
                         {challenge.type === 'QUIZ' ? (
@@ -786,6 +811,31 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 16,
         fontWeight: '600',
+    },
+    audioContainer: {
+        backgroundColor: 'white',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 16,
+        elevation: 1,
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        shadowOffset: {width: 0, height: 1},
+    },
+    audioRequirement: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff3e0',
+        padding: 12,
+        borderRadius: 8,
+        marginTop: 12,
+        gap: 8,
+    },
+    audioRequirementText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '500',
     },
 });
 

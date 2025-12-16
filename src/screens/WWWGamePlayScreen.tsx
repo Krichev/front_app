@@ -22,9 +22,11 @@ import {
     useGetQuizSessionQuery,
     useSubmitRoundAnswerMutation
 } from '../entities/QuizState/model/slice/quizApi';
+import {useGetQuestAudioConfigQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -50,6 +52,12 @@ const WWWGamePlayScreen: React.FC = () => {
     const [beginQuizSession] = useBeginQuizSessionMutation();
     const [submitRoundAnswer] = useSubmitRoundAnswerMutation();
     const [completeQuizSession] = useCompleteQuizSessionMutation();
+
+    // Fetch quest audio configuration if challengeId exists
+    const { data: audioConfig } = useGetQuestAudioConfigQuery(
+        challengeId ? Number(challengeId) : 0,
+        { skip: !challengeId }
+    );
 
     // Game state
     const [currentRound, setCurrentRound] = useState(0);
@@ -570,6 +578,24 @@ const WWWGamePlayScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                {/* Quest Audio Player Section */}
+                {audioConfig && (
+                    <View style={styles.audioSection}>
+                        <QuestAudioPlayer
+                            audioConfig={audioConfig}
+                            autoPlay={false}
+                        />
+                        {audioConfig.minimumScorePercentage > 0 && (
+                            <View style={styles.scoreRequirementBanner}>
+                                <MaterialCommunityIcons name="alert-circle" size={20} color="#FF9800" />
+                                <Text style={styles.scoreRequirementText}>
+                                    Minimum score required: {audioConfig.minimumScorePercentage}%
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
                 {renderPhaseContent()}
             </ScrollView>
 
@@ -949,6 +975,25 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 8,
+    },
+    audioSection: {
+        margin: 16,
+        marginBottom: 0,
+    },
+    scoreRequirementBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff3e0',
+        padding: 12,
+        borderRadius: 8,
+        marginTop: 12,
+        gap: 8,
+    },
+    scoreRequirementText: {
+        flex: 1,
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
     },
 });
 
