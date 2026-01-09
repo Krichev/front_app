@@ -498,3 +498,128 @@ export interface UploadAudioResponse {
     /** Processing status of the media file */
     processingStatus: string;
 }
+
+// ============================================================================
+// AUDIO CHALLENGE TYPES
+// ============================================================================
+
+/**
+ * Types of audio-based challenges
+ */
+export enum AudioChallengeType {
+    RHYTHM_CREATION = 'RHYTHM_CREATION',
+    RHYTHM_REPEAT = 'RHYTHM_REPEAT',
+    SOUND_MATCH = 'SOUND_MATCH',
+    SINGING = 'SINGING'
+}
+
+/**
+ * Audio challenge type metadata
+ */
+export interface AudioChallengeTypeInfo {
+    type: AudioChallengeType;
+    label: string;
+    description: string;
+    icon: string;
+    requiresReferenceAudio: boolean;
+    usesPitchScoring: boolean;
+    usesRhythmScoring: boolean;
+    usesVoiceScoring: boolean;
+}
+
+/**
+ * Audio challenge type definitions
+ */
+export const AUDIO_CHALLENGE_TYPES: AudioChallengeTypeInfo[] = [
+    {
+        type: AudioChallengeType.RHYTHM_CREATION,
+        label: 'Create Rhythm',
+        description: 'Create your own rhythm pattern. Scored on consistency and creativity.',
+        icon: 'music-note-plus',
+        requiresReferenceAudio: false,
+        usesPitchScoring: false,
+        usesRhythmScoring: true,
+        usesVoiceScoring: false
+    },
+    {
+        type: AudioChallengeType.RHYTHM_REPEAT,
+        label: 'Repeat Rhythm',
+        description: 'Listen and repeat the rhythm pattern you hear.',
+        icon: 'repeat',
+        requiresReferenceAudio: true,
+        usesPitchScoring: false,
+        usesRhythmScoring: true,
+        usesVoiceScoring: false
+    },
+    {
+        type: AudioChallengeType.SOUND_MATCH,
+        label: 'Match Sound',
+        description: 'Make sounds as close as possible to the reference.',
+        icon: 'waveform',
+        requiresReferenceAudio: true,
+        usesPitchScoring: true,
+        usesRhythmScoring: false,
+        usesVoiceScoring: true
+    },
+    {
+        type: AudioChallengeType.SINGING,
+        label: 'Sing Along',
+        description: 'Sing the song segment and receive a karaoke-style score.',
+        icon: 'microphone',
+        requiresReferenceAudio: true,
+        usesPitchScoring: true,
+        usesRhythmScoring: true,
+        usesVoiceScoring: true
+    }
+];
+
+/**
+ * Audio challenge configuration for question creation
+ */
+export interface AudioChallengeConfig {
+    audioChallengeType: AudioChallengeType;
+    audioReferenceMediaId?: number;
+    audioSegmentStart?: number;
+    audioSegmentEnd?: number;
+    minimumScorePercentage: number;
+    rhythmBpm?: number;
+    rhythmTimeSignature?: string;
+}
+
+/**
+ * Audio challenge submission
+ */
+export interface AudioChallengeSubmission {
+    id: number;
+    questionId: number;
+    userId: number;
+    processingStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    processingProgress: number;
+    overallScore?: number;
+    pitchScore?: number;
+    rhythmScore?: number;
+    voiceScore?: number;
+    passed?: boolean;
+    minimumScoreRequired: number;
+    detailedMetrics?: string;
+    createdAt: string;
+    processedAt?: string;
+}
+
+/**
+ * Create audio question request
+ */
+export interface CreateAudioQuestionRequest {
+    question: string;
+    answer?: string;
+    audioChallengeType: AudioChallengeType;
+    topic?: string;
+    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    visibility?: 'PUBLIC' | 'PRIVATE' | 'GROUP_ONLY';
+    additionalInfo?: string;
+    audioSegmentStart?: number;
+    audioSegmentEnd?: number;
+    minimumScorePercentage?: number;
+    rhythmBpm?: number;
+    rhythmTimeSignature?: string;
+}

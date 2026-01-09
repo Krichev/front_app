@@ -18,6 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {Picker} from '@react-native-picker/picker';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import DocumentPicker from 'react-native-document-picker';
 import FileService, {ProcessedFileInfo} from "../../services/speech/FileService";
 import MediaUploadService from "../../services/media/MediaUploadService";
 import {QuestionService, UserQuestion} from '../../services/wwwGame/questionService';
@@ -201,7 +202,43 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
      * Handle audio selection
      */
     const handleAudioPick = async () => {
-        Alert.alert('Coming Soon', 'Audio selection feature is not yet implemented.');
+        try {
+            const result = await DocumentPicker.pick({
+                type: [DocumentPicker.types.audio],
+                allowMultiSelection: false,
+            });
+
+            if (!result || result.length === 0) {
+                console.log('Audio selection cancelled');
+                return;
+            }
+
+            const audioFile = result[0];
+
+            // Create ProcessedFileInfo object compatible with FileService
+            const processedAudio: ProcessedFileInfo = {
+                uri: audioFile.uri,
+                name: audioFile.name || 'audio.mp3',
+                type: audioFile.type || 'audio/mpeg',
+                size: audioFile.size || 0,
+                sizeFormatted: FileService.formatFileSize(audioFile.size || 0),
+                isImage: false,
+                isVideo: false,
+            };
+
+            setSelectedMedia(processedAudio);
+            setUploadedMediaInfo(null);
+            setQuestionType('AUDIO');
+
+            console.log('Audio selected:', processedAudio.name, processedAudio.sizeFormatted);
+        } catch (error: any) {
+            if (DocumentPicker.isCancel(error)) {
+                console.log('Audio selection cancelled');
+            } else {
+                console.error('Error picking audio:', error);
+                Alert.alert('Error', 'Failed to select audio. Please try again.');
+            }
+        }
     };
 
     /**
@@ -547,13 +584,19 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                 <Text style={styles.videoText}>Video Selected</Text>
                                             </View>
                                         )}
+                                        {!selectedMedia.isImage && !selectedMedia.isVideo && (
+                                            <View style={styles.videoPlaceholder}>
+                                                <MaterialCommunityIcons name="music" size={48} color="#666" />
+                                                <Text style={styles.videoText}>Audio Selected</Text>
+                                            </View>
+                                        )}
 
                                         <View style={styles.mediaInfo}>
                                             <Text style={styles.mediaName} numberOfLines={1}>
                                                 {selectedMedia.name}
                                             </Text>
                                             <Text style={styles.mediaSize}>
-                                                {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : 'Video'}
+                                                {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : selectedMedia.isVideo ? 'Video' : 'Audio'}
                                             </Text>
                                         </View>
 

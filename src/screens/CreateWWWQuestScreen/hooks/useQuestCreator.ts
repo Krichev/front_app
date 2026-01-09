@@ -4,9 +4,6 @@ import {Alert} from 'react-native';
 import {
     CreateChallengeRequest,
     useCreateChallengeMutation,
-    useUploadQuestAudioMutation,
-    useUpdateQuestAudioConfigMutation,
-    QuestAudioConfig,
 } from '../../../entities/ChallengeState/model/slice/challengeApi';
 import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/slice/quizApi';
 import {PaymentType} from '../../../entities/ChallengeState/model/types';
@@ -37,8 +34,6 @@ export interface SelectedQuestion {
 export const useQuestCreator = () => {
     const [createChallenge, { isLoading: isCreatingChallenge }] = useCreateChallengeMutation();
     const [startQuizSession, { isLoading: isStartingSession }] = useStartQuizSessionMutation();
-    const [uploadQuestAudio] = useUploadQuestAudioMutation();
-    const [updateQuestAudioConfig] = useUpdateQuestAudioConfigMutation();
 
     // Basic Info
     const [title, setTitle] = useState('Quiz Challenge');
@@ -58,9 +53,6 @@ export const useQuestCreator = () => {
     });
 
     const [teamMemberInput, setTeamMemberInput] = useState('');
-
-    // Audio Configuration
-    const [audioConfig, setAudioConfig] = useState<QuestAudioConfig | null>(null);
 
     const addTeamMember = () => {
         if (teamMemberInput.trim()) {
@@ -133,43 +125,13 @@ export const useQuestCreator = () => {
                 throw new Error('Challenge creation failed - no ID returned');
             }
 
-            // Step 2: Upload and configure audio if present
-            if (audioConfig && audioConfig.audioMediaId) {
-                try {
-                    console.log('Configuring audio for quest:', audioConfig);
-
-                    // Upload audio file if we have a local file
-                    // Note: In practice, the audioFile would be stored in audioConfig
-                    // For now, we just configure with the mediaId from audioConfig
-
-                    await updateQuestAudioConfig({
-                        questId: Number(challengeResult.id),
-                        audioConfig: {
-                            audioMediaId: audioConfig.audioMediaId,
-                            audioStartTime: audioConfig.audioStartTime,
-                            audioEndTime: audioConfig.audioEndTime,
-                            minimumScorePercentage: audioConfig.minimumScorePercentage,
-                        },
-                    }).unwrap();
-
-                    console.log('Audio configuration saved successfully');
-                } catch (audioError) {
-                    console.error('Failed to configure audio:', audioError);
-                    // Don't fail the entire quest creation, just warn
-                    Alert.alert(
-                        'Warning',
-                        'Quest created but audio configuration failed. You can add audio later.'
-                    );
-                }
-            }
-
-            // Step 3: Prepare custom question IDs (if questions have IDs from app/user)
+            // Step 2: Prepare custom question IDs (if questions have IDs from app/user)
             const customQuestionIds: number[] = extractQuestionIds(selectedQuestions);
 
             const hasUserQuestions = selectedQuestions.some(q => q.source === 'user');
             const questionSource = hasUserQuestions ? 'user' : 'app';
 
-            // Step 4: Create session payload with ALL required fields
+            // Step 3: Create session payload with ALL required fields
             const sessionPayload = {
                 challengeId: challengeResult.id,
                 teamName: quizConfig.teamName || 'My Team',
@@ -184,7 +146,7 @@ export const useQuestCreator = () => {
 
             console.log('Starting quiz session with payload:', sessionPayload);
 
-            // Step 5: Start quiz session
+            // Step 4: Start quiz session
             const sessionResult = await startQuizSession(sessionPayload).unwrap();
             console.log('Quiz session started:', sessionResult);
 
@@ -210,7 +172,6 @@ export const useQuestCreator = () => {
         reward,
         quizConfig,
         teamMemberInput,
-        audioConfig,
         isCreating: isCreatingChallenge || isStartingSession,
 
         // Setters
@@ -219,7 +180,6 @@ export const useQuestCreator = () => {
         setReward,
         setQuizConfig,
         setTeamMemberInput,
-        setAudioConfig,
 
         // Actions
         addTeamMember,
