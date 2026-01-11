@@ -1,5 +1,5 @@
 // src/screens/CreateAudioQuestionScreen.tsx
-import React, {useCallback} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
     SafeAreaView,
     KeyboardAvoidingView,
@@ -9,7 +9,7 @@ import {
     Text,
     TouchableOpacity,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AudioQuestionForm, AudioQuestionFormData} from './components/AudioQuestionForm';
@@ -21,10 +21,11 @@ import {useAudioQuestionSubmit} from './components/hooks/useAudioQuestionSubmit'
 
 type RootStackParamList = {
     UserQuestions: undefined;
-    CreateAudioQuestion: undefined;
+    CreateAudioQuestion: { onSubmit?: (question: any) => void };
     AudioQuestionDetail: {questionId: number};
 };
 
+type CreateAudioQuestionRouteProp = RouteProp<RootStackParamList, 'CreateAudioQuestion'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateAudioQuestion'>;
 
 // ============================================================================
@@ -37,12 +38,19 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateAudio
  */
 const CreateAudioQuestionScreen: React.FC = () => {
     const navigation = useNavigation<NavigationProp>();
+    const route = useRoute<CreateAudioQuestionRouteProp>();
+    const onSubmitCallback = route.params?.onSubmit;
+    const [lastSubmittedData, setLastSubmittedData] = useState<AudioQuestionFormData | null>(null);
 
     const {submitAudioQuestion, isSubmitting} = useAudioQuestionSubmit({
         onSuccess: (questionId) => {
             console.log('✅ Audio question created:', questionId);
-            // Navigate to the question detail or back to list
-            navigation.navigate('UserQuestions');
+            if (onSubmitCallback && lastSubmittedData) {
+                onSubmitCallback({ ...lastSubmittedData, id: questionId });
+                navigation.goBack();
+            } else {
+                navigation.navigate('UserQuestions');
+            }
         },
         onError: (error) => {
             console.error('❌ Audio question creation failed:', error);
@@ -51,6 +59,7 @@ const CreateAudioQuestionScreen: React.FC = () => {
 
     const handleSubmit = useCallback(
         async (formData: AudioQuestionFormData) => {
+            setLastSubmittedData(formData);
             await submitAudioQuestion(formData);
         },
         [submitAudioQuestion]

@@ -7,5 +7,6 @@ export { default as QuestionList } from './components/QuestionList';
 export { default as SelectedQuestionsPreview } from './components/SelectedQuestionsPreview';
 export { default as AddQuestionModal } from './components/AddQuestionModal';
 export { default as MediaQuestionModal } from './components/MediaQuestionModal';
+export { default as QuestionTypeSelectorModal } from './components/QuestionTypeSelectorModal';
 export * from './hooks/useQuestCreator';
 export * from './hooks/useQuestionsManager';

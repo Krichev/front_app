@@ -68,7 +68,7 @@ export type RootStackParamList = {
     };
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
-    CreateAudioQuestion: undefined;
+    CreateAudioQuestion: { onSubmit: (question: any) => void };
 };
 
 export type MainTabParamList = {

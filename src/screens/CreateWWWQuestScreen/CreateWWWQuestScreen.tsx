@@ -26,6 +26,8 @@ import {useQuestCreator} from './hooks/useQuestCreator';
 import {useQuestionsManager} from './hooks/useQuestionsManager';
 import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
 import MediaQuestionModal from "./components/MediaQuestionModal.tsx";
+import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
+import { QuestionType } from '../../services/wwwGame/questionService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -36,6 +38,8 @@ const CreateWWWQuestScreen = () => {
     const questionsManager = useQuestionsManager();
 
     const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
+    const [showTypeSelector, setShowTypeSelector] = useState(false);
+    const [preSelectedMediaType, setPreSelectedMediaType] = useState<'image' | 'video' | null>(null);
 
     // Local state for features not yet in hook
     const [searchKeyword, setSearchKeyword] = useState('');
@@ -130,6 +134,27 @@ const CreateWWWQuestScreen = () => {
         }
     };
 
+    const handleTypeSelect = (type: QuestionType) => {
+        setShowTypeSelector(false);
+        if (type === 'AUDIO') {
+            navigation.navigate('CreateAudioQuestion', { 
+                onSubmit: handleAudioQuestionCreated 
+            });
+        } else {
+            setPreSelectedMediaType(type === 'TEXT' ? null : type.toLowerCase() as 'image' | 'video');
+            setShowUnifiedQuestionModal(true);
+        }
+    };
+
+    const handleAudioQuestionCreated = (question: any) => {
+        // This function will be called from CreateAudioQuestionScreen
+        // with the newly created audio question.
+        // We can then add it to our custom questions list.
+        console.log('Audio question created:', question);
+        // Assuming questionsManager has a method to add a custom question
+        // questionsManager.addCustomQuestion(question);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -166,7 +191,7 @@ const CreateWWWQuestScreen = () => {
                 <QuestionSourceSelector
                     questionSource={questionSource}
                     onSourceChange={questionsManager.setQuestionSource}
-                    onAddQuestion={() => setShowUnifiedQuestionModal(true)}
+                    onAddQuestion={() => setShowTypeSelector(true)}
                 />
 
                 {/* Question List - ✅ Using local variable with default */}
@@ -244,12 +269,23 @@ const CreateWWWQuestScreen = () => {
             {/* Unified Question Modal */}
             <MediaQuestionModal
                 visible={showUnifiedQuestionModal}
-                onClose={() => setShowUnifiedQuestionModal(false)}
+                onClose={() => {
+                    setShowUnifiedQuestionModal(false);
+                    setPreSelectedMediaType(null);
+                }}
                 onSubmit={(questionData) => {
                     questionsManager.handleUnifiedQuestionSubmit(questionData);
                     setShowUnifiedQuestionModal(false);
                 }}
                 availableTopics={questionsManager.availableTopics}
+                preSelectedMediaType={preSelectedMediaType}
+            />
+
+            {/* Question Type Selector Modal */}
+            <QuestionTypeSelectorModal
+                visible={showTypeSelector}
+                onClose={() => setShowTypeSelector(false)}
+                onSelect={handleTypeSelect}
             />
         </SafeAreaView>
     );

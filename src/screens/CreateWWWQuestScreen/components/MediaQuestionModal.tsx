@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/components/MediaQuestionModal.tsx
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -28,6 +28,7 @@ interface MediaQuestionModalProps {
     onClose: () => void;
     onSubmit: (questionData: QuestionFormData) => void;
     isSubmitting?: boolean;
+    preSelectedMediaType?: 'image' | 'video' | null;
 }
 
 // ============================================================================
@@ -39,6 +40,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                                    onClose,
                                                                    onSubmit,
                                                                    isSubmitting = false,
+                                                                   preSelectedMediaType,
                                                                }) => {
     // Form state
     const [question, setQuestion] = useState('');
@@ -52,6 +54,12 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
     const [isSelectingMedia, setIsSelectingMedia] = useState(false);
     const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
+
+    useEffect(() => {
+        if (visible && preSelectedMediaType) {
+            handleSelectMedia(preSelectedMediaType);
+        }
+    }, [visible, preSelectedMediaType]);
 
     /**
      * Determine question type based on selected media (IMPLICIT)
