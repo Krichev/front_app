@@ -12,6 +12,7 @@ import {quizApi} from '../../../entities/QuizState/model/slice/quizApi';
 import {tournamentQuestionApi} from '../../../entities/TournamentState/model/slice/tournamentQuestionApi';
 import {mediaApi} from '../../../entities/MediaState/model/slice/mediaApi';
 import {topicApi} from '../../../entities/TopicState/model/slice/topicApi';
+import {audioChallengeApi} from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 
 export const store = configureStore({
     reducer: {
@@ -27,6 +28,7 @@ export const store = configureStore({
         [tournamentQuestionApi.reducerPath]: tournamentQuestionApi.reducer,
         [mediaApi.reducerPath]: mediaApi.reducer,
         [topicApi.reducerPath]: topicApi.reducer,
+        [audioChallengeApi.reducerPath]: audioChallengeApi.reducer,
     },
 
     middleware: (getDefaultMiddleware) =>
@@ -39,6 +41,7 @@ export const store = configureStore({
             tournamentQuestionApi.middleware,
             mediaApi.middleware,
             topicApi.middleware,
+            audioChallengeApi.middleware,
         ),
 
     devTools: process.env.NODE_ENV !== 'production', // Enable Redux DevTools in development

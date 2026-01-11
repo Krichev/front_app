@@ -31,6 +31,7 @@ import {AuthNavigationHandler} from '../entities/AuthState/ui/AuthNavigationHand
 import {GameSettings} from '../services/wwwGame';
 import CreateQuestionWithMedia from "../screens/components/CreateQuestionWithMedia.tsx";
 import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
+import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
 
 // Navigation types
 export type RootStackParamList = {
@@ -67,6 +68,7 @@ export type RootStackParamList = {
     };
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
+    CreateAudioQuestion: undefined;
 };
 
 export type MainTabParamList = {
@@ -212,6 +214,14 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen
                             name="CreateUserQuestion"
                             component={CreateQuestionWithMedia}
+                        />
+                        <Stack.Screen
+                            name="CreateAudioQuestion"
+                            component={CreateAudioQuestionScreen}
+                            options={{
+                                headerShown: false,
+                                title: 'Create Audio Question',
+                            }}
                         />
                     </>
                 )}
