@@ -30,6 +30,11 @@ import {
 import {getVisibilityIcon} from "../../entities/ChallengeState/model/types.ts";
 import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../entities/TopicState';
+import AudioChallengeSection, {
+    AudioChallengeConfig,
+    DEFAULT_AUDIO_CONFIG,
+} from './AudioChallengeSection';
+import {AudioChallengeType, AUDIO_CHALLENGE_TYPES} from '../../entities/ChallengeState/model/types';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -67,6 +72,7 @@ export interface QuestionFormData {
     questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
     media?: MediaInfo;
     visibility: QuestionVisibility;
+    audioConfig?: AudioChallengeConfig;
 }
 
 /**
@@ -105,6 +111,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
     const [visibility, setVisibility] = useState<QuestionVisibility>(
         (existingQuestion?.visibility as QuestionVisibility) || QuestionVisibility.PRIVATE
     );
+    const [audioConfig, setAudioConfig] = useState<AudioChallengeConfig>(DEFAULT_AUDIO_CONFIG);
 
     // Handle topic selection
     const handleSelectTopic = (selectedTopic: SelectableTopic | null) => {
@@ -298,9 +305,25 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
             return false;
         }
 
-        if (questionType !== 'TEXT' && !uploadedMediaInfo && !isEditing) {
+        // Image/Video validation
+        if ((questionType === 'IMAGE' || questionType === 'VIDEO') && !uploadedMediaInfo && !isEditing) {
             Alert.alert('Validation Error', 'Please upload media first or change question type to TEXT');
             return false;
+        }
+
+        // Audio challenge validation
+        if (questionType === 'AUDIO') {
+            if (!audioConfig.audioChallengeType) {
+                Alert.alert('Validation Error', 'Please select an audio challenge type');
+                return false;
+            }
+
+            // Check if reference audio is required
+            const typeInfo = AUDIO_CHALLENGE_TYPES.find(t => t.type === audioConfig.audioChallengeType);
+            if (typeInfo?.requiresReferenceAudio && !audioConfig.referenceAudioFile) {
+                Alert.alert('Validation Error', 'Reference audio is required for this challenge type');
+                return false;
+            }
         }
 
         return true;
@@ -337,19 +360,41 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                     topic: topic.trim() || undefined,
                     additionalInfo: additionalInfo.trim() || undefined,
                     visibility,
+                    questionType,
                 };
 
-                // Add media info if available
-                if (uploadedMediaInfo) {
-                    questionData.questionType = questionType;
+                // Add media info if available for IMAGE/VIDEO
+                if (uploadedMediaInfo && (questionType === 'IMAGE' || questionType === 'VIDEO')) {
                     questionData.mediaFileId = uploadedMediaInfo.mediaId;
                 }
 
-                // Call the custom handler if provided
-                if (onQuestionSubmit) {
+                // Add audio challenge config for AUDIO type
+                if (questionType === 'AUDIO' && audioConfig.audioChallengeType) {
+                    questionData.audioChallengeType = audioConfig.audioChallengeType;
+                    questionData.minimumScorePercentage = audioConfig.minimumScorePercentage;
+                    questionData.audioSegmentStart = audioConfig.audioSegmentStart;
+                    questionData.audioSegmentEnd = audioConfig.audioSegmentEnd;
+
+                    // Add rhythm settings if applicable
+                    if (audioConfig.rhythmBpm) {
+                        questionData.rhythmBpm = audioConfig.rhythmBpm;
+                    }
+                    if (audioConfig.rhythmTimeSignature) {
+                        questionData.rhythmTimeSignature = audioConfig.rhythmTimeSignature;
+                    }
+                }
+
+                // Handle submission based on type
+                if (questionType === 'AUDIO' && audioConfig.referenceAudioFile) {
+                    // For audio questions with reference file, use multipart upload
+                    await submitAudioQuestion(questionData, audioConfig.referenceAudioFile);
+                    Alert.alert('Success', 'Audio question created successfully');
+                } else if (onQuestionSubmit) {
+                    // Call the custom handler if provided
                     onQuestionSubmit({
                         ...questionData,
                         media: uploadedMediaInfo || undefined,
+                        audioConfig: questionType === 'AUDIO' ? audioConfig : undefined,
                     });
                 } else {
                     // Default behavior: save to backend
@@ -365,6 +410,55 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
             Alert.alert('Error', 'Failed to save question. Please try again.');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    /**
+     * Submit audio question with multipart form data
+     */
+    const submitAudioQuestion = async (
+        questionData: any,
+        audioFile: ProcessedFileInfo
+    ): Promise<void> => {
+        const formData = new FormData();
+
+        // Add request data as JSON string
+        formData.append('request', JSON.stringify({
+            question: questionData.question,
+            answer: questionData.answer,
+            audioChallengeType: questionData.audioChallengeType,
+            topic: questionData.topic,
+            difficulty: questionData.difficulty,
+            visibility: questionData.visibility,
+            additionalInfo: questionData.additionalInfo,
+            audioSegmentStart: questionData.audioSegmentStart,
+            audioSegmentEnd: questionData.audioSegmentEnd,
+            minimumScorePercentage: questionData.minimumScorePercentage,
+            rhythmBpm: questionData.rhythmBpm,
+            rhythmTimeSignature: questionData.rhythmTimeSignature,
+        }));
+
+        // Add audio file
+        formData.append('referenceAudio', {
+            uri: audioFile.uri,
+            name: audioFile.name,
+            type: audioFile.type,
+        } as any);
+
+        // Make API call (you'll need to implement this or use the appropriate API endpoint)
+        // For now, using a placeholder - replace with actual implementation
+        const response = await fetch('http://10.0.2.2:8082/challenger/api/questions/audio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'multipart/form-data',
+                // Add authorization header if needed
+                // 'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to create audio question');
         }
     };
 
@@ -426,13 +520,24 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                 <View style={styles.pickerContainer}>
                                     <Picker
                                         selectedValue={questionType}
-                                        onValueChange={(value) => setQuestionType(value)}
+                                        onValueChange={(value) => {
+                                            setQuestionType(value);
+                                            // Reset audio config when switching away from AUDIO
+                                            if (value !== 'AUDIO') {
+                                                setAudioConfig(DEFAULT_AUDIO_CONFIG);
+                                                // Also clear any selected media if switching to/from AUDIO
+                                                if (questionType === 'AUDIO' || value === 'AUDIO') {
+                                                    setSelectedMedia(null);
+                                                    setUploadedMediaInfo(null);
+                                                }
+                                            }
+                                        }}
                                         style={styles.picker}
                                     >
                                         <Picker.Item label="Text Only" value="TEXT" />
                                         <Picker.Item label="Image Question" value="IMAGE" />
                                         <Picker.Item label="Video Question" value="VIDEO" />
-                                        <Picker.Item label="Audio Question" value="AUDIO" />
+                                        <Picker.Item label="🎤 Audio Challenge" value="AUDIO" />
                                     </Picker>
                                 </View>
                             </View>
@@ -554,11 +659,11 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                             />
                         </View>
 
-                        {/* Media Section - Only show if not TEXT type and not editing */}
-                        {!isEditing && questionType !== 'TEXT' && (
+                        {/* Media Section - For IMAGE and VIDEO only */}
+                        {!isEditing && (questionType === 'IMAGE' || questionType === 'VIDEO') && (
                             <View style={styles.formGroup}>
                                 <Text style={styles.label}>
-                                    Media ({questionType === 'IMAGE' ? 'Image' : questionType === 'VIDEO' ? 'Video' : 'Audio'}) *
+                                    Media ({questionType === 'IMAGE' ? 'Image' : 'Video'}) *
                                 </Text>
 
                                 {!selectedMedia ? (
@@ -645,6 +750,15 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                     </View>
                                 )}
                             </View>
+                        )}
+
+                        {/* Audio Challenge Section - For AUDIO type */}
+                        {!isEditing && questionType === 'AUDIO' && (
+                            <AudioChallengeSection
+                                config={audioConfig}
+                                onConfigChange={setAudioConfig}
+                                disabled={isSubmitting}
+                            />
                         )}
                     </View>
                 </ScrollView>
