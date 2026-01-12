@@ -1,4 +1,3 @@
-// src/screens/ChallengeDetailsScreen.tsx
 import React, {useEffect, useState} from 'react';
 import {
     ActivityIndicator,
@@ -16,15 +15,19 @@ import {
     useGetQuestAudioConfigQuery,
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
+    useGetQuestionsForChallengeQuery,
 } from '../entities/ChallengeState/model/slice/challengeApi';
+import {
+    useStartQuizSessionMutation,
+} from '../entities/QuizState/model/slice/quizApi';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
 import {navigateToTab} from "../utils/navigation.ts";
-import {QuestionService} from "../services/wwwGame";
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
+import {AudioChallengeType} from '../entities/ChallengeState/model/types';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -35,18 +38,33 @@ type RootStackParamList = {
     CreateChallenge: undefined;
     UserProfile: { userId: string };
     WWWGamePlay: {
-        teamName: string;
-        teamMembers: string[];
-        difficulty: string;
-        roundTime: number;
-        roundCount: number;
-        enableAIHost: boolean;
+        teamName?: string;
+        teamMembers?: string[];
+        difficulty?: string;
+        roundTime?: number;
+        roundCount?: number;
+        enableAIHost?: boolean;
         challengeId?: string;
+        sessionId?: string;
     };
+    WWWGameSetup: undefined;
+    QuizResults: undefined;
 };
 
 type ChallengeDetailsRouteProp = RouteProp<RootStackParamList, 'ChallengeDetails'>;
 type ChallengeDetailsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChallengeDetails'>;
+
+interface ParsedQuizConfig {
+    gameType?: string;           // 'WWW' | 'BLITZ' | 'TRIVIA' | 'CUSTOM' | 'AUDIO'
+    difficulty?: string;         // 'EASY' | 'MEDIUM' | 'HARD'
+    roundCount?: number;
+    roundTime?: number;
+    teamName?: string;
+    teamMembers?: string[];
+    enableAIHost?: boolean;
+    teamBased?: boolean;
+    audioChallengeType?: string; // For AUDIO: 'RHYTHM_CREATION' | 'RHYTHM_REPEAT' | 'SOUND_MATCH' | 'SINGING'
+}
 
 const ChallengeDetailsScreen: React.FC = () => {
     const route = useRoute<ChallengeDetailsRouteProp>();
@@ -74,6 +92,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // State for verification upload
     const [proofSubmitted, setProofSubmitted] = useState(false);
+    const [isStartingQuiz, setIsStartingQuiz] = useState(false);
 
     // RTK Query hooks - skip query if no challengeId
     const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId!, {
@@ -85,6 +104,10 @@ const ChallengeDetailsScreen: React.FC = () => {
     );
     const [joinChallenge, {isLoading: isJoining}] = useJoinChallengeMutation();
     const [submitCompletion, {isLoading: isSubmitting}] = useSubmitChallengeCompletionMutation();
+    const [startQuizSession] = useStartQuizSessionMutation();
+
+    // Prefetch custom questions if needed
+    const { data: customQuestions } = useGetQuestionsForChallengeQuery({ challengeId: challengeId! }, { skip: !challengeId });
 
     useEffect(() => {
         if (error) {
@@ -173,15 +196,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     const renderQuizContent = () => {
         if (!challenge || challenge.type !== 'QUIZ') return null;
 
-        let quizConfig: {
-            gameType?: string;
-            difficulty?: string;
-            roundCount?: number;
-            roundTime?: number;
-            teamName?: string;
-            teamMembers?: string[];
-            enableAIHost?: boolean;
-        } | null = null;
+        let quizConfig: ParsedQuizConfig | null = null;
 
         try {
             // Parse quiz configuration if available
@@ -227,7 +242,10 @@ const ChallengeDetailsScreen: React.FC = () => {
                                 )}
                             </>
                         ) : (
-                            <Text style={styles.quizValue}>Standard Quiz</Text>
+                            <View style={styles.quizRow}>
+                                <Text style={styles.quizLabel}>Game Type:</Text>
+                                <Text style={styles.quizValue}>{quizConfig.gameType || 'Standard Quiz'}</Text>
+                            </View>
                         )}
                     </View>
                 )}
@@ -316,15 +334,7 @@ const ChallengeDetailsScreen: React.FC = () => {
             return;
         }
 
-        let quizConfig: {
-            gameType?: string;
-            difficulty?: string;
-            roundCount?: number;
-            roundTime?: number;
-            teamName?: string;
-            teamMembers?: string[];
-            enableAIHost?: boolean;
-        } | null = null;
+        let quizConfig: ParsedQuizConfig | null = null;
 
         try {
             if (challenge.quizConfig) {
@@ -332,33 +342,213 @@ const ChallengeDetailsScreen: React.FC = () => {
             }
         } catch (e) {
             console.error('Error parsing quiz config:', e);
+            Alert.alert('Error', 'Invalid quiz configuration');
+            return;
         }
 
-        // Check if this is a WWW quiz with game configuration
-        console.log(quizConfig?.gameType);
-        if (quizConfig && quizConfig.gameType === 'WWW') {
-            try {
-                // Use static methods directly on QuestionService
-                const questions = await QuestionService.getQuestionsByDifficulty(
-                    quizConfig.difficulty?.toLowerCase() as any || 'Medium',
-                    quizConfig.roundCount || 5
-                );
+        if (!quizConfig) {
+            Alert.alert('Error', 'Quiz configuration not found');
+            return;
+        }
 
-                navigation.navigate('WWWGamePlay', {
-                    teamName: quizConfig.teamName || 'Team',
-                    teamMembers: quizConfig.teamMembers || [],
-                    difficulty: quizConfig.difficulty || 'medium',
-                    roundTime: quizConfig.roundTime || 30,
-                    roundCount: quizConfig.roundCount || 5,
-                    enableAIHost: quizConfig.enableAIHost !== false,
-                    challengeId: challengeId || undefined,
-                });
-            } catch (error) {
-                console.error('Failed to load quiz questions:', error);
-                Alert.alert('Error', 'Failed to load quiz questions. Please try again.');
+        const gameType = quizConfig.gameType?.toUpperCase();
+        console.log('Starting quiz with gameType:', gameType);
+
+        setIsStartingQuiz(true);
+
+        try {
+            switch (gameType) {
+                case 'WWW':
+                    await handleWWWQuiz(quizConfig);
+                    break;
+                case 'BLITZ':
+                    await handleBlitzQuiz(quizConfig);
+                    break;
+                case 'TRIVIA':
+                    await handleTriviaQuiz(quizConfig);
+                    break;
+                case 'CUSTOM':
+                    await handleCustomQuiz(quizConfig);
+                    break;
+                case 'AUDIO':
+                    await handleAudioQuiz(quizConfig);
+                    break;
+                default:
+                    // Fallback to WWW if no type specified, or show alert
+                    if (!gameType) {
+                        await handleWWWQuiz(quizConfig);
+                    } else {
+                        Alert.alert(
+                            'Coming Soon',
+                            `Quiz type "${gameType}" is not yet supported.`
+                        );
+                    }
             }
+        } catch (error) {
+            console.error('Error starting quiz:', error);
+            Alert.alert('Error', 'Failed to start quiz. Please try again.');
+        } finally {
+            setIsStartingQuiz(false);
+        }
+    };
+
+    const handleWWWQuiz = async (config: ParsedQuizConfig) => {
+        // Create a session for tracking
+        try {
+            const session = await startQuizSession({
+                challengeId: challengeId!,
+                teamName: config.teamName || 'Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
+                roundTimeSeconds: config.roundTime || 30,
+                totalRounds: config.roundCount || 5,
+                enableAiHost: config.enableAIHost !== false,
+                questionSource: 'app'
+            }).unwrap();
+
+            navigation.navigate('WWWGamePlay', {
+                sessionId: session.id,
+                challengeId: challengeId,
+                teamName: config.teamName || 'Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: config.difficulty || 'MEDIUM',
+                roundTime: config.roundTime || 30,
+                roundCount: config.roundCount || 5,
+                enableAIHost: config.enableAIHost !== false,
+            });
+        } catch (error) {
+            console.error('Failed to create WWW quiz session:', error);
+            // Fallback to legacy navigation without session if session creation fails
+            // This ensures backward compatibility
+            navigation.navigate('WWWGamePlay', {
+                teamName: config.teamName || 'Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: config.difficulty || 'medium',
+                roundTime: config.roundTime || 30,
+                roundCount: config.roundCount || 5,
+                enableAIHost: config.enableAIHost !== false,
+                challengeId: challengeId,
+            });
+        }
+    };
+
+    const handleBlitzQuiz = async (config: ParsedQuizConfig) => {
+        // Blitz is fast-paced WWW
+        const blitzRoundTime = 15; // 15 seconds for blitz
+        const blitzAIHost = false; // No AI host for speed
+
+        try {
+            const session = await startQuizSession({
+                challengeId: challengeId!,
+                teamName: config.teamName || 'Blitz Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: (config.difficulty?.toUpperCase() as any) || 'HARD',
+                roundTimeSeconds: blitzRoundTime,
+                totalRounds: config.roundCount || 10,
+                enableAiHost: blitzAIHost,
+                questionSource: 'app'
+            }).unwrap();
+
+            navigation.navigate('WWWGamePlay', {
+                sessionId: session.id,
+                challengeId: challengeId,
+                teamName: config.teamName || 'Blitz Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: config.difficulty || 'HARD',
+                roundTime: blitzRoundTime,
+                roundCount: config.roundCount || 10,
+                enableAIHost: blitzAIHost,
+            });
+        } catch (error) {
+            console.error('Failed to create Blitz session:', error);
+            throw error;
+        }
+    };
+
+    const handleTriviaQuiz = async (config: ParsedQuizConfig) => {
+        // Individual Trivia
+        try {
+            const session = await startQuizSession({
+                challengeId: challengeId!,
+                teamName: user?.username || 'Player',
+                teamMembers: [user?.username || 'Player'],
+                difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
+                roundTimeSeconds: config.roundTime || 20,
+                totalRounds: config.roundCount || 10,
+                enableAiHost: false, // Usually no AI host for standard trivia
+                questionSource: 'app'
+            }).unwrap();
+
+            // Reuse WWWGamePlay for now, or create TriviaGamePlay later
+            navigation.navigate('WWWGamePlay', {
+                sessionId: session.id,
+                challengeId: challengeId,
+                teamName: user?.username || 'Player',
+                teamMembers: [user?.username || 'Player'],
+                difficulty: config.difficulty || 'MEDIUM',
+                roundTime: config.roundTime || 20,
+                roundCount: config.roundCount || 10,
+                enableAIHost: false,
+            });
+        } catch (error) {
+            console.error('Failed to create Trivia session:', error);
+            throw error;
+        }
+    };
+
+    const handleCustomQuiz = async (config: ParsedQuizConfig) => {
+        // Quiz with custom questions from the challenge
+        try {
+            // Extract IDs from pre-fetched custom questions if available
+            const customQuestionIds = customQuestions?.map(q => q.id) || [];
+
+            const session = await startQuizSession({
+                challengeId: challengeId!,
+                teamName: config.teamName || 'Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
+                roundTimeSeconds: config.roundTime || 30,
+                totalRounds: config.roundCount || 5,
+                enableAiHost: config.enableAIHost !== false,
+                questionSource: 'user', // Important: source is user/custom
+                customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined
+            }).unwrap();
+
+            navigation.navigate('WWWGamePlay', {
+                sessionId: session.id,
+                challengeId: challengeId,
+                teamName: config.teamName || 'Team',
+                teamMembers: config.teamMembers || [],
+                difficulty: config.difficulty || 'MEDIUM',
+                roundTime: config.roundTime || 30,
+                roundCount: config.roundCount || 5,
+                enableAIHost: config.enableAIHost !== false,
+            });
+        } catch (error) {
+            console.error('Failed to create Custom Quiz session:', error);
+            throw error;
+        }
+    };
+
+    const handleAudioQuiz = async (config: ParsedQuizConfig) => {
+        // Check for audio config
+        if (!audioConfig && !config.audioChallengeType) {
+            Alert.alert('Error', 'Audio configuration missing for this challenge.');
+            return;
+        }
+
+        const audioType = config.audioChallengeType || AudioChallengeType.RHYTHM_CREATION;
+
+        // For now, if it's a simple listen/play, we might stick here or navigate
+        // If we have specific screens for these:
+        if (audioType === AudioChallengeType.RHYTHM_CREATION || audioType === AudioChallengeType.RHYTHM_REPEAT) {
+             Alert.alert('Coming Soon', 'Rhythm game modes are under development.');
+             // Future: navigation.navigate('RhythmGamePlay', { ... })
+        } else if (audioType === AudioChallengeType.SINGING) {
+             Alert.alert('Coming Soon', 'Singing challenge mode is under development.');
         } else {
-            Alert.alert('Info', 'This quiz type is not yet supported');
+             // Default audio behavior (e.g. just listening)
+             Alert.alert('Audio Challenge', 'Listen to the audio track and complete the verification tasks.');
         }
     };
 
@@ -492,11 +682,18 @@ const ChallengeDetailsScreen: React.FC = () => {
                         {challenge.type === 'QUIZ' ? (
                             // Quiz-specific button
                             <TouchableOpacity
-                                style={[styles.button, styles.primaryButton]}
+                                style={[styles.button, styles.primaryButton, isStartingQuiz && styles.buttonDisabled]}
                                 onPress={handleStartQuiz}
+                                disabled={isStartingQuiz}
                             >
-                                <MaterialCommunityIcons name="play-circle" size={24} color="white"/>
-                                <Text style={styles.buttonText}>Start Quiz</Text>
+                                {isStartingQuiz ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="play-circle" size={24} color="white"/>
+                                        <Text style={styles.buttonText}>Start Quiz</Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         ) : (
                             // Regular challenge buttons
@@ -797,6 +994,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 4,
         shadowOffset: {width: 0, height: 2},
+    },
+    buttonDisabled: {
+        opacity: 0.7,
+        backgroundColor: '#A0A0A0',
     },
     primaryButton: {
         backgroundColor: '#007AFF',
