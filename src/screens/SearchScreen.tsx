@@ -16,10 +16,11 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {ApiChallenge, useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
-import {UserProfile, useSearchUsersQuery} from '../entities/UserState/model/slice/userApi';
+import {useSearchUsersQuery} from '../entities/UserState/model/slice/userApi';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
 import {FormatterService} from '../services/verification/ui/Services';
+import { UserSearchResult } from '../entities/QuizState/model/types/question.types';
 
 // Define types
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -47,7 +48,7 @@ const SearchScreen: React.FC = () => {
         data: userResults,
         isLoading: loadingUsers,
         error: usersError,
-    } = useSearchUsersQuery(debouncedQuery, {
+    } = useSearchUsersQuery({ q: debouncedQuery, limit: 20 }, {
         skip: debouncedQuery.length < 2 || category !== 'users',
     });
 
@@ -117,73 +118,8 @@ const SearchScreen: React.FC = () => {
         navigation.navigate('UserProfile', {userId});
     };
 
-    // Render challenge item
-    const renderChallengeItem = ({item}: { item: ApiChallenge }) => {
-        // Use QuizChallengeCard component for quiz type challenges
-
-        if (!item || !item.id) {
-            console.warn('Invalid challenge item:', item);
-            return null;
-        }
-        const isQuizChallenge = item.type === 'QUIZ';
-
-        if (isQuizChallenge) {
-            return (
-                <QuizChallengeCard
-                    challenge={item}
-                    onPress={() => {
-                        console.log('Opening quiz challenge:', item.id);
-                        navigateToChallengeDetails(item.id);
-                    }}
-                />
-            );
-        }
-
-        // Regular challenge card
-        return (
-            <TouchableOpacity
-                style={styles.challengeItem}
-                onPress={() => {
-                    console.log('Opening challenge:', item.id);
-                    navigateToChallengeDetails(item.id);
-                }}
-            >
-                <View style={styles.challengeHeader}>
-                    <Text style={styles.challengeTitle}>{item.title}</Text>
-                    <View style={[styles.statusBadge, getStatusStyle(item.status)]}>
-                        <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-                    </View>
-                </View>
-
-                {item.description && (
-                    <Text style={styles.challengeDesc} numberOfLines={2}>
-                        {item.description}
-                    </Text>
-                )}
-
-                <View style={styles.challengeFooter}>
-                    <View style={styles.challengeType}>
-                        <MaterialCommunityIcons
-                            name={getChallengeTypeIcon(item.type)}
-                            size={16}
-                            color="#4CAF50"
-                            style={styles.typeIcon}
-                        />
-                        <Text style={styles.challengeTypeText}>{item.type}</Text>
-                    </View>
-
-                    {item.created_at && (
-                        <Text style={styles.dateText}>
-                            {FormatterService.formatDate(item.created_at)}
-                        </Text>
-                    )}
-                </View>
-            </TouchableOpacity>
-        );
-    };
-
     // Render user item
-    const renderUserItem = ({item}: { item: UserProfile }) => (
+    const renderUserItem = ({item}: { item: UserSearchResult }) => (
         <TouchableOpacity
             style={styles.userItem}
             onPress={() => navigateToUserProfile(item.id)}
@@ -198,29 +134,42 @@ const SearchScreen: React.FC = () => {
                 )}
             </View>
             <View style={styles.userInfo}>
-                <Text style={styles.userName}>{item.username}</Text>
-                <Text style={styles.userEmail}>{item.email}</Text>
+                <View style={styles.userHeader}>
+                    <Text style={styles.userName}>{item.username}</Text>
+                    {item.connectionStatus && item.connectionStatus !== 'NONE' && (
+                        <View style={[styles.connectionBadge, getConnectionStatusStyle(item.connectionStatus)]}>
+                            <Text style={styles.connectionText}>{item.connectionStatus.replace('_', ' ')}</Text>
+                        </View>
+                    )}
+                </View>
+                {item.mutualConnectionsCount > 0 && (
+                    <Text style={styles.mutualText}>
+                        <MaterialCommunityIcons name="account-group" size={12}/> {item.mutualConnectionsCount} mutual connections
+                    </Text>
+                )}
                 {item.bio && (
                     <Text style={styles.userBio} numberOfLines={2}>
                         {item.bio}
                     </Text>
                 )}
             </View>
+            {(!item.connectionStatus || item.connectionStatus === 'NONE') && (
+                <TouchableOpacity 
+                    style={styles.addContactButton}
+                    onPress={() => navigation.navigate('AddContact', { selectedUserId: item.id })}
+                >
+                    <MaterialCommunityIcons name="account-plus" size={20} color="#4CAF50"/>
+                </TouchableOpacity>
+            )}
         </TouchableOpacity>
     );
 
-    // Helper to get status badge style
-    const getStatusStyle = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'active':
-            case 'open':
-                return styles.statusActive;
-            case 'completed':
-                return styles.statusCompleted;
-            case 'failed':
-                return styles.statusFailed;
-            default:
-                return {};
+    const getConnectionStatusStyle = (status: string) => {
+        switch (status) {
+            case 'CONNECTED': return styles.statusConnected;
+            case 'PENDING_SENT': return styles.statusPending;
+            case 'PENDING_RECEIVED': return styles.statusPending;
+            default: return {};
         }
     };
 
@@ -392,9 +341,9 @@ const SearchScreen: React.FC = () => {
                                         <ActivityIndicator size="large" color="#4CAF50"/>
                                         <Text style={styles.loadingText}>Searching users...</Text>
                                     </View>
-                                ) : userResults && userResults.length > 0 ? (
-                                    <FlatList<UserProfile>
-                                        data={userResults}
+                                ) : userResults && userResults.content.length > 0 ? (
+                                    <FlatList<UserSearchResult>
+                                        data={userResults.content}
                                         renderItem={renderUserItem}
                                         keyExtractor={(item) => item.id}
                                         contentContainerStyle={styles.listContainer}
@@ -690,6 +639,38 @@ const styles = StyleSheet.create({
     userBio: {
         fontSize: 14,
         color: '#888',
+        marginTop: 4,
+    },
+    userHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 2,
+    },
+    connectionBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+    },
+    statusConnected: {
+        backgroundColor: '#E8F5E9',
+    },
+    statusPending: {
+        backgroundColor: '#FFF3E0',
+    },
+    connectionText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#555',
+    },
+    mutualText: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 4,
+    },
+    addContactButton: {
+        padding: 8,
+        justifyContent: 'center',
     },
 });
 

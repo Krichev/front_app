@@ -23,6 +23,8 @@ import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import GamesHomeScreen from '../screens/GamesHomeScreen';
+import {ContactsScreen} from '../screens/ContactsScreen';
+import {AddContactScreen} from '../screens/AddContactScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -46,6 +48,8 @@ export type RootStackParamList = {
     CreateWWWQuest: undefined;
     UserProfile: {userId: string};
     EditProfile: {userId: string};
+    Contacts: undefined;
+    AddContact: {selectedUserId?: string};
     WWWGameSetup: {
         selectedQuestions?: QuizQuestion[];
         challengeId?: string;
@@ -75,7 +79,7 @@ export type MainTabParamList = {
     Home: undefined;
     Challenges: undefined;
     Search: undefined;
-    Games: undefined;
+    Contacts: undefined;
     Profile: undefined;
 };
 
@@ -122,15 +126,11 @@ function MainTabs() {
                 }}
             />
             <Tab.Screen
-                name="Games"
-                component={GamesHomeScreen}
+                name="Contacts"
+                component={ContactsScreen}
                 options={{
                     tabBarIcon: ({color, size}) => (
-                        <MaterialCommunityIcons
-                            name="gamepad-variant"
-                            size={size}
-                            color={color}
-                        />
+                        <MaterialCommunityIcons name="account-group" size={size} color={color} />
                     ),
                 }}
             />
@@ -200,6 +200,7 @@ const AppNavigator: React.FC = () => {
                         />
                         <Stack.Screen name="UserProfile" component={UserProfileScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                        <Stack.Screen name="AddContact" component={AddContactScreen} />
                         <Stack.Screen name="WWWGameSetup" component={WWWGameSetupScreen} />
                         <Stack.Screen name="WWWGamePlay" component={WWWGamePlayScreen} />
                         <Stack.Screen

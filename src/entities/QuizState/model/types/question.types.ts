@@ -40,8 +40,15 @@ export interface QuestionSearchParams {
 
 // Relationship types
 export enum RelationshipType {
+    COLLEAGUE = 'COLLEAGUE',
+    CLASSMATE = 'CLASSMATE',
     FRIEND = 'FRIEND',
-    FAMILY = 'FAMILY',
+    CLOSE_FRIEND = 'CLOSE_FRIEND',
+    FAMILY_PARENT = 'FAMILY_PARENT',
+    FAMILY_SIBLING = 'FAMILY_SIBLING',
+    FAMILY_EXTENDED = 'FAMILY_EXTENDED',
+    PARTNER = 'PARTNER',
+    ACQUAINTANCE = 'ACQUAINTANCE',
     BLOCKED = 'BLOCKED'
 }
 
@@ -59,12 +66,59 @@ export interface UserRelationship {
     relatedUserAvatar?: string;
     relationshipType: RelationshipType;
     status: RelationshipStatus;
+    nickname?: string;
+    notes?: string;
+    isFavorite: boolean;
     createdAt: string;
 }
 
+export interface ContactGroup {
+    id: string;
+    name: string;
+    color?: string;
+    icon?: string;
+    memberCount: number;
+}
+
+export interface UserSearchResult {
+    id: string;
+    username: string;
+    avatar?: string;
+    bio?: string;
+    mutualConnectionsCount: number;
+    connectionStatus?: 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'CONNECTED';
+}
+
 export interface CreateRelationshipRequest {
-    relatedUserId: number;
+    relatedUserId: string | number;
     relationshipType: RelationshipType;
+    nickname?: string;
+}
+
+export interface UpdateRelationshipRequest {
+    relationshipType?: RelationshipType;
+    nickname?: string;
+    notes?: string;
+    isFavorite?: boolean;
+}
+
+export interface UserPrivacySettings {
+    allowRequestsFrom: string;
+    showConnections: boolean;
+    showMutualConnections: boolean;
+}
+
+export interface UserSuggestion {
+    id: string;
+    username: string;
+    avatar?: string;
+    mutualConnectionsCount: number;
+}
+
+export interface MutualConnection {
+    id: string;
+    username: string;
+    avatar?: string;
 }
 
 // Helper functions

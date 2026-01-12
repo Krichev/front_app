@@ -13,11 +13,17 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {useGetUserProfileQuery, useGetUserStatsQuery} from '../entities/UserState/model/slice/userApi';
+import {
+    useGetRelationshipsQuery,
+    useCreateRelationshipMutation,
+    useGetMutualConnectionsQuery
+} from '../entities/UserState/model/slice/relationshipApi';
 import {useGetChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import {NativeStackNavigationProp} from "react-native-screens/native-stack";
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { RelationshipStatus, RelationshipType } from '../entities/QuizState/model/types/question.types';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -31,18 +37,6 @@ type RootStackParamList = {
 type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
 
-interface UserProfile {
-    id: string;
-    username: string;
-    email: string;
-    bio?: string;
-    avatar?: string;
-    createdAt: string;
-    statsCompleted?: number;
-    statsCreated?: number;
-    statsSuccess?: number;
-}
-
 const UserProfileScreen: React.FC = () => {
     const route = useRoute<UserProfileRouteProp>();
     const navigation = useNavigation<UserProfileNavigationProp>();
@@ -51,57 +45,22 @@ const UserProfileScreen: React.FC = () => {
     // FIXED: Handle missing route params and use current user's ID as fallback
     const userId = route.params?.userId || currentUser?.id;
 
-    // State for tab selection
-    const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created');
-    const [refreshing, setRefreshing] = useState(false);
-
-    // Early return if no userId available
-    if (!userId) {
-        return (
-            <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F44336" />
-                <Text style={styles.errorText}>User not found.</Text>
-            </SafeAreaView>
-        );
-    }
-
-    // RTK Query hooks with proper error handling
-    const {
-        data: user,
-        isLoading: loadingUser,
-        error: userError,
-        refetch: refetchUser
-    } = useGetUserProfileQuery(userId, {
-        // Enable refetching when user comes back to this screen
-        refetchOnMountOrArgChange: true,
-    });
-
-    const {
-        data: userStats,
-        isLoading: loadingStats,
-        refetch: refetchStats
-    } = useGetUserStatsQuery(userId, {
-        refetchOnMountOrArgChange: true,
-    });
-
-    const {
-        data: createdChallenges,
-        isLoading: loadingCreated,
-        refetch: refetchCreated
-    } = useGetChallengesQuery({
-        creator_id: userId,
-    });
-
-    const {
-        data: joinedChallenges,
-        isLoading: loadingJoined,
-        refetch: refetchJoined
-    } = useGetChallengesQuery({
-        participant_id: userId,
-    });
-
     // Check if this is the current user's profile
     const isCurrentUser = currentUser?.id === userId;
+
+    // Relationship status
+    const { data: relationshipData } = useGetRelationshipsQuery(
+        { relatedUserId: userId, status: undefined },
+        { skip: isCurrentUser || !userId }
+    );
+    const relationship = relationshipData?.content?.[0];
+
+    const { data: mutualConnections } = useGetMutualConnectionsQuery(
+        userId,
+        { skip: isCurrentUser || !userId }
+    );
+
+    const [createRelationship, { isLoading: isSendingRequest }] = useCreateRelationshipMutation();
 
     // Handle refresh
     const onRefresh = async () => {
@@ -120,14 +79,21 @@ const UserProfileScreen: React.FC = () => {
         }
     };
 
-    // Handle editing profile
-    const handleEditProfile = () => {
-        navigation.navigate('EditProfile', { userId });
-    };
-
     // Handle challenge tap
     const navigateToChallengeDetails = (challengeId: string) => {
         navigation.navigate('ChallengeDetails', { challengeId });
+    };
+
+    const handleAddContact = async () => {
+        try {
+            await createRelationship({
+                relatedUserId: userId,
+                relationshipType: RelationshipType.FRIEND
+            }).unwrap();
+            Alert.alert('Success', 'Relationship request sent');
+        } catch (error) {
+            Alert.alert('Error', 'Failed to send request');
+        }
     };
 
     // Format date
@@ -243,9 +209,19 @@ const UserProfileScreen: React.FC = () => {
                         <Text style={styles.username}>{user.username}</Text>
                         {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
                         <Text style={styles.joinDate}>{formatJoinDate(user.createdAt)}</Text>
+                        
+                        {!isCurrentUser && relationship && (
+                            <View style={styles.relationshipBadge}>
+                                <Text style={styles.relationshipText}>
+                                    {relationship.status === RelationshipStatus.ACCEPTED 
+                                        ? relationship.relationshipType 
+                                        : `Request ${relationship.status}`}
+                                </Text>
+                            </View>
+                        )}
                     </View>
 
-                    {isCurrentUser && (
+                    {isCurrentUser ? (
                         <TouchableOpacity
                             style={styles.editProfileButton}
                             onPress={handleEditProfile}
@@ -253,8 +229,49 @@ const UserProfileScreen: React.FC = () => {
                             <MaterialCommunityIcons name="pencil" size={18} color="white" />
                             <Text style={styles.editProfileButtonText}>Edit Profile</Text>
                         </TouchableOpacity>
+                    ) : (
+                        !relationship ? (
+                            <TouchableOpacity
+                                style={styles.addContactButton}
+                                onPress={handleAddContact}
+                                disabled={isSendingRequest}
+                            >
+                                {isSendingRequest ? (
+                                    <ActivityIndicator size="small" color="white" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="account-plus" size={18} color="white" />
+                                        <Text style={styles.addContactButtonText}>Add to Contacts</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        ) : relationship.status === RelationshipStatus.PENDING ? (
+                            <View style={styles.pendingBadge}>
+                                <Text style={styles.pendingText}>Request Pending</Text>
+                            </View>
+                        ) : null
                     )}
                 </View>
+
+                {/* Mutual Connections Section */}
+                {!isCurrentUser && mutualConnections && mutualConnections.length > 0 && (
+                    <View style={styles.mutualSection}>
+                        <Text style={styles.sectionTitle}>Mutual Connections</Text>
+                        <View style={styles.mutualAvatars}>
+                            {mutualConnections.slice(0, 5).map((conn, index) => (
+                                <View key={conn.id} style={[styles.mutualAvatarWrapper, { marginLeft: index === 0 ? 0 : -15 }]}>
+                                    <Image 
+                                        source={{ uri: conn.avatar || 'https://via.placeholder.com/40x40?text=U' }} 
+                                        style={styles.mutualAvatar} 
+                                    />
+                                </View>
+                            ))}
+                            {mutualConnections.length > 5 && (
+                                <Text style={styles.mutualMore}>+{mutualConnections.length - 5} more</Text>
+                            )}
+                        </View>
+                    </View>
+                )}
 
                 {/* Stats Section */}
                 <View style={styles.statsSection}>
@@ -445,6 +462,70 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 5,
+    },
+    addContactButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#4CAF50',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    addContactButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginLeft: 5,
+    },
+    relationshipBadge: {
+        backgroundColor: '#e8f5e9',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginTop: 5,
+    },
+    relationshipText: {
+        color: '#4CAF50',
+        fontSize: 12,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    pendingBadge: {
+        backgroundColor: '#fff3e0',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    pendingText: {
+        color: '#ff9800',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    mutualSection: {
+        backgroundColor: 'white',
+        margin: 10,
+        padding: 20,
+        borderRadius: 10,
+    },
+    mutualAvatars: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    mutualAvatarWrapper: {
+        borderWidth: 2,
+        borderColor: 'white',
+        borderRadius: 20,
+    },
+    mutualAvatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+    },
+    mutualMore: {
+        marginLeft: 10,
+        color: '#666',
+        fontSize: 14,
     },
     statsSection: {
         backgroundColor: 'white',
