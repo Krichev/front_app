@@ -10,7 +10,7 @@ import {
     UserPrivacySettings,
     UserSuggestion,
     MutualConnection
-} from '../../QuizState/model/types/question.types';
+} from '../../../QuizState/model/types/question.types';
 
 export const relationshipApi = createApi({
     reducerPath: 'relationshipApi',

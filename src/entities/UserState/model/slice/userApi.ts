@@ -4,7 +4,7 @@ import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {updateUser} from '../../../AuthState/model/slice/authSlice'; // ADDED: Import updateUser
 import TokenRefreshService from '../../../../services/auth/TokenRefreshService'; // ADDED: Import TokenRefreshService
-import { UserSearchResult } from '../../QuizState/model/types/question.types';
+import { UserSearchResult } from '../../../QuizState/model/types/question.types';
 
 export interface UserProfile {
     id: string;
@@ -131,8 +131,6 @@ export const userApi = createApi({
             ],
         }),
 
-import { UserSearchResult } from '../../QuizState/model/types/question.types';
-...
         searchUsers: builder.query<{ content: UserSearchResult[], totalElements: number }, { q: string; page?: number; limit?: number; excludeConnected?: boolean }>({
             query: ({ q, page = 0, limit = 10, excludeConnected = false }) => ({
                 url: '/users/search',

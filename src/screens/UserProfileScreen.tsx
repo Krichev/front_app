@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     Image,
     RefreshControl,
@@ -19,20 +20,12 @@ import {
     useGetMutualConnectionsQuery
 } from '../entities/UserState/model/slice/relationshipApi';
 import {useGetChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
-import {NativeStackNavigationProp} from "react-native-screens/native-stack";
+import {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RelationshipStatus, RelationshipType } from '../entities/QuizState/model/types/question.types';
-
-// Define the types for the navigation parameters
-type RootStackParamList = {
-    Home: undefined;
-    Challenges: undefined;
-    ChallengeDetails: { challengeId: string };
-    UserProfile: { userId: string };
-    EditProfile: { userId: string };
-};
+import {RootStackParamList} from '../navigation/AppNavigator';
 
 type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
@@ -48,15 +41,58 @@ const UserProfileScreen: React.FC = () => {
     // Check if this is the current user's profile
     const isCurrentUser = currentUser?.id === userId;
 
+    // State for tab selection
+    const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created');
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Handle editing profile
+    const handleEditProfile = () => {
+        if (userId) {
+            navigation.navigate('EditProfile', { userId });
+        }
+    };
+
+    const {
+        data: user,
+        isLoading: loadingUser,
+        error: userError,
+        refetch: refetchUser
+    } = useGetUserProfileQuery(userId!, {
+        skip: !userId,
+    });
+
+    const {
+        data: userStats,
+        refetch: refetchStats
+    } = useGetUserStatsQuery(userId!, {
+        skip: !userId,
+    });
+
+    const {
+        data: createdChallenges,
+        isLoading: loadingCreated,
+        refetch: refetchCreated
+    } = useGetChallengesQuery({
+        creator_id: userId!,
+    }, { skip: !userId });
+
+    const {
+        data: joinedChallenges,
+        isLoading: loadingJoined,
+        refetch: refetchJoined
+    } = useGetChallengesQuery({
+        participant_id: userId!,
+    }, { skip: !userId });
+
     // Relationship status
-    const { data: relationshipData } = useGetRelationshipsQuery(
+    const { data: relationshipData, refetch: refetchRelationship } = useGetRelationshipsQuery(
         { relatedUserId: userId, status: undefined },
         { skip: isCurrentUser || !userId }
     );
     const relationship = relationshipData?.content?.[0];
 
-    const { data: mutualConnections } = useGetMutualConnectionsQuery(
-        userId,
+    const { data: mutualConnections, refetch: refetchMutual } = useGetMutualConnectionsQuery(
+        userId!,
         { skip: isCurrentUser || !userId }
     );
 
@@ -66,12 +102,17 @@ const UserProfileScreen: React.FC = () => {
     const onRefresh = async () => {
         setRefreshing(true);
         try {
-            await Promise.all([
+            const promises: Promise<any>[] = [
                 refetchUser(),
                 refetchStats(),
                 refetchCreated(),
                 refetchJoined(),
-            ]);
+            ];
+            if (!isCurrentUser && userId) {
+                promises.push(refetchRelationship());
+                promises.push(refetchMutual());
+            }
+            await Promise.all(promises);
         } catch (error) {
             console.error('Error refreshing profile:', error);
         } finally {
@@ -85,6 +126,7 @@ const UserProfileScreen: React.FC = () => {
     };
 
     const handleAddContact = async () => {
+        if (!userId) return;
         try {
             await createRelationship({
                 relatedUserId: userId,
