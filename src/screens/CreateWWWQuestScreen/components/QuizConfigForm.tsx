@@ -1,4 +1,5 @@
 // src/screens/CreateWWWQuestScreen/components/QuizConfigForm.tsx
+import {Picker} from '@react-native-picker/picker';
 import React from 'react';
 import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {QuizConfig} from '../hooks/useQuestCreator';
@@ -214,6 +215,109 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                 </View>
             </View>
 
+            {/* Participation Settings */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Participation Settings</Text>
+                <View style={styles.toggleRow}>
+                    <View style={styles.toggleInfo}>
+                        <Text style={styles.label}>Open Enrollment</Text>
+                        <Text style={styles.helperText}>
+                            Allow users to join without an invitation.
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggle,
+                            config?.allowOpenEnrollment && styles.toggleActive
+                        ]}
+                        onPress={() => updateConfig({ allowOpenEnrollment: !config?.allowOpenEnrollment })}
+                    >
+                        <View
+                            style={[
+                                styles.toggleThumb,
+                                config?.allowOpenEnrollment && styles.toggleThumbActive
+                            ]}
+                        />
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.inputRow}>
+                    <Text style={styles.label}>Max Participants</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={config?.maxParticipants?.toString() || ''}
+                        onChangeText={(text) => updateConfig({ maxParticipants: text ? parseInt(text) : undefined })}
+                        placeholder="Unlimited"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                    />
+                </View>
+            </View>
+
+            {/* Completion Settings */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Completion Settings</Text>
+                <View style={styles.toggleRow}>
+                    <View style={styles.toggleInfo}>
+                        <Text style={styles.label}>Shuffle Questions</Text>
+                        <Text style={styles.helperText}>
+                            Randomize question order for each participant.
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggle,
+                            config?.shuffleQuestions && styles.toggleActive
+                        ]}
+                        onPress={() => updateConfig({ shuffleQuestions: !config?.shuffleQuestions })}
+                    >
+                        <View
+                            style={[
+                                styles.toggleThumb,
+                                config?.shuffleQuestions && styles.toggleThumbActive
+                            ]}
+                        />
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.inputRow}>
+                    <Text style={styles.label}>Max Attempts Per User</Text>
+                    <TextInput
+                        style={styles.input}
+                        value={config?.maxAttempts?.toString() || ''}
+                        onChangeText={(text) => updateConfig({ maxAttempts: text ? parseInt(text) : undefined })}
+                        placeholder="1"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                    />
+                </View>
+            </View>
+
+            {/* Result Sharing Settings */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Result Sharing Settings</Text>
+                <View style={styles.toggleRow}>
+                    <View style={styles.toggleInfo}>
+                        <Text style={styles.label}>Require Result Consent</Text>
+                        <Text style={styles.helperText}>
+                            Ask participant before sharing their results.
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggle,
+                            config?.requireResultConsent && styles.toggleActive
+                        ]}
+                        onPress={() => updateConfig({ requireResultConsent: !config?.requireResultConsent })}
+                    >
+                        <View
+                            style={[
+                                styles.toggleThumb,
+                                config?.requireResultConsent && styles.toggleThumbActive
+                            ]}
+                        />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
             {/* Configuration Summary */}
             <View style={styles.summaryBox}>
                 <Text style={styles.summaryTitle}>Configuration Summary</Text>
@@ -372,6 +476,9 @@ const styles = StyleSheet.create({
     },
     toggleInfo: {
         flex: 1,
+    },
+    inputRow: {
+        marginTop: 16,
     },
     toggle: {
         width: 56,

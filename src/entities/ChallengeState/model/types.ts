@@ -225,10 +225,24 @@ export interface GetAccessibleChallengesParams {
 // QUIZ CHALLENGE TYPES
 // ============================================================================
 
+export type ResultSharingPolicy = 
+    | 'CREATOR_ONLY' 
+    | 'PARTICIPANTS_ONLY' 
+    | 'ALL_PARTICIPANTS' 
+    | 'PUBLIC' 
+    | 'NONE';
+
+export type ParticipantConsentStatus = 
+    | 'NOT_ASKED' 
+    | 'PENDING' 
+    | 'GRANTED' 
+    | 'DENIED';
+
 /**
- * Quiz challenge configuration (API format)
+ * Extended quiz configuration with participation settings
  */
 export interface QuizChallengeConfig {
+    // Existing fields
     defaultDifficulty: 'EASY' | 'MEDIUM' | 'HARD';
     defaultRoundTimeSeconds: number;
     defaultTotalRounds: number;
@@ -239,6 +253,42 @@ export interface QuizChallengeConfig {
     teamName: string;
     teamMembers: string[];
     teamBased?: boolean;
+    
+    // NEW: Participation settings
+    maxParticipants?: number;           // null = unlimited
+    allowOpenEnrollment?: boolean;      // default true
+    enrollmentDeadline?: string;        // ISO date string
+    
+    // NEW: Completion settings
+    individualOnly?: boolean;           // force individual completion
+    maxAttempts?: number;               // default 1
+    shuffleQuestions?: boolean;         // randomize per participant
+    
+    // NEW: Result sharing
+    resultSharing?: ResultSharingPolicy;
+    requireResultConsent?: boolean;     // ask before sharing with creator
+}
+
+/**
+ * Participant settings for a quiz
+ */
+export interface QuizParticipantSettings {
+    id: string;
+    challengeId: string;
+    userId: string;
+    username?: string;
+    resultConsentStatus: ParticipantConsentStatus;
+    attemptsUsed: number;
+    lastAttemptAt?: string;
+    bestScore?: number;
+}
+
+/**
+ * Request to update consent
+ */
+export interface UpdateConsentRequest {
+    challengeId: string;
+    granted: boolean;
 }
 
 /**
