@@ -3,6 +3,7 @@ import React from 'react';
 import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import { View, Text } from 'react-native';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
@@ -34,6 +35,8 @@ import {GameSettings} from '../services/wwwGame';
 import CreateQuestionWithMedia from "../screens/components/CreateQuestionWithMedia.tsx";
 import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
+import { useGetRelationshipsQuery } from '../entities/UserState/model/slice/relationshipApi';
+import { RelationshipStatus } from '../entities/QuizState/model/types/question.types';
 
 // Navigation types
 export type RootStackParamList = {
@@ -91,6 +94,12 @@ export const navigationRef = React.createRef<NavigationContainerRef<RootStackPar
 
 // Main tab navigator
 function MainTabs() {
+    const { data: pendingData } = useGetRelationshipsQuery({
+        status: RelationshipStatus.PENDING,
+        size: 1
+    });
+    const pendingCount = pendingData?.totalElements || 0;
+
     return (
         <Tab.Navigator
             screenOptions={{
@@ -130,7 +139,29 @@ function MainTabs() {
                 component={ContactsScreen}
                 options={{
                     tabBarIcon: ({color, size}) => (
-                        <MaterialCommunityIcons name="account-group" size={size} color={color} />
+                        <View style={{ width: 24, height: 24, margin: 5 }}>
+                            <MaterialCommunityIcons name="account-group" size={size} color={color} />
+                            {pendingCount > 0 && (
+                                <View style={{
+                                    position: 'absolute',
+                                    right: -8,
+                                    top: -8,
+                                    backgroundColor: '#ff4444',
+                                    borderRadius: 10,
+                                    minWidth: 18,
+                                    height: 18,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    paddingHorizontal: 2,
+                                    borderWidth: 1.5,
+                                    borderColor: 'white'
+                                }}>
+                                    <Text style={{ color: 'white', fontSize: 10, fontWeight: 'bold' }}>
+                                        {pendingCount > 99 ? '99+' : pendingCount}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
                     ),
                 }}
             />

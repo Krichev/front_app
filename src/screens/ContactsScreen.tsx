@@ -18,7 +18,6 @@ import {
     useRejectRelationshipMutation,
     useRemoveRelationshipMutation,
     useToggleFavoriteMutation,
-    useGetContactGroupsQuery,
 } from '../entities/UserState/model/slice/relationshipApi';
 import {
     RelationshipStatus,
@@ -35,15 +34,17 @@ const CATEGORIES = [
 ];
 
 export const ContactsScreen: React.FC = () => {
+    const [viewMode, setViewMode] = useState<'contacts' | 'requests'>('contacts');
     const [activeCategory, setActiveCategory] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'name_asc' | 'date_desc'>('name_asc');
 
+    // Contacts Query
     const {
         data: relationshipPage,
-        isLoading,
-        isFetching,
-        refetch
+        isLoading: isLoadingContacts,
+        isFetching: isFetchingContacts,
+        refetch: refetchContacts
     } = useGetRelationshipsQuery({
         type: activeCategory !== 'ALL' && activeCategory !== 'FAVORITES' ? activeCategory as RelationshipType : undefined,
         status: RelationshipStatus.ACCEPTED,
@@ -51,8 +52,22 @@ export const ContactsScreen: React.FC = () => {
         size: 100
     });
 
+    // Pending Requests Query
+    const {
+        data: pendingRequestsPage,
+        isLoading: isLoadingPending,
+        isFetching: isFetchingPending,
+        refetch: refetchPending
+    } = useGetRelationshipsQuery({
+        status: RelationshipStatus.PENDING,
+        sort: 'date_desc',
+        size: 100
+    });
+
     const [toggleFavorite] = useToggleFavoriteMutation();
     const [removeRelationship] = useRemoveRelationshipMutation();
+    const [acceptRelationship] = useAcceptRelationshipMutation();
+    const [rejectRelationship] = useRejectRelationshipMutation();
 
     const relationships = useMemo(() => {
         let items = relationshipPage?.content || [];
@@ -71,6 +86,8 @@ export const ContactsScreen: React.FC = () => {
         
         return items;
     }, [relationshipPage, activeCategory, searchQuery]);
+
+    const pendingRequests = pendingRequestsPage?.content || [];
 
     const handleToggleFavorite = async (id: string) => {
         try {
@@ -94,6 +111,36 @@ export const ContactsScreen: React.FC = () => {
                             await removeRelationship(id).unwrap();
                         } catch (error) {
                             Alert.alert('Error', 'Failed to remove contact');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleAcceptRequest = async (id: string) => {
+        try {
+            await acceptRelationship(id).unwrap();
+            // Automatically switch to contacts view to see new friend? Optional.
+        } catch (error) {
+            Alert.alert('Error', 'Failed to accept request');
+        }
+    };
+
+    const handleRejectRequest = (id: string) => {
+        Alert.alert(
+            'Reject Request',
+            'Are you sure you want to reject this request?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Reject',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await rejectRelationship(id).unwrap();
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to reject request');
                         }
                     }
                 }
@@ -144,6 +191,40 @@ export const ContactsScreen: React.FC = () => {
         </View>
     );
 
+    const renderPendingRequestCard = ({ item }: { item: UserRelationship }) => (
+        <View style={styles.requestCard}>
+            <View style={styles.avatarContainer}>
+                {item.relatedUserAvatar ? (
+                    <Image source={{ uri: item.relatedUserAvatar }} style={styles.avatar} />
+                ) : (
+                    <View style={[styles.avatarPlaceholder, { backgroundColor: '#fff3cd' }]}>
+                        <Text style={[styles.avatarInitial, { color: '#ffc107' }]}>
+                            {item.relatedUserUsername.charAt(0).toUpperCase()}
+                        </Text>
+                    </View>
+                )}
+            </View>
+            
+            <View style={styles.contactInfo}>
+                <Text style={styles.contactName}>
+                    {item.relatedUserUsername}
+                </Text>
+                <Text style={styles.requestText}>
+                    wants to connect as {item.relationshipType}
+                </Text>
+            </View>
+
+            <View style={styles.actions}>
+                <TouchableOpacity onPress={() => handleAcceptRequest(item.id)} style={styles.actionButton}>
+                    <Icon name="checkmark-circle" size={28} color="#4CAF50" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleRejectRequest(item.id)} style={styles.actionButton}>
+                    <Icon name="close-circle" size={28} color="#ff4444" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -153,76 +234,126 @@ export const ContactsScreen: React.FC = () => {
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.searchSection}>
-                <View style={styles.searchBar}>
-                    <Icon name="search" size={20} color="#999" />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search contacts..."
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                </View>
+            <View style={styles.tabContainer}>
                 <TouchableOpacity 
-                    style={styles.sortButton}
-                    onPress={() => setSortBy(sortBy === 'name_asc' ? 'date_desc' : 'name_asc')}
+                    style={[styles.tab, viewMode === 'contacts' && styles.activeTab]}
+                    onPress={() => setViewMode('contacts')}
                 >
-                    <Icon name="swap-vertical" size={20} color="#007AFF" />
+                    <Text style={[styles.tabText, viewMode === 'contacts' && styles.activeTabText]}>
+                        Contacts
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.tab, viewMode === 'requests' && styles.activeTab]}
+                    onPress={() => setViewMode('requests')}
+                >
+                    <Text style={[styles.tabText, viewMode === 'requests' && styles.activeTabText]}>
+                        Requests
+                    </Text>
+                    {pendingRequests.length > 0 && (
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{pendingRequests.length}</Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.categoryContainer}>
-                <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    data={CATEGORIES}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <TouchableOpacity
-                            style={[
-                                styles.categoryTab,
-                                activeCategory === item.id && styles.activeCategoryTab
-                            ]}
-                            onPress={() => setActiveCategory(item.id)}
-                        >
-                            <Icon 
-                                name={item.icon} 
-                                size={18} 
-                                color={activeCategory === item.id ? '#fff' : '#666'} 
+            {viewMode === 'contacts' ? (
+                <>
+                    <View style={styles.searchSection}>
+                        <View style={styles.searchBar}>
+                            <Icon name="search" size={20} color="#999" />
+                            <TextInput
+                                style={styles.searchInput}
+                                placeholder="Search contacts..."
+                                value={searchQuery}
+                                onChangeText={setSearchQuery}
                             />
-                            <Text style={[
-                                styles.categoryLabel,
-                                activeCategory === item.id && styles.activeCategoryLabel
-                            ]}>
-                                {item.label}
-                            </Text>
+                        </View>
+                        <TouchableOpacity 
+                            style={styles.sortButton}
+                            onPress={() => setSortBy(sortBy === 'name_asc' ? 'date_desc' : 'name_asc')}
+                        >
+                            <Icon name="swap-vertical" size={20} color="#007AFF" />
                         </TouchableOpacity>
-                    )}
-                    contentContainerStyle={styles.categoryList}
-                />
-            </View>
-
-            <FlatList
-                data={relationships}
-                renderItem={renderContactItem}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContent}
-                refreshControl={
-                    <RefreshControl refreshing={isFetching} onRefresh={refetch} />
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        {isLoading ? (
-                            <ActivityIndicator size="large" color="#007AFF" />
-                        ) : (
-                            <>
-                                <Icon name="people-outline" size={64} color="#ccc" />
-                                <Text style={styles.emptyText}>No contacts found</Text>
-                            </>
-                        )}
                     </View>
-                }
-            />
+
+                    <View style={styles.categoryContainer}>
+                        <FlatList
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            data={CATEGORIES}
+                            keyExtractor={(item) => item.id}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.categoryTab,
+                                        activeCategory === item.id && styles.activeCategoryTab
+                                    ]}
+                                    onPress={() => setActiveCategory(item.id)}
+                                >
+                                    <Icon 
+                                        name={item.icon} 
+                                        size={18} 
+                                        color={activeCategory === item.id ? '#fff' : '#666'} 
+                                    />
+                                    <Text style={[
+                                        styles.categoryLabel,
+                                        activeCategory === item.id && styles.activeCategoryLabel
+                                    ]}>
+                                        {item.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                            contentContainerStyle={styles.categoryList}
+                        />
+                    </View>
+
+                    <FlatList
+                        data={relationships}
+                        renderItem={renderContactItem}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.listContent}
+                        refreshControl={
+                            <RefreshControl refreshing={isFetchingContacts} onRefresh={refetchContacts} />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                {isLoadingContacts ? (
+                                    <ActivityIndicator size="large" color="#007AFF" />
+                                ) : (
+                                    <>
+                                        <Icon name="people-outline" size={64} color="#ccc" />
+                                        <Text style={styles.emptyText}>No contacts found</Text>
+                                    </>
+                                )}
+                            </View>
+                        }
+                    />
+                </>
+            ) : (
+                <FlatList
+                    data={pendingRequests}
+                    renderItem={renderPendingRequestCard}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.listContent}
+                    refreshControl={
+                        <RefreshControl refreshing={isFetchingPending} onRefresh={refetchPending} />
+                    }
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            {isLoadingPending ? (
+                                <ActivityIndicator size="large" color="#007AFF" />
+                            ) : (
+                                <>
+                                    <Icon name="mail-open-outline" size={64} color="#ccc" />
+                                    <Text style={styles.emptyText}>No pending requests</Text>
+                                </>
+                            )}
+                        </View>
+                    }
+                />
+            )}
         </View>
     );
 };
@@ -261,6 +392,46 @@ const styles = StyleSheet.create({
     },
     addButton: {
         padding: 8,
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        padding: 16,
+        backgroundColor: '#fff',
+        gap: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    tab: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: '#f8f9fa',
+    },
+    activeTab: {
+        backgroundColor: '#e7f1ff',
+    },
+    tabText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#666',
+    },
+    activeTabText: {
+        color: '#007AFF',
+    },
+    badge: {
+        backgroundColor: '#ff4444',
+        borderRadius: 10,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        marginLeft: 8,
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: 'bold',
     },
     searchSection: {
         flexDirection: 'row',
@@ -336,6 +507,21 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 2,
     },
+    requestCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#ffeeba',
+    },
     avatarContainer: {
         marginRight: 12,
     },
@@ -368,6 +554,11 @@ const styles = StyleSheet.create({
     username: {
         fontSize: 13,
         color: '#868e96',
+        marginTop: 2,
+    },
+    requestText: {
+        fontSize: 13,
+        color: '#666',
         marginTop: 2,
     },
     badgeContainer: {
