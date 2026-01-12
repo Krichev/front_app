@@ -126,6 +126,11 @@ const ChallengeVerificationScreen: React.FC = () => {
 
     // Submit verification data to server
     const submitToServer = async () => {
+        if (!challengeId) {
+            Alert.alert('Error', 'Challenge ID is missing');
+            return;
+        }
+
         try {
             const verificationData = {
                 photo: photoUri,
@@ -138,8 +143,8 @@ const ChallengeVerificationScreen: React.FC = () => {
             };
 
             await submitCompletion({
-                id: challengeId,
-                proof: verificationData
+                challengeId: challengeId,
+                completionData: verificationData
             }).unwrap();
 
             Alert.alert(

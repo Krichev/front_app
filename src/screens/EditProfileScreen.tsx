@@ -174,14 +174,21 @@ const EditProfileScreen: React.FC = () => {
             const originalUsername = userProfile?.username;
             const usernameChanged = originalUsername !== formData.username.trim();
 
+            if (!userId) {
+                Alert.alert('Error', 'User ID not found');
+                return;
+            }
+
             const updateData = {
-                id: userId,
                 username: formData.username.trim(),
                 bio: formData.bio.trim(),
                 avatar: formData.avatar,
             };
 
-            const result = await updateUserProfile(updateData).unwrap();
+            await updateUserProfile({
+                userId,
+                userData: updateData
+            }).unwrap();
 
             // If this is the current user's profile and username changed, update Redux auth state
             if (isOwn && usernameChanged && currentUser) {

@@ -162,8 +162,8 @@ const WWWGameResultsScreen: React.FC = () => {
 
             // Submit completion with the game results
             await submitCompletion({
-                id: challengeId,
-                proof: {
+                challengeId: challengeId,
+                completionData: {
                     score,
                     totalRounds,
                     completed: true,

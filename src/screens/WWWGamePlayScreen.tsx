@@ -194,15 +194,16 @@ const WWWGamePlayScreen: React.FC = () => {
 
         try {
             const request = {
-                roundNumber: currentRound + 1, // roundNumber is 1-based
                 teamAnswer: teamAnswer.trim(),
                 playerWhoAnswered: selectedPlayer || 'Team', // Default to 'Team' if no player selected
                 discussionNotes: discussionNotes.trim(),
-                hintUsed: showHint,
-                voiceRecordingUsed: isVoiceRecordingEnabled && (voiceTranscription.length > 0),
             };
 
-            await submitRoundAnswer({ sessionId, request }).unwrap();
+            await submitRoundAnswer({
+                sessionId,
+                roundId: currentRoundData.id,
+                answer: request
+            }).unwrap();
 
             // Move to feedback phase
             setGamePhase('feedback');
