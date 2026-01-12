@@ -1,391 +1,350 @@
-// src/screens/SearchScreen.tsx
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     ActivityIndicator,
-    Alert,
-    FlatList,
     Image,
     SafeAreaView,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {ApiChallenge, useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
-import {useSearchUsersQuery} from '../entities/UserState/model/slice/userApi';
-import {RootStackParamList} from '../navigation/AppNavigator';
-import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
-import {FormatterService} from '../services/verification/ui/Services';
+import { useSearchChallengesQuery } from '../entities/ChallengeState/model/slice/challengeApi';
+import { useSearchUsersQuery } from '../entities/UserState/model/slice/userApi';
+import { RootStackParamList } from '../navigation/AppNavigator';
 import { UserSearchResult } from '../entities/QuizState/model/types/question.types';
 
-// Define types
 type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-type SearchCategory = 'challenges' | 'users' | 'quizzes';
+
+const PREVIEW_LIMIT = 3;
 
 const SearchScreen: React.FC = () => {
     const navigation = useNavigation<SearchScreenNavigationProp>();
 
-    // State
     const [searchQuery, setSearchQuery] = useState('');
-    const [category, setCategory] = useState<SearchCategory>('challenges');
     const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+        users: false,
+        quizzes: false,
+        challenges: false,
+    });
     const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-    // RTK Query hooks
+    // Fetch ALL types when query is valid
+    const shouldSearch = debouncedQuery.length >= 2;
+
     const {
         data: challengeResults,
         isLoading: loadingChallenges,
-        error: challengesError,
-    } = useSearchChallengesQuery(debouncedQuery, {
-        skip: debouncedQuery.length < 2 || category === 'users',
-    });
+    } = useSearchChallengesQuery({ q: debouncedQuery }, { skip: !shouldSearch });
 
     const {
         data: userResults,
         isLoading: loadingUsers,
-        error: usersError,
-    } = useSearchUsersQuery({ q: debouncedQuery, limit: 20 }, {
-        skip: debouncedQuery.length < 2 || category !== 'users',
-    });
+    } = useSearchUsersQuery(
+        { q: debouncedQuery, limit: 20 },
+        { skip: !shouldSearch }
+    );
 
-    // Filter quiz challenges
-    const quizResults = React.useMemo(() => {
-        if (!challengeResults) return [];
+    // Separate quizzes from challenges
+    const quizResults = useMemo(() => {
+        return challengeResults?.filter(c => c.type === 'QUIZ') || [];
+    }, [challengeResults]);
 
-        return challengeResults.filter(challenge => {
-            if (category !== 'quizzes') return false;
-            return challenge.type === 'QUIZ';
-        });
-    }, [challengeResults, category]);
+    const challengeOnlyResults = useMemo(() => {
+        return challengeResults?.filter(c => c.type !== 'QUIZ') || [];
+    }, [challengeResults]);
 
-    // Standard challenge results (non-quiz)
-    const standardChallengeResults = React.useMemo(() => {
-        if (!challengeResults) return [];
+    const users = userResults?.content || [];
 
-        return challengeResults.filter(challenge => {
-            if (category !== 'challenges') return false;
-            return challenge.type !== 'QUIZ';
-        });
-    }, [challengeResults, category]);
-
-    // Debouncing search query
+    // Debounce
     useEffect(() => {
         const handler = setTimeout(() => {
             if (searchQuery.length >= 2) {
                 setDebouncedQuery(searchQuery);
-
-                // Save to recent searches
+                // eslint-disable-next-line react-hooks/exhaustive-deps
                 if (!recentSearches.includes(searchQuery)) {
                     setRecentSearches(prev => [searchQuery, ...prev.slice(0, 4)]);
                 }
+            } else {
+                setDebouncedQuery('');
             }
-        }, 500);
+        }, 400);
+        return () => clearTimeout(handler);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchQuery]);
 
-        return () => {
-            clearTimeout(handler);
-        };
-    }, [searchQuery, recentSearches]);
+    const isLoading = loadingChallenges || loadingUsers;
+    const hasResults = users.length > 0 || quizResults.length > 0 || challengeOnlyResults.length > 0;
+    const totalResults = users.length + quizResults.length + challengeOnlyResults.length;
 
-    // Handle clearing search
-    const clearSearch = () => {
-        setSearchQuery('');
-        setDebouncedQuery('');
+    const toggleSection = (section: string) => {
+        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
     };
 
-    // Navigate to challenge details
-    const navigateToChallengeDetails = (challengeId: string) => {
-        try {
-            if (!challengeId) {
-                console.error('Cannot navigate: Challenge ID is undefined');
-                Alert.alert('Error', 'Cannot open this challenge (missing ID)');
-                return;
-            }
-
-            console.log('Navigating to challenge details with ID:', challengeId);
-            navigation.navigate('ChallengeDetails', { challengeId });
-        } catch (error) {
-            console.error('Navigation error:', error);
-            Alert.alert('Error', 'Could not open challenge details');
-        }
-    };
-
-    // Navigate to user profile
     const navigateToUserProfile = (userId: string) => {
-        navigation.navigate('UserProfile', {userId});
+        navigation.navigate('UserProfile', { userId });
     };
 
-    // Render user item
-    const renderUserItem = ({item}: { item: UserSearchResult }) => (
+    const navigateToChallengeDetails = (challengeId: string) => {
+        navigation.navigate('ChallengeDetails', { challengeId });
+    };
+
+    // Render section header
+    const renderSectionHeader = (
+        title: string,
+        icon: string,
+        count: number,
+        sectionKey: string
+    ) => {
+        const isExpanded = expandedSections[sectionKey];
+        const showToggle = count > PREVIEW_LIMIT;
+
+        return (
+            <TouchableOpacity
+                style={styles.sectionHeader}
+                onPress={() => showToggle && toggleSection(sectionKey)}
+                disabled={!showToggle}
+            >
+                <View style={styles.sectionHeaderLeft}>
+                    <MaterialCommunityIcons name={icon} size={22} color='#007AFF' />
+                    <Text style={styles.sectionTitle}>{title}</Text>
+                    <View style={styles.countBadge}>
+                        <Text style={styles.countText}>{count}</Text>
+                    </View>
+                </View>
+                {showToggle && (
+                    <MaterialCommunityIcons
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={24}
+                        color='#666'
+                    />
+                )}
+            </TouchableOpacity>
+        );
+    };
+
+    // Render user card
+    const renderUserCard = (user: UserSearchResult) => (
         <TouchableOpacity
-            style={styles.userItem}
-            onPress={() => navigateToUserProfile(item.id)}
+            key={user.id}
+            style={styles.resultCard}
+            onPress={() => navigateToUserProfile(user.id)}
         >
-            <View style={styles.userAvatar}>
-                {item.avatar ? (
-                    <Image source={{uri: item.avatar}} style={styles.avatarImage}/>
+            <View style={styles.avatarContainer}>
+                {user.avatar ? (
+                    <Image source={{ uri: user.avatar }} style={styles.avatar} />
                 ) : (
-                    <Text style={styles.avatarInitial}>
-                        {item.username.charAt(0).toUpperCase()}
-                    </Text>
+                    <View style={styles.avatarPlaceholder}>
+                        <Text style={styles.avatarInitial}>
+                            {user.username.charAt(0).toUpperCase()}
+                        </Text>
+                    </View>
                 )}
             </View>
-            <View style={styles.userInfo}>
-                <View style={styles.userHeader}>
-                    <Text style={styles.userName}>{item.username}</Text>
-                    {item.connectionStatus && item.connectionStatus !== 'NONE' && (
-                        <View style={[styles.connectionBadge, getConnectionStatusStyle(item.connectionStatus)]}>
-                            <Text style={styles.connectionText}>{item.connectionStatus.replace('_', ' ')}</Text>
+            <View style={styles.cardContent}>
+                <View style={styles.cardHeader}>
+                    <Text style={styles.cardTitle}>{user.username}</Text>
+                    {user.connectionStatus && user.connectionStatus !== 'NONE' && (
+                        <View style={[
+                            styles.statusBadge,
+                            user.connectionStatus === 'ACCEPTED' ? styles.statusConnected : styles.statusPending
+                        ]}>
+                            <Text style={styles.statusText}>
+                                {user.connectionStatus === 'ACCEPTED' ? 'Connected' : 'Pending'}
+                            </Text>
                         </View>
                     )}
                 </View>
-                {item.mutualConnectionsCount > 0 && (
-                    <Text style={styles.mutualText}>
-                        <MaterialCommunityIcons name="account-group" size={12}/> {item.mutualConnectionsCount} mutual connections
-                    </Text>
-                )}
-                {item.bio && (
-                    <Text style={styles.userBio} numberOfLines={2}>
-                        {item.bio}
-                    </Text>
+                {user.bio && (
+                    <Text style={styles.cardSubtitle} numberOfLines={1}>{user.bio}</Text>
                 )}
             </View>
-            {(!item.connectionStatus || item.connectionStatus === 'NONE') && (
-                <TouchableOpacity 
-                    style={styles.addContactButton}
-                    onPress={() => navigation.navigate('AddContact', { selectedUserId: item.id })}
-                >
-                    <MaterialCommunityIcons name="account-plus" size={20} color="#4CAF50"/>
-                </TouchableOpacity>
-            )}
+            <MaterialCommunityIcons name='chevron-right' size={20} color='#ccc' />
         </TouchableOpacity>
     );
 
-    const getConnectionStatusStyle = (status: string) => {
-        switch (status) {
-            case 'CONNECTED': return styles.statusConnected;
-            case 'PENDING_SENT': return styles.statusPending;
-            case 'PENDING_RECEIVED': return styles.statusPending;
-            default: return {};
-        }
-    };
+    // Render challenge/quiz card
+    const renderChallengeCard = (challenge: any, isQuiz: boolean) => (
+        <TouchableOpacity
+            key={challenge.id}
+            style={styles.resultCard}
+            onPress={() => navigateToChallengeDetails(challenge.id)}
+        >
+            <View style={[styles.iconContainer, isQuiz ? styles.quizIcon : styles.challengeIcon]}>
+                <MaterialCommunityIcons
+                    name={isQuiz ? 'brain' : 'trophy'}
+                    size={24}
+                    color='#fff'
+                />
+            </View>
+            <View style={styles.cardContent}>
+                <Text style={styles.cardTitle} numberOfLines={1}>{challenge.title}</Text>
+                <Text style={styles.cardSubtitle} numberOfLines={1}>
+                    {challenge.description || (isQuiz ? 'Quiz Challenge' : 'Challenge')}
+                </Text>
+            </View>
+            <MaterialCommunityIcons name='chevron-right' size={20} color='#ccc' />
+        </TouchableOpacity>
+    );
 
-    // Helper to get icon for challenge type
-    const getChallengeTypeIcon = (type: string) => {
-        switch (type) {
-            case 'QUEST':
-                return 'trophy';
-            case 'QUIZ':
-                return 'help-circle';
-            case 'ACTIVITY_PARTNER':
-                return 'account-group';
-            case 'FITNESS_TRACKING':
-                return 'run';
-            case 'HABIT_BUILDING':
-                return 'calendar-check';
-            default:
-                return 'checkbox-marked-circle-outline';
-        }
+    // Render section content
+    const renderSection = (
+        title: string,
+        icon: string,
+        items: any[],
+        sectionKey: string,
+        renderItem: (item: any) => React.ReactNode
+    ) => {
+        if (items.length === 0) return null;
+
+        const isExpanded = expandedSections[sectionKey];
+        const displayItems = isExpanded ? items : items.slice(0, PREVIEW_LIMIT);
+
+        return (
+            <View style={styles.section}>
+                {renderSectionHeader(title, icon, items.length, sectionKey)}
+                <View style={styles.sectionContent}>
+                    {displayItems.map(renderItem)}
+                </View>
+                {!isExpanded && items.length > PREVIEW_LIMIT && (
+                    <TouchableOpacity
+                        style={styles.seeAllButton}
+                        onPress={() => toggleSection(sectionKey)}
+                    >
+                        <Text style={styles.seeAllText}>
+                            See all {items.length} {title.toLowerCase()}
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+        );
     };
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Search Header */}
-            <View style={styles.searchHeader}>
-                <View style={styles.searchBar}>
-                    <MaterialCommunityIcons
-                        name="magnify"
-                        size={24}
-                        color="#888"
-                        style={styles.searchIcon}
-                    />
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+                <View style={styles.searchInputWrapper}>
+                    <MaterialCommunityIcons name='magnify' size={22} color='#888' />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search..."
+                        placeholder='Search users, quizzes, challenges...'
+                        placeholderTextColor='#999'
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        returnKeyType="search"
+                        autoCapitalize='none'
+                        returnKeyType='search'
                     />
                     {searchQuery.length > 0 && (
-                        <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                            <MaterialCommunityIcons name="close" size={18} color="#888"/>
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <MaterialCommunityIcons name='close-circle' size={20} color='#888' />
                         </TouchableOpacity>
                     )}
                 </View>
             </View>
 
-            {/* Category Selection */}
-            <View style={styles.categoryTabs}>
-                <TouchableOpacity
-                    style={[styles.categoryTab, category === 'challenges' && styles.activeTab]}
-                    onPress={() => setCategory('challenges')}
-                >
-                    <MaterialCommunityIcons
-                        name="trophy-outline"
-                        size={20}
-                        color={category === 'challenges' ? '#4CAF50' : '#888'}
-                    />
-                    <Text
-                        style={[
-                            styles.categoryTabText,
-                            category === 'challenges' && styles.activeTabText,
-                        ]}
-                    >
-                        Challenges
-                    </Text>
-                </TouchableOpacity>
+            {/* Results */}
+            <ScrollView
+                style={styles.resultsContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Loading State */}
+                {isLoading && debouncedQuery.length >= 2 && (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size='large' color='#007AFF' />
+                        <Text style={styles.loadingText}>Searching...</Text>
+                    </View>
+                )}
 
-                <TouchableOpacity
-                    style={[styles.categoryTab, category === 'users' && styles.activeTab]}
-                    onPress={() => setCategory('users')}
-                >
-                    <MaterialCommunityIcons
-                        name="account-search-outline"
-                        size={20}
-                        color={category === 'users' ? '#4CAF50' : '#888'}
-                    />
-                    <Text
-                        style={[
-                            styles.categoryTabText,
-                            category === 'users' && styles.activeTabText,
-                        ]}
-                    >
-                        Users
-                    </Text>
-                </TouchableOpacity>
+                {/* Empty Query State */}
+                {debouncedQuery.length < 2 && searchQuery.length === 0 && (
+                    <View style={styles.emptyState}>
+                        <MaterialCommunityIcons name='magnify' size={64} color='#ddd' />
+                        <Text style={styles.emptyStateTitle}>Search WWW Quest</Text>
+                        <Text style={styles.emptyStateText}>
+                            Find users, quizzes, and challenges
+                        </Text>
 
-                <TouchableOpacity
-                    style={[styles.categoryTab, category === 'quizzes' && styles.activeTab]}
-                    onPress={() => setCategory('quizzes')}
-                >
-                    <MaterialCommunityIcons
-                        name="brain"
-                        size={20}
-                        color={category === 'quizzes' ? '#4CAF50' : '#888'}
-                    />
-                    <Text
-                        style={[
-                            styles.categoryTabText,
-                            category === 'quizzes' && styles.activeTabText,
-                        ]}
-                    >
-                        Quizzes
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Recent Searches (show only if no search is active) */}
-            {debouncedQuery.length === 0 && recentSearches.length > 0 && (
-                <View style={styles.recentSearchesContainer}>
-                    <Text style={styles.recentSearchesTitle}>Recent Searches</Text>
-                    {recentSearches.map((term, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            style={styles.recentSearchItem}
-                            onPress={() => setSearchQuery(term)}
-                        >
-                            <MaterialCommunityIcons name="history" size={16} color="#888"/>
-                            <Text style={styles.recentSearchText}>{term}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
-
-            {/* Search Results */}
-            <View style={styles.resultsContainer}>
-                {debouncedQuery.length < 2 ? (
-                    <View style={styles.placeholderContainer}>
-                        {debouncedQuery.length === 0 ? (
-                            <>
-                                <MaterialCommunityIcons name="magnify" size={64} color="#e0e0e0"/>
-                                <Text style={styles.placeholderText}>Search for challenges, users or quizzes</Text>
-                            </>
-                        ) : (
-                            <Text style={styles.placeholderText}>Type at least 2 characters to search</Text>
+                        {/* Recent Searches */}
+                        {recentSearches.length > 0 && (
+                            <View style={styles.recentContainer}>
+                                <Text style={styles.recentTitle}>Recent Searches</Text>
+                                {recentSearches.map((term, i) => (
+                                    <TouchableOpacity
+                                        key={i}
+                                        style={styles.recentItem}
+                                        onPress={() => setSearchQuery(term)}
+                                    >
+                                        <MaterialCommunityIcons name='history' size={18} color='#888' />
+                                        <Text style={styles.recentText}>{term}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         )}
                     </View>
-                ) : (
-                    <>
-                        {category === 'challenges' && (
-                            <>
-                                {loadingChallenges ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="large" color="#4CAF50"/>
-                                        <Text style={styles.loadingText}>Searching challenges...</Text>
-                                    </View>
-                                ) : standardChallengeResults.length > 0 ? (
-                                    <FlatList<ApiChallenge>
-                                        data={standardChallengeResults}
-                                        renderItem={renderChallengeItem}
-                                        keyExtractor={(item) => item.id}
-                                        contentContainerStyle={styles.listContainer}
-                                    />
-                                ) : (
-                                    <View style={styles.emptyResultsContainer}>
-                                        <MaterialCommunityIcons name="trophy-broken" size={64} color="#e0e0e0"/>
-                                        <Text style={styles.emptyResultsText}>
-                                            No challenges found matching "{debouncedQuery}"
-                                        </Text>
-                                    </View>
-                                )}
-                            </>
-                        )}
-
-                        {category === 'users' && (
-                            <>
-                                {loadingUsers ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="large" color="#4CAF50"/>
-                                        <Text style={styles.loadingText}>Searching users...</Text>
-                                    </View>
-                                ) : userResults && userResults.content.length > 0 ? (
-                                    <FlatList<UserSearchResult>
-                                        data={userResults.content}
-                                        renderItem={renderUserItem}
-                                        keyExtractor={(item) => item.id}
-                                        contentContainerStyle={styles.listContainer}
-                                    />
-                                ) : (
-                                    <View style={styles.emptyResultsContainer}>
-                                        <MaterialCommunityIcons name="account-question" size={64} color="#e0e0e0"/>
-                                        <Text style={styles.emptyResultsText}>
-                                            No users found matching "{debouncedQuery}"
-                                        </Text>
-                                    </View>
-                                )}
-                            </>
-                        )}
-
-                        {category === 'quizzes' && (
-                            <>
-                                {loadingChallenges ? (
-                                    <View style={styles.loadingContainer}>
-                                        <ActivityIndicator size="large" color="#4CAF50"/>
-                                        <Text style={styles.loadingText}>Searching quizzes...</Text>
-                                    </View>
-                                ) : quizResults.length > 0 ? (
-                                    <FlatList<ApiChallenge>
-                                        data={quizResults}
-                                        renderItem={renderChallengeItem}
-                                        keyExtractor={(item) => item.id}
-                                        contentContainerStyle={styles.listContainer}
-                                    />
-                                ) : (
-                                    <View style={styles.emptyResultsContainer}>
-                                        <MaterialCommunityIcons name="help-circle" size={64} color="#e0e0e0"/>
-                                        <Text style={styles.emptyResultsText}>
-                                            No quizzes found matching "{debouncedQuery}"
-                                        </Text>
-                                    </View>
-                                )}
-                            </>
-                        )}
-                    </>
                 )}
-            </View>
+
+                {/* Min chars hint */}
+                {searchQuery.length > 0 && searchQuery.length < 2 && (
+                    <View style={styles.hintContainer}>
+                        <Text style={styles.hintText}>Type at least 2 characters to search</Text>
+                    </View>
+                )}
+
+                {/* No Results */}
+                {!isLoading && debouncedQuery.length >= 2 && !hasResults && (
+                    <View style={styles.emptyState}>
+                        <MaterialCommunityIcons name='emoticon-sad-outline' size={64} color='#ddd' />
+                        <Text style={styles.emptyStateTitle}>No results found</Text>
+                        <Text style={styles.emptyStateText}>
+                            Try a different search term
+                        </Text>
+                    </View>
+                )}
+
+                {/* Results Summary */}
+                {!isLoading && hasResults && (
+                    <View style={styles.summaryContainer}>
+                        <Text style={styles.summaryText}>
+                            Found {totalResults} result{totalResults !== 1 ? 's' : ''} for "{debouncedQuery}"
+                        </Text>
+                    </View>
+                )}
+
+                {/* Users Section */}
+                {!isLoading && renderSection(
+                    'Users',
+                    'account-group',
+                    users,
+                    'users',
+                    (user) => renderUserCard(user)
+                )}
+
+                {/* Quizzes Section */}
+                {!isLoading && renderSection(
+                    'Quizzes',
+                    'brain',
+                    quizResults,
+                    'quizzes',
+                    (quiz) => renderChallengeCard(quiz, true)
+                )}
+
+                {/* Challenges Section */}
+                {!isLoading && renderSection(
+                    'Challenges',
+                    'trophy',
+                    challengeOnlyResults,
+                    'challenges',
+                    (challenge) => renderChallengeCard(challenge, false)
+                )}
+
+                <View style={{ height: 40 }} />
+            </ScrollView>
         </SafeAreaView>
     );
 };
@@ -393,284 +352,224 @@ const SearchScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#f8f9fa',
     },
-    searchHeader: {
-        backgroundColor: '#4CAF50',
+    searchContainer: {
         padding: 16,
-        paddingBottom: 24,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
     },
-    searchBar: {
+    searchInputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'white',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        height: 44,
-    },
-    searchIcon: {
-        marginRight: 8,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
     },
     searchInput: {
         flex: 1,
+        marginLeft: 10,
         fontSize: 16,
-        color: '#333',
-    },
-    clearButton: {
-        padding: 4,
-    },
-    categoryTabs: {
-        flexDirection: 'row',
-        backgroundColor: 'white',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-    },
-    categoryTab: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 2,
-        borderBottomColor: 'transparent',
-    },
-    activeTab: {
-        borderBottomColor: '#4CAF50',
-    },
-    categoryTabText: {
-        marginLeft: 4,
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#888',
-    },
-    activeTabText: {
-        color: '#4CAF50',
-    },
-    recentSearchesContainer: {
-        backgroundColor: 'white',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    recentSearchesTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#555',
-        marginBottom: 8,
-    },
-    recentSearchItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    recentSearchText: {
-        marginLeft: 8,
-        fontSize: 14,
         color: '#333',
     },
     resultsContainer: {
         flex: 1,
     },
-    listContainer: {
-        padding: 16,
-    },
-    placeholderContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 24,
-    },
-    placeholderText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#888',
-        textAlign: 'center',
-    },
     loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
+        padding: 40,
         alignItems: 'center',
-        padding: 24,
     },
     loadingText: {
         marginTop: 12,
-        fontSize: 16,
-        color: '#555',
+        color: '#666',
+        fontSize: 14,
     },
-    emptyResultsContainer: {
-        flex: 1,
-        justifyContent: 'center',
+    emptyState: {
+        padding: 40,
         alignItems: 'center',
-        padding: 24,
     },
-    emptyResultsText: {
+    emptyStateTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#333',
         marginTop: 16,
-        fontSize: 16,
+    },
+    emptyStateText: {
+        fontSize: 14,
         color: '#888',
+        marginTop: 8,
         textAlign: 'center',
     },
-    challengeItem: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 12,
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: {width: 0, height: 1},
+    hintContainer: {
+        padding: 20,
+        alignItems: 'center',
     },
-    challengeHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
+    hintText: {
+        color: '#888',
+        fontSize: 14,
+    },
+    summaryContainer: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    summaryText: {
+        color: '#666',
+        fontSize: 13,
+    },
+    section: {
         marginBottom: 8,
     },
-    challengeTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        flex: 1,
-        marginRight: 8,
-    },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        backgroundColor: '#f0f0f0',
-    },
-    statusActive: {
-        backgroundColor: '#E8F5E9',
-    },
-    statusCompleted: {
-        backgroundColor: '#E3F2FD',
-    },
-    statusFailed: {
-        backgroundColor: '#FFEBEE',
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#555',
-    },
-    challengeDesc: {
-        fontSize: 14,
-        color: '#757575',
-        marginBottom: 12,
-    },
-    challengeFooter: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    challengeType: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-    },
-    typeIcon: {
-        marginRight: 4,
-    },
-    challengeTypeText: {
-        fontSize: 12,
-        color: '#4CAF50',
-        fontWeight: '500',
-    },
-    dateText: {
-        fontSize: 12,
-        color: '#888',
-    },
-    userItem: {
-        backgroundColor: 'white',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 12,
-        flexDirection: 'row',
-        elevation: 1,
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        shadowOffset: {width: 0, height: 1},
-    },
-    userAvatar: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#4CAF50',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 16,
-    },
-    avatarImage: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-    },
-    avatarInitial: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: 'white',
-    },
-    userInfo: {
-        flex: 1,
-    },
-    userName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
-    },
-    userEmail: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 4,
-    },
-    userBio: {
-        fontSize: 14,
-        color: '#888',
-        marginTop: 4,
-    },
-    userHeader: {
+    sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 2,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
     },
-    connectionBadge: {
+    sectionHeaderLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    sectionTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+        marginLeft: 10,
+    },
+    countBadge: {
+        backgroundColor: '#e8f4fd',
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 10,
+        marginLeft: 8,
+    },
+    countText: {
+        fontSize: 12,
+        color: '#007AFF',
+        fontWeight: '600',
+    },
+    sectionContent: {
+        backgroundColor: '#fff',
+    },
+    resultCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f5f5f5',
+    },
+    avatarContainer: {
+        width: 44,
+        height: 44,
+        marginRight: 12,
+    },
+    avatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+    },
+    avatarPlaceholder: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#007AFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    avatarInitial: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    iconContainer: {
+        width: 44,
+        height: 44,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    quizIcon: {
+        backgroundColor: '#9c27b0',
+    },
+    challengeIcon: {
+        backgroundColor: '#ff9800',
+    },
+    cardContent: {
+        flex: 1,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    cardTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#333',
+    },
+    cardSubtitle: {
+        fontSize: 13,
+        color: '#888',
+        marginTop: 2,
+    },
+    statusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 10,
+        marginLeft: 8,
     },
     statusConnected: {
-        backgroundColor: '#E8F5E9',
+        backgroundColor: '#e8f5e9',
     },
     statusPending: {
-        backgroundColor: '#FFF3E0',
+        backgroundColor: '#fff3e0',
     },
-    connectionText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#555',
-    },
-    mutualText: {
-        fontSize: 12,
+    statusText: {
+        fontSize: 11,
+        fontWeight: '500',
         color: '#666',
-        marginBottom: 4,
     },
-    addContactButton: {
-        padding: 8,
-        justifyContent: 'center',
+    seeAllButton: {
+        paddingVertical: 12,
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    seeAllText: {
+        color: '#007AFF',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    recentContainer: {
+        width: '100%',
+        marginTop: 24,
+        paddingHorizontal: 16,
+    },
+    recentTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
+        marginBottom: 12,
+    },
+    recentItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    recentText: {
+        marginLeft: 10,
+        fontSize: 15,
+        color: '#333',
     },
 });
 

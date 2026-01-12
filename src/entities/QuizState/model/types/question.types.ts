@@ -86,7 +86,7 @@ export interface UserSearchResult {
     avatar?: string;
     bio?: string;
     mutualConnectionsCount: number;
-    connectionStatus?: 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'CONNECTED';
+    connectionStatus?: 'NONE' | 'PENDING' | 'ACCEPTED';
 }
 
 export interface CreateRelationshipRequest {
