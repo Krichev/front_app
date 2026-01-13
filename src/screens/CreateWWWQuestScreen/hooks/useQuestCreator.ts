@@ -2,16 +2,16 @@
 import {useState} from 'react';
 import {Alert} from 'react-native';
 import {
-    CreateChallengeRequest,
-    useCreateChallengeMutation,
+    useCreateQuizChallengeMutation,
+    CreateQuizChallengeRequest,
 } from '../../../entities/ChallengeState/model/slice/challengeApi';
 import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/slice/quizApi';
-import {PaymentType} from '../../../entities/ChallengeState/model/types';
 import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
 import {BaseQuestionForQuest, extractQuestionIds} from "../types/question.types.ts";
+import {mapQuizConfigToBackend} from "../../../utils/quizConfigMapper.ts";
 
 export interface QuizConfig {
-    gameType: string;
+    gameType: 'WWW';
     teamName: string;
     teamMembers: string[];
     difficulty: APIDifficulty;
@@ -32,7 +32,7 @@ export interface SelectedQuestion {
 }
 
 export const useQuestCreator = () => {
-    const [createChallenge, { isLoading: isCreatingChallenge }] = useCreateChallengeMutation();
+    const [createQuizChallenge, { isLoading: isCreatingChallenge }] = useCreateQuizChallengeMutation();
     const [startQuizSession, { isLoading: isStartingSession }] = useStartQuizSessionMutation();
 
     // Basic Info
@@ -77,67 +77,44 @@ export const useQuestCreator = () => {
         try {
             console.log('Creating quest with config:', quizConfig);
 
-            // Step 1: Create Challenge with ALL required fields matching CreateChallengeRequest
-            const challengePayload: CreateChallengeRequest = {
-                // ===== BASIC REQUIRED FIELDS =====
+            // Step 1: Map UI config to backend format
+            const backendQuizConfig = mapQuizConfigToBackend(quizConfig);
+            console.log('Mapped backend config:', backendQuizConfig);
+
+            // Step 2: Create Quiz Challenge with proper payload
+            const challengePayload: CreateQuizChallengeRequest = {
                 title,
                 description,
-                type: 'QUIZ',
                 visibility: 'PUBLIC',
-                status: 'ACTIVE',
-                userId: userId,
-
-                // ===== OPTIONAL BASIC FIELDS =====
-                reward,
-                penalty: undefined,
-                verificationMethod: undefined,
-                verificationDetails: undefined,
-                targetGroup: undefined,
-                tags: undefined,
-                quizConfig: undefined,
-
-                // ===== DATE FIELDS =====
-                startDate: new Date().toISOString(),
-                endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                 frequency: 'ONE_TIME',
-
-                // ===== PAYMENT FIELDS (matching backend defaults) =====
-                paymentType: PaymentType.FREE,
-                hasEntryFee: false,
-                entryFeeAmount: undefined,
-                entryFeeCurrency: undefined,
-                hasPrize: false,
-                prizeAmount: undefined,
-                prizeCurrency: undefined,
-
-                // ===== ACCESS CONTROL FIELDS =====
-                requiresApproval: false,
-                invitedUserIds: undefined,
-
-                // ===== QUIZ-SPECIFIC FIELDS =====
-                difficulty: quizConfig.difficulty,
+                startDate: new Date(),
+                endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week
+                quizConfig: backendQuizConfig,
+                // Note: customQuestions can be added here if needed
+                customQuestions: []
             };
 
-            const challengeResult = await createChallenge(challengePayload).unwrap();
+            console.log('Creating quiz challenge with payload:', challengePayload);
+            const challengeResult = await createQuizChallenge(challengePayload).unwrap();
             console.log('Challenge created:', challengeResult);
 
             if (!challengeResult?.id) {
                 throw new Error('Challenge creation failed - no ID returned');
             }
 
-            // Step 2: Prepare custom question IDs (if questions have IDs from app/user)
+            // Step 3: Prepare custom question IDs (if questions have IDs from app/user)
             const customQuestionIds: number[] = extractQuestionIds(selectedQuestions);
 
             const hasUserQuestions = selectedQuestions.some(q => q.source === 'user');
             const questionSource = hasUserQuestions ? 'user' : 'app';
 
-            // Step 3: Create session payload with ALL required fields
+            // Step 4: Create session payload with ALL required fields
             const sessionPayload = {
                 challengeId: challengeResult.id,
                 teamName: quizConfig.teamName || 'My Team',
                 teamMembers: quizConfig.teamMembers.length > 0 ? quizConfig.teamMembers : ['Player 1'],
                 difficulty: quizConfig.difficulty,
-                totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length),
+                totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length > 0 ? selectedQuestions.length : quizConfig.roundCount),
                 roundTimeSeconds: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
                 questionSource: questionSource as 'app' | 'user',
@@ -146,7 +123,7 @@ export const useQuestCreator = () => {
 
             console.log('Starting quiz session with payload:', sessionPayload);
 
-            // Step 4: Start quiz session
+            // Step 5: Start quiz session
             const sessionResult = await startQuizSession(sessionPayload).unwrap();
             console.log('Quiz session started:', sessionResult);
 
