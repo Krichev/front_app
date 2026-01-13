@@ -26,8 +26,9 @@ import {useQuestCreator} from './hooks/useQuestCreator';
 import {useQuestionsManager} from './hooks/useQuestionsManager';
 import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
 import MediaQuestionModal from "./components/MediaQuestionModal.tsx";
+import RegularQuestionEditor from "./components/RegularQuestionEditor";
 import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
-import { QuestionType } from '../../services/wwwGame/questionService';
+import { QuestionCategory } from './types/question.types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -134,14 +135,14 @@ const CreateWWWQuestScreen = () => {
         }
     };
 
-    const handleTypeSelect = (type: QuestionType) => {
+    const handleTypeSelect = (category: QuestionCategory) => {
         setShowTypeSelector(false);
-        if (type === 'AUDIO') {
+        if (category === 'KARAOKE') {
             navigation.navigate('CreateAudioQuestion', { 
                 onSubmit: handleAudioQuestionCreated 
             });
         } else {
-            setPreSelectedMediaType(type === 'TEXT' ? null : type.toLowerCase() as 'image' | 'video');
+            setPreSelectedMediaType(null);
             setShowUnifiedQuestionModal(true);
         }
     };

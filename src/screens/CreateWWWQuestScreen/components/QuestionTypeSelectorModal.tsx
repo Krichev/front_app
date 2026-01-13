@@ -3,21 +3,28 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
-// Assuming QuestionType is available from a central types file
-import { QuestionType } from '../../../services/wwwGame/questionService'; 
+import { QuestionCategory } from '../types/question.types';
 
 interface QuestionTypeSelectorModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (type: QuestionType) => void;
+  onSelect: (category: QuestionCategory) => void;
 }
 
 const optionData = [
-  { type: 'TEXT' as QuestionType, icon: 'text-box-outline', label: 'Text Question', description: 'A standard text-based question.' },
-  { type: 'IMAGE' as QuestionType, icon: 'image-outline', label: 'Image Question', description: 'Question with a visual element.' },
-  { type: 'VIDEO' as QuestionType, icon: 'video-outline', label: 'Video Question', description: 'Question based on a video clip.' },
-  { type: 'AUDIO' as QuestionType, icon: 'microphone-outline', label: 'Audio Challenge', description: 'Opens the full audio editor.', opensNewScreen: true },
+  { 
+    category: 'REGULAR' as QuestionCategory, 
+    icon: 'help-circle-outline', 
+    label: 'Regular Question', 
+    description: 'Create a classic quiz question with optional image, video, or audio.' 
+  },
+  { 
+    category: 'KARAOKE' as QuestionCategory, 
+    icon: 'microphone-variant', 
+    label: 'Karaoke Question', 
+    description: 'Create an audio challenge where users sing or match sounds.', 
+    opensNewScreen: true 
+  },
 ];
 
 const QuestionTypeSelectorModal: React.FC<QuestionTypeSelectorModalProps> = ({ visible, onClose, onSelect }) => {
@@ -38,7 +45,11 @@ const QuestionTypeSelectorModal: React.FC<QuestionTypeSelectorModalProps> = ({ v
           </View>
           <View style={styles.optionsGrid}>
             {optionData.map((option) => (
-              <TouchableOpacity key={option.type} style={styles.optionCard} onPress={() => onSelect(option.type)}>
+              <TouchableOpacity 
+                key={option.category} 
+                style={styles.optionCard} 
+                onPress={() => onSelect(option.category)}
+              >
                 <MaterialCommunityIcons name={option.icon} size={32} color="#007AFF" />
                 <Text style={styles.optionLabel}>{option.label}</Text>
                 <Text style={styles.optionDescription}>{option.description}</Text>
