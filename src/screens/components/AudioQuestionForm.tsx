@@ -25,6 +25,7 @@ import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../entities/TopicState';
 import {AudioChallengeTypeSelector} from '../../shared/ui/AudioChallengeTypeSelector/AudioChallengeTypeSelector';
 import FileService, {ProcessedFileInfo} from '../../services/speech/FileService';
+import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCard';
 
 // ============================================================================
 // TYPES
@@ -111,6 +112,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     });
 
     const [isUploading, setIsUploading] = useState(false);
+    const [audioInputMode, setAudioInputMode] = useState<'upload' | 'record'>('record');
     const [errors, setErrors] = useState<Partial<Record<keyof AudioQuestionFormData, string>>>({});
 
     // ============================================================================
@@ -212,6 +214,20 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         }
     }, [updateField]);
 
+    const handleRecordingComplete = useCallback((path: string) => {
+        const processedFile: ProcessedFileInfo = {
+            uri: `file://${path}`,
+            name: `recording_${Date.now()}.wav`,
+            type: 'audio/wav',
+            size: 0, // Should ideally get size
+            isImage: false,
+            isVideo: false,
+            extension: 'wav',
+        };
+        updateField('referenceAudioFile', processedFile);
+        setErrors(prev => ({...prev, referenceAudioFile: undefined}));
+    }, [updateField]);
+
     const handleRemoveAudio = useCallback(() => {
         updateField('referenceAudioFile', null);
         updateField('audioSegmentStart', 0);
@@ -288,6 +304,38 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                     </Text>
                 </View>
 
+                {/* Input Mode Tabs */}
+                {!formData.referenceAudioFile && (
+                    <View style={styles.tabContainer}>
+                        <TouchableOpacity
+                            style={[styles.tab, audioInputMode === 'record' && styles.activeTab]}
+                            onPress={() => setAudioInputMode('record')}
+                        >
+                            <MaterialCommunityIcons 
+                                name="microphone" 
+                                size={20} 
+                                color={audioInputMode === 'record' ? '#007AFF' : '#666'} 
+                            />
+                            <Text style={[styles.tabText, audioInputMode === 'record' && styles.activeTabText]}>
+                                Record
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tab, audioInputMode === 'upload' && styles.activeTab]}
+                            onPress={() => setAudioInputMode('upload')}
+                        >
+                            <MaterialCommunityIcons 
+                                name="upload" 
+                                size={20} 
+                                color={audioInputMode === 'upload' ? '#007AFF' : '#666'} 
+                            />
+                            <Text style={[styles.tabText, audioInputMode === 'upload' && styles.activeTabText]}>
+                                Upload
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 {formData.referenceAudioFile ? (
                     <View style={styles.audioPreview}>
                         <View style={styles.audioInfo}>
@@ -297,7 +345,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                     {formData.referenceAudioFile.name}
                                 </Text>
                                 <Text style={styles.audioSize}>
-                                    {FileService.formatFileSize(formData.referenceAudioFile.size)}
+                                    {formData.referenceAudioFile.sizeFormatted || 'Unknown size'}
                                 </Text>
                             </View>
                         </View>
@@ -317,23 +365,31 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                         </View>
                     </View>
                 ) : (
-                    <TouchableOpacity
-                        style={[
-                            styles.uploadButton,
-                            errors.referenceAudioFile && styles.uploadButtonError,
-                        ]}
-                        onPress={handleAudioPick}
-                        disabled={isUploading}
-                    >
-                        {isUploading ? (
-                            <ActivityIndicator size="small" color="#007AFF" />
+                    <View style={styles.inputArea}>
+                        {audioInputMode === 'record' ? (
+                            <AudioRecorderCard 
+                                onRecordingComplete={handleRecordingComplete}
+                            />
                         ) : (
-                            <>
-                                <MaterialCommunityIcons name="upload" size={24} color="#007AFF" />
-                                <Text style={styles.uploadButtonText}>Upload Audio File</Text>
-                            </>
+                            <TouchableOpacity
+                                style={[
+                                    styles.uploadButton,
+                                    errors.referenceAudioFile && styles.uploadButtonError,
+                                ]}
+                                onPress={handleAudioPick}
+                                disabled={isUploading}
+                            >
+                                {isUploading ? (
+                                    <ActivityIndicator size="small" color="#007AFF" />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="upload" size={24} color="#007AFF" />
+                                        <Text style={styles.uploadButtonText}>Select Audio File</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
                         )}
-                    </TouchableOpacity>
+                    </View>
                 )}
 
                 {errors.referenceAudioFile && (

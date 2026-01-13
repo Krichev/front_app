@@ -25,7 +25,6 @@ import SelectedQuestionsPreview from './components/SelectedQuestionsPreview';
 import {useQuestCreator} from './hooks/useQuestCreator';
 import {useQuestionsManager} from './hooks/useQuestionsManager';
 import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
-import MediaQuestionModal from "./components/MediaQuestionModal.tsx";
 import RegularQuestionEditor from "./components/RegularQuestionEditor";
 import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
 import { QuestionCategory } from './types/question.types';
@@ -138,8 +137,8 @@ const CreateWWWQuestScreen = () => {
     const handleTypeSelect = (category: QuestionCategory) => {
         setShowTypeSelector(false);
         if (category === 'KARAOKE') {
-            navigation.navigate('CreateAudioQuestion', { 
-                onSubmit: handleAudioQuestionCreated 
+            navigation.navigate('CreateAudioQuestion', {
+                onSubmit: handleAudioQuestionCreated
             });
         } else {
             setPreSelectedMediaType(null);
@@ -268,7 +267,7 @@ const CreateWWWQuestScreen = () => {
             </View>
 
             {/* Unified Question Modal */}
-            <MediaQuestionModal
+            <RegularQuestionEditor
                 visible={showUnifiedQuestionModal}
                 onClose={() => {
                     setShowUnifiedQuestionModal(false);
@@ -282,8 +281,7 @@ const CreateWWWQuestScreen = () => {
                 preSelectedMediaType={preSelectedMediaType}
             />
 
-            {/* Question Type Selector Modal */}
-            <QuestionTypeSelectorModal
+            {/* Question Type Selector Modal */}            <QuestionTypeSelectorModal
                 visible={showTypeSelector}
                 onClose={() => setShowTypeSelector(false)}
                 onSelect={handleTypeSelect}
