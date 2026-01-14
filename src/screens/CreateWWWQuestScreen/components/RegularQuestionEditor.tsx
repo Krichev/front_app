@@ -55,6 +55,35 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const [isSelectingMedia, setIsSelectingMedia] = useState(false);
     const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
 
+
+
+    /**
+     * Handle audio picking from library
+     */
+    const handleAudioPick = useCallback(async () => {
+        try {
+            setIsSelectingMedia(true);
+            setMediaSelectionType('audio');
+            const result = await FileService.pickAudio();
+            if (result) {
+                // Validate file
+                const validation = FileService.validateFile(result);
+                if (!validation.isValid) {
+                    Alert.alert('Invalid File', validation.error || 'Please select a valid audio');
+                    return;
+                }
+                console.log('🎵 Audio selected:', result.name, result.sizeFormatted);
+                setSelectedMedia(result);
+            }
+        } catch (error) {
+            console.error('Error picking audio:', error);
+            Alert.alert('Error', 'Failed to pick audio. Please try again.');
+        } finally {
+            setIsSelectingMedia(false);
+            setMediaSelectionType(null);
+        }
+    }, []);
+
     /**
      * Handle media selection based on type
      */

@@ -28,6 +28,7 @@ import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
 import RegularQuestionEditor from "./components/RegularQuestionEditor";
 import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
 import {QuestionCategory} from './types/question.types';
+import {APIDifficulty} from '../../services/wwwGame/questionService';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -43,8 +44,8 @@ const CreateWWWQuestScreen = () => {
 
     // Local state for features not yet in hook
     const [searchKeyword, setSearchKeyword] = useState('');
-    const [searchDifficulty, setSearchDifficulty] = useState<string | undefined>();
-    const [searchTopic, setSearchTopic] = useState<string | undefined>();
+    const [searchDifficulty, setSearchDifficulty] = useState<APIDifficulty | 'ALL'>('ALL');
+    const [searchTopic, setSearchTopic] = useState<string>('');
     const [currentPage, setCurrentPage] = useState(0);
     const [visibleAnswers, setVisibleAnswers] = useState<Set<number>>(new Set());
     const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
@@ -75,8 +76,8 @@ const CreateWWWQuestScreen = () => {
 
     const clearSearch = () => {
         setSearchKeyword('');
-        setSearchDifficulty(undefined);
-        setSearchTopic(undefined);
+        setSearchDifficulty('ALL');
+        setSearchTopic('');
     };
 
     const handleCreateQuest = async () => {
@@ -201,7 +202,7 @@ const CreateWWWQuestScreen = () => {
                     userQuestions={questionsManager.userQuestions || []}
                     isLoadingApp={questionsManager.isLoadingAppQuestions}
                     isLoadingUser={questionsManager.isLoadingUserQuestions}
-                    error={undefined}
+                    error={null}
                     searchKeyword={searchKeyword}
                     searchDifficulty={searchDifficulty}
                     searchTopic={searchTopic}
