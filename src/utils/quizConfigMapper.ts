@@ -10,17 +10,20 @@ import {QuizChallengeConfig} from "../entities/ChallengeState/model/slice/challe
  * @returns Backend-formatted quiz configuration
  */
 export const mapQuizConfigToBackend = (uiConfig: QuizConfig): QuizChallengeConfig => {
+    // Normalize difficulty to uppercase for consistent lookup
+    const normalizedDifficulty = uiConfig.difficulty?.toUpperCase() || 'MEDIUM';
+    
     // Map UI difficulty to backend difficulty format
-    const difficultyMap: Record<'Easy' | 'Medium' | 'Hard', 'EASY' | 'MEDIUM' | 'HARD'> = {
-        'Easy': 'EASY',
-        'Medium': 'MEDIUM',
-        'Hard': 'HARD'
+    const difficultyMap: Record<string, 'EASY' | 'MEDIUM' | 'HARD'> = {
+        'EASY': 'EASY',
+        'MEDIUM': 'MEDIUM',
+        'HARD': 'HARD'
     };
 
     // Create complete backend config with ALL fields
     const backendConfig: QuizChallengeConfig = {
         // Mapped fields (format conversion)
-        defaultDifficulty: difficultyMap[uiConfig.difficulty],
+        defaultDifficulty: difficultyMap[normalizedDifficulty] || 'MEDIUM',
         defaultRoundTimeSeconds: uiConfig.roundTime,
         defaultTotalRounds: uiConfig.roundCount,
         enableAiHost: uiConfig.enableAIHost,
@@ -31,8 +34,8 @@ export const mapQuizConfigToBackend = (uiConfig: QuizConfig): QuizChallengeConfi
 
         // Direct pass-through fields (NEW - these were missing!)
         gameType: uiConfig.gameType,
-        teamName: uiConfig.teamName,
-        teamMembers: uiConfig.teamMembers,
+        teamName: uiConfig.teamName || '',  // OK to be empty for challenge creation
+        teamMembers: uiConfig.teamMembers || [],  // OK to be empty for challenge creation
         teamBased: uiConfig.teamBased ?? false
     };
 
