@@ -27,7 +27,7 @@ import {useQuestionsManager} from './hooks/useQuestionsManager';
 import {RootStackParamList} from "../../navigation/AppNavigator.tsx";
 import RegularQuestionEditor from "./components/RegularQuestionEditor";
 import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
-import { QuestionCategory } from './types/question.types';
+import {QuestionCategory} from './types/question.types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -277,11 +277,11 @@ const CreateWWWQuestScreen = () => {
                     questionsManager.handleUnifiedQuestionSubmit(questionData);
                     setShowUnifiedQuestionModal(false);
                 }}
-                availableTopics={questionsManager.availableTopics}
                 preSelectedMediaType={preSelectedMediaType}
             />
 
-            {/* Question Type Selector Modal */}            <QuestionTypeSelectorModal
+            {/* Question Type Selector Modal */}
+            <QuestionTypeSelectorModal
                 visible={showTypeSelector}
                 onClose={() => setShowTypeSelector(false)}
                 onSelect={handleTypeSelect}

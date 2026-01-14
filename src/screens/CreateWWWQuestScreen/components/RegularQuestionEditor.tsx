@@ -55,115 +55,6 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const [isSelectingMedia, setIsSelectingMedia] = useState(false);
     const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
 
-    useEffect(() => {
-        if (visible && preSelectedMediaType) {
-            handleSelectMedia(preSelectedMediaType);
-        }
-    }, [visible, preSelectedMediaType, handleSelectMedia]);
-
-    /**
-     * Determine question type based on selected media (IMPLICIT)
-     * Returns TEXT if no media selected
-     */
-    const getQuestionType = (): QuestionType => {
-        if (!selectedMedia) {
-            return 'TEXT';
-        }
-
-        // Detect from selected file type
-        if (selectedMedia.type.startsWith('image/')) {
-            return 'IMAGE';
-        } else if (selectedMedia.type.startsWith('video/')) {
-            return 'VIDEO';
-        } else if (selectedMedia.type.startsWith('audio/')) {
-            return 'AUDIO';
-        }
-
-        return 'TEXT';
-    };
-
-    /**
-     * Handle image picking from library
-     */
-    const handleImagePick = useCallback(async () => {
-        try {
-            setIsSelectingMedia(true);
-            setMediaSelectionType('image');
-            const result = await FileService.pickImage();
-            if (result) {
-                // Validate file
-                const validation = FileService.validateFile(result);
-                if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid image');
-                    return;
-                }
-                console.log('📷 Image selected:', result.name, result.sizeFormatted);
-                setSelectedMedia(result);
-            }
-        } catch (error) {
-            console.error('Error picking image:', error);
-            Alert.alert('Error', 'Failed to pick image. Please try again.');
-        } finally {
-            setIsSelectingMedia(false);
-            setMediaSelectionType(null);
-        }
-    }, []);
-
-    /**
-     * Handle video picking from library
-     */
-    const handleVideoPick = useCallback(async () => {
-        try {
-            console.log('🎥 Video start');
-            setIsSelectingMedia(true);
-            setMediaSelectionType('video');
-            const result = await FileService.pickVideo();
-            if (result) {
-                // Validate file
-                const validation = FileService.validateFile(result);
-                if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid video');
-                    return;
-                }
-                console.log('🎥 Video selected:', result.name, result.sizeFormatted);
-                setSelectedMedia(result);
-            }
-        } catch (error) {
-            console.error('Error picking video:', error);
-            Alert.alert('Error', 'Failed to pick video. Please try again.');
-        } finally {
-            setIsSelectingMedia(false);
-            setMediaSelectionType(null);
-        }
-    }, []);
-
-    /**
-     * Handle audio picking from library
-     */
-    const handleAudioPick = useCallback(async () => {
-        try {
-            setIsSelectingMedia(true);
-            setMediaSelectionType('audio');
-            const result = await FileService.pickAudio();
-            if (result) {
-                // Validate file
-                const validation = FileService.validateFile(result);
-                if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid audio');
-                    return;
-                }
-                console.log('🎵 Audio selected:', result.name, result.sizeFormatted);
-                setSelectedMedia(result);
-            }
-        } catch (error) {
-            console.error('Error picking audio:', error);
-            Alert.alert('Error', 'Failed to pick audio. Please try again.');
-        } finally {
-            setIsSelectingMedia(false);
-            setMediaSelectionType(null);
-        }
-    }, []);
-
     /**
      * Handle media selection based on type
      */
@@ -185,6 +76,12 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             Alert.alert('Error', 'Failed to select media. Please try again.');
         }
     }, [handleImagePick, handleVideoPick, handleAudioPick]);
+
+    useEffect(() => {
+        if (visible && preSelectedMediaType) {
+            handleSelectMedia(preSelectedMediaType);
+        }
+    }, [visible, preSelectedMediaType, handleSelectMedia]);
 
     /**
      * Remove selected media
