@@ -486,6 +486,50 @@ export interface QuestAudioConfig {
     minimumScorePercentage: number;
 }
 
+// ============================================================================
+// CHALLENGE AUDIO TYPES (parallel to Quest audio)
+// ============================================================================
+
+/**
+ * Challenge audio configuration
+ */
+export interface ChallengeAudioConfig {
+    /** ID of the audio file in media_files table */
+    audioMediaId?: number;
+    /** URL to stream the audio file */
+    audioUrl?: string;
+    /** Audio segment start time in seconds */
+    audioStartTime: number;
+    /** Audio segment end time in seconds (null means full duration) */
+    audioEndTime?: number;
+    /** Total duration of the audio file in seconds */
+    totalDuration?: number;
+    /** Minimum score percentage (0-100) required to complete the challenge */
+    minimumScorePercentage: number;
+}
+
+/**
+ * Request to update challenge audio configuration
+ */
+export interface UpdateChallengeAudioConfigRequest {
+    audioMediaId?: number;
+    audioStartTime?: number;
+    audioEndTime?: number;
+    minimumScorePercentage?: number;
+}
+
+/**
+ * Response from challenge audio configuration API
+ */
+export interface ChallengeAudioResponse {
+    audioMediaId: number;
+    audioUrl: string;
+    audioStartTime: number;
+    audioEndTime?: number;
+    totalDuration: number;
+    minimumScorePercentage: number;
+}
+
 /**
  * Request to update quest audio configuration
  */

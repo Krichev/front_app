@@ -12,7 +12,7 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {
     useGetChallengeByIdQuery,
-    useGetQuestAudioConfigQuery,
+    useGetChallengeAudioConfigQuery,
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
     useGetQuestionsForChallengeQuery,
@@ -98,8 +98,8 @@ const ChallengeDetailsScreen: React.FC = () => {
     const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId!, {
         skip: !challengeId, // Skip the query if challengeId is undefined
     });
-    const { data: audioConfig } = useGetQuestAudioConfigQuery(
-        challengeId ? Number(challengeId) : 0,
+    const { data: audioConfig } = useGetChallengeAudioConfigQuery(
+        challengeId || '',
         { skip: !challengeId }
     );
     const [joinChallenge, {isLoading: isJoining}] = useJoinChallengeMutation();

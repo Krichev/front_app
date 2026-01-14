@@ -22,7 +22,7 @@ import {
     useGetQuizSessionQuery,
     useSubmitRoundAnswerMutation
 } from '../entities/QuizState/model/slice/quizApi';
-import {useGetQuestAudioConfigQuery} from '../entities/ChallengeState/model/slice/challengeApi';
+import {useGetChallengeAudioConfigQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 import {RootStackParamList} from '../navigation/AppNavigator';
@@ -53,9 +53,9 @@ const WWWGamePlayScreen: React.FC = () => {
     const [submitRoundAnswer] = useSubmitRoundAnswerMutation();
     const [completeQuizSession] = useCompleteQuizSessionMutation();
 
-    // Fetch quest audio configuration if challengeId exists
-    const { data: audioConfig } = useGetQuestAudioConfigQuery(
-        challengeId ? Number(challengeId) : 0,
+    // Fetch challenge audio configuration if challengeId exists
+    const { data: audioConfig, isLoading: isLoadingAudioConfig } = useGetChallengeAudioConfigQuery(
+        challengeId || '',
         { skip: !challengeId }
     );
 

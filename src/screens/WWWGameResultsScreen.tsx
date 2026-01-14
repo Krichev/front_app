@@ -17,7 +17,7 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {WWWGameService} from "../services/wwwGame/wwwGameService.ts";
 import {
-    useGetQuestAudioConfigQuery,
+    useGetChallengeAudioConfigQuery,
     useSubmitChallengeCompletionMutation
 } from '../entities/ChallengeState/model/slice/challengeApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -62,9 +62,9 @@ const WWWGameResultsScreen: React.FC = () => {
     const { user } = useSelector((state: RootState) => state.auth);
     const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
 
-    // Fetch quest audio configuration if challengeId exists
-    const { data: audioConfig } = useGetQuestAudioConfigQuery(
-        challengeId ? Number(challengeId) : 0,
+    // Fetch challenge audio configuration if challengeId exists
+    const { data: audioConfig } = useGetChallengeAudioConfigQuery(
+        challengeId || '',
         { skip: !challengeId }
     );
 

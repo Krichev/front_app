@@ -20,6 +20,8 @@ import type {
     UpdateQuestAudioConfigRequest,
     UploadQuestAudioRequest,
     UploadAudioResponse,
+    ChallengeAudioResponse,
+    UpdateChallengeAudioConfigRequest,
 } from '../types';
 
 
@@ -310,6 +312,43 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
                 { type: 'Quest', id: questId },
             ],
         }),
+
+        // =============================================================================
+        // CHALLENGE AUDIO CONFIG ENDPOINTS
+        // =============================================================================
+
+        getChallengeAudioConfig: builder.query<ChallengeAudioResponse | null, string>({
+            query: (challengeId) => `/challenges/${challengeId}/audio-config`,
+            providesTags: (result, error, challengeId) => [
+                { type: 'Challenge', id: `AUDIO_${challengeId}` },
+            ],
+        }),
+
+        updateChallengeAudioConfig: builder.mutation<ChallengeAudioResponse, {
+            challengeId: string;
+            config: UpdateChallengeAudioConfigRequest;
+        }>({
+            query: ({ challengeId, config }) => ({
+                url: `/challenges/${challengeId}/audio-config`,
+                method: 'PUT',
+                body: config,
+            }),
+            invalidatesTags: (result, error, { challengeId }) => [
+                { type: 'Challenge', id: challengeId },
+                { type: 'Challenge', id: `AUDIO_${challengeId}` },
+            ],
+        }),
+
+        removeChallengeAudioConfig: builder.mutation<void, string>({
+            query: (challengeId) => ({
+                url: `/challenges/${challengeId}/audio-config`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, challengeId) => [
+                { type: 'Challenge', id: challengeId },
+                { type: 'Challenge', id: `AUDIO_${challengeId}` },
+            ],
+        }),
     }),
 });
 
@@ -345,6 +384,11 @@ export const {
     useGetQuestAudioConfigQuery,
     useRemoveQuestAudioConfigMutation,
     useUploadQuestAudioMutation,
+
+    // Challenge audio config hooks
+    useGetChallengeAudioConfigQuery,
+    useUpdateChallengeAudioConfigMutation,
+    useRemoveChallengeAudioConfigMutation,
 } = enhancedChallengeApi;
 
 // Re-export types for convenience
