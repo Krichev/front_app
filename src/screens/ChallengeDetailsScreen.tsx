@@ -16,6 +16,7 @@ import {
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
     useGetQuestionsForChallengeQuery,
+    useDeleteQuestMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
 import {
     useStartQuizSessionMutation,
@@ -105,6 +106,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     const [joinChallenge, {isLoading: isJoining}] = useJoinChallengeMutation();
     const [submitCompletion, {isLoading: isSubmitting}] = useSubmitChallengeCompletionMutation();
     const [startQuizSession] = useStartQuizSessionMutation();
+    const [deleteQuest, {isLoading: isDeleting}] = useDeleteQuestMutation();
 
     // Prefetch custom questions if needed
     const { data: customQuestions } = useGetQuestionsForChallengeQuery({ challengeId: challengeId! }, { skip: !challengeId });
@@ -132,6 +134,48 @@ const ChallengeDetailsScreen: React.FC = () => {
             console.log('===================================');
         }
     }, [challenge, user]);
+
+    // Handle delete quest
+    const handleDeleteQuest = () => {
+        if (!challengeId) return;
+
+        Alert.alert(
+            'Delete Quest',
+            'Are you sure you want to delete this quest? This action cannot be undone.\n\nNote: Statistics from completed sessions will be preserved.',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteQuest(Number(challengeId)).unwrap();
+                            Alert.alert('Success', 'Quest deleted successfully', [
+                                {
+                                    text: 'OK',
+                                    onPress: () => {
+                                        // Navigate back to the list
+                                        navigation.goBack();
+                                    }
+                                }
+                            ]);
+                        } catch (error: any) {
+                            console.error('Delete quest error:', error);
+                            const message = error?.status === 403
+                                ? "You don't have permission to delete this quest"
+                                : error?.status === 404
+                                ? "Quest not found"
+                                : "Failed to delete quest. Please try again.";
+                            Alert.alert('Error', message);
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     // Handle join challenge
     const handleJoinChallenge = async () => {
@@ -577,6 +621,21 @@ const ChallengeDetailsScreen: React.FC = () => {
                             )}
                         </View>
                     </View>
+
+                    {/* Delete Button for Creator */}
+                    {challenge.userIsCreator && (
+                        <TouchableOpacity
+                            style={styles.deleteHeaderButton}
+                            onPress={handleDeleteQuest}
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <ActivityIndicator size="small" color="white" />
+                            ) : (
+                                <MaterialCommunityIcons name="delete" size={24} color="white" />
+                            )}
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Content */}
@@ -798,6 +857,12 @@ const styles = StyleSheet.create({
     },
     headerContent: {
         flex: 1,
+    },
+    deleteHeaderButton: {
+        padding: 8,
+        marginLeft: 8,
+        backgroundColor: 'rgba(255, 59, 48, 0.8)',
+        borderRadius: 8,
     },
     title: {
         fontSize: 28,

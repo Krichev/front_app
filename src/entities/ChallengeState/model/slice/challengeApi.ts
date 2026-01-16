@@ -313,6 +313,18 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
             ],
         }),
 
+        deleteQuest: builder.mutation<void, number>({
+            query: (questId) => ({
+                url: `/quests/${questId}`,
+                method: 'DELETE',
+            }),
+            invalidatesTags: (result, error, questId) => [
+                { type: 'Quest', id: questId },
+                { type: 'Quest', id: 'LIST' },
+                { type: 'Challenge', id: 'LIST' },
+            ],
+        }),
+
         // =============================================================================
         // CHALLENGE AUDIO CONFIG ENDPOINTS
         // =============================================================================
@@ -384,6 +396,7 @@ export const {
     useGetQuestAudioConfigQuery,
     useRemoveQuestAudioConfigMutation,
     useUploadQuestAudioMutation,
+    useDeleteQuestMutation,
 
     // Challenge audio config hooks
     useGetChallengeAudioConfigQuery,
