@@ -218,7 +218,10 @@ const ChallengeDetailsScreen: React.FC = () => {
         try {
             await submitCompletion({
                 challengeId: challengeId,  // Changed from 'id' to 'challengeId'
-                completionData: {completed: true}  // Changed from 'proof' to 'completionData'
+                completionData: {
+                    verificationData: {completed: true},
+                    notes: null
+                }
             }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');

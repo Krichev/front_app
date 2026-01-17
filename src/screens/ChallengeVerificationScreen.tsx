@@ -144,7 +144,10 @@ const ChallengeVerificationScreen: React.FC = () => {
 
             await submitCompletion({
                 challengeId: challengeId,
-                completionData: verificationData
+                completionData: {
+                    verificationData: verificationData,
+                    notes: null
+                }
             }).unwrap();
 
             Alert.alert(

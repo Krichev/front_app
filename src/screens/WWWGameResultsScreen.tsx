@@ -4,6 +4,7 @@ import {
     ActivityIndicator,
     Alert,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -164,17 +165,20 @@ const WWWGameResultsScreen: React.FC = () => {
             await submitCompletion({
                 challengeId: challengeId,
                 completionData: {
-                    score,
-                    totalRounds,
-                    completed: true,
-                    teamName,
-                    roundsData: roundsData.map(round => ({
-                        question: round.question,
-                        correctAnswer: round.correctAnswer,
-                        teamAnswer: round.teamAnswer,
-                        isCorrect: round.isCorrect,
-                        playerWhoAnswered: round.playerWhoAnswered
-                    }))
+                    verificationData: {
+                        score,
+                        totalRounds,
+                        completed: true,
+                        teamName,
+                        roundsData: roundsData.map(round => ({
+                            question: round.question,
+                            correctAnswer: round.correctAnswer,
+                            teamAnswer: round.teamAnswer,
+                            isCorrect: round.isCorrect,
+                            playerWhoAnswered: round.playerWhoAnswered
+                        }))
+                    },
+                    notes: `Quiz completed with score ${score}/${totalRounds}`
                 }
             }).unwrap();
 
