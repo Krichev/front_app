@@ -283,4 +283,18 @@ export type {
     LocationVerificationRequest,
     ChallengeAccessUser,
     CreateQuizChallengeRequest,
+    // ===== ADD THESE TWO NEW EXPORTS =====
+    PaymentType,
+    CurrencyType,
 };
+
+// Quest is now an alias for Challenge
+// This maintains backward compatibility with UI code
+export type Quest = ApiChallenge;
+export type QuestDTO = ApiChallenge;
+
+// For clarity in UI code
+export interface QuestListItem extends ApiChallenge {
+    // Any quest-specific display properties
+    displayType?: 'quiz' | 'audio' | 'standard';
+}

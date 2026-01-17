@@ -257,36 +257,77 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
         }),
 
         // =============================================================================
-        // QUEST AUDIO ENDPOINTS
+        // QUEST ALIASES (For backward compatibility with UI terminology)
         // =============================================================================
 
-        updateQuestAudioConfig: builder.mutation<QuestAudioResponse, UpdateQuestAudioConfigRequest>({
-            query: ({ questId, audioConfig }) => ({
-                url: `/quests/${questId}/audio-config`,
-                method: 'PUT',
-                body: audioConfig,
+        deleteQuest: builder.mutation<{ message: string }, number>({
+            query: (questId) => ({
+                url: `/challenges/${questId}`,
+                method: 'DELETE',
             }),
-            invalidatesTags: (result, error, { questId }) => [
+            invalidatesTags: (result, error, questId) => [
+                { type: 'Challenge', id: questId },
+                { type: 'Challenge', id: 'LIST' },
                 { type: 'Quest', id: questId },
                 { type: 'Quest', id: 'LIST' },
             ],
         }),
 
-        getQuestAudioConfig: builder.query<QuestAudioResponse | null, number>({
-            query: (questId) => `/quests/${questId}/audio-config`,
+        getQuestById: builder.query<ApiChallenge, number>({
+            query: (questId) => `/challenges/${questId}`,
             providesTags: (result, error, questId) => [
+                { type: 'Challenge', id: questId },
+                { type: 'Quest', id: questId },
+            ],
+        }),
+
+        getMyQuests: builder.query<ApiChallenge[], void>({
+            query: () => ({
+                url: '/challenges',
+                params: { creator_id: 'me' },
+            }),
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.map(({ id }) => ({ type: 'Challenge' as const, id })),
+                        { type: 'Challenge', id: 'LIST' },
+                        { type: 'Quest', id: 'LIST' },
+                    ]
+                    : [{ type: 'Challenge', id: 'LIST' }, { type: 'Quest', id: 'LIST' }],
+        }),
+
+        // =============================================================================
+        // QUEST AUDIO ENDPOINTS (Now pointing to challenges)
+        // =============================================================================
+
+        updateQuestAudioConfig: builder.mutation<QuestAudioResponse, UpdateQuestAudioConfigRequest>({
+            query: ({ questId, audioConfig }) => ({
+                url: `/challenges/${questId}/audio-config`,
+                method: 'PUT',
+                body: audioConfig,
+            }),
+            invalidatesTags: (result, error, { questId }) => [
+                { type: 'Challenge', id: questId },
+                { type: 'Quest', id: questId },
+            ],
+        }),
+
+        getQuestAudioConfig: builder.query<QuestAudioResponse | null, number>({
+            query: (questId) => `/challenges/${questId}/audio-config`,
+            providesTags: (result, error, questId) => [
+                { type: 'Challenge', id: questId },
                 { type: 'Quest', id: questId },
             ],
         }),
 
         removeQuestAudioConfig: builder.mutation<void, number>({
             query: (questId) => ({
-                url: `/quests/${questId}/audio-config`,
+                url: `/challenges/${questId}/audio-config`,
                 method: 'DELETE',
             }),
             invalidatesTags: (result, error, questId) => [
+                { type: 'Challenge', id: questId },
                 { type: 'Quest', id: questId },
-                { type: 'Quest', id: 'LIST' },
             ],
         }),
 
@@ -300,7 +341,7 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
                 } as any);
 
                 return {
-                    url: `/quests/${questId}/audio`,
+                    url: `/challenges/${questId}/audio`,
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -309,19 +350,8 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
                 };
             },
             invalidatesTags: (result, error, { questId }) => [
+                { type: 'Challenge', id: questId },
                 { type: 'Quest', id: questId },
-            ],
-        }),
-
-        deleteQuest: builder.mutation<void, number>({
-            query: (questId) => ({
-                url: `/quests/${questId}`,
-                method: 'DELETE',
-            }),
-            invalidatesTags: (result, error, questId) => [
-                { type: 'Quest', id: questId },
-                { type: 'Quest', id: 'LIST' },
-                { type: 'Challenge', id: 'LIST' },
             ],
         }),
 
@@ -397,6 +427,8 @@ export const {
     useRemoveQuestAudioConfigMutation,
     useUploadQuestAudioMutation,
     useDeleteQuestMutation,
+    useGetQuestByIdQuery,
+    useGetMyQuestsQuery,
 
     // Challenge audio config hooks
     useGetChallengeAudioConfigQuery,
