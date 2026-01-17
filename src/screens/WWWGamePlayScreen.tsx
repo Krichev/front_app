@@ -89,7 +89,7 @@ const WWWGamePlayScreen: React.FC = () => {
     useEffect(() => {
         if (session && rounds.length > 0) {
             if (session.status === 'CREATED') {
-                setGamePhase('question');
+                setGamePhase('waiting');
             } else if (session.status === 'IN_PROGRESS') {
                 // Determine current round based on completed rounds
                 const currentRoundIndex = session.completedRounds || 0;
