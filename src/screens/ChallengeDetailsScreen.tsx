@@ -108,8 +108,14 @@ const ChallengeDetailsScreen: React.FC = () => {
     const [startQuizSession] = useStartQuizSessionMutation();
     const [deleteQuest, {isLoading: isDeleting}] = useDeleteQuestMutation();
 
+    // Add cancelled state check
+    const isCancelled = challenge?.status === 'CANCELLED';
+
     // Prefetch custom questions if needed
-    const { data: customQuestions } = useGetQuestionsForChallengeQuery({ challengeId: challengeId! }, { skip: !challengeId });
+    const { data: customQuestions } = useGetQuestionsForChallengeQuery(
+        { challengeId: challengeId! }, 
+        { skip: !challengeId || isCancelled } // Skip if cancelled
+    );
 
     useEffect(() => {
         if (error) {
@@ -599,6 +605,15 @@ const ChallengeDetailsScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView>
+                {/* Show banner for cancelled challenges */}
+                {isCancelled && (
+                    <View style={styles.cancelledBanner}>
+                        <MaterialCommunityIcons name="cancel" size={24} color="#fff" />
+                        <Text style={styles.cancelledBannerText}>
+                            This quest has been cancelled
+                        </Text>
+                    </View>
+                )}
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerContent}>
@@ -1102,6 +1117,19 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#666',
         fontWeight: '500',
+    },
+    cancelledBanner: {
+        backgroundColor: '#F44336',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        gap: 8,
+    },
+    cancelledBannerText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 16,
     },
 });
 

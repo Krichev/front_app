@@ -168,6 +168,7 @@ export interface GetChallengesParams {
     creator_id?: string;
     targetGroup?: string;
     participant_id?: string | undefined;
+    excludeCancelled?: boolean;
 }
 
 // ============================================================================

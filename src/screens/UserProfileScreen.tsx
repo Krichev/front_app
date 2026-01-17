@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -26,6 +26,7 @@ import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RelationshipStatus, RelationshipType } from '../entities/QuizState/model/types/question.types';
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {ApiChallenge} from '../entities/ChallengeState/model/types';
 
 type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
@@ -44,6 +45,7 @@ const UserProfileScreen: React.FC = () => {
     // State for tab selection
     const [activeTab, setActiveTab] = useState<'created' | 'joined'>('created');
     const [refreshing, setRefreshing] = useState(false);
+    const [showCancelled, setShowCancelled] = useState(false);
 
     // Handle editing profile
     const handleEditProfile = () => {
@@ -74,6 +76,7 @@ const UserProfileScreen: React.FC = () => {
         refetch: refetchCreated
     } = useGetChallengesQuery({
         creator_id: userId!,
+        excludeCancelled: !showCancelled,
     }, { skip: !userId });
 
     const {
@@ -82,7 +85,25 @@ const UserProfileScreen: React.FC = () => {
         refetch: refetchJoined
     } = useGetChallengesQuery({
         participant_id: userId!,
+        excludeCancelled: !showCancelled,
     }, { skip: !userId });
+
+    // Client-side filtering as backup
+    const activeCreatedChallenges = useMemo(() => {
+        if (!createdChallenges) return [];
+        if (showCancelled) return createdChallenges;
+        return createdChallenges.filter(c => 
+            c.status !== 'CANCELLED' && c.status !== 'COMPLETED'
+        );
+    }, [createdChallenges, showCancelled]);
+
+    const activeJoinedChallenges = useMemo(() => {
+        if (!joinedChallenges) return [];
+        if (showCancelled) return joinedChallenges;
+        return joinedChallenges.filter(c => 
+            c.status !== 'CANCELLED' && c.status !== 'COMPLETED'
+        );
+    }, [joinedChallenges, showCancelled]);
 
     // Relationship status
     const { data: relationshipData, refetch: refetchRelationship } = useGetRelationshipsQuery(
@@ -190,35 +211,65 @@ const UserProfileScreen: React.FC = () => {
     );
 
     // Render challenge item
-    const renderChallengeItem = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            style={styles.challengeItem}
-            onPress={() => navigateToChallengeDetails(item.id)}
-        >
-            <View style={styles.challengeHeader}>
-                <Text style={styles.challengeTitle} numberOfLines={1}>
-                    {item.title}
-                </Text>
-                <Text style={styles.challengeDate}>
-                    {formatDate(item.createdAt)}
-                </Text>
-            </View>
-            {item.description && (
-                <Text style={styles.challengeDescription} numberOfLines={2}>
-                    {item.description}
-                </Text>
-            )}
-            <View style={styles.challengeFooter}>
-                <View style={styles.challengeTag}>
-                    <MaterialCommunityIcons name="trophy-outline" size={16} color="#4CAF50" />
-                    <Text style={styles.challengeTagText}>{item.category || 'General'}</Text>
+    const renderChallengeItem = ({ item }: { item: ApiChallenge }) => {
+        const isCancelled = item.status === 'CANCELLED';
+        const isCompleted = item.status === 'COMPLETED';
+
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.challengeItem,
+                    isCancelled && styles.cancelledChallenge
+                ]}
+                onPress={() => navigateToChallengeDetails(item.id)}
+            >
+                <View style={styles.challengeHeader}>
+                    <Text 
+                        style={[
+                            styles.challengeTitle,
+                            isCancelled && styles.cancelledText
+                        ]} 
+                        numberOfLines={1}
+                    >
+                        {item.title}
+                    </Text>
+                    {isCancelled && (
+                        <View style={styles.statusBadge}>
+                            <Text style={styles.statusBadgeText}>CANCELLED</Text>
+                        </View>
+                    )}
+                    {isCompleted && (
+                        <View style={[styles.statusBadge, styles.completedBadge]}>
+                            <Text style={styles.statusBadgeText}>COMPLETED</Text>
+                        </View>
+                    )}
+                    <Text style={styles.challengeDate}>
+                        {formatDate(item.createdAt)}
+                    </Text>
                 </View>
-                <Text style={styles.challengeDifficulty}>
-                    {item.difficulty || 'Medium'}
-                </Text>
-            </View>
-        </TouchableOpacity>
-    );
+                {item.description && (
+                    <Text 
+                        style={[
+                            styles.challengeDescription,
+                            isCancelled && styles.cancelledText
+                        ]} 
+                        numberOfLines={2}
+                    >
+                        {item.description}
+                    </Text>
+                )}
+                <View style={styles.challengeFooter}>
+                    <View style={styles.challengeTag}>
+                        <MaterialCommunityIcons name="trophy-outline" size={16} color="#4CAF50" />
+                        <Text style={styles.challengeTagText}>{item.targetGroup || 'General'}</Text>
+                    </View>
+                    <Text style={styles.challengeDifficulty}>
+                        {item.status || 'Medium'}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -333,7 +384,7 @@ const UserProfileScreen: React.FC = () => {
                             onPress={() => setActiveTab('created')}
                         >
                             <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
-                                Created ({createdChallenges?.length || 0})
+                                Created ({activeCreatedChallenges?.length || 0})
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -341,10 +392,25 @@ const UserProfileScreen: React.FC = () => {
                             onPress={() => setActiveTab('joined')}
                         >
                             <Text style={[styles.tabText, activeTab === 'joined' && styles.activeTabText]}>
-                                Joined ({joinedChallenges?.length || 0})
+                                Joined ({activeJoinedChallenges?.length || 0})
                             </Text>
                         </TouchableOpacity>
                     </View>
+
+                    {/* NEW: Toggle for cancelled challenges */}
+                    <TouchableOpacity 
+                        style={styles.toggleCancelled}
+                        onPress={() => setShowCancelled(!showCancelled)}
+                    >
+                        <MaterialCommunityIcons 
+                            name={showCancelled ? "eye-off-outline" : "eye-outline"} 
+                            size={16} 
+                            color="#666" 
+                        />
+                        <Text style={styles.toggleCancelledText}>
+                            {showCancelled ? "Hide Cancelled/Completed" : "Show All"}
+                        </Text>
+                    </TouchableOpacity>
 
                     {/* Challenge List */}
                     <View style={styles.challengesList}>
@@ -354,9 +420,9 @@ const UserProfileScreen: React.FC = () => {
                                     <ActivityIndicator size="small" color="#4CAF50" />
                                     <Text style={styles.loadingText}>Loading created challenges...</Text>
                                 </View>
-                            ) : createdChallenges && createdChallenges.length > 0 ? (
+                            ) : activeCreatedChallenges && activeCreatedChallenges.length > 0 ? (
                                 <FlatList
-                                    data={createdChallenges}
+                                    data={activeCreatedChallenges}
                                     renderItem={renderChallengeItem}
                                     keyExtractor={(item) => item.id}
                                     scrollEnabled={false}
@@ -376,9 +442,9 @@ const UserProfileScreen: React.FC = () => {
                                     <ActivityIndicator size="small" color="#4CAF50" />
                                     <Text style={styles.loadingText}>Loading joined challenges...</Text>
                                 </View>
-                            ) : joinedChallenges && joinedChallenges.length > 0 ? (
+                            ) : activeJoinedChallenges && activeJoinedChallenges.length > 0 ? (
                                 <FlatList
-                                    data={joinedChallenges}
+                                    data={activeJoinedChallenges}
                                     renderItem={renderChallengeItem}
                                     keyExtractor={(item) => item.id}
                                     scrollEnabled={false}
@@ -705,6 +771,42 @@ const styles = StyleSheet.create({
         color: '#999',
         textAlign: 'center',
         marginTop: 10,
+    },
+    toggleCancelled: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        gap: 5,
+    },
+    toggleCancelledText: {
+        fontSize: 12,
+        color: '#666',
+    },
+    cancelledChallenge: {
+        opacity: 0.6,
+        backgroundColor: '#f5f5f5',
+    },
+    cancelledText: {
+        textDecorationLine: 'line-through',
+        color: '#999',
+    },
+    statusBadge: {
+        backgroundColor: '#F44336',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 4,
+        marginRight: 8,
+    },
+    completedBadge: {
+        backgroundColor: '#4CAF50',
+    },
+    statusBadgeText: {
+        color: 'white',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
 });
 
