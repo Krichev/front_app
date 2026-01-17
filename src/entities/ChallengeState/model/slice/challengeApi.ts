@@ -89,7 +89,10 @@ export const challengeApi = createApi({
                 method: 'PUT',
                 body: challenge,
             }),
-            invalidatesTags: (result, error, {id}) => [{type: 'Challenge', id}],
+            invalidatesTags: (result, error, {id}) => [
+                {type: 'Challenge', id},
+                {type: 'Challenge', id: 'LIST'},
+            ],
         }),
 
         deleteChallenge: builder.mutation<{message: string}, string>({
@@ -97,7 +100,10 @@ export const challengeApi = createApi({
                 url: `/challenges/${id}`,
                 method: 'DELETE',
             }),
-            invalidatesTags: (result, error, id) => [{type: 'Challenge', id}],
+            invalidatesTags: (result, error, id) => [
+                {type: 'Challenge', id},
+                {type: 'Challenge', id: 'LIST'},
+            ],
         }),
 
         joinChallenge: builder.mutation<{message: string}, {challengeId: string; userId?: string}>({
@@ -327,7 +333,9 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
             }),
             invalidatesTags: (result, error, questId) => [
                 { type: 'Challenge', id: questId },
+                { type: 'Challenge', id: 'LIST' },
                 { type: 'Quest', id: questId },
+                { type: 'Quest', id: 'LIST' },
             ],
         }),
 
