@@ -19,7 +19,8 @@ import {
     AudioChallengeType,
     AUDIO_CHALLENGE_TYPES,
     AudioChallengeTypeInfo,
-} from '../../entities/ChallengeState/model/types';
+    AUDIO_CHALLENGE_TYPES_INFO,
+} from '../../types/audioChallenge.types';
 import {QuestionVisibility} from '../../entities/QuizState/model/types/question.types';
 import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../entities/TopicState';

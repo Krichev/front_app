@@ -15,8 +15,9 @@ import DocumentPicker from 'react-native-document-picker';
 import {
     AudioChallengeType,
     AUDIO_CHALLENGE_TYPES,
+    AUDIO_CHALLENGE_TYPES_INFO,
     AudioChallengeTypeInfo,
-} from '../../entities/ChallengeState/model/types';
+} from '../../types/audioChallenge.types';
 import FileService, {ProcessedFileInfo, FileInfo} from '../../services/speech/FileService';
 
 // ============================================================================
@@ -70,7 +71,7 @@ export const AudioChallengeSection: React.FC<AudioChallengeSectionProps> = ({
 
     const selectedTypeInfo = useMemo<AudioChallengeTypeInfo | null>(() => {
         if (!config.audioChallengeType) return null;
-        return AUDIO_CHALLENGE_TYPES.find(t => t.type === config.audioChallengeType) || null;
+        return AUDIO_CHALLENGE_TYPES_INFO[config.audioChallengeType] || null;
     }, [config.audioChallengeType]);
 
     const showRhythmSettings = selectedTypeInfo?.usesRhythmScoring ?? false;

@@ -598,81 +598,22 @@ export interface UploadAudioResponse {
 // AUDIO CHALLENGE TYPES
 // ============================================================================
 
-/**
- * Types of audio-based challenges
- */
-export enum AudioChallengeType {
-    RHYTHM_CREATION = 'RHYTHM_CREATION',
-    RHYTHM_REPEAT = 'RHYTHM_REPEAT',
-    SOUND_MATCH = 'SOUND_MATCH',
-    SINGING = 'SINGING'
-}
+// Re-export from canonical source for backward compatibility
+export {
+    AUDIO_CHALLENGE_TYPES,
+    AUDIO_CHALLENGE_TYPES_INFO,
+    AudioChallengeTypeInfo,
+    getAudioChallengeTypeInfo,
+} from '../../../types/audioChallenge.types';
 
-/**
- * Audio challenge type metadata
- */
-export interface AudioChallengeTypeInfo {
-    type: AudioChallengeType;
-    label: string;
-    description: string;
-    icon: string;
-    requiresReferenceAudio: boolean;
-    usesPitchScoring: boolean;
-    usesRhythmScoring: boolean;
-    usesVoiceScoring: boolean;
-}
-
-/**
- * Audio challenge type definitions
- */
-export const AUDIO_CHALLENGE_TYPES: AudioChallengeTypeInfo[] = [
-    {
-        type: AudioChallengeType.RHYTHM_CREATION,
-        label: 'Create Rhythm',
-        description: 'Create your own rhythm pattern. Scored on consistency and creativity.',
-        icon: 'music-note-plus',
-        requiresReferenceAudio: false,
-        usesPitchScoring: false,
-        usesRhythmScoring: true,
-        usesVoiceScoring: false
-    },
-    {
-        type: AudioChallengeType.RHYTHM_REPEAT,
-        label: 'Repeat Rhythm',
-        description: 'Listen and repeat the rhythm pattern you hear.',
-        icon: 'repeat',
-        requiresReferenceAudio: true,
-        usesPitchScoring: false,
-        usesRhythmScoring: true,
-        usesVoiceScoring: false
-    },
-    {
-        type: AudioChallengeType.SOUND_MATCH,
-        label: 'Match Sound',
-        description: 'Make sounds as close as possible to the reference.',
-        icon: 'waveform',
-        requiresReferenceAudio: true,
-        usesPitchScoring: true,
-        usesRhythmScoring: false,
-        usesVoiceScoring: true
-    },
-    {
-        type: AudioChallengeType.SINGING,
-        label: 'Sing Along',
-        description: 'Sing the song segment and receive a karaoke-style score.',
-        icon: 'microphone',
-        requiresReferenceAudio: true,
-        usesPitchScoring: true,
-        usesRhythmScoring: true,
-        usesVoiceScoring: true
-    }
-];
+// Keep the enum here as it's used as a value
+export { AudioChallengeType } from '../../../types/audioChallenge.types';
 
 /**
  * Audio challenge configuration for question creation
  */
 export interface AudioChallengeConfig {
-    audioChallengeType: AudioChallengeType;
+    audioChallengeType: import('../../../types/audioChallenge.types').AudioChallengeType;
     audioReferenceMediaId?: number;
     audioSegmentStart?: number;
     audioSegmentEnd?: number;
@@ -707,7 +648,7 @@ export interface AudioChallengeSubmission {
 export interface CreateAudioQuestionRequest {
     question: string;
     answer?: string;
-    audioChallengeType: AudioChallengeType;
+    audioChallengeType: import('../../../types/audioChallenge.types').AudioChallengeType;
     topic?: string;
     difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
     visibility?: 'PUBLIC' | 'PRIVATE' | 'GROUP_ONLY';

@@ -2,20 +2,16 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {Platform} from 'react-native';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import {
+    AudioChallengeType,
+    AudioChallengeTypeInfo,
+    AUDIO_CHALLENGE_TYPES,
+    AUDIO_CHALLENGE_TYPES_INFO,
+} from '../../../../types/audioChallenge.types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-/**
- * Audio challenge types supported by the system
- */
-export enum AudioChallengeType {
-    RHYTHM_CREATION = 'RHYTHM_CREATION',
-    RHYTHM_REPEAT = 'RHYTHM_REPEAT',
-    SOUND_MATCH = 'SOUND_MATCH',
-    SINGING = 'SINGING',
-}
 
 /**
  * Request to create a new audio challenge question
@@ -127,70 +123,6 @@ export interface AudioFileInfo {
     type: string;
 }
 
-/**
- * Audio challenge type metadata (for UI display)
- */
-export interface AudioChallengeTypeInfo {
-    type: AudioChallengeType;
-    label: string;
-    description: string;
-    icon: string;
-    requiresReferenceAudio: boolean;
-    usesPitchScoring: boolean;
-    usesRhythmScoring: boolean;
-    usesVoiceScoring: boolean;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * Audio challenge type definitions for UI
- */
-export const AUDIO_CHALLENGE_TYPE_INFO: AudioChallengeTypeInfo[] = [
-    {
-        type: AudioChallengeType.RHYTHM_CREATION,
-        label: 'Create Rhythm',
-        description: 'Create your own rhythm pattern. Scored on consistency and creativity.',
-        icon: 'music-note-plus',
-        requiresReferenceAudio: false,
-        usesPitchScoring: false,
-        usesRhythmScoring: true,
-        usesVoiceScoring: false,
-    },
-    {
-        type: AudioChallengeType.RHYTHM_REPEAT,
-        label: 'Repeat Rhythm',
-        description: 'Listen and repeat the rhythm pattern you hear.',
-        icon: 'repeat',
-        requiresReferenceAudio: true,
-        usesPitchScoring: false,
-        usesRhythmScoring: true,
-        usesVoiceScoring: false,
-    },
-    {
-        type: AudioChallengeType.SOUND_MATCH,
-        label: 'Match Sound',
-        description: 'Make sounds as close as possible to the reference.',
-        icon: 'waveform',
-        requiresReferenceAudio: true,
-        usesPitchScoring: true,
-        usesRhythmScoring: false,
-        usesVoiceScoring: true,
-    },
-    {
-        type: AudioChallengeType.SINGING,
-        label: 'Sing Along',
-        description: 'Sing the song segment and receive a karaoke-style score.',
-        icon: 'microphone',
-        requiresReferenceAudio: true,
-        usesPitchScoring: true,
-        usesRhythmScoring: true,
-        usesVoiceScoring: true,
-    },
-];
-
 // ============================================================================
 // API DEFINITION
 // ============================================================================
@@ -209,7 +141,7 @@ export const audioChallengeApi = createApi({
          * Returns static data about challenge types
          */
         getAudioChallengeTypes: builder.query<AudioChallengeTypeInfo[], void>({
-            queryFn: () => ({data: AUDIO_CHALLENGE_TYPE_INFO}),
+            queryFn: () => ({data: AUDIO_CHALLENGE_TYPES}),
         }),
 
         /**
@@ -523,15 +455,14 @@ export const {
  * Get challenge type info by type
  */
 export const selectChallengeTypeInfo = (type: AudioChallengeType): AudioChallengeTypeInfo | undefined => {
-    return AUDIO_CHALLENGE_TYPE_INFO.find((info) => info.type === type);
+    return AUDIO_CHALLENGE_TYPES_INFO[type];
 };
 
 /**
  * Check if a challenge type requires reference audio
  */
 export const requiresReferenceAudio = (type: AudioChallengeType): boolean => {
-    const info = selectChallengeTypeInfo(type);
-    return info?.requiresReferenceAudio ?? false;
+    return AUDIO_CHALLENGE_TYPES_INFO[type]?.requiresReferenceAudio ?? false;
 };
 
 /**
@@ -539,18 +470,11 @@ export const requiresReferenceAudio = (type: AudioChallengeType): boolean => {
  * Returns [pitchWeight, rhythmWeight, voiceWeight]
  */
 export const getScoringWeights = (type: AudioChallengeType): [number, number, number] => {
-    switch (type) {
-        case AudioChallengeType.RHYTHM_CREATION:
-            return [0.0, 1.0, 0.0];
-        case AudioChallengeType.RHYTHM_REPEAT:
-            return [0.0, 0.9, 0.1];
-        case AudioChallengeType.SOUND_MATCH:
-            return [0.5, 0.1, 0.4];
-        case AudioChallengeType.SINGING:
-            return [0.5, 0.3, 0.2];
-        default:
-            return [0.33, 0.33, 0.34];
+    const weights = AUDIO_CHALLENGE_TYPES_INFO[type]?.scoringWeights;
+    if (weights) {
+        return [weights.pitch, weights.rhythm, weights.voice];
     }
+    return [0.33, 0.33, 0.34];
 };
 
 export default audioChallengeApi;

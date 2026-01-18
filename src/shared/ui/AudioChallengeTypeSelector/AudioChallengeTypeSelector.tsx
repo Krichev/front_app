@@ -1,12 +1,8 @@
 // src/shared/ui/AudioChallengeTypeSelector/AudioChallengeTypeSelector.tsx
 import React from 'react';
-import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {
-    AudioChallengeType,
-    AUDIO_CHALLENGE_TYPES,
-    AudioChallengeTypeInfo,
-} from '../../../entities/ChallengeState/model/types';
+import {AUDIO_CHALLENGE_TYPES, AudioChallengeType, AudioChallengeTypeInfo,} from '../../../types/audioChallenge.types';
 
 // ============================================================================
 // TYPES
