@@ -11,16 +11,14 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {
-    useGetChallengeByIdQuery,
+    useDeleteQuestMutation,
     useGetChallengeAudioConfigQuery,
+    useGetChallengeByIdQuery,
+    useGetQuestionsForChallengeQuery,
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
-    useGetQuestionsForChallengeQuery,
-    useDeleteQuestMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
-import {
-    useStartQuizSessionMutation,
-} from '../entities/QuizState/model/slice/quizApi';
+import {useStartQuizSessionMutation,} from '../entities/QuizState/model/slice/quizApi';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useSelector} from 'react-redux';
@@ -273,7 +271,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                             <>
                                 <View style={styles.quizRow}>
                                     <Text style={styles.quizLabel}>Game Type:</Text>
-                                    <Text style={styles.quizValue}>Who? What? Where?</Text>
+                                    <Text style={styles.quizValue}>{quizConfig.gameType || 'Quiz'}</Text>
                                 </View>
                                 <View style={styles.quizRow}>
                                     <Text style={styles.quizLabel}>Difficulty:</Text>
