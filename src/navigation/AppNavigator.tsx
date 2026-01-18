@@ -61,12 +61,21 @@ export type RootStackParamList = {
         | (GameSettings & { sessionId?: string; challengeId?: string })
         | { sessionId: string|undefined; challengeId?: string|undefined };
     WWWGameResults: {
+        teamName: string;
         score: number;
-        totalQuestions: number;
+        totalRounds: number;
+        roundsData: Array<{
+            question: string;
+            correctAnswer: string;
+            teamAnswer: string;
+            isCorrect: boolean;
+            playerWhoAnswered: string;
+            discussionNotes: string;
+        }>;
         challengeId?: string;
-        teamName?: string;
-        totalRounds?: number;
-        roundsData?: any[];
+        sessionId?: string;
+        gameStartTime?: string;
+        gameDuration?: number;
     };
     QuizResults: {
         score: number;

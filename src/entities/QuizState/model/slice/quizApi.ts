@@ -192,6 +192,10 @@ export interface QuizRound {
     answerSubmittedAt?: string;
     discussionDurationSeconds?: number;
     totalRoundDurationSeconds?: number;
+    // MISSING FIELDS:
+    hintUsed?: boolean;
+    voiceRecordingUsed?: boolean;
+    aiFeedback?: string;
 }
 
 export interface SubmitRoundAnswerRequest {

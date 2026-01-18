@@ -1,3 +1,4 @@
+// src/components/QuestAudioPlayer.tsx
 import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Video, {OnProgressData, VideoRef} from 'react-native-video';
@@ -112,7 +113,6 @@ export const QuestAudioPlayer: React.FC<QuestAudioPlayerProps> = ({
       <Video
         ref={videoRef}
         source={{ uri: audioConfig.audioUrl }}
-        audioOnly={true}
         paused={!isPlaying}
         onProgress={handleProgress}
         onLoad={handleLoad}

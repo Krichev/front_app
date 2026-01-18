@@ -86,7 +86,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         onProgress={handleProgress}
         onLoad={handleLoad}
         onEnd={handleEnd}
-        audioOnly={true}
         playInBackground={false}
         playWhenInactive={false}
         ignoreSilentSwitch="ignore"
