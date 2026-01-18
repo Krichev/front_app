@@ -23,10 +23,12 @@ import {
     useSubmitRoundAnswerMutation
 } from '../entities/QuizState/model/slice/quizApi';
 import {useGetChallengeAudioConfigQuery} from '../entities/ChallengeState/model/slice/challengeApi';
+import { useSubmitRecordingMutation } from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import VoiceRecorder from '../components/VoiceRecorder';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
+import { KaraokeQuestionDisplay } from './components/KaraokeQuestionDisplay';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -52,6 +54,7 @@ const WWWGamePlayScreen: React.FC = () => {
     const [beginQuizSession] = useBeginQuizSessionMutation();
     const [submitRoundAnswer] = useSubmitRoundAnswerMutation();
     const [completeQuizSession] = useCompleteQuizSessionMutation();
+    const [submitRecording, { isLoading: isSubmittingAudio }] = useSubmitRecordingMutation();
 
     // Fetch challenge audio configuration if challengeId exists
     const { data: audioConfig, isLoading: isLoadingAudioConfig } = useGetChallengeAudioConfigQuery(
@@ -75,6 +78,7 @@ const WWWGamePlayScreen: React.FC = () => {
     const [isVoiceRecordingEnabled, setIsVoiceRecordingEnabled] = useState(false);
     const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
     const [voiceTranscription, setVoiceTranscription] = useState('');
+    const [recordedAudio, setRecordedAudio] = useState<{uri: string; name: string; type: string} | null>(null);
 
     // Animated values
     const timerAnimation = useRef(new Animated.Value(1)).current;
@@ -84,6 +88,11 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Current round data
     const currentRoundData = rounds[currentRound];
+
+    // Helper to check if it's an audio challenge
+    const isAudioChallenge = (question: any): boolean => {
+        return question?.questionType === 'AUDIO' && !!question?.audioChallengeType;
+    };
 
     // Initialize game when session and rounds are loaded
     useEffect(() => {
@@ -185,7 +194,42 @@ const WWWGamePlayScreen: React.FC = () => {
         setVoiceTranscription(text);
     };
 
-    // Submit round answer
+    // Handler for audio recording completion
+    const handleAudioRecordingComplete = (audioFile: { uri: string; name: string; type: string }) => {
+        setRecordedAudio(audioFile);
+    };
+
+    // Submit audio answer
+    const submitAudioAnswer = async () => {
+        if (!recordedAudio || !currentRoundData || !sessionId) return;
+
+        try {
+            // Submit to audio challenge API for scoring
+            const result = await submitRecording({
+                questionId: parseInt(currentRoundData.question.id as unknown as string),
+                audioFile: recordedAudio,
+            }).unwrap();
+
+            // Also submit round answer with reference to submission
+            await submitRoundAnswer({
+                sessionId,
+                roundId: currentRoundData.id,
+                answer: {
+                    teamAnswer: `Audio submission: ${result.id}`,
+                    playerWhoAnswered: selectedPlayer || 'Team',
+                    discussionNotes: discussionNotes.trim(),
+                }
+            }).unwrap();
+
+            setGamePhase('feedback');
+            refetchRounds();
+        } catch (error) {
+            console.error('Failed to submit audio:', error);
+            Alert.alert('Error', 'Failed to submit audio recording');
+        }
+    };
+
+    // Submit round answer (text)
     const submitAnswer = async () => {
         if (!currentRoundData || !teamAnswer.trim() || !sessionId) {
             Alert.alert('Error', 'Please provide an answer');
@@ -230,6 +274,7 @@ const WWWGamePlayScreen: React.FC = () => {
             setSelectedPlayer('');
             setShowHint(false);
             setVoiceTranscription('');
+            setRecordedAudio(null);
         }
     };
 
@@ -274,7 +319,7 @@ const WWWGamePlayScreen: React.FC = () => {
         });
     };
 
-    // Handle voice recording for answers
+    // Handle voice recording for answers (Text based)
     const toggleVoiceAnswer = () => {
         setIsRecordingVoiceAnswer(!isRecordingVoiceAnswer);
     };
@@ -308,13 +353,23 @@ const WWWGamePlayScreen: React.FC = () => {
 
             case 'question':
                 if (!currentRoundData) return null;
+                const questionData = currentRoundData.question;
 
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.questionNumber}>
                             Question {currentRound + 1} of {session?.totalRounds || rounds.length}
                         </Text>
-                        <Text style={styles.question}>{currentRoundData.question.question}</Text>
+                        
+                        {isAudioChallenge(questionData) ? (
+                            <KaraokeQuestionDisplay
+                                question={questionData as any}
+                                onRecordingComplete={() => {}} // Preview only in question phase
+                                disabled={true}
+                            />
+                        ) : (
+                            <Text style={styles.question}>{questionData.question}</Text>
+                        )}
 
                         <TouchableOpacity
                             style={styles.primaryButton}
@@ -348,9 +403,14 @@ const WWWGamePlayScreen: React.FC = () => {
                         </View>
 
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
-                        <Text style={styles.question}>{currentRoundData.question.question}</Text>
+                        
+                        {isAudioChallenge(currentRoundData.question) ? (
+                            <Text style={styles.question}>Audio Challenge</Text>
+                        ) : (
+                            <Text style={styles.question}>{currentRoundData.question.question}</Text>
+                        )}
 
-                        {isVoiceRecordingEnabled && (
+                        {isVoiceRecordingEnabled && !isAudioChallenge(currentRoundData.question) && (
                             <View style={styles.voiceRecorderContainer}>
                                 <VoiceRecorder
                                     onTranscription={handleVoiceTranscription}
@@ -388,14 +448,39 @@ const WWWGamePlayScreen: React.FC = () => {
 
             case 'answer':
                 if (!currentRoundData) return null;
+                const answerQuestionData = currentRoundData.question;
+
+                if (isAudioChallenge(answerQuestionData)) {
+                    return (
+                        <View style={styles.phaseContainer}>
+                            <Text style={styles.answerTitle}>Record Your Response</Text>
+                            <KaraokeQuestionDisplay
+                                question={answerQuestionData as any}
+                                onRecordingComplete={handleAudioRecordingComplete}
+                                disabled={false}
+                            />
+                            <TouchableOpacity
+                                style={[styles.primaryButton, (!recordedAudio || isSubmittingAudio) && styles.disabledButton]}
+                                onPress={submitAudioAnswer}
+                                disabled={!recordedAudio || isSubmittingAudio}
+                            >
+                                {isSubmittingAudio ? (
+                                    <Text style={styles.buttonText}>Uploading...</Text>
+                                ) : (
+                                    <Text style={styles.buttonText}>Submit Recording</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    );
+                }
 
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.answerTitle}>Submit Your Answer</Text>
-                        <Text style={styles.question}>{currentRoundData.question.question}</Text>
+                        <Text style={styles.question}>{answerQuestionData.question}</Text>
 
                         {/* Hint section */}
-                        {currentRoundData.question.additionalInfo && (
+                        {answerQuestionData.additionalInfo && (
                             <View>
                                 <TouchableOpacity
                                     style={styles.hintButton}
@@ -407,7 +492,7 @@ const WWWGamePlayScreen: React.FC = () => {
                                 </TouchableOpacity>
                                 {showHint && (
                                     <View style={styles.hintContainer}>
-                                        <Text style={styles.hintText}>{currentRoundData.question.additionalInfo}</Text>
+                                        <Text style={styles.hintText}>{answerQuestionData.additionalInfo}</Text>
                                     </View>
                                 )}
                             </View>
@@ -708,6 +793,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         borderRadius: 8,
         alignItems: 'center',
+        marginTop: 16,
     },
     secondaryButton: {
         backgroundColor: '#FF9800',
