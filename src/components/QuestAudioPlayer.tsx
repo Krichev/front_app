@@ -1,7 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Video, { OnProgressData } from 'react-native-video';
-import { QuestAudioResponse } from '../entities/ChallengeState/model/types';
+import React, {useEffect, useRef, useState} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import Video, {OnProgressData, VideoRef} from 'react-native-video';
+import {QuestAudioResponse} from '../entities/ChallengeState/model/types';
 
 interface QuestAudioPlayerProps {
   audioConfig: QuestAudioResponse;
@@ -14,7 +14,7 @@ export const QuestAudioPlayer: React.FC<QuestAudioPlayerProps> = ({
   autoPlay = false,
   onSegmentComplete,
 }) => {
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<VideoRef>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(audioConfig.audioStartTime);
   const [hasReachedEnd, setHasReachedEnd] = useState(false);

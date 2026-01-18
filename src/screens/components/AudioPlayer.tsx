@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Video, { OnProgressData } from 'react-native-video';
+// src/screens/components/AudioPlayer.tsx
+import React, {useEffect, useRef, useState} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import Video, {OnProgressData, VideoRef} from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface AudioPlayerProps {
@@ -16,7 +17,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   segmentEnd,
   onPlaybackComplete,
 }) => {
-  const videoRef = useRef<Video>(null);
+  const videoRef = useRef<VideoRef>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(segmentStart);
   const [duration, setDuration] = useState(0);
