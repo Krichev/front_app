@@ -119,13 +119,17 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     // DERIVED STATE
     // ============================================================================
 
-    const selectedTypeInfo = useMemo<AudioChallengeTypeInfo | null>(() => {
+    const selectedTypeInfo = useMemo(() => {
         if (!formData.audioChallengeType) return null;
-        return AUDIO_CHALLENGE_TYPES.find(t => t.type === formData.audioChallengeType) || null;
+        return AUDIO_CHALLENGE_TYPES_INFO[formData.audioChallengeType] || null;
     }, [formData.audioChallengeType]);
 
+    // Derived visibility flags with defaults
+    const showRhythmSettings = selectedTypeInfo?.showRhythmSettings ?? false;
+    const showClassificationSection = selectedTypeInfo?.showClassificationSection ?? true;
+    const showAudioSegmentTrim = selectedTypeInfo?.showAudioSegmentTrim ?? false;
     const requiresReferenceAudio = selectedTypeInfo?.requiresReferenceAudio ?? false;
-    const showRhythmSettings = selectedTypeInfo?.usesRhythmScoring ?? false;
+    const rhythmSettingsHint = selectedTypeInfo?.rhythmSettingsHint;
 
     // ============================================================================
     // HANDLERS
@@ -141,6 +145,38 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             setErrors(prev => ({...prev, [field]: undefined}));
         }
     }, [errors]);
+
+    const handleTypeChange = useCallback((type: AudioChallengeType) => {
+        const typeInfo = AUDIO_CHALLENGE_TYPES_INFO[type];
+        
+        setFormData(prev => {
+            const newData = {...prev, audioChallengeType: type};
+            
+            // Reset fields based on new type configuration
+            if (!typeInfo.showRhythmSettings) {
+                newData.rhythmBpm = null;
+                newData.rhythmTimeSignature = '4/4';
+            } else if (prev.rhythmBpm === null) {
+                // Restore default BPM if showing settings again
+                newData.rhythmBpm = 120;
+            }
+
+            if (!typeInfo.showAudioSegmentTrim) {
+                newData.audioSegmentStart = 0;
+                newData.audioSegmentEnd = null;
+            }
+
+            // If Classification is hidden, we might want to keep existing values 
+            // or set defaults if empty, but usually better to preserve in case they switch back.
+            // For RHYTHM_REPEAT (hidden classification), we might programmatically set 
+            // a default topic/difficulty if required by backend, but backend handles optionality.
+            
+            return newData;
+        });
+
+        // Clear type error
+        setErrors(prev => ({...prev, audioChallengeType: undefined}));
+    }, []);
 
     const handleSelectTopic = useCallback((selectedTopic: SelectableTopic | null) => {
         if (selectedTopic) {
@@ -246,7 +282,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             newErrors.audioChallengeType = 'Please select a challenge type';
         }
 
-        // Reference audio validation
+        // Reference audio validation (only if required by type)
         if (requiresReferenceAudio && !formData.referenceAudioFile) {
             newErrors.referenceAudioFile = 'Reference audio is required for this challenge type';
         }
@@ -261,11 +297,17 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             newErrors.minimumScorePercentage = 'Score must be between 0 and 100';
         }
 
-        // BPM validation
+        // BPM validation (only if section is shown)
         if (showRhythmSettings && formData.rhythmBpm !== null) {
             if (formData.rhythmBpm < 40 || formData.rhythmBpm > 240) {
                 newErrors.rhythmBpm = 'BPM must be between 40 and 240';
             }
+        } else if (showRhythmSettings && formData.rhythmBpm === null) {
+             // If section is shown, BPM is generally expected unless strictly optional
+             // For RHYTHM_CREATION it is required. For SINGING it is optional (hint).
+             if (formData.audioChallengeType === 'RHYTHM_CREATION') {
+                 newErrors.rhythmBpm = 'BPM is required';
+             }
         }
 
         setErrors(newErrors);
@@ -292,6 +334,10 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
     const renderAudioUploadSection = () => {
         if (!formData.audioChallengeType) return null;
+        
+        // If type doesn't require reference audio and we don't need to show it
+        // (e.g. RHYTHM_CREATION), skip rendering
+        if (!requiresReferenceAudio) return null;
 
         const isRequired = requiresReferenceAudio;
 
@@ -396,8 +442,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                     <Text style={styles.errorText}>{errors.referenceAudioFile}</Text>
                 )}
 
-                {/* Audio Segment Picker */}
-                {formData.referenceAudioFile && (
+                {/* Audio Segment Picker (moved from separate logic) */}
+                {formData.referenceAudioFile && showAudioSegmentTrim && (
                     <View style={styles.segmentSection}>
                         <Text style={styles.subsectionTitle}>Audio Segment (Optional)</Text>
                         <Text style={styles.helperText}>
@@ -516,6 +562,12 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                     <Text style={styles.sectionTitle}>Rhythm Settings</Text>
                 </View>
 
+                {rhythmSettingsHint && (
+                    <Text style={styles.helperText}>
+                        <MaterialCommunityIcons name="information-outline" size={14} color="#888" /> {rhythmSettingsHint}
+                    </Text>
+                )}
+
                 {/* BPM Input */}
                 <View style={styles.formGroup}>
                     <Text style={styles.inputLabel}>BPM (Beats Per Minute)</Text>
@@ -599,6 +651,65 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         );
     };
 
+    const renderClassificationSection = () => {
+        if (!showClassificationSection) return null;
+
+        return (
+            <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons name="tag" size={20} color="#333" />
+                    <Text style={styles.sectionTitle}>Classification</Text>
+                </View>
+
+                {/* Difficulty */}
+                <View style={styles.formGroup}>
+                    <Text style={styles.inputLabel}>Difficulty</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={formData.difficulty}
+                            onValueChange={(value) => updateField('difficulty', value as Difficulty)}
+                            style={styles.picker}
+                            enabled={!isSubmitting}
+                        >
+                            <Picker.Item label="Easy" value="EASY" />
+                            <Picker.Item label="Medium" value="MEDIUM" />
+                            <Picker.Item label="Hard" value="HARD" />
+                        </Picker>
+                    </View>
+                </View>
+
+                {/* Topic */}
+                <View style={styles.formGroup}>
+                    <TopicTreeSelector
+                        selectedTopicId={formData.topicId}
+                        selectedTopicName={formData.topic}
+                        onSelectTopic={handleSelectTopic}
+                        allowCreate={true}
+                        placeholder="Select or create a topic..."
+                        label="Topic (Optional)"
+                        required={false}
+                    />
+                </View>
+
+                {/* Additional Info */}
+                <View style={styles.formGroup}>
+                    <Text style={styles.inputLabel}>Additional Info (Optional)</Text>
+                    <TextInput
+                        style={[styles.input, styles.textArea]}
+                        value={formData.additionalInfo}
+                        onChangeText={(text) => updateField('additionalInfo', text)}
+                        placeholder="Any hints or additional context..."
+                        placeholderTextColor="#999"
+                        multiline
+                        numberOfLines={2}
+                        textAlignVertical="top"
+                        editable={!isSubmitting}
+                    />
+                </View>
+            </View>
+        );
+    };
+
     // ============================================================================
     // MAIN RENDER
     // ============================================================================
@@ -609,7 +720,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             <View style={styles.section}>
                 <AudioChallengeTypeSelector
                     selectedType={formData.audioChallengeType}
-                    onSelectType={(type) => updateField('audioChallengeType', type)}
+                    onSelectType={handleTypeChange}
                     disabled={isSubmitting}
                 />
                 {errors.audioChallengeType && (
@@ -664,58 +775,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             {renderRhythmSettingsSection()}
 
             {/* Classification Section */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons name="tag" size={20} color="#333" />
-                    <Text style={styles.sectionTitle}>Classification</Text>
-                </View>
-
-                {/* Difficulty */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Difficulty</Text>
-                    <View style={styles.pickerContainer}>
-                        <Picker
-                            selectedValue={formData.difficulty}
-                            onValueChange={(value) => updateField('difficulty', value as Difficulty)}
-                            style={styles.picker}
-                            enabled={!isSubmitting}
-                        >
-                            <Picker.Item label="Easy" value="EASY" />
-                            <Picker.Item label="Medium" value="MEDIUM" />
-                            <Picker.Item label="Hard" value="HARD" />
-                        </Picker>
-                    </View>
-                </View>
-
-                {/* Topic */}
-                <View style={styles.formGroup}>
-                    <TopicTreeSelector
-                        selectedTopicId={formData.topicId}
-                        selectedTopicName={formData.topic}
-                        onSelectTopic={handleSelectTopic}
-                        allowCreate={true}
-                        placeholder="Select or create a topic..."
-                        label="Topic (Optional)"
-                        required={false}
-                    />
-                </View>
-
-                {/* Additional Info */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Additional Info (Optional)</Text>
-                    <TextInput
-                        style={[styles.input, styles.textArea]}
-                        value={formData.additionalInfo}
-                        onChangeText={(text) => updateField('additionalInfo', text)}
-                        placeholder="Any hints or additional context..."
-                        placeholderTextColor="#999"
-                        multiline
-                        numberOfLines={2}
-                        textAlignVertical="top"
-                        editable={!isSubmitting}
-                    />
-                </View>
-            </View>
+            {renderClassificationSection()}
 
             {/* Action Buttons */}
             <View style={styles.actions}>

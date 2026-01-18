@@ -14,6 +14,12 @@ export interface AudioChallengeTypeInfo {
         rhythm: number;
         voice: number;
     };
+    // UI visibility flags
+    showRhythmSettings: boolean;      // BPM, time signature
+    showClassificationSection: boolean; // topic, difficulty, visibility
+    showAudioSegmentTrim: boolean;    // start/end time controls
+    // Contextual help
+    rhythmSettingsHint?: string;      // Why hidden/shown
 }
 
 export type AudioChallengeType = 'RHYTHM_CREATION' | 'RHYTHM_REPEAT' | 'SOUND_MATCH' | 'SINGING';
@@ -48,7 +54,11 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         usesPitchScoring: false,
         usesRhythmScoring: true,
         usesVoiceScoring: false,
-        scoringWeights: { pitch: 0, rhythm: 1.0, voice: 0 }
+        scoringWeights: { pitch: 0, rhythm: 1.0, voice: 0 },
+        showRhythmSettings: true,
+        showClassificationSection: true,
+        showAudioSegmentTrim: false,
+        rhythmSettingsHint: 'Set the target tempo for rhythm creation',
     },
     RHYTHM_REPEAT: {
         type: 'RHYTHM_REPEAT',
@@ -56,7 +66,11 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         usesPitchScoring: false,
         usesRhythmScoring: true,
         usesVoiceScoring: false,
-        scoringWeights: { pitch: 0, rhythm: 1.0, voice: 0 }
+        scoringWeights: { pitch: 0, rhythm: 1.0, voice: 0 },
+        showRhythmSettings: false,
+        showClassificationSection: false,
+        showAudioSegmentTrim: true,
+        rhythmSettingsHint: 'Rhythm pattern is extracted from your reference audio',
     },
     SOUND_MATCH: {
         type: 'SOUND_MATCH',
@@ -64,7 +78,10 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         usesPitchScoring: true,
         usesRhythmScoring: false,
         usesVoiceScoring: true,
-        scoringWeights: { pitch: 0.5, rhythm: 0, voice: 0.5 }
+        scoringWeights: { pitch: 0.5, rhythm: 0, voice: 0.5 },
+        showRhythmSettings: false,
+        showClassificationSection: false,
+        showAudioSegmentTrim: true,
     },
     SINGING: {
         type: 'SINGING',
@@ -72,6 +89,10 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         usesPitchScoring: true,
         usesRhythmScoring: true,
         usesVoiceScoring: true,
-        scoringWeights: { pitch: 0.4, rhythm: 0.3, voice: 0.3 }
+        scoringWeights: { pitch: 0.4, rhythm: 0.3, voice: 0.3 },
+        showRhythmSettings: true,  // Optional BPM hint
+        showClassificationSection: true,
+        showAudioSegmentTrim: true,
+        rhythmSettingsHint: 'Optional: Set BPM as a visual guide for the singer',
     }
 };
