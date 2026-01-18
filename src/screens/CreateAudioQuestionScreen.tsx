@@ -9,7 +9,7 @@ import {
     Text,
     TouchableOpacity,
 } from 'react-native';
-import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
+import {useNavigation, useRoute, RouteProp, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AudioQuestionForm, AudioQuestionFormData} from './components/AudioQuestionForm';
@@ -41,8 +41,9 @@ const CreateAudioQuestionScreen: React.FC = () => {
     const route = useRoute<CreateAudioQuestionRouteProp>();
     const onSubmitCallback = route.params?.onSubmit;
     const [lastSubmittedData, setLastSubmittedData] = useState<AudioQuestionFormData | null>(null);
+    const [formResetKey, setFormResetKey] = useState(0);
 
-    const {submitAudioQuestion, isSubmitting} = useAudioQuestionSubmit({
+    const {submitAudioQuestion, isSubmitting, resetMutation} = useAudioQuestionSubmit({
         onSuccess: (questionId) => {
             console.log('✅ Audio question created:', questionId);
             if (onSubmitCallback && lastSubmittedData) {
@@ -56,6 +57,20 @@ const CreateAudioQuestionScreen: React.FC = () => {
             console.error('❌ Audio question creation failed:', error);
         },
     });
+
+    useFocusEffect(
+        useCallback(() => {
+            // Reset mutation state when screen gains focus
+            resetMutation();
+            setLastSubmittedData(null);
+            // Force form reset by updating key
+            setFormResetKey(prev => prev + 1);
+            
+            return () => {
+                // Optional cleanup on blur
+            };
+        }, [resetMutation])
+    );
 
     const handleSubmit = useCallback(
         async (formData: AudioQuestionFormData) => {
@@ -97,6 +112,7 @@ const CreateAudioQuestionScreen: React.FC = () => {
                 style={styles.keyboardAvoid}
             >
                 <AudioQuestionForm
+                    key={formResetKey}
                     onSubmit={handleSubmit}
                     onCancel={handleCancel}
                     isSubmitting={isSubmitting}

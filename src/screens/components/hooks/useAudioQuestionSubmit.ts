@@ -29,6 +29,8 @@ export interface UseAudioQuestionSubmitReturn {
     error: Error | null;
     /** Reset the error state */
     resetError: () => void;
+    /** Reset the mutation state */
+    resetMutation: () => void;
 }
 
 // ============================================================================
@@ -44,7 +46,7 @@ export const useAudioQuestionSubmit = (
 ): UseAudioQuestionSubmitReturn => {
     const {onSuccess, onError} = options;
 
-    const [createAudioQuestion, {isLoading}] = useCreateAudioQuestionMutation();
+    const [createAudioQuestion, {isLoading, reset}] = useCreateAudioQuestionMutation();
     const [error, setError] = useState<Error | null>(null);
 
     const submitAudioQuestion = useCallback(
@@ -129,6 +131,7 @@ export const useAudioQuestionSubmit = (
         isSubmitting: isLoading,
         error,
         resetError,
+        resetMutation: reset,
     };
 };
 
