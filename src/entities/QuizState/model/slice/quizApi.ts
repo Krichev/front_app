@@ -62,6 +62,24 @@ export interface QuizQuestion {
     questionMediaType?: MediaType;
     questionThumbnailUrl?: string;
 
+    // ===== AUDIO CHALLENGE FIELDS =====
+    /** Type of audio challenge - only set for audio questions */
+    audioChallengeType?: 'RHYTHM_CREATION' | 'RHYTHM_REPEAT' | 'SOUND_MATCH' | 'SINGING' | null;
+    /** Reference media ID for challenges requiring reference audio */
+    audioReferenceMediaId?: number | null;
+    /** Start time in seconds for audio segment */
+    audioSegmentStart?: number | null;
+    /** End time in seconds for audio segment (null = play to end) */
+    audioSegmentEnd?: number | null;
+    /** Minimum score percentage to pass (0-100) */
+    minimumScorePercentage?: number | null;
+    /** BPM for rhythm challenges */
+    rhythmBpm?: number | null;
+    /** Time signature string (e.g., "4/4") */
+    rhythmTimeSignature?: string | null;
+    /** JSON string with additional config */
+    audioChallengeConfig?: string | null;
+
     // User creation tracking
     isUserCreated: boolean;
     creatorId?: number;

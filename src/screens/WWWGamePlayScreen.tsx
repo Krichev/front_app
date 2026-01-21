@@ -421,6 +421,14 @@ const WWWGamePlayScreen: React.FC = () => {
                 if (!currentRoundData) return null;
                 const questionData = currentRoundData.question;
 
+                // DEBUG: Log question data to verify audio fields are present
+                console.log('🎯 Question data:', {
+                    id: questionData.id,
+                    questionType: questionData.questionType,
+                    audioChallengeType: questionData.audioChallengeType,
+                    isAudioChallenge: isAudioChallenge(questionData),
+                });
+
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.questionNumber}>
