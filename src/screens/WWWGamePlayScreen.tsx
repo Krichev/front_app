@@ -29,6 +29,8 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 import { KaraokeQuestionDisplay } from './components/KaraokeQuestionDisplay';
+import QuestionMediaViewer from './CreateWWWQuestScreen/components/QuestionMediaViewer';
+import { MediaType } from '../services/wwwGame/questionService';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -92,6 +94,70 @@ const WWWGamePlayScreen: React.FC = () => {
     // Helper to check if it's an audio challenge
     const isAudioChallenge = (question: any): boolean => {
         return question?.questionType === 'AUDIO' && !!question?.audioChallengeType;
+    };
+
+    const hasQuestionMedia = (question: any): boolean => {
+        if (!question) return false;
+        // Has media if questionType is not TEXT, or if questionMediaType is set
+        const type = question.questionType?.toUpperCase();
+        return (type && type !== 'TEXT') || !!question.questionMediaType;
+    };
+
+    const getMediaType = (question: any): MediaType | null => {
+        if (!question) return null;
+        // Prefer questionMediaType if available
+        const mediaType = question.questionMediaType?.toUpperCase();
+        if (mediaType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mediaType)) {
+            return mediaType as MediaType;
+        }
+        // Fall back to questionType
+        const qType = question.questionType?.toUpperCase();
+        if (qType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(qType)) {
+            return qType as MediaType;
+        }
+        return null;
+    };
+
+    const QuestionContent: React.FC<{
+        question: any;
+        showText?: boolean;
+        mediaHeight?: number;
+    }> = ({ question, showText = true, mediaHeight = 200 }) => {
+        const mediaType = getMediaType(question);
+        const questionId = question?.id ? Number(question.id) : null;
+        const showMedia = hasQuestionMedia(question) && !isAudioChallenge(question) && questionId;
+
+        return (
+            <View style={styles.questionContentContainer}>
+                {/* Media section */}
+                {showMedia && mediaType && (
+                    <View style={styles.questionMediaSection}>
+                        <View style={styles.mediaTypeIndicator}>
+                            <MaterialCommunityIcons
+                                name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
+                                size={16}
+                                color="#666"
+                            />
+                            <Text style={styles.mediaTypeLabel}>
+                                {mediaType === 'AUDIO' ? 'Listen to the audio' :
+                                 mediaType === 'VIDEO' ? 'Watch the video' : 'View the image'}
+                            </Text>
+                        </View>
+                        <QuestionMediaViewer
+                            questionId={questionId}
+                            mediaType={mediaType as MediaType}
+                            height={mediaType === 'AUDIO' ? 80 : mediaHeight}
+                            enableFullscreen={mediaType !== 'AUDIO'}
+                        />
+                    </View>
+                )}
+                
+                {/* Question text */}
+                {showText && (
+                    <Text style={styles.question}>{question?.question}</Text>
+                )}
+            </View>
+        );
     };
 
     // Initialize game when session and rounds are loaded
@@ -368,7 +434,7 @@ const WWWGamePlayScreen: React.FC = () => {
                                 disabled={true}
                             />
                         ) : (
-                            <Text style={styles.question}>{questionData.question}</Text>
+                            <QuestionContent question={questionData} />
                         )}
 
                         <TouchableOpacity
@@ -407,7 +473,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         {isAudioChallenge(currentRoundData.question) ? (
                             <Text style={styles.question}>Audio Challenge</Text>
                         ) : (
-                            <Text style={styles.question}>{currentRoundData.question.question}</Text>
+                            <QuestionContent question={currentRoundData.question} />
                         )}
 
                         {isVoiceRecordingEnabled && !isAudioChallenge(currentRoundData.question) && (
@@ -477,7 +543,7 @@ const WWWGamePlayScreen: React.FC = () => {
                 return (
                     <View style={styles.phaseContainer}>
                         <Text style={styles.answerTitle}>Submit Your Answer</Text>
-                        <Text style={styles.question}>{answerQuestionData.question}</Text>
+                        <QuestionContent question={answerQuestionData} />
 
                         {/* Hint section */}
                         {answerQuestionData.additionalInfo && (
@@ -1078,6 +1144,28 @@ const styles = StyleSheet.create({
     },
     scoreRequirementText: {
         flex: 1,
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
+    },
+    questionContentContainer: {
+        width: '100%',
+        marginBottom: 16,
+    },
+    questionMediaSection: {
+        marginBottom: 16,
+        backgroundColor: '#f9f9f9',
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    mediaTypeIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        backgroundColor: '#f0f0f0',
+        gap: 8,
+    },
+    mediaTypeLabel: {
         fontSize: 14,
         color: '#666',
         fontWeight: '500',
