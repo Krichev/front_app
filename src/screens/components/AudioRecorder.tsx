@@ -4,6 +4,9 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import AudioRecord from 'react-native-audio-record';
 import { AudioPlayer } from './AudioPlayer';
 
+/**
+ * @deprecated Use AudioResponseRecorder from ./audio/ instead
+ */
 interface AudioRecorderProps {
   onRecordingComplete: (audioFile: { uri: string; name: string; type: string }) => void;
   maxDuration?: number; // seconds

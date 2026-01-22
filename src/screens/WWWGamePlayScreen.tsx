@@ -29,6 +29,7 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 import { KaraokeQuestionDisplay } from './components/KaraokeQuestionDisplay';
+import { AudioChallengeContainer } from './components/audio';
 import QuestionMediaViewer from './CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { MediaType } from '../services/wwwGame/questionService';
 
@@ -436,10 +437,9 @@ const WWWGamePlayScreen: React.FC = () => {
                         </Text>
                         
                         {isAudioChallenge(questionData) ? (
-                            <KaraokeQuestionDisplay
+                            <AudioChallengeContainer
                                 question={questionData as any}
-                                onRecordingComplete={() => {}} // Preview only in question phase
-                                disabled={true}
+                                mode="preview"
                             />
                         ) : (
                             <QuestionContent question={questionData} />
@@ -447,9 +447,11 @@ const WWWGamePlayScreen: React.FC = () => {
 
                         <TouchableOpacity
                             style={styles.primaryButton}
-                            onPress={startDiscussion}
+                            onPress={isAudioChallenge(questionData) ? () => setGamePhase('answer') : startDiscussion}
                         >
-                            <Text style={styles.buttonText}>Start Discussion</Text>
+                            <Text style={styles.buttonText}>
+                                {isAudioChallenge(questionData) ? "Ready to Record" : "Start Discussion"}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -527,11 +529,11 @@ const WWWGamePlayScreen: React.FC = () => {
                 if (isAudioChallenge(answerQuestionData)) {
                     return (
                         <View style={styles.phaseContainer}>
-                            <Text style={styles.answerTitle}>Record Your Response</Text>
-                            <KaraokeQuestionDisplay
+                            <AudioChallengeContainer
                                 question={answerQuestionData as any}
+                                mode="record"
                                 onRecordingComplete={handleAudioRecordingComplete}
-                                disabled={false}
+                                disabled={isSubmittingAudio}
                             />
                             <TouchableOpacity
                                 style={[styles.primaryButton, (!recordedAudio || isSubmittingAudio) && styles.disabledButton]}

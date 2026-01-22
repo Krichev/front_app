@@ -5,6 +5,9 @@ import {AudioPlayer} from './AudioPlayer';
 import {AudioRecorder} from './AudioRecorder';
 import {AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType} from '../../types/audioChallenge.types';
 
+/**
+ * @deprecated Use AudioChallengeContainer or AudioChallengePreview from ./audio/ instead
+ */
 interface KaraokeQuestionDisplayProps {
   question: {
     question: string;

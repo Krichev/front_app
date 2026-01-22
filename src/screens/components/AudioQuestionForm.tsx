@@ -274,11 +274,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     const validateForm = useCallback((): boolean => {
         const newErrors: Partial<Record<keyof AudioQuestionFormData, string>> = {};
 
-        // Required fields
-        if (!formData.question.trim()) {
-            newErrors.question = 'Question is required';
-        }
-
+        // Question/Answer are optional for audio challenges (will be auto-filled)
+        
         if (!formData.audioChallengeType) {
             newErrors.audioChallengeType = 'Please select a challenge type';
         }
@@ -321,8 +318,19 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             return;
         }
 
+        // Auto-fill optional fields for audio challenges
+        const submissionData = { ...formData };
+        if (!submissionData.question.trim()) {
+            // Use instructions from type info if available, or default
+            const typeLabel = formData.audioChallengeType ? AUDIO_CHALLENGE_TYPES_INFO[formData.audioChallengeType]?.label : 'Audio Challenge';
+            submissionData.question = `Complete the ${typeLabel}`;
+        }
+        if (!submissionData.answer.trim()) {
+            submissionData.answer = "Audio Response";
+        }
+
         try {
-            await onSubmit(formData);
+            await onSubmit(submissionData);
         } catch (error) {
             console.error('Submit error:', error);
             Alert.alert('Error', 'Failed to save question. Please try again.');
@@ -732,7 +740,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             {/* Question Text */}
             <View style={styles.section}>
                 <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Instructions / Question *</Text>
+                    <Text style={styles.inputLabel}>Instructions / Question</Text>
                     <TextInput
                         style={[styles.input, styles.textArea]}
                         value={formData.question}
