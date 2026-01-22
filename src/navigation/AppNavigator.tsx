@@ -37,6 +37,7 @@ import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
 import { useGetRelationshipsQuery } from '../entities/UserState/model/slice/relationshipApi';
 import { RelationshipStatus } from '../entities/QuizState/model/types/question.types';
+import RhythmChallengeScreen from '../screens/RhythmChallengeScreen';
 
 // Navigation types
 export type RootStackParamList = {
@@ -85,6 +86,10 @@ export type RootStackParamList = {
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
     CreateAudioQuestion: { onSubmit: (question: any) => void };
+    RhythmChallenge: {
+        questionId: number;
+        onComplete?: (passed: boolean, score: number) => void;
+    };
 };
 
 export type MainTabParamList = {
@@ -262,6 +267,14 @@ const AppNavigator: React.FC = () => {
                             options={{
                                 headerShown: false,
                                 title: 'Create Audio Question',
+                            }}
+                        />
+                        <Stack.Screen 
+                            name="RhythmChallenge" 
+                            component={RhythmChallengeScreen}
+                            options={{
+                                headerShown: false,
+                                animation: 'slide_from_right',
                             }}
                         />
                     </>
