@@ -4,7 +4,6 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
-    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
@@ -17,6 +16,8 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import KeychainService from '../services/auth/KeychainService';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles, useStyles} from '../shared/ui/theme';
 
 interface FormData {
     username: string;
@@ -45,6 +46,8 @@ const LoginScreen: React.FC = () => {
     const dispatch = useDispatch();
     const navigation = useNavigation<LoginScreenNavigationProp>();
     const [login, {isLoading}] = useLoginMutation();
+    const {screen, form, theme} = useAppStyles();
+    const styles = useStyles(themeStyles);
 
     const [formData, setFormData] = useState<FormData>({
         username: '',
@@ -117,24 +120,24 @@ const LoginScreen: React.FC = () => {
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.container}>
+            style={screen.container}>
             <View style={styles.formContainer}>
                 <Text style={styles.title}>Welcome Back!</Text>
                 <Text style={styles.subtitle}>Sign in to continue</Text>
 
                 <TextInput
-                    style={styles.input}
+                    style={[form.input, styles.inputMargin]}
                     placeholder="Username"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.colors.text.disabled}
                     value={formData.username}
                     onChangeText={value => handleInputChange('username', value)}
                     autoCapitalize="none"
                 />
 
                 <TextInput
-                    style={styles.input}
+                    style={[form.input, styles.inputMargin]}
                     placeholder="Password"
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.colors.text.disabled}
                     value={formData.password}
                     onChangeText={value => handleInputChange('password', value)}
                     secureTextEntry
@@ -142,10 +145,10 @@ const LoginScreen: React.FC = () => {
                 />
 
                 <TouchableOpacity
-                    style={[styles.button, isLoading && styles.buttonDisabled]}
+                    style={[form.submitButton, styles.buttonMargin, isLoading && form.submitButtonDisabled]}
                     onPress={handleLogin}
                     disabled={isLoading}>
-                    <Text style={styles.buttonText}>
+                    <Text style={form.submitButtonText}>
                         {isLoading ? 'Logging in...' : 'Login'}
                     </Text>
                 </TouchableOpacity>
@@ -162,63 +165,41 @@ const LoginScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
+const themeStyles = createStyles(theme => ({
     formContainer: {
         flex: 1,
         justifyContent: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: theme.spacing['2xl'],
     },
     title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        ...theme.typography.heading.h2,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.sm,
     },
     subtitle: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 32,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing['3xl'],
     },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 16,
-        marginBottom: 16,
-        fontSize: 16,
-        color: '#333',
+    inputMargin: {
+        marginBottom: theme.spacing.lg,
     },
-    button: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    buttonDisabled: {
-        backgroundColor: '#ccc',
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+    buttonMargin: {
+        marginTop: theme.spacing.sm,
     },
     signupButton: {
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
         alignItems: 'center',
     },
     signupText: {
-        color: '#666',
-        fontSize: 14,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
     },
     signupLink: {
-        color: '#4CAF50',
-        fontWeight: '600',
+        ...theme.typography.body.small,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
-});
+}));
 
 export default LoginScreen;

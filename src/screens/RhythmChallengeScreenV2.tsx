@@ -3,7 +3,6 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     SafeAreaView,
     TouchableOpacity,
     ActivityIndicator,
@@ -33,6 +32,8 @@ import {
     EnhancedRhythmScoringResult,
     BeatIndicator,
 } from '../types/rhythmChallenge.types';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles, useStyles} from '../shared/ui/theme';
 
 // ============================================================================
 // TYPES
@@ -55,6 +56,8 @@ export const RhythmChallengeScreenV2: React.FC = () => {
     const navigation = useNavigation();
     const route = useRoute<RhythmChallengeRouteProp>();
     const { questionId, onComplete } = route.params;
+    const {theme} = useAppStyles();
+    const styles = useStyles(themeStyles);
     
     // API hooks
     const { data: question, isLoading: questionLoading } = useGetAudioQuestionQuery(questionId);
@@ -287,7 +290,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                 <MaterialCommunityIcons 
                     name="gesture-tap" 
                     size={24} 
-                    color={inputMode === 'TAP' ? '#fff' : '#888'} 
+                    color={inputMode === 'TAP' ? theme.colors.text.inverse : theme.colors.text.disabled} 
                 />
                 <Text style={[styles.modeButtonText, inputMode === 'TAP' && styles.modeButtonTextActive]}>
                     Tap Mode
@@ -302,7 +305,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                 <MaterialCommunityIcons 
                     name="microphone" 
                     size={24} 
-                    color={inputMode === 'AUDIO' ? '#fff' : '#888'} 
+                    color={inputMode === 'AUDIO' ? theme.colors.text.inverse : theme.colors.text.disabled} 
                 />
                 <Text style={[styles.modeButtonText, inputMode === 'AUDIO' && styles.modeButtonTextActive]}>
                     Clap Mode
@@ -319,7 +322,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4CAF50" />
+                    <ActivityIndicator size="large" color={theme.colors.primary.main} />
                     <Text style={styles.loadingText}>Loading challenge...</Text>
                 </View>
             </SafeAreaView>
@@ -330,7 +333,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336" />
+                    <MaterialCommunityIcons name="alert-circle" size={48} color={theme.colors.error.main} />
                     <Text style={styles.errorText}>Question not found</Text>
                 </View>
             </SafeAreaView>
@@ -342,7 +345,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+                    <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text.inverse} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Rhythm Challenge</Text>
                 <View style={styles.attemptBadge}>
@@ -396,7 +399,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                         
                         <View style={styles.actionButtons}>
                             <TouchableOpacity style={styles.listenButton} onPress={handlePlayReference}>
-                                <MaterialCommunityIcons name="play-circle" size={32} color="#fff" />
+                                <MaterialCommunityIcons name="play-circle" size={32} color={theme.colors.text.inverse} />
                                 <Text style={styles.listenButtonText}>
                                     Listen {listenCount > 0 ? `(${listenCount})` : ''}
                                 </Text>
@@ -410,7 +413,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                                 <MaterialCommunityIcons 
                                     name={inputMode === 'TAP' ? "gesture-tap" : "microphone"} 
                                     size={32} 
-                                    color="#fff" 
+                                    color={theme.colors.text.inverse} 
                                 />
                                 <Text style={styles.startButtonText}>
                                     {inputMode === 'TAP' ? "Start Tapping" : "Start Recording"}
@@ -433,7 +436,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                         />
                         
                         <View style={styles.playingIndicator}>
-                            <MaterialCommunityIcons name="volume-high" size={48} color="#4CAF50" />
+                            <MaterialCommunityIcons name="volume-high" size={48} color={theme.colors.success.main} />
                             <Text style={styles.playingText}>Playing pattern...</Text>
                         </View>
                     </View>
@@ -469,7 +472,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                                     </Text>
                                     
                                     <TouchableOpacity style={styles.stopButton} onPress={handleStopTapRecording}>
-                                        <MaterialCommunityIcons name="stop" size={32} color="#fff" />
+                                        <MaterialCommunityIcons name="stop" size={32} color={theme.colors.text.inverse} />
                                         <Text style={styles.stopButtonText}>Done</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -493,7 +496,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
                 
                 {phase === 'PROCESSING' && inputMode === 'TAP' && (
                     <View style={styles.processingContainer}>
-                        <ActivityIndicator size="large" color="#4CAF50" />
+                        <ActivityIndicator size="large" color={theme.colors.success.main} />
                         <Text style={styles.processingText}>Analyzing your rhythm...</Text>
                     </View>
                 )}
@@ -514,10 +517,10 @@ export const RhythmChallengeScreenV2: React.FC = () => {
 // STYLES
 // ============================================================================
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#121212',
+        backgroundColor: theme.colors.neutral.gray[900], // Dark background
     },
     scrollContent: {
         flexGrow: 1,
@@ -528,8 +531,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        color: '#888',
-        marginTop: 16,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.lg,
         fontSize: 16,
     },
     errorContainer: {
@@ -538,161 +541,161 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     errorText: {
-        color: '#F44336',
-        marginTop: 16,
+        color: theme.colors.error.main,
+        marginTop: theme.spacing.lg,
         fontSize: 18,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: theme.spacing.lg,
         borderBottomWidth: 1,
-        borderBottomColor: '#333',
+        borderBottomColor: theme.colors.neutral.gray[800],
     },
     backButton: {
-        padding: 8,
+        padding: theme.spacing.sm,
     },
     headerTitle: {
         flex: 1,
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
-        marginLeft: 8,
+        color: theme.colors.text.inverse,
+        marginLeft: theme.spacing.sm,
     },
     attemptBadge: {
-        backgroundColor: '#333',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: theme.colors.neutral.gray[800],
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     attemptText: {
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontSize: 12,
     },
     questionContainer: {
-        padding: 20,
+        padding: theme.spacing.xl,
         alignItems: 'center',
     },
     questionText: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#fff',
+        color: theme.colors.text.inverse,
         textAlign: 'center',
     },
     patternInfo: {
         fontSize: 14,
-        color: '#888',
-        marginTop: 8,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.sm,
     },
     modeSelectorContainer: {
         flexDirection: 'row',
-        backgroundColor: '#1a1a1a',
-        borderRadius: 12,
+        backgroundColor: theme.colors.neutral.gray[800],
+        borderRadius: theme.layout.borderRadius.lg,
         padding: 4,
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     modeButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 8,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     modeButtonActive: {
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.neutral.gray[700],
     },
     modeButtonText: {
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
     modeButtonTextActive: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
     },
     readyContainer: {
         flex: 1,
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     actionButtons: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 32,
-        gap: 16,
+        marginTop: theme.spacing['3xl'],
+        gap: theme.spacing.lg,
     },
     listenButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#2196F3',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: theme.colors.info.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     listenButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 18,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
     startButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     startButtonDisabled: {
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.neutral.gray[800],
         opacity: 0.5,
     },
     startButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 18,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
     hintText: {
         textAlign: 'center',
-        color: '#FFC107',
-        marginTop: 16,
+        color: theme.colors.warning.main,
+        marginTop: theme.spacing.lg,
         fontSize: 14,
     },
     listeningContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     playingIndicator: {
         alignItems: 'center',
-        marginTop: 32,
+        marginTop: theme.spacing['3xl'],
     },
     playingText: {
-        color: '#4CAF50',
+        color: theme.colors.success.main,
         fontSize: 18,
-        marginTop: 8,
+        marginTop: theme.spacing.sm,
     },
     countdownContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     countdownText: {
         fontSize: 120,
         fontWeight: 'bold',
-        color: '#4CAF50',
+        color: theme.colors.success.main,
     },
     countdownLabel: {
         fontSize: 24,
-        color: '#888',
-        marginTop: 16,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.lg,
     },
     recordingContainer: {
         flex: 1,
         justifyContent: 'space-between',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     recordingControls: {
         flexDirection: 'row',
@@ -701,37 +704,37 @@ const styles = StyleSheet.create({
     },
     durationText: {
         fontSize: 24,
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontFamily: 'monospace',
     },
     stopButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F44336',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.error.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     stopButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 18,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
     processingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     processingText: {
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontSize: 18,
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
     },
     audioRecorderContainer: {
         flex: 1,
     },
-});
+}));
 
 export default RhythmChallengeScreenV2;

@@ -1,6 +1,7 @@
 // src/screens/CreateWWWQuestScreen/components/BasicInfoForm.tsx
 import React from 'react';
-import {StyleSheet, Text, TextInput, View} from 'react-native';
+import {Text, TextInput, View} from 'react-native';
+import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 
 interface BasicInfoFormProps {
     title: string;
@@ -19,81 +20,48 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
                                                          onDescriptionChange,
                                                          onRewardChange,
                                                      }) => {
-    return (
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Information</Text>
+    const {form, theme} = useAppStyles();
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Title</Text>
+    return (
+        <View style={form.section}>
+            <Text style={form.sectionTitle}>Basic Information</Text>
+
+            <View style={form.formGroup}>
+                <Text style={form.label}>Title</Text>
                 <TextInput
-                    style={styles.input}
+                    style={form.input}
                     value={title}
                     onChangeText={onTitleChange}
                     placeholder="Enter quest title"
+                    placeholderTextColor={theme.colors.text.disabled}
                 />
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Description</Text>
+            <View style={form.formGroup}>
+                <Text style={form.label}>Description</Text>
                 <TextInput
-                    style={[styles.input, styles.textArea]}
+                    style={[form.input, form.textArea]}
                     value={description}
                     onChangeText={onDescriptionChange}
                     placeholder="Describe your quest"
+                    placeholderTextColor={theme.colors.text.disabled}
                     multiline
                     numberOfLines={3}
                 />
             </View>
 
-            <View style={styles.inputContainer}>
-                <Text style={styles.label}>Reward</Text>
+            <View style={form.formGroup}>
+                <Text style={form.label}>Reward</Text>
                 <TextInput
-                    style={styles.input}
+                    style={form.input}
                     value={reward}
                     onChangeText={onRewardChange}
                     placeholder="What's the reward?"
+                    placeholderTextColor={theme.colors.text.disabled}
                 />
             </View>
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    section: {
-        padding: 16,
-        backgroundColor: '#fff',
-        marginBottom: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 16,
-    },
-    inputContainer: {
-        marginBottom: 16,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
-        marginBottom: 8,
-    },
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        color: '#333',
-        backgroundColor: '#f8f8f8',
-    },
-    textArea: {
-        minHeight: 80,
-        textAlignVertical: 'top',
-    },
-});
 
 export default BasicInfoForm;

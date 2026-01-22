@@ -5,11 +5,9 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
     ScrollView,
     Alert,
     ActivityIndicator,
-    Platform,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Picker} from '@react-native-picker/picker';
@@ -17,7 +15,6 @@ import Slider from '@react-native-community/slider';
 import DocumentPicker from 'react-native-document-picker';
 import {
     AudioChallengeType,
-    AUDIO_CHALLENGE_TYPES,
     AudioChallengeTypeInfo,
     AUDIO_CHALLENGE_TYPES_INFO,
 } from '../../types/audioChallenge.types';
@@ -27,6 +24,8 @@ import {SelectableTopic} from '../../entities/TopicState';
 import {AudioChallengeTypeSelector} from '../../shared/ui/AudioChallengeTypeSelector/AudioChallengeTypeSelector';
 import FileService, {ProcessedFileInfo} from '../../services/speech/FileService';
 import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCard';
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
+import {createStyles, useStyles} from '../../shared/ui/theme';
 
 // ============================================================================
 // TYPES
@@ -103,6 +102,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     isEditing = false,
     isSubmitting = false,
 }) => {
+    const {screen, form, theme} = useAppStyles();
+    const styles = useStyles(themeStyles);
+
     // ============================================================================
     // STATE
     // ============================================================================
@@ -166,11 +168,6 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 newData.audioSegmentStart = 0;
                 newData.audioSegmentEnd = null;
             }
-
-            // If Classification is hidden, we might want to keep existing values 
-            // or set defaults if empty, but usually better to preserve in case they switch back.
-            // For RHYTHM_REPEAT (hidden classification), we might programmatically set 
-            // a default topic/difficulty if required by backend, but backend handles optionality.
             
             return newData;
         });
@@ -351,10 +348,10 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         const isRequired = requiresReferenceAudio;
 
         return (
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons name="file-music" size={20} color="#333" />
-                    <Text style={styles.sectionTitle}>
+            <View style={form.section}>
+                <View style={form.sectionHeader}>
+                    <MaterialCommunityIcons name="file-music" size={20} color={theme.colors.text.primary} />
+                    <Text style={form.sectionTitle}>
                         Reference Audio {isRequired ? '*' : '(Optional)'}
                     </Text>
                 </View>
@@ -369,7 +366,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             <MaterialCommunityIcons 
                                 name="microphone" 
                                 size={20} 
-                                color={audioInputMode === 'record' ? '#007AFF' : '#666'} 
+                                color={audioInputMode === 'record' ? theme.colors.primary.main : theme.colors.text.secondary} 
                             />
                             <Text style={[styles.tabText, audioInputMode === 'record' && styles.activeTabText]}>
                                 Record
@@ -382,7 +379,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             <MaterialCommunityIcons 
                                 name="upload" 
                                 size={20} 
-                                color={audioInputMode === 'upload' ? '#007AFF' : '#666'} 
+                                color={audioInputMode === 'upload' ? theme.colors.primary.main : theme.colors.text.secondary} 
                             />
                             <Text style={[styles.tabText, audioInputMode === 'upload' && styles.activeTabText]}>
                                 Upload
@@ -394,7 +391,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 {formData.referenceAudioFile ? (
                     <View style={styles.audioPreview}>
                         <View style={styles.audioInfo}>
-                            <MaterialCommunityIcons name="music-circle" size={40} color="#007AFF" />
+                            <MaterialCommunityIcons name="music-circle" size={40} color={theme.colors.primary.main} />
                             <View style={styles.audioDetails}>
                                 <Text style={styles.audioName} numberOfLines={1}>
                                     {formData.referenceAudioFile.name}
@@ -409,13 +406,13 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 style={styles.audioActionButton}
                                 onPress={() => {/* TODO: Play audio preview */}}
                             >
-                                <MaterialCommunityIcons name="play-circle" size={32} color="#4CAF50" />
+                                <MaterialCommunityIcons name="play-circle" size={32} color={theme.colors.success.main} />
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.audioActionButton}
                                 onPress={handleRemoveAudio}
                             >
-                                <MaterialCommunityIcons name="close-circle" size={32} color="#F44336" />
+                                <MaterialCommunityIcons name="close-circle" size={32} color={theme.colors.error.main} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -435,10 +432,10 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 disabled={isUploading}
                             >
                                 {isUploading ? (
-                                    <ActivityIndicator size="small" color="#007AFF" />
+                                    <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
                                     <>
-                                        <MaterialCommunityIcons name="upload" size={24} color="#007AFF" />
+                                        <MaterialCommunityIcons name="upload" size={24} color={theme.colors.primary.main} />
                                         <Text style={styles.uploadButtonText}>Select Audio File</Text>
                                     </>
                                 )}
@@ -448,20 +445,20 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 )}
 
                 {errors.referenceAudioFile && (
-                    <Text style={styles.errorText}>{errors.referenceAudioFile}</Text>
+                    <Text style={form.errorText}>{errors.referenceAudioFile}</Text>
                 )}
 
                 {/* Audio Segment Picker (moved from separate logic) */}
                 {formData.referenceAudioFile && showAudioSegmentTrim && (
                     <View style={styles.segmentSection}>
                         <Text style={styles.subsectionTitle}>Audio Segment (Optional)</Text>
-                        <Text style={styles.helperText}>
+                        <Text style={form.helperText}>
                             Specify which portion of the audio to use for the challenge
                         </Text>
                         
                         <View style={styles.segmentInputs}>
                             <View style={styles.segmentInputGroup}>
-                                <Text style={styles.inputLabel}>Start (sec)</Text>
+                                <Text style={form.label}>Start (sec)</Text>
                                 <TextInput
                                     style={styles.segmentInput}
                                     value={String(formData.audioSegmentStart)}
@@ -471,11 +468,12 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                     }}
                                     keyboardType="numeric"
                                     placeholder="0"
+                                    placeholderTextColor={theme.colors.text.disabled}
                                 />
                             </View>
-                            <MaterialCommunityIcons name="arrow-right" size={20} color="#999" />
+                            <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.text.disabled} />
                             <View style={styles.segmentInputGroup}>
-                                <Text style={styles.inputLabel}>End (sec)</Text>
+                                <Text style={form.label}>End (sec)</Text>
                                 <TextInput
                                     style={styles.segmentInput}
                                     value={formData.audioSegmentEnd !== null ? String(formData.audioSegmentEnd) : ''}
@@ -489,12 +487,13 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                     }}
                                     keyboardType="numeric"
                                     placeholder="Full"
+                                    placeholderTextColor={theme.colors.text.disabled}
                                 />
                             </View>
                         </View>
 
                         {errors.audioSegmentEnd && (
-                            <Text style={styles.errorText}>{errors.audioSegmentEnd}</Text>
+                            <Text style={form.errorText}>{errors.audioSegmentEnd}</Text>
                         )}
                     </View>
                 )}
@@ -506,10 +505,10 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         if (!formData.audioChallengeType) return null;
 
         return (
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons name="target" size={20} color="#333" />
-                    <Text style={styles.sectionTitle}>Passing Criteria</Text>
+            <View style={form.section}>
+                <View style={form.sectionHeader}>
+                    <MaterialCommunityIcons name="target" size={20} color={theme.colors.text.primary} />
+                    <Text style={form.sectionTitle}>Passing Criteria</Text>
                 </View>
 
                 <Text style={styles.subsectionTitle}>
@@ -525,9 +524,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                         step={5}
                         value={formData.minimumScorePercentage}
                         onValueChange={(value) => updateField('minimumScorePercentage', value)}
-                        minimumTrackTintColor="#007AFF"
-                        maximumTrackTintColor="#E0E0E0"
-                        thumbTintColor="#007AFF"
+                        minimumTrackTintColor={theme.colors.primary.main}
+                        maximumTrackTintColor={theme.colors.border.light}
+                        thumbTintColor={theme.colors.primary.main}
                     />
                     <Text style={styles.sliderLabel}>100%</Text>
                 </View>
@@ -555,7 +554,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 </View>
 
                 {errors.minimumScorePercentage && (
-                    <Text style={styles.errorText}>{errors.minimumScorePercentage}</Text>
+                    <Text style={form.errorText}>{errors.minimumScorePercentage}</Text>
                 )}
             </View>
         );
@@ -565,21 +564,21 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         if (!showRhythmSettings) return null;
 
         return (
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons name="metronome" size={20} color="#333" />
-                    <Text style={styles.sectionTitle}>Rhythm Settings</Text>
+            <View style={form.section}>
+                <View style={form.sectionHeader}>
+                    <MaterialCommunityIcons name="metronome" size={20} color={theme.colors.text.primary} />
+                    <Text style={form.sectionTitle}>Rhythm Settings</Text>
                 </View>
 
                 {rhythmSettingsHint && (
-                    <Text style={styles.helperText}>
-                        <MaterialCommunityIcons name="information-outline" size={14} color="#888" /> {rhythmSettingsHint}
+                    <Text style={form.helperText}>
+                        <MaterialCommunityIcons name="information-outline" size={14} color={theme.colors.text.secondary} /> {rhythmSettingsHint}
                     </Text>
                 )}
 
                 {/* BPM Input */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>BPM (Beats Per Minute)</Text>
+                <View style={form.formGroup}>
+                    <Text style={form.label}>BPM (Beats Per Minute)</Text>
                     <View style={styles.bpmContainer}>
                         <TouchableOpacity
                             style={styles.bpmButton}
@@ -588,7 +587,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 updateField('rhythmBpm', newBpm);
                             }}
                         >
-                            <MaterialCommunityIcons name="minus" size={24} color="#007AFF" />
+                            <MaterialCommunityIcons name="minus" size={24} color={theme.colors.primary.main} />
                         </TouchableOpacity>
                         
                         <TextInput
@@ -600,6 +599,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             }}
                             keyboardType="numeric"
                             placeholder="120"
+                            placeholderTextColor={theme.colors.text.disabled}
                         />
                         
                         <TouchableOpacity
@@ -609,7 +609,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 updateField('rhythmBpm', newBpm);
                             }}
                         >
-                            <MaterialCommunityIcons name="plus" size={24} color="#007AFF" />
+                            <MaterialCommunityIcons name="plus" size={24} color={theme.colors.primary.main} />
                         </TouchableOpacity>
                     </View>
                     
@@ -637,18 +637,18 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                     </View>
 
                     {errors.rhythmBpm && (
-                        <Text style={styles.errorText}>{errors.rhythmBpm}</Text>
+                        <Text style={form.errorText}>{errors.rhythmBpm}</Text>
                     )}
                 </View>
 
                 {/* Time Signature Picker */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Time Signature</Text>
-                    <View style={styles.pickerContainer}>
+                <View style={form.formGroup}>
+                    <Text style={form.label}>Time Signature</Text>
+                    <View style={form.pickerContainer}>
                         <Picker
                             selectedValue={formData.rhythmTimeSignature}
                             onValueChange={(value) => updateField('rhythmTimeSignature', value)}
-                            style={styles.picker}
+                            style={form.picker}
                         >
                             {TIME_SIGNATURES.map((sig) => (
                                 <Picker.Item key={sig} label={sig} value={sig} />
@@ -664,20 +664,20 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         if (!showClassificationSection) return null;
 
         return (
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <MaterialCommunityIcons name="tag" size={20} color="#333" />
-                    <Text style={styles.sectionTitle}>Classification</Text>
+            <View style={form.section}>
+                <View style={form.sectionHeader}>
+                    <MaterialCommunityIcons name="tag" size={20} color={theme.colors.text.primary} />
+                    <Text style={form.sectionTitle}>Classification</Text>
                 </View>
 
                 {/* Difficulty */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Difficulty</Text>
-                    <View style={styles.pickerContainer}>
+                <View style={form.formGroup}>
+                    <Text style={form.label}>Difficulty</Text>
+                    <View style={form.pickerContainer}>
                         <Picker
                             selectedValue={formData.difficulty}
                             onValueChange={(value) => updateField('difficulty', value as Difficulty)}
-                            style={styles.picker}
+                            style={form.picker}
                             enabled={!isSubmitting}
                         >
                             <Picker.Item label="Easy" value="EASY" />
@@ -688,7 +688,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 </View>
 
                 {/* Topic */}
-                <View style={styles.formGroup}>
+                <View style={form.formGroup}>
                     <TopicTreeSelector
                         selectedTopicId={formData.topicId}
                         selectedTopicName={formData.topic}
@@ -701,14 +701,14 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 </View>
 
                 {/* Additional Info */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Additional Info (Optional)</Text>
+                <View style={form.formGroup}>
+                    <Text style={form.label}>Additional Info (Optional)</Text>
                     <TextInput
-                        style={[styles.input, styles.textArea]}
+                        style={[form.input, form.textArea]}
                         value={formData.additionalInfo}
                         onChangeText={(text) => updateField('additionalInfo', text)}
                         placeholder="Any hints or additional context..."
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.colors.text.disabled}
                         multiline
                         numberOfLines={2}
                         textAlignVertical="top"
@@ -724,48 +724,48 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     // ============================================================================
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <ScrollView style={screen.container} showsVerticalScrollIndicator={false}>
             {/* Challenge Type Selector */}
-            <View style={styles.section}>
+            <View style={form.section}>
                 <AudioChallengeTypeSelector
                     selectedType={formData.audioChallengeType}
                     onSelectType={handleTypeChange}
                     disabled={isSubmitting}
                 />
                 {errors.audioChallengeType && (
-                    <Text style={styles.errorText}>{errors.audioChallengeType}</Text>
+                    <Text style={form.errorText}>{errors.audioChallengeType}</Text>
                 )}
             </View>
 
             {/* Question Text */}
-            <View style={styles.section}>
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Instructions / Question</Text>
+            <View style={form.section}>
+                <View style={form.formGroup}>
+                    <Text style={form.label}>Instructions / Question</Text>
                     <TextInput
-                        style={[styles.input, styles.textArea]}
+                        style={[form.input, form.textArea]}
                         value={formData.question}
                         onChangeText={(text) => updateField('question', text)}
                         placeholder="e.g., Repeat the rhythm pattern you hear"
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.colors.text.disabled}
                         multiline
                         numberOfLines={3}
                         textAlignVertical="top"
                         editable={!isSubmitting}
                     />
                     {errors.question && (
-                        <Text style={styles.errorText}>{errors.question}</Text>
+                        <Text style={form.errorText}>{errors.question}</Text>
                     )}
                 </View>
 
                 {/* Answer/Description */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.inputLabel}>Answer / Description</Text>
+                <View style={form.formGroup}>
+                    <Text style={form.label}>Answer / Description</Text>
                     <TextInput
-                        style={[styles.input, styles.textArea]}
+                        style={[form.input, form.textArea]}
                         value={formData.answer}
                         onChangeText={(text) => updateField('answer', text)}
                         placeholder="e.g., 4/4 time, 120 BPM clapping pattern"
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.colors.text.disabled}
                         multiline
                         numberOfLines={2}
                         textAlignVertical="top"
@@ -799,18 +799,19 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 )}
                 <TouchableOpacity
                     style={[
-                        styles.submitButton,
-                        isSubmitting && styles.submitButtonDisabled,
+                        form.submitButton,
+                        isSubmitting && form.submitButtonDisabled,
+                        { flex: 2 }
                     ]}
                     onPress={handleSubmit}
                     disabled={isSubmitting}
                 >
                     {isSubmitting ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={theme.colors.text.inverse} />
                     ) : (
                         <>
-                            <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
-                            <Text style={styles.submitButtonText}>
+                            <MaterialCommunityIcons name="check" size={20} color={theme.colors.text.inverse} />
+                            <Text style={form.submitButtonText}>
                                 {isEditing ? 'Update Question' : 'Create Audio Question'}
                             </Text>
                         </>
@@ -828,204 +829,135 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 // STYLES
 // ============================================================================
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F5F5F5',
-    },
-    section: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        marginHorizontal: 16,
-        marginTop: 16,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-        gap: 8,
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#333333',
-    },
+const themeStyles = createStyles(theme => ({
     subsectionTitle: {
+        ...theme.typography.heading.h6,
         fontSize: 14,
-        fontWeight: '600',
-        color: '#555555',
-        marginBottom: 8,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
     },
-    formGroup: {
-        marginBottom: 16,
-    },
-    inputLabel: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333333',
-        marginBottom: 8,
-    },
-    input: {
-        backgroundColor: '#F5F5F5',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        color: '#1A1A1A',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-    },
-    textArea: {
-        minHeight: 80,
-        paddingTop: 12,
-    },
-    pickerContainer: {
-        backgroundColor: '#F5F5F5',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-        overflow: 'hidden',
-    },
-    picker: {
-        height: 50,
-    },
-    helperText: {
-        fontSize: 12,
-        color: '#888888',
-        marginBottom: 12,
-    },
-    errorText: {
-        fontSize: 12,
-        color: '#F44336',
-        marginTop: 4,
-    },
-
     // Audio upload styles
     uploadButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F0F7FF',
-        borderRadius: 8,
-        padding: 16,
+        backgroundColor: theme.colors.info.background,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.lg,
         borderWidth: 2,
-        borderColor: '#007AFF',
+        borderColor: theme.colors.primary.main,
         borderStyle: 'dashed',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     uploadButtonError: {
-        borderColor: '#F44336',
-        backgroundColor: '#FFF5F5',
+        borderColor: theme.colors.error.main,
+        backgroundColor: theme.colors.error.background,
     },
     uploadButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#007AFF',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
     audioPreview: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#F0F7FF',
-        borderRadius: 8,
-        padding: 12,
+        backgroundColor: theme.colors.info.background,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
         borderWidth: 1,
-        borderColor: '#007AFF',
+        borderColor: theme.colors.primary.main,
     },
     audioInfo: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
-        gap: 12,
+        gap: theme.spacing.md,
     },
     audioDetails: {
         flex: 1,
     },
     audioName: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333333',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     audioSize: {
-        fontSize: 12,
-        color: '#666666',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
     },
     audioActions: {
         flexDirection: 'row',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     audioActionButton: {
-        padding: 4,
+        padding: theme.spacing.xs,
     },
 
     // Segment picker styles
     segmentSection: {
-        marginTop: 16,
-        paddingTop: 16,
+        marginTop: theme.spacing.lg,
+        paddingTop: theme.spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
+        borderTopColor: theme.colors.border.light,
     },
     segmentInputs: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 16,
+        gap: theme.spacing.lg,
     },
     segmentInputGroup: {
         flex: 1,
     },
     segmentInput: {
-        backgroundColor: '#F5F5F5',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
+        ...theme.typography.body.medium,
         textAlign: 'center',
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: theme.colors.border.light,
+        color: theme.colors.text.primary,
     },
 
     // Slider styles
     sliderContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.md,
     },
     slider: {
         flex: 1,
         height: 40,
     },
     sliderLabel: {
-        fontSize: 12,
-        color: '#666666',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
         width: 40,
         textAlign: 'center',
     },
     scorePresets: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     scorePreset: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        backgroundColor: '#F0F0F0',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.xl,
+        backgroundColor: theme.colors.neutral.gray[200],
     },
     scorePresetActive: {
-        backgroundColor: '#007AFF',
+        backgroundColor: theme.colors.primary.main,
     },
     scorePresetText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#666666',
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     scorePresetTextActive: {
-        color: '#FFFFFF',
+        color: theme.colors.text.inverse,
     },
 
     // BPM styles
@@ -1033,92 +965,105 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     bpmButton: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#F0F7FF',
+        backgroundColor: theme.colors.info.background,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#007AFF',
+        borderColor: theme.colors.primary.main,
     },
     bpmInput: {
         width: 80,
-        backgroundColor: '#F5F5F5',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 18,
-        fontWeight: '700',
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
+        ...theme.typography.heading.h5,
         textAlign: 'center',
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: theme.colors.border.light,
+        color: theme.colors.text.primary,
     },
     bpmPresets: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 8,
-        marginTop: 12,
+        gap: theme.spacing.sm,
+        marginTop: theme.spacing.md,
     },
     bpmPreset: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        backgroundColor: '#F0F0F0',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.xl,
+        backgroundColor: theme.colors.neutral.gray[200],
     },
     bpmPresetActive: {
-        backgroundColor: '#007AFF',
+        backgroundColor: theme.colors.primary.main,
     },
     bpmPresetText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#666666',
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     bpmPresetTextActive: {
-        color: '#FFFFFF',
+        color: theme.colors.text.inverse,
     },
 
     // Action buttons
     actions: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginHorizontal: 16,
-        marginTop: 24,
-        gap: 12,
+        marginHorizontal: theme.spacing.lg,
+        marginTop: theme.spacing['2xl'],
+        gap: theme.spacing.md,
     },
     cancelButton: {
         flex: 1,
-        paddingVertical: 14,
-        borderRadius: 8,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F5F5F5',
+        backgroundColor: theme.colors.background.secondary,
     },
     cancelButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666666',
+        ...theme.typography.button,
+        color: theme.colors.text.secondary,
     },
-    submitButton: {
-        flex: 2,
+    tabContainer: {
         flexDirection: 'row',
-        paddingVertical: 14,
-        borderRadius: 8,
+        marginBottom: theme.spacing.md,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: 4,
+    },
+    tab: {
+        flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#4CAF50',
-        gap: 8,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.sm,
+        gap: theme.spacing.xs,
     },
-    submitButtonDisabled: {
-        backgroundColor: '#A5D6A7',
+    activeTab: {
+        backgroundColor: theme.colors.background.primary,
+        ...theme.shadows.small,
     },
-    submitButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#FFFFFF',
+    tabText: {
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.text.secondary,
     },
-});
+    activeTabText: {
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    inputArea: {
+        marginBottom: theme.spacing.sm,
+    }
+}));
 
 export default AudioQuestionForm;

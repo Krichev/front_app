@@ -67,14 +67,65 @@ export type {
 } from './types';
 
 // Export style creation utilities
+
 export {
+
     createStyles,
+
     createStaticStyles,
+
     useStyles,
+
     combineStyles as mergeStyles,
+
     createConditionalStyles,
+
     createResponsiveStyles,
+
 } from './createStyles';
 
+
+
+// Export ThemeProvider and hooks
+
+export {
+
+    ThemeProvider,
+
+    useTheme,
+
+    useThemeObject,
+
+    useThemeColors,
+
+    useThemeSpacing,
+
+    useThemeTypography,
+
+    withTheme,
+
+    ThemeConsumer,
+
+    ThemeContext,
+
+} from './ThemeProvider';
+
+
+
+// Export shared styles
+
+export * from '../styles';
+
+
+
+// Export shared hooks
+
+export * from '../hooks/useAppStyles';
+
+
+
 // Default export
+
 export default theme;
+
+

@@ -6,7 +6,6 @@ import {
     Image,
     Modal,
     ScrollView,
-    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
@@ -18,6 +17,8 @@ import FileService, {ProcessedFileInfo} from '../../../services/speech/FileServi
 import {QuestionType} from "../../../services/wwwGame/questionService";
 import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
+import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
+import {createStyles, useStyles} from '../../../shared/ui/theme';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -42,6 +43,9 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                                    isSubmitting = false,
                                                                    preSelectedMediaType,
                                                                }) => {
+    const {modal, form, theme} = useAppStyles();
+    const styles = useStyles(themeStyles);
+
     // Form state
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
@@ -331,7 +335,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
         return (
             <View style={styles.mediaPreviewContainer}>
-                <Text style={styles.sectionTitle}>Media Preview</Text>
+                <Text style={form.sectionTitle}>Media Preview</Text>
 
                 {/* Image Preview */}
                 {currentQuestionType === 'IMAGE' && selectedMedia && (
@@ -348,7 +352,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                         <MaterialCommunityIcons
                             name={currentQuestionType === 'VIDEO' ? 'video' : 'music'}
                             size={48}
-                            color="#007AFF"
+                            color={theme.colors.primary.main}
                         />
                         <Text style={styles.mediaPlaceholderText} numberOfLines={2}>
                             {selectedMedia.name}
@@ -369,7 +373,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     <MaterialCommunityIcons
                         name="file-upload"
                         size={16}
-                        color="#007AFF"
+                        color={theme.colors.primary.main}
                     />
                     <Text style={styles.mediaStatusText}>
                         {`${getQuestionType()} Selected - will upload when saved`}
@@ -381,7 +385,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     style={styles.removeMediaButton}
                     onPress={handleRemoveMedia}
                 >
-                    <MaterialCommunityIcons name="delete" size={20} color="#FF3B30"/>
+                    <MaterialCommunityIcons name="delete" size={20} color={theme.colors.error.main}/>
                     <Text style={styles.removeMediaText}>Remove Media</Text>
                 </TouchableOpacity>
             </View>
@@ -397,14 +401,14 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         >
             <View style={styles.container}>
                 {/* Header */}
-                <View style={styles.header}>
+                <View style={modal.header}>
                     <TouchableOpacity onPress={handleClose} disabled={isSubmitting}>
-                        <MaterialCommunityIcons name="close" size={24} color={isSubmitting ? "#999" : "#007AFF"}/>
+                        <MaterialCommunityIcons name="close" size={24} color={isSubmitting ? theme.colors.text.disabled : theme.colors.primary.main}/>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Regular Question</Text>
+                    <Text style={modal.headerTitle}>Regular Question</Text>
                     <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? (
-                            <ActivityIndicator size="small" color="#007AFF" />
+                            <ActivityIndicator size="small" color={theme.colors.primary.main} />
                         ) : (
                             <Text style={styles.saveButton}>Save</Text>
                         )}
@@ -413,8 +417,8 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                     {/* Media Selection - Inline Buttons */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Add Media (Optional)</Text>
+                    <View style={form.section}>
+                        <Text style={form.sectionTitle}>Add Media (Optional)</Text>
                         <View style={styles.mediaButtonsContainer}>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -422,9 +426,9 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 disabled={isSelectingMedia}
                             >
                                 {isSelectingMedia && mediaSelectionType === 'image' ? (
-                                    <ActivityIndicator size="small" color="#007AFF" />
+                                    <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
-                                    <MaterialCommunityIcons name="image" size={24} color="#007AFF" />
+                                    <MaterialCommunityIcons name="image" size={24} color={theme.colors.primary.main} />
                                 )}
                                 <Text style={styles.mediaButtonText}>Image</Text>
                             </TouchableOpacity>
@@ -434,9 +438,9 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 disabled={isSelectingMedia}
                             >
                                 {isSelectingMedia && mediaSelectionType === 'video' ? (
-                                    <ActivityIndicator size="small" color="#007AFF" />
+                                    <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
-                                    <MaterialCommunityIcons name="video" size={24} color="#007AFF" />
+                                    <MaterialCommunityIcons name="video" size={24} color={theme.colors.primary.main} />
                                 )}
                                 <Text style={styles.mediaButtonText}>Video</Text>
                             </TouchableOpacity>
@@ -446,9 +450,9 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 disabled={isSelectingMedia}
                             >
                                 {isSelectingMedia && mediaSelectionType === 'audio' ? (
-                                    <ActivityIndicator size="small" color="#007AFF" />
+                                    <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
-                                    <MaterialCommunityIcons name="music" size={24} color="#007AFF" />
+                                    <MaterialCommunityIcons name="music" size={24} color={theme.colors.primary.main} />
                                 )}
                                 <Text style={styles.mediaButtonText}>Audio (Narration)</Text>
                             </TouchableOpacity>
@@ -459,12 +463,12 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     </View>
 
                     {/* Question Field */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Question *</Text>
+                    <View style={form.section}>
+                        <Text style={form.sectionTitle}>Question *</Text>
                         <TextInput
-                            style={styles.textInput}
+                            style={form.input}
                             placeholder="Enter your question..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                             value={question}
                             onChangeText={setQuestion}
                             multiline
@@ -473,12 +477,12 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     </View>
 
                     {/* Answer Field */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Answer *</Text>
+                    <View style={form.section}>
+                        <Text style={form.sectionTitle}>Answer *</Text>
                         <TextInput
-                            style={styles.textInput}
+                            style={form.input}
                             placeholder="Enter the correct answer..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                             value={answer}
                             onChangeText={setAnswer}
                             multiline
@@ -487,8 +491,8 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     </View>
 
                     {/* Difficulty Selector */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Difficulty *</Text>
+                    <View style={form.section}>
+                        <Text style={form.sectionTitle}>Difficulty *</Text>
                         <View style={styles.difficultyContainer}>
                             {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
                                 <TouchableOpacity
@@ -513,7 +517,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     </View>
 
                     {/* Topic Field */}
-                    <View style={styles.section}>
+                    <View style={form.section}>
                         <TopicTreeSelector
                             selectedTopicId={selectedTopicId}
                             selectedTopicName={topic}
@@ -526,12 +530,12 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     </View>
 
                     {/* Additional Info Field */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Additional Info (Optional)</Text>
+                    <View style={form.section}>
+                        <Text style={form.sectionTitle}>Additional Info (Optional)</Text>
                         <TextInput
-                            style={styles.textInput}
+                            style={form.input}
                             placeholder="Add any helpful context or hints..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                             value={additionalInfo}
                             onChangeText={setAdditionalInfo}
                             multiline
@@ -548,195 +552,117 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 // STYLES
 // ============================================================================
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E5E5',
-    },
-    headerTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#000',
+        backgroundColor: theme.colors.background.tertiary,
     },
     saveButton: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#007AFF',
+        ...theme.typography.button,
+        color: theme.colors.primary.main,
     },
     scrollView: {
         flex: 1,
     },
-    section: {
-        backgroundColor: '#FFF',
-        marginTop: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 16,
-    },
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#000',
-        marginBottom: 12,
-    },
     mediaButtonsContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     mediaButton: {
         flex: 1,
         flexDirection: 'column',
         alignItems: 'center',
-        paddingVertical: 16,
-        borderRadius: 8,
-        backgroundColor: '#F8F9FA',
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.secondary,
         borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderColor: theme.colors.border.light,
     },
     mediaButtonDisabled: {
         opacity: 0.5,
     },
     mediaButtonText: {
-        fontSize: 12,
-        color: '#007AFF',
-        marginTop: 6,
-        fontWeight: '500',
+        ...theme.typography.caption,
+        color: theme.colors.primary.main,
+        marginTop: theme.spacing.sm,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     mediaStatusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 12,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        backgroundColor: '#F0F8FF',
-        borderRadius: 6,
-        gap: 6,
+        marginTop: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        backgroundColor: theme.colors.info.background,
+        borderRadius: theme.layout.borderRadius.sm,
+        gap: theme.spacing.sm,
     },
     mediaStatusText: {
-        fontSize: 13,
-        color: '#007AFF',
-        fontWeight: '500',
-    },
-    mediaStatusTextUploaded: {
-        color: '#4CAF50',
+        ...theme.typography.caption,
+        color: theme.colors.info.main,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     mediaPreviewContainer: {
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
     },
     imagePreview: {
         width: '100%',
         height: 200,
-        borderRadius: 8,
-        backgroundColor: '#F0F0F0',
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.neutral.gray[100],
     },
     mediaPlaceholder: {
         width: '100%',
         height: 150,
-        borderRadius: 8,
-        backgroundColor: '#F8F9FA',
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderColor: theme.colors.border.light,
     },
     mediaPlaceholderText: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 8,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.sm,
         textAlign: 'center',
     },
     mediaFileSize: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 4,
+        ...theme.typography.caption,
+        color: theme.colors.text.disabled,
+        marginTop: theme.spacing.xs,
     },
     mediaTypeBadge: {
-        marginTop: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        backgroundColor: '#E0E0E0',
-        borderRadius: 12,
+        marginTop: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        backgroundColor: theme.colors.neutral.gray[200],
+        borderRadius: theme.layout.borderRadius.lg,
     },
     mediaTypeBadgeText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#666',
-    },
-    progressContainer: {
-        marginTop: 12,
-        alignItems: 'center',
-    },
-    progressText: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-        marginTop: 8,
-    },
-    progressBar: {
-        width: '100%',
-        height: 4,
-        backgroundColor: '#E5E5E5',
-        borderRadius: 2,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        backgroundColor: '#007AFF',
-    },
-    uploadedBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 12,
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        backgroundColor: '#E8F5E9',
-        borderRadius: 8,
-    },
-    uploadedText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#4CAF50',
-        marginLeft: 6,
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     removeMediaButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 12,
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        backgroundColor: '#FFF',
+        marginTop: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.primary,
         borderWidth: 1,
-        borderColor: '#FF3B30',
+        borderColor: theme.colors.error.main,
     },
     removeMediaText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#FF3B30',
-        marginLeft: 6,
-    },
-    textInput: {
-        fontSize: 15,
-        color: '#000',
-        padding: 12,
-        borderWidth: 1,
-        borderColor: '#E5E5E5',
-        borderRadius: 8,
-        backgroundColor: '#FAFAFA',
-        textAlignVertical: 'top',
+        ...theme.typography.body.small,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.error.main,
+        marginLeft: theme.spacing.sm,
     },
     difficultyContainer: {
         flexDirection: 'row',
@@ -744,25 +670,26 @@ const styles = StyleSheet.create({
     },
     difficultyButton: {
         flex: 1,
-        paddingVertical: 10,
-        marginHorizontal: 4,
-        borderRadius: 8,
+        paddingVertical: theme.spacing.sm,
+        marginHorizontal: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
         borderWidth: 1,
-        borderColor: '#007AFF',
-        backgroundColor: '#FFF',
+        borderColor: theme.colors.primary.main,
+        backgroundColor: theme.colors.background.primary,
         alignItems: 'center',
     },
     difficultyButtonActive: {
-        backgroundColor: '#007AFF',
+        backgroundColor: theme.colors.primary.main,
     },
     difficultyText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#007AFF',
+        ...theme.typography.body.small,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.primary.main,
     },
     difficultyTextActive: {
-        color: '#FFF',
+        color: theme.colors.text.inverse,
     },
-});
+}));
 
 export default RegularQuestionEditor;
+
