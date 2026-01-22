@@ -218,7 +218,7 @@ export class QuestionService {
             queryParams.append('page', (params.page ?? 0).toString());
             queryParams.append('size', (params.size ?? 20).toString());
 
-            const url = `${this.baseUrl}/quiz-questions/search/advanced?${queryParams.toString()}`;
+            const url = `${this.baseUrl}/quiz/questions/search/advanced?${queryParams.toString()}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -244,7 +244,7 @@ export class QuestionService {
      */
     static async getAvailableTopics(): Promise<string[]> {
         try {
-            const url = `${this.baseUrl}/quiz-questions/topics`;
+            const url = `${this.baseUrl}/quiz/questions/topics`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -274,7 +274,7 @@ export class QuestionService {
             queryParams.append('count', count.toString());
             if (difficulty) queryParams.append('difficulty', difficulty);
 
-            const url = `${this.baseUrl}/quiz-questions/random?${queryParams.toString()}`;
+            const url = `${this.baseUrl}/quiz/questions/random?${queryParams.toString()}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -305,7 +305,7 @@ export class QuestionService {
             queryParams.append('page', '0');
             queryParams.append('size', count.toString());
 
-            const url = `${this.baseUrl}/quiz-questions/search?${queryParams.toString()}`;
+            const url = `${this.baseUrl}/quiz/questions/search?${queryParams.toString()}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -343,7 +343,7 @@ export class QuestionService {
      */
     static async createUserQuestion(question: Omit<UserQuestion, 'id'>): Promise<UserQuestion> {
         try {
-            const url = `${this.baseUrl}/quiz-questions/user`;
+            const url = `${this.baseUrl}/quiz/questions`;
             const response = await this.fetchWithAuth(url, {
                 method: 'POST',
                 body: JSON.stringify(question)
@@ -365,7 +365,7 @@ export class QuestionService {
      */
     static async getUserQuestions(): Promise<UserQuestion[]> {
         try {
-            const url = `${this.baseUrl}/quiz-questions/user/my-questions`;
+            const url = `${this.baseUrl}/quiz/questions/me?size=1000`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -374,7 +374,9 @@ export class QuestionService {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            return await response.json();
+            const data = await response.json();
+            // The /me endpoint returns a Page object
+            return data.content || [];
         } catch (error) {
             console.error('❌ Error fetching user questions:', error);
             throw new Error('Failed to fetch your questions. Please try again.');
@@ -386,7 +388,7 @@ export class QuestionService {
      */
     static async updateUserQuestion(id: number, question: Partial<UserQuestion>): Promise<UserQuestion> {
         try {
-            const url = `${this.baseUrl}/quiz-questions/user/${id}`;
+            const url = `${this.baseUrl}/quiz/questions/${id}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'PUT',
                 body: JSON.stringify(question)
@@ -408,7 +410,7 @@ export class QuestionService {
      */
     static async deleteUserQuestion(id: number): Promise<void> {
         try {
-            const url = `${this.baseUrl}/quiz-questions/user/${id}`;
+            const url = `${this.baseUrl}/quiz/questions/${id}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'DELETE'
             });
