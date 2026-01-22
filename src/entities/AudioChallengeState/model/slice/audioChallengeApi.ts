@@ -7,7 +7,16 @@ import {
     AudioChallengeTypeInfo,
     AUDIO_CHALLENGE_TYPES,
     AUDIO_CHALLENGE_TYPES_INFO,
+    AudioFileInfo,
 } from '../../../../types/audioChallenge.types';
+
+export {
+    AudioChallengeType,
+    AUDIO_CHALLENGE_TYPES,
+    AUDIO_CHALLENGE_TYPES_INFO,
+};
+
+export type { AudioChallengeTypeInfo, AudioFileInfo };
 
 // ============================================================================
 // TYPES
@@ -112,15 +121,6 @@ export interface AudioChallengeSubmission {
     // Timestamps
     createdAt: string;
     processedAt?: string;
-}
-
-/**
- * File info for uploads
- */
-export interface AudioFileInfo {
-    uri: string;
-    name: string;
-    type: string;
 }
 
 // ============================================================================

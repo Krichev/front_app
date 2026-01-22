@@ -4,7 +4,14 @@
 // AUDIO CHALLENGE TYPE - SINGLE SOURCE OF TRUTH
 // ============================================================================
 
-export type AudioChallengeType = 'RHYTHM_CREATION' | 'RHYTHM_REPEAT' | 'SOUND_MATCH' | 'SINGING';
+export const AudioChallengeType = {
+    RHYTHM_CREATION: 'RHYTHM_CREATION',
+    RHYTHM_REPEAT: 'RHYTHM_REPEAT',
+    SOUND_MATCH: 'SOUND_MATCH',
+    SINGING: 'SINGING',
+} as const;
+
+export type AudioChallengeType = typeof AudioChallengeType[keyof typeof AudioChallengeType];
 
 /**
  * Complete audio challenge type configuration
@@ -162,4 +169,13 @@ export interface RecordingState {
     isPaused: boolean;
     duration: number;
     audioPath: string | null;
+}
+
+/**
+ * File info for audio uploads
+ */
+export interface AudioFileInfo {
+    uri: string;
+    name: string;
+    type: string;
 }

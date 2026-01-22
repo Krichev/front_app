@@ -598,16 +598,15 @@ export interface UploadAudioResponse {
 // AUDIO CHALLENGE TYPES
 // ============================================================================
 
-// Re-export from canonical source for backward compatibility
+// Re-export from canonical source
 export {
     AUDIO_CHALLENGE_TYPES,
     AUDIO_CHALLENGE_TYPES_INFO,
-    AudioChallengeTypeInfo,
     getAudioChallengeTypeInfo,
+    AudioChallengeType, // This now exports both the const value and the type
 } from '../../../types/audioChallenge.types';
 
-// Keep the enum here as it's used as a value
-export { AudioChallengeType } from '../../../types/audioChallenge.types';
+export type { AudioChallengeTypeInfo } from '../../../types/audioChallenge.types';
 
 /**
  * Audio challenge configuration for question creation
