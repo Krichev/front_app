@@ -1,5 +1,5 @@
 // src/screens/UserQuestionsScreen.tsx
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {QuestionService, UserQuestion} from '../services/wwwGame/questionService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -18,6 +18,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 type RootStackParamList = {
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
+    CreateAudioQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
     WWWGameSetup: { userQuestions?: UserQuestion[] };
 };
@@ -33,11 +34,7 @@ const UserQuestionsScreen: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [selectedQuestions, setSelectedQuestions] = useState<UserQuestion[]>([]);
 
-    useEffect(() => {
-        loadUserQuestions();
-    }, []);
-
-    const loadUserQuestions = async () => {
+    const loadUserQuestions = useCallback(async () => {
         setLoading(true);
         try {
             const userQuestions = await QuestionService.getUserQuestions();
@@ -48,9 +45,15 @@ const UserQuestionsScreen: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const handleDeleteQuestion = async (id: string) => {
+    useFocusEffect(
+        useCallback(() => {
+            loadUserQuestions();
+        }, [loadUserQuestions])
+    );
+
+    const handleDeleteQuestion = async (id: number) => {
         Alert.alert(
             'Delete Question',
             'Are you sure you want to delete this question?',
@@ -88,6 +91,10 @@ const UserQuestionsScreen: React.FC = () => {
 
     const handleCreateQuestion = () => {
         navigation.navigate('CreateUserQuestion');
+    };
+
+    const handleCreateAudioQuestion = () => {
+        navigation.navigate('CreateAudioQuestion');
     };
 
     const handleEditQuestion = (question: UserQuestion) => {
@@ -130,7 +137,7 @@ const UserQuestionsScreen: React.FC = () => {
 
                 <View style={styles.questionFooter}>
                     <Text style={styles.dateText}>
-                        Created: {new Date(item.createdAt).toLocaleDateString()}
+                        Created: {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Unknown'}
                     </Text>
                     <TouchableOpacity
                         onPress={() => handleDeleteQuestion(item.id)}
@@ -163,30 +170,47 @@ const UserQuestionsScreen: React.FC = () => {
                     <Text style={styles.emptyText}>
                         You haven't created any questions yet
                     </Text>
-                    <TouchableOpacity
-                        style={styles.createFirstButton}
-                        onPress={handleCreateQuestion}
-                    >
-                        <Text style={styles.createButtonText}>Create Your First Question</Text>
-                    </TouchableOpacity>
+                    <View style={styles.emptyButtonContainer}>
+                        <TouchableOpacity
+                            style={styles.createFirstButton}
+                            onPress={handleCreateQuestion}
+                        >
+                            <Text style={styles.createButtonText}>Create Standard Question</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.createFirstButton, {backgroundColor: '#2196F3', marginTop: 12}]}
+                            onPress={handleCreateAudioQuestion}
+                        >
+                            <Text style={styles.createButtonText}>Create Audio Question</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             ) : (
                 <FlatList
                     data={questions}
                     renderItem={renderQuestionItem}
-                    keyExtractor={item => item.id}
+                    keyExtractor={item => item.id.toString()}
                     contentContainerStyle={styles.listContent}
                 />
             )}
 
             <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                    style={styles.createButton}
-                    onPress={handleCreateQuestion}
-                >
-                    <MaterialCommunityIcons name="plus" size={20} color="white"/>
-                    <Text style={styles.buttonText}>Create New Question</Text>
-                </TouchableOpacity>
+                <View style={styles.actionButtonsRow}>
+                    <TouchableOpacity
+                        style={[styles.createButton, {flex: 1, marginRight: 8}]}
+                        onPress={handleCreateQuestion}
+                    >
+                        <MaterialCommunityIcons name="plus" size={20} color="white"/>
+                        <Text style={styles.buttonText}>Standard</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.createButton, {flex: 1, backgroundColor: '#2196F3'}]}
+                        onPress={handleCreateAudioQuestion}
+                    >
+                        <MaterialCommunityIcons name="microphone" size={20} color="white"/>
+                        <Text style={styles.buttonText}>Audio</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {questions.length > 0 && (
                     <TouchableOpacity
@@ -249,11 +273,17 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 20,
     },
+    emptyButtonContainer: {
+        width: '100%',
+        alignItems: 'center',
+    },
     createFirstButton: {
         backgroundColor: '#4CAF50',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 8,
+        width: '80%',
+        alignItems: 'center',
     },
     listContent: {
         padding: 16,
@@ -327,6 +357,10 @@ const styles = StyleSheet.create({
         borderTopColor: '#ddd',
         backgroundColor: 'white',
     },
+    actionButtonsRow: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
     createButton: {
         backgroundColor: '#4CAF50',
         flexDirection: 'row',
@@ -334,7 +368,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         borderRadius: 8,
-        marginBottom: 12,
     },
     createButtonText: {
         color: 'white',

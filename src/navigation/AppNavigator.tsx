@@ -26,12 +26,14 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import GamesHomeScreen from '../screens/GamesHomeScreen';
 import {ContactsScreen} from '../screens/ContactsScreen';
 import {AddContactScreen} from '../screens/AddContactScreen';
+import UserQuestionsScreen from '../screens/UserQuestionsScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AuthNavigationHandler} from '../entities/AuthState/ui/AuthNavigationHandler';
 import {GameSettings} from '../services/wwwGame';
+import {UserQuestion} from '../services/wwwGame/questionService';
 import CreateQuestionWithMedia from "../screens/components/CreateQuestionWithMedia.tsx";
 import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
@@ -85,7 +87,8 @@ export type RootStackParamList = {
     };
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
-    CreateAudioQuestion: { onSubmit: (question: any) => void };
+    EditUserQuestion: { question: UserQuestion };
+    CreateAudioQuestion: { onSubmit?: (question: any) => void };
     RhythmChallenge: {
         questionId: number;
         onComplete?: (passed: boolean, score: number) => void;
@@ -255,10 +258,14 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen name="QuizResults" component={QuizResultsScreen} />
                         <Stack.Screen
                             name="UserQuestions"
-                            component={CreateQuestionWithMedia}
+                            component={UserQuestionsScreen}
                         />
                         <Stack.Screen
                             name="CreateUserQuestion"
+                            component={CreateQuestionWithMedia}
+                        />
+                        <Stack.Screen
+                            name="EditUserQuestion"
                             component={CreateQuestionWithMedia}
                         />
                         <Stack.Screen

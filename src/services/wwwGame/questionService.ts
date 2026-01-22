@@ -38,6 +38,7 @@ export interface UserQuestion {
     visibility: QuestionVisibility;
     topic?: string;
     additionalInfo?: string;
+    createdAt: string;
 }
 
 type HeadersInit_ = Record<string, string>;
