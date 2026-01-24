@@ -1,23 +1,11 @@
 // src/screens/components/AudioQuestionForm.tsx
-import React, {useState, useCallback, useMemo} from 'react';
-import {
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    ScrollView,
-    Alert,
-    ActivityIndicator,
-} from 'react-native';
+import React, {useCallback, useMemo, useState} from 'react';
+import {ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Picker} from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
 import DocumentPicker from 'react-native-document-picker';
-import {
-    AudioChallengeType,
-    AudioChallengeTypeInfo,
-    AUDIO_CHALLENGE_TYPES_INFO,
-} from '../../types/audioChallenge.types';
+import {AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType,} from '../../types/audioChallenge.types';
 import {QuestionVisibility} from '../../entities/QuizState/model/types/question.types';
 import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../entities/TopicState';
@@ -25,7 +13,7 @@ import {AudioChallengeTypeSelector} from '../../shared/ui/AudioChallengeTypeSele
 import FileService, {ProcessedFileInfo} from '../../services/speech/FileService';
 import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCard';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
-import {createStyles, useStyles} from '../../shared/ui/theme';
+import {createStyles} from '../../shared/ui/theme';
 
 // ============================================================================
 // TYPES
@@ -103,8 +91,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     isSubmitting = false,
 }) => {
     const {screen, form, theme} = useAppStyles();
-    const styles = useStyles(themeStyles);
-
+    const styles = themeStyles;
     // ============================================================================
     // STATE
     // ============================================================================

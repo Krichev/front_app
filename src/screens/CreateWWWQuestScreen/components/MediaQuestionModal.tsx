@@ -18,7 +18,7 @@ import {QuestionType} from "../../../services/wwwGame/questionService";
 import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
-import {createStyles, useStyles} from '../../../shared/ui/theme';
+import {createStyles} from '../../../shared/ui/theme';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -44,7 +44,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                                    preSelectedMediaType,
                                                                }) => {
     const {modal, form, theme} = useAppStyles();
-    const styles = useStyles(themeStyles);
+    const styles = themeStyles;
 
     // Form state
     const [question, setQuestion] = useState('');
