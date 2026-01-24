@@ -2,6 +2,8 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 interface QuestionSourceSelectorProps {
     source: 'app' | 'user';
@@ -12,6 +14,9 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                                                                            source,
                                                                            onSelectSource
                                                                        }) => {
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
+
     return (
         <View style={styles.container}>
             <Text style={styles.label}>Question Source:</Text>
@@ -26,7 +31,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                     <MaterialCommunityIcons
                         name="brain"
                         size={20}
-                        color={source === 'app' ? 'white' : '#666'}
+                        color={source === 'app' ? theme.colors.text.inverse : theme.colors.text.secondary}
                         style={styles.icon}
                     />
                     <Text
@@ -48,7 +53,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                     <MaterialCommunityIcons
                         name="account-edit"
                         size={20}
-                        color={source === 'user' ? 'white' : '#666'}
+                        color={source === 'user' ? theme.colors.text.inverse : theme.colors.text.secondary}
                         style={styles.icon}
                     />
                     <Text
@@ -65,46 +70,46 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     label: {
-        fontSize: 16,
-        fontWeight: '500',
-        marginBottom: 12,
-        color: '#555',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.medium,
+        marginBottom: theme.spacing.md,
+        color: theme.colors.text.secondary,
     },
     toggleContainer: {
         flexDirection: 'row',
-        backgroundColor: '#f0f0f0',
-        borderRadius: 8,
+        backgroundColor: theme.colors.background.tertiary,
+        borderRadius: theme.layout.borderRadius.md,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: theme.colors.border.light,
     },
     toggleButton: {
         flex: 1,
-        paddingVertical: 12,
+        paddingVertical: theme.spacing.md,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
     },
     toggleButtonActive: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     icon: {
-        marginRight: 6,
+        marginRight: theme.spacing.xs,
     },
     toggleText: {
-        fontSize: 14,
-        color: '#555',
-        fontWeight: '500',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     toggleTextActive: {
-        color: 'white',
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.bold,
     },
-});
+}));
 
 export default QuestionSourceSelector;

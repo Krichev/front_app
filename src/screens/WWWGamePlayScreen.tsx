@@ -7,7 +7,6 @@ import {
     Platform,
     SafeAreaView,
     ScrollView,
-    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
@@ -31,6 +30,8 @@ import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 import { AudioChallengeContainer } from './components/audio';
 import QuestionMediaViewer from './CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { MediaType } from '../services/wwwGame/questionService';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -38,6 +39,8 @@ type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
 const WWWGamePlayScreen: React.FC = () => {
     const route = useRoute<WWWGamePlayRouteProp>();
     const navigation = useNavigation<WWWGamePlayNavigationProp>();
+    const {screen, theme} = useAppStyles();
+    const styles = themeStyles;
 
     const params = route.params;
     const sessionId = params?.sessionId;
@@ -118,7 +121,7 @@ const WWWGamePlayScreen: React.FC = () => {
         return null;
     };
 
-    const QuestionContent: React.FC<{
+    const QuestionContent: React.FC <{
         question: any;
         showText?: boolean;
         mediaHeight?: number;
@@ -136,7 +139,7 @@ const WWWGamePlayScreen: React.FC = () => {
                             <MaterialCommunityIcons
                                 name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
                                 size={16}
-                                color="#666"
+                                color={theme.colors.text.secondary}
                             />
                             <Text style={styles.mediaTypeLabel}>
                                 {mediaType === 'AUDIO' ? 'Listen to the audio' :
@@ -406,7 +409,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         <MaterialCommunityIcons
                             name="play-circle-outline"
                             size={80}
-                            color="#4CAF50"
+                            color={theme.colors.success.main}
                             style={styles.icon}
                         />
                         <Text style={styles.waitingTitle}>Ready to Start?</Text>
@@ -519,6 +522,7 @@ const WWWGamePlayScreen: React.FC = () => {
                                 placeholder="Record your team's discussion..."
                                 multiline
                                 textAlignVertical="top"
+                                placeholderTextColor={theme.colors.text.disabled}
                             />
                         </View>
 
@@ -596,7 +600,7 @@ const WWWGamePlayScreen: React.FC = () => {
                                     <MaterialCommunityIcons
                                         name={isRecordingVoiceAnswer ? 'stop' : 'microphone'}
                                         size={20}
-                                        color="white"
+                                        color={theme.colors.text.inverse}
                                     />
                                     <Text style={styles.voiceAnswerButtonText}>
                                         {isRecordingVoiceAnswer ? 'Stop Recording Answer' : 'Record Voice Answer'}
@@ -624,13 +628,13 @@ const WWWGamePlayScreen: React.FC = () => {
                                     {gameSettings.players.map((player: string) => (
                                         <TouchableOpacity
                                             key={player}
-                                            style={[
+                                            style={[ 
                                                 styles.playerButton,
                                                 selectedPlayer === player && styles.selectedPlayerButton,
                                             ]}
                                             onPress={() => setSelectedPlayer(player)}
                                         >
-                                            <Text style={[
+                                            <Text style={[ 
                                                 styles.playerButtonText,
                                                 selectedPlayer === player && styles.selectedPlayerText,
                                             ]}>
@@ -651,6 +655,7 @@ const WWWGamePlayScreen: React.FC = () => {
                                 onChangeText={setTeamAnswer}
                                 placeholder="Enter your team's answer..."
                                 multiline
+                                placeholderTextColor={theme.colors.text.disabled}
                             />
                         </View>
 
@@ -685,7 +690,7 @@ const WWWGamePlayScreen: React.FC = () => {
                             <Text style={styles.resultLabel}>Correct Answer:</Text>
                             <Text style={styles.resultValue}>{currentRoundData.question.answer}</Text>
 
-                            <View style={[
+                            <View style={[ 
                                 styles.resultBadge,
                                 isCorrect ? styles.correctBadge : styles.incorrectBadge,
                             ]}>
@@ -721,9 +726,9 @@ const WWWGamePlayScreen: React.FC = () => {
     // Loading state
     if (isLoadingSession || isLoadingRounds) {
         return (
-            <SafeAreaView style={styles.container}>
+            <SafeAreaView style={screen.container}>
                 <View style={styles.loadingContainer}>
-                    <MaterialCommunityIcons name="loading" size={40} color="#4CAF50" />
+                    <MaterialCommunityIcons name="loading" size={40} color={theme.colors.success.main} />
                     <Text style={styles.loadingText}>Loading quiz...</Text>
                 </View>
             </SafeAreaView>
@@ -735,7 +740,7 @@ const WWWGamePlayScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={40} color="#F44336" />
+                    <MaterialCommunityIcons name="alert-circle" size={40} color={theme.colors.error.main} />
                     <Text style={styles.errorText}>Quiz session not found</Text>
                     <TouchableOpacity
                         style={styles.primaryButton}
@@ -760,7 +765,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         />
                         {audioConfig.minimumScorePercentage > 0 && (
                             <View style={styles.scoreRequirementBanner}>
-                                <MaterialCommunityIcons name="alert-circle" size={20} color="#FF9800" />
+                                <MaterialCommunityIcons name="alert-circle" size={20} color={theme.colors.warning.main} />
                                 <Text style={styles.scoreRequirementText}>
                                     Minimum score required: {audioConfig.minimumScorePercentage}%
                                 </Text>
@@ -783,7 +788,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         <MaterialCommunityIcons
                             name="trophy"
                             size={60}
-                            color="#4CAF50"
+                            color={theme.colors.success.main}
                             style={styles.modalIcon}
                         />
                         <Text style={styles.modalTitle}>Quiz Complete!</Text>
@@ -806,10 +811,10 @@ const WWWGamePlayScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     content: {
         flex: 1,
@@ -820,377 +825,379 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
+        marginTop: theme.spacing.md,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 24,
+        padding: theme.spacing['2xl'],
     },
     errorText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#F44336',
+        marginTop: theme.spacing.md,
+        ...theme.typography.body.medium,
+        color: theme.colors.error.main,
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: theme.spacing['2xl'],
     },
     phaseContainer: {
         flex: 1,
-        padding: 24,
+        padding: theme.spacing['2xl'],
     },
     icon: {
         alignSelf: 'center',
-        marginBottom: 24,
+        marginBottom: theme.spacing['2xl'],
     },
     waitingTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
         textAlign: 'center',
-        color: '#333',
-        marginBottom: 16,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     waitingText: {
-        fontSize: 16,
+        ...theme.typography.body.medium,
         textAlign: 'center',
-        color: '#666',
+        color: theme.colors.text.secondary,
         lineHeight: 24,
-        marginBottom: 32,
+        marginBottom: theme.spacing['3xl'],
     },
     questionNumber: {
-        fontSize: 14,
-        color: '#666',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     question: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#333',
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
         textAlign: 'center',
-        marginBottom: 32,
+        marginBottom: theme.spacing['3xl'],
         lineHeight: 28,
-        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+        fontFamily: Platform.OS === 'ios' ? 'System' : theme.typography.fontFamily.primary,
     },
     primaryButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
     },
     secondaryButton: {
-        backgroundColor: '#FF9800',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        backgroundColor: theme.colors.warning.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
     },
     disabledButton: {
         opacity: 0.7,
-        backgroundColor: '#A5D6A7',
+        backgroundColor: theme.colors.success.light,
     },
     buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     timerContainer: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     timerText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 8,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.sm,
         textAlign: 'center',
     },
     timerBar: {
         height: 10,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background.tertiary,
         borderRadius: 5,
         overflow: 'hidden',
     },
     timerProgress: {
         height: '100%',
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     discussionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     notesContainer: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     notesLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
     },
     notesInput: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
         minHeight: 120,
         textAlignVertical: 'top',
+        color: theme.colors.text.primary,
     },
     answerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     formGroup: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     formLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
     },
     playersScroll: {
         flexDirection: 'row',
         maxHeight: 50,
     },
     playerButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: '#f0f0f0',
-        marginRight: 8,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius['2xl'],
+        backgroundColor: theme.colors.background.tertiary,
+        marginRight: theme.spacing.sm,
     },
     selectedPlayerButton: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     playerButtonText: {
-        color: '#333',
+        color: theme.colors.text.primary,
     },
     selectedPlayerText: {
-        color: 'white',
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     answerInput: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
+        ...theme.typography.body.medium,
         minHeight: 80,
         textAlignVertical: 'top',
+        color: theme.colors.text.primary,
     },
     hintButton: {
         alignSelf: 'center',
-        padding: 8,
-        marginBottom: 16,
+        padding: theme.spacing.sm,
+        marginBottom: theme.spacing.lg,
     },
     hintButtonText: {
-        color: '#2196F3',
-        fontWeight: '500',
+        color: theme.colors.info.main,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     hintContainer: {
-        backgroundColor: '#f5f5f5',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
+        backgroundColor: theme.colors.background.secondary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.lg,
     },
     hintText: {
-        color: '#555',
+        color: theme.colors.text.secondary, // Or a slightly darker variant
         fontStyle: 'italic',
     },
     feedbackTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     resultContainer: {
-        backgroundColor: '#f9f9f9',
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 16,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.lg,
     },
     resultLabel: {
-        fontSize: 14,
-        color: '#666',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
         marginBottom: 4,
     },
     resultValue: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
-        marginBottom: 12,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
+        fontWeight: theme.typography.fontWeight.medium,
+        marginBottom: theme.spacing.md,
     },
     resultBadge: {
         alignSelf: 'flex-start',
         paddingVertical: 4,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        marginBottom: 12,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.lg,
+        marginBottom: theme.spacing.md,
     },
     correctBadge: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     incorrectBadge: {
-        backgroundColor: '#F44336',
+        backgroundColor: theme.colors.error.main,
     },
     resultBadgeText: {
-        color: 'white',
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.bold,
         fontSize: 12,
     },
     aiFeedbackContainer: {
-        backgroundColor: '#E1F5FE',
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 16,
+        backgroundColor: theme.colors.info.background,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.lg,
     },
     aiFeedbackTitle: {
-        fontSize: 14,
-        color: '#0288D1',
-        fontWeight: 'bold',
-        marginBottom: 8,
+        ...theme.typography.body.small,
+        color: theme.colors.info.dark,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.sm,
     },
     aiFeedbackText: {
-        color: '#333',
+        color: theme.colors.text.primary,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: theme.colors.overlay.medium,
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 24,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing['2xl'],
         width: '80%',
         alignItems: 'center',
     },
     modalIcon: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     modalTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     modalText: {
-        fontSize: 16,
-        color: '#555',
-        marginBottom: 8,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
         textAlign: 'center',
     },
     modalScore: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-        marginBottom: 24,
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.success.main,
+        marginBottom: theme.spacing['2xl'],
         textAlign: 'center',
     },
     modalButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
     },
     modalButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     voiceRecorderContainer: {
-        marginBottom: 16,
-        backgroundColor: '#f9f9f9',
-        padding: 12,
-        borderRadius: 8,
+        marginBottom: theme.spacing.lg,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     transcriptionContainer: {
-        marginTop: 8,
-        backgroundColor: '#f0f0f0',
-        padding: 12,
-        borderRadius: 8,
+        marginTop: theme.spacing.sm,
+        backgroundColor: theme.colors.background.tertiary, // Maybe slightly darker/lighter?
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     transcriptionLabel: {
-        fontWeight: 'bold',
-        fontSize: 14,
-        color: '#555',
+        fontWeight: theme.typography.fontWeight.bold,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
         marginBottom: 4,
     },
     transcriptionText: {
-        fontSize: 14,
-        color: '#333',
+        ...theme.typography.body.small,
+        color: theme.colors.text.primary,
         fontStyle: 'italic',
     },
     voiceAnswerContainer: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     voiceAnswerButton: {
         flexDirection: 'row',
-        backgroundColor: '#FF9800',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        backgroundColor: theme.colors.warning.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.md,
     },
     voiceAnswerButtonActive: {
-        backgroundColor: '#F44336',
+        backgroundColor: theme.colors.error.main,
     },
     voiceAnswerButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 8,
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginLeft: theme.spacing.sm,
     },
     audioSection: {
-        margin: 16,
+        margin: theme.spacing.lg,
         marginBottom: 0,
     },
     scoreRequirementBanner: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff3e0',
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 12,
-        gap: 8,
+        backgroundColor: theme.colors.warning.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.md,
+        gap: theme.spacing.sm,
     },
     scoreRequirementText: {
         flex: 1,
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     questionContentContainer: {
         width: '100%',
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     questionMediaSection: {
-        marginBottom: 16,
-        backgroundColor: '#f9f9f9',
-        borderRadius: 12,
+        marginBottom: theme.spacing.lg,
+        backgroundColor: theme.colors.background.tertiary,
+        borderRadius: theme.layout.borderRadius.lg,
         overflow: 'hidden',
     },
     mediaTypeIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 12,
-        backgroundColor: '#f0f0f0',
-        gap: 8,
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.tertiary,
+        gap: theme.spacing.sm,
     },
     mediaTypeLabel: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '500',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
-});
+}));
 
 export default WWWGamePlayScreen;

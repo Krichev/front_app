@@ -1,25 +1,11 @@
 // src/shared/ui/TopicSelector/CreateTopicModal.tsx
-import React, { useState, useEffect } from 'react';
-import {
-    Modal,
-    View,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    StyleSheet,
-    Alert,
-    ActivityIndicator,
-    ScrollView,
-} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {ActivityIndicator, Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {
-    CreateTopicRequest,
-    Topic,
-} from '../../../entities/TopicState/model/types/topic.types';
-import {
-    useGetRootTopicsQuery,
-    useLazyGetTopicChildrenQuery,
-} from '../../../entities/TopicState/model/slice/topicApi';
+import {CreateTopicRequest, Topic,} from '../../../entities/TopicState/model/types/topic.types';
+import {useGetRootTopicsQuery, useLazyGetTopicChildrenQuery,} from '../../../entities/TopicState/model/slice/topicApi';
+import {useAppStyles} from '../hooks/useAppStyles';
+import {createStyles} from '../theme';
 
 interface CreateTopicModalProps {
     visible: boolean;
@@ -38,6 +24,9 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
     initialParentName,
     isLoading = false,
 }) => {
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
+    
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
 
@@ -201,12 +190,12 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                             >
                                 {isLoading ? (
-                                    <ActivityIndicator size="small" color="#007AFF" />
+                                    <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
                                     <MaterialCommunityIcons
                                         name={isExpanded ? 'chevron-down' : 'chevron-right'}
                                         size={18}
-                                        color="#666"
+                                        color={theme.colors.text.secondary}
                                     />
                                 )}
                             </TouchableOpacity>
@@ -221,7 +210,7 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
 
                         {/* Selection indicator */}
                         {isSelected && (
-                            <MaterialCommunityIcons name="check-circle" size={18} color="#007AFF" />
+                            <MaterialCommunityIcons name="check-circle" size={18} color={theme.colors.primary.main} />
                         )}
                     </View>
                 </TouchableOpacity>
@@ -258,13 +247,13 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
                         <MaterialCommunityIcons
                             name="close"
                             size={24}
-                            color={isLoading ? '#999' : '#007AFF'}
+                            color={isLoading ? theme.colors.text.disabled : theme.colors.primary.main}
                         />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Create New Topic</Text>
                     <TouchableOpacity onPress={handleSubmit} disabled={isLoading}>
                         {isLoading ? (
-                            <ActivityIndicator size="small" color="#007AFF" />
+                            <ActivityIndicator size="small" color={theme.colors.primary.main} />
                         ) : (
                             <Text style={styles.submitButton}>Create</Text>
                         )}
@@ -274,7 +263,7 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
                 <ScrollView style={styles.content}>
                     {/* Warning about validation */}
                     <View style={styles.warningBox}>
-                        <MaterialCommunityIcons name="information" size={20} color="#FF9800" />
+                        <MaterialCommunityIcons name="information" size={20} color={theme.colors.warning.main} />
                         <Text style={styles.warningText}>
                             New topics require moderator approval before becoming public.
                         </Text>
@@ -286,7 +275,7 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
                         <TextInput
                             style={styles.input}
                             placeholder="e.g., Machine Learning"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                             value={name}
                             onChangeText={setName}
                             maxLength={100}
@@ -303,7 +292,7 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
                         <TextInput
                             style={[styles.input, styles.textArea]}
                             placeholder="Briefly describe what this topic covers..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                             value={description}
                             onChangeText={setDescription}
                             multiline
@@ -319,7 +308,7 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
                     {/* Parent topic info */}
                     {initialParentId && (
                         <View style={styles.infoBox}>
-                            <MaterialCommunityIcons name="file-tree" size={20} color="#007AFF" />
+                            <MaterialCommunityIcons name="file-tree" size={20} color={theme.colors.primary.main} />
                             <Text style={styles.infoText}>
                                 This topic will be created as a subtopic
                             </Text>
@@ -331,92 +320,119 @@ const CreateTopicModal: React.FC<CreateTopicModalProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: theme.colors.background.secondary,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#FFF',
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.md,
+        backgroundColor: theme.colors.background.primary,
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E5E5',
+        borderBottomColor: theme.colors.border.light,
     },
     headerTitle: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#000',
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     submitButton: {
-        fontSize: 17,
-        fontWeight: '600',
-        color: '#007AFF',
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
     content: {
         flex: 1,
-        padding: 16,
+        padding: theme.spacing.lg,
     },
     warningBox: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#FFF3E0',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
-        gap: 8,
+        backgroundColor: theme.colors.warning.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.lg,
+        gap: theme.spacing.sm,
     },
     warningText: {
         flex: 1,
-        fontSize: 14,
-        color: '#E65100',
+        ...theme.typography.body.small,
+        color: theme.colors.warning.dark,
         lineHeight: 20,
     },
     section: {
-        marginBottom: 24,
+        marginBottom: theme.spacing['2xl'],
     },
     label: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#000',
-        marginBottom: 8,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.sm,
     },
     input: {
-        backgroundColor: '#FFF',
+        backgroundColor: theme.colors.background.primary,
         borderWidth: 1,
-        borderColor: '#E5E5E5',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 15,
-        color: '#000',
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
     },
     textArea: {
         minHeight: 100,
-        paddingTop: 10,
+        paddingTop: theme.spacing.sm,
     },
     helperText: {
-        fontSize: 13,
-        color: '#666',
-        marginTop: 6,
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.xs,
     },
     infoBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E3F2FD',
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 8,
-        gap: 8,
+        backgroundColor: theme.colors.info.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.sm,
+        gap: theme.spacing.sm,
     },
     infoText: {
         flex: 1,
-        fontSize: 14,
-        color: '#1565C0',
+        ...theme.typography.body.small,
+        color: theme.colors.info.dark,
     },
-});
+    treeNode: {
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+    },
+    treeNodeSelected: {
+        backgroundColor: theme.colors.info.background,
+    },
+    treeNodeContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    expandButton: {
+        padding: 4,
+    },
+    expandPlaceholder: {
+        width: 26,
+    },
+    treeNodeName: {
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
+        marginLeft: theme.spacing.sm,
+        flex: 1,
+    },
+    treeNodeNameSelected: {
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+}));
 
 export default CreateTopicModal;

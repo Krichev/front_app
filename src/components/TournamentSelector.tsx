@@ -1,7 +1,9 @@
-// src/components/TournamentSelector.tsx - Optional Enhancement
+// src/components/TournamentSelector.tsx
 import React, {useState} from 'react';
-import {ActivityIndicator, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {ActivityIndicator, FlatList, Modal, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 interface Tournament {
     id: string;
@@ -24,16 +26,18 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                                                    tournaments,
                                                                    isLoading = false,
                                                                }) => {
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
     const [modalVisible, setModalVisible] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     // Mock tournaments if none provided (for demo)
     const defaultTournaments: Tournament[] = [
-        { id: 1, title: 'General Knowledge', questionCount: 150, activeQuestions: 145 },
-        { id: 2, title: 'Science & Technology', questionCount: 200, activeQuestions: 190 },
-        { id: 3, title: 'History & Culture', questionCount: 180, activeQuestions: 175 },
-        { id: 4, title: 'Sports & Entertainment', questionCount: 120, activeQuestions: 115 },
-        { id: 5, title: 'Advanced Challenge', questionCount: 250, activeQuestions: 240 },
+        { id: '1', title: 'General Knowledge', questionCount: 150, activeQuestions: 145 },
+        { id: '2', title: 'Science & Technology', questionCount: 200, activeQuestions: 190 },
+        { id: '3', title: 'History & Culture', questionCount: 180, activeQuestions: 175 },
+        { id: '4', title: 'Sports & Entertainment', questionCount: 120, activeQuestions: 115 },
+        { id: '5', title: 'Advanced Challenge', questionCount: 250, activeQuestions: 240 },
     ];
 
     const displayTournaments = tournaments || defaultTournaments;
@@ -49,8 +53,8 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
         (t) => t.id.toString() === selectedTournamentId
     );
 
-    const handleSelectTournament = (id: number) => {
-        onSelectTournament(id.toString());
+    const handleSelectTournament = (id: string) => {
+        onSelectTournament(id);
         setModalVisible(false);
         setSearchQuery('');
     };
@@ -65,7 +69,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                 disabled={isLoading}
             >
                 <View style={styles.selectorContent}>
-                    <MaterialCommunityIcons name="trophy" size={24} color="#4CAF50" />
+                    <MaterialCommunityIcons name="trophy" size={24} color={theme.colors.success.main} />
                     <View style={styles.selectorTextContainer}>
                         <Text style={styles.selectorTitle}>
                             {selectedTournament?.title || `Tournament #${selectedTournamentId}`}
@@ -77,9 +81,9 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                         )}
                     </View>
                     {isLoading ? (
-                        <ActivityIndicator size="small" color="#4CAF50" />
+                        <ActivityIndicator size="small" color={theme.colors.success.main} />
                     ) : (
-                        <MaterialCommunityIcons name="chevron-down" size={24} color="#999" />
+                        <MaterialCommunityIcons name="chevron-down" size={24} color={theme.colors.text.disabled} />
                     )}
                 </View>
             </TouchableOpacity>
@@ -100,7 +104,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                 onPress={() => setModalVisible(false)}
                                 style={styles.closeButton}
                             >
-                                <MaterialCommunityIcons name="close" size={24} color="#666" />
+                                <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.secondary} />
                             </TouchableOpacity>
                         </View>
 
@@ -109,7 +113,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                             <MaterialCommunityIcons
                                 name="magnify"
                                 size={20}
-                                color="#999"
+                                color={theme.colors.text.disabled}
                                 style={styles.searchIcon}
                             />
                             <TextInput
@@ -117,7 +121,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                 placeholder="Search tournaments..."
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
-                                placeholderTextColor="#999"
+                                placeholderTextColor={theme.colors.text.disabled}
                             />
                         </View>
 
@@ -139,8 +143,8 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                         size={24}
                                         color={
                                             item.id.toString() === selectedTournamentId
-                                                ? '#4CAF50'
-                                                : '#999'
+                                                ? theme.colors.success.main
+                                                : theme.colors.text.disabled
                                         }
                                     />
                                     <View style={styles.tournamentInfo}>
@@ -161,7 +165,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                         <MaterialCommunityIcons
                                             name="check-circle"
                                             size={24}
-                                            color="#4CAF50"
+                                            color={theme.colors.success.main}
                                         />
                                     )}
                                 </TouchableOpacity>
@@ -171,7 +175,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                     <MaterialCommunityIcons
                                         name="trophy-outline"
                                         size={48}
-                                        color="#ccc"
+                                        color={theme.colors.text.disabled}
                                     />
                                     <Text style={styles.emptyText}>No tournaments found</Text>
                                 </View>
@@ -186,6 +190,7 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
                                     style={styles.manualInput}
                                     placeholder="Enter ID"
                                     keyboardType="number-pad"
+                                    placeholderTextColor={theme.colors.text.disabled}
                                     onSubmitEditing={(e) => {
                                         const id = e.nativeEvent.text;
                                         if (id) {
@@ -203,148 +208,149 @@ const TournamentSelector: React.FC<TournamentSelectorProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     label: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-        fontWeight: '500',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     selectorButton: {
-        backgroundColor: '#f9f9f9',
+        backgroundColor: theme.colors.background.tertiary,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
     },
     selectorContent: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     selectorTextContainer: {
         flex: 1,
     },
     selectorTitle: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     selectorSubtitle: {
-        fontSize: 12,
-        color: '#666',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: theme.colors.overlay.medium,
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: 'white',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        backgroundColor: theme.colors.background.primary,
+        borderTopLeftRadius: theme.layout.borderRadius.xl,
+        borderTopRightRadius: theme.layout.borderRadius.xl,
         maxHeight: '80%',
-        paddingBottom: 20,
+        paddingBottom: theme.spacing.xl,
     },
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
+        padding: theme.spacing.lg,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: theme.colors.border.light,
     },
     modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     closeButton: {
-        padding: 4,
+        padding: theme.spacing.xs,
     },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        margin: 16,
-        paddingHorizontal: 12,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        margin: theme.spacing.lg,
+        paddingHorizontal: theme.spacing.md,
     },
     searchIcon: {
-        marginRight: 8,
+        marginRight: theme.spacing.sm,
     },
     searchInput: {
         flex: 1,
-        paddingVertical: 12,
-        fontSize: 16,
-        color: '#333',
+        paddingVertical: theme.spacing.md,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
     },
     tournamentItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: theme.spacing.lg,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        gap: 12,
+        borderBottomColor: theme.colors.background.tertiary,
+        gap: theme.spacing.md,
     },
     selectedTournamentItem: {
-        backgroundColor: '#f0f9f4',
+        backgroundColor: theme.colors.success.background,
     },
     tournamentInfo: {
         flex: 1,
     },
     tournamentTitle: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     selectedTournamentTitle: {
-        color: '#4CAF50',
-        fontWeight: 'bold',
+        color: theme.colors.success.main,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     tournamentSubtitle: {
-        fontSize: 12,
-        color: '#666',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 40,
+        paddingVertical: theme.spacing['4xl'],
     },
     emptyText: {
-        fontSize: 16,
-        color: '#999',
-        marginTop: 12,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.disabled,
+        marginTop: theme.spacing.md,
     },
     manualInputContainer: {
-        padding: 16,
+        padding: theme.spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
+        borderTopColor: theme.colors.border.light,
     },
     manualInputLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
     },
     manualInputRow: {
         flexDirection: 'row',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     manualInput: {
         flex: 1,
-        backgroundColor: '#f9f9f9',
+        backgroundColor: theme.colors.background.tertiary,
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        fontSize: 16,
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
     },
-});
+}));
 
 export default TournamentSelector;

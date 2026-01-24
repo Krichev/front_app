@@ -18,6 +18,13 @@ export const colors: Colors = {
         contrast: '#FFFFFF',
     },
 
+    accent: {
+        main: '#9C27B0',
+        light: '#BA68C8',
+        dark: '#7B1FA2',
+        contrast: '#FFFFFF',
+    },
+
     // Neutral colors
     neutral: {
         white: '#FFFFFF',
@@ -70,6 +77,7 @@ export const colors: Colors = {
         primary: '#FFFFFF',
         secondary: '#F9FAFB',
         tertiary: '#F3F4F6',
+        dark: '#1a1a1a',
     },
 
     // Text colors

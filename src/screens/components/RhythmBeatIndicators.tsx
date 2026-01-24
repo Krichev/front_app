@@ -1,8 +1,10 @@
 // src/screens/components/RhythmBeatIndicators.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, Animated, Dimensions } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { BeatIndicator } from '../../types/rhythmChallenge.types';
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../shared/ui/theme';
 
 interface RhythmBeatIndicatorsProps {
     beats: BeatIndicator[];
@@ -19,6 +21,9 @@ export const RhythmBeatIndicators: React.FC<RhythmBeatIndicatorsProps> = ({
     currentBeatIndex = -1,
     mode,
 }) => {
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
+    
     const screenWidth = Dimensions.get('window').width;
     const beatSize = Math.min(40, (screenWidth - 40) / Math.max(beats.length, 1) - 8);
     
@@ -44,10 +49,10 @@ export const RhythmBeatIndicators: React.FC<RhythmBeatIndicatorsProps> = ({
             
             {mode === 'results' && (
                 <View style={styles.legendContainer}>
-                    <LegendItem color="#4CAF50" label="Perfect" />
-                    <LegendItem color="#8BC34A" label="Good" />
-                    <LegendItem color="#FFC107" label="Early/Late" />
-                    <LegendItem color="#F44336" label="Missed" />
+                    <LegendItem color={theme.colors.success.main} label="Perfect" />
+                    <LegendItem color={theme.colors.success.light} label="Good" />
+                    <LegendItem color={theme.colors.warning.light} label="Early/Late" />
+                    <LegendItem color={theme.colors.error.main} label="Missed" />
                 </View>
             )}
         </View>
@@ -62,6 +67,8 @@ interface BeatDotProps {
 }
 
 const BeatDot: React.FC<BeatDotProps> = ({ beat, size, isActive, showScore }) => {
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
     const scaleAnim = useRef(new Animated.Value(1)).current;
     
     useEffect(() => {
@@ -82,22 +89,22 @@ const BeatDot: React.FC<BeatDotProps> = ({ beat, size, isActive, showScore }) =>
     }, [isActive, scaleAnim]);
     
     const getColor = () => {
-        if (beat.status === 'pending') return '#666';
+        if (beat.status === 'pending') {return theme.colors.text.secondary;}
         if (beat.status === 'hit') {
-            if (beat.score && beat.score >= 90) return '#4CAF50'; // Perfect
-            if (beat.score && beat.score >= 70) return '#8BC34A'; // Good
-            return '#FFC107'; // Early/Late
+            if (beat.score && beat.score >= 90) {return theme.colors.success.main;} // Perfect
+            if (beat.score && beat.score >= 70) {return theme.colors.success.light;} // Good
+            return theme.colors.warning.light; // Early/Late
         }
-        if (beat.status === 'missed') return '#F44336';
-        if (beat.status === 'early') return '#FF9800';
-        if (beat.status === 'late') return '#FF9800';
-        return '#666';
+        if (beat.status === 'missed') {return theme.colors.error.main;}
+        if (beat.status === 'early') {return theme.colors.warning.main;}
+        if (beat.status === 'late') {return theme.colors.warning.main;}
+        return theme.colors.text.secondary;
     };
     
     const getIcon = () => {
-        if (beat.status === 'pending') return 'circle-outline';
-        if (beat.status === 'hit') return 'check-circle';
-        if (beat.status === 'missed') return 'close-circle';
+        if (beat.status === 'pending') {return 'circle-outline';}
+        if (beat.status === 'hit') {return 'check-circle';}
+        if (beat.status === 'missed') {return 'close-circle';}
         return 'circle';
     };
     
@@ -118,7 +125,7 @@ const BeatDot: React.FC<BeatDotProps> = ({ beat, size, isActive, showScore }) =>
                 <MaterialCommunityIcons
                     name={getIcon()}
                     size={size * 0.6}
-                    color="#fff"
+                    color={theme.colors.text.inverse}
                 />
             </Animated.View>
             
@@ -142,57 +149,61 @@ interface LegendItemProps {
     label: string;
 }
 
-const LegendItem: React.FC<LegendItemProps> = ({ color, label }) => (
-    <View style={styles.legendItem}>
-        <View style={[styles.legendDot, { backgroundColor: color }]} />
-        <Text style={styles.legendText}>{label}</Text>
-    </View>
-);
+const LegendItem: React.FC<LegendItemProps> = ({ color, label }) => {
+    const styles = themeStyles;
+    return (
+        <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: color }]} />
+            <Text style={styles.legendText}>{label}</Text>
+        </View>
+    );
+};
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        padding: 16,
-        backgroundColor: '#1a1a1a',
-        borderRadius: 12,
-        margin: 16,
+        padding: theme.spacing.lg,
+        backgroundColor: theme.colors.neutral.gray[900], // Dark background for game elements
+        borderRadius: theme.layout.borderRadius.lg,
+        margin: theme.spacing.lg,
     },
     title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#fff',
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.inverse,
         textAlign: 'center',
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     beatsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     beatWrapper: {
         alignItems: 'center',
-        margin: 4,
+        margin: theme.spacing.xs,
     },
     beatDot: {
         justifyContent: 'center',
         alignItems: 'center',
     },
     scoreText: {
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginTop: theme.spacing.xs,
         fontSize: 10,
-        fontWeight: 'bold',
-        marginTop: 4,
     },
     errorText: {
         fontSize: 8,
-        color: '#888',
+        color: theme.colors.text.disabled,
     },
     legendContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         flexWrap: 'wrap',
-        marginTop: 16,
-        gap: 12,
+        marginTop: theme.spacing.lg,
+        gap: theme.spacing.md,
     },
     legendItem: {
         flexDirection: 'row',
@@ -202,12 +213,12 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        marginRight: 4,
+        marginRight: theme.spacing.xs,
     },
     legendText: {
-        fontSize: 12,
-        color: '#999',
+        ...theme.typography.caption,
+        color: theme.colors.text.disabled,
     },
-});
+}));
 
 export default RhythmBeatIndicators;

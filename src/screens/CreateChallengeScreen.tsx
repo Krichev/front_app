@@ -7,7 +7,6 @@ import {
     Platform,
     SafeAreaView,
     ScrollView,
-    StyleSheet,
     Switch,
     Text,
     TextInput,
@@ -19,6 +18,8 @@ import {CreateChallengeRequest, useCreateChallengeMutation} from '../entities/Ch
 import {Picker} from '@react-native-picker/picker';
 import {ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationType} from '../app/types';
 import Geolocation from '@react-native-community/geolocation';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 interface CreateChallengeFormData {
     title: string;
@@ -51,6 +52,8 @@ interface LocationDetailsState {
 const CreateChallengeScreen: React.FC = () => {
     const navigation = useNavigation();
     const [createChallenge, { isLoading }] = useCreateChallengeMutation();
+    const {screen, theme} = useAppStyles();
+    const styles = themeStyles;
 
     // Loading states
     const [locationFetching, setLocationFetching] = useState<boolean>(false);
@@ -252,6 +255,7 @@ const CreateChallengeScreen: React.FC = () => {
                         placeholder="Describe what the photo should show (e.g., 'Take a photo showing your completed workout')"
                         multiline
                         numberOfLines={3}
+                        placeholderTextColor={theme.colors.text.disabled}
                     />
 
                     <View style={styles.switchContainer}>
@@ -259,8 +263,8 @@ const CreateChallengeScreen: React.FC = () => {
                         <Switch
                             value={photoDetails.requiresComparison}
                             onValueChange={(value) => setPhotoDetails(prev => ({...prev, requiresComparison: value}))}
-                            trackColor={{false: '#767577', true: '#81b0ff'}}
-                            thumbColor={photoDetails.requiresComparison ? '#f5dd4b' : '#f4f3f4'}
+                            trackColor={{false: theme.colors.neutral.gray[400], true: theme.colors.info.light}}
+                            thumbColor={photoDetails.requiresComparison ? theme.colors.info.main : theme.colors.neutral.gray[50]}
                         />
                     </View>
 
@@ -288,6 +292,7 @@ const CreateChallengeScreen: React.FC = () => {
                         value={locationDetails.locationName}
                         onChangeText={(text) => setLocationDetails(prev => ({...prev, locationName: text}))}
                         placeholder="e.g., Central Park Gym, Downtown Library"
+                        placeholderTextColor={theme.colors.text.disabled}
                     />
 
                     <TouchableOpacity
@@ -321,6 +326,7 @@ const CreateChallengeScreen: React.FC = () => {
                         }}
                         keyboardType="numeric"
                         placeholder="100"
+                        placeholderTextColor={theme.colors.text.disabled}
                     />
                 </View>
             )}
@@ -351,6 +357,7 @@ const CreateChallengeScreen: React.FC = () => {
                                 value={formData.title}
                                 onChangeText={(text) => updateFormField('title', text)}
                                 placeholder="Enter challenge title"
+                                placeholderTextColor={theme.colors.text.disabled}
                             />
                         </View>
 
@@ -364,6 +371,7 @@ const CreateChallengeScreen: React.FC = () => {
                                 placeholder="Describe your challenge"
                                 multiline
                                 numberOfLines={3}
+                                placeholderTextColor={theme.colors.text.disabled}
                             />
                         </View>
 
@@ -506,6 +514,7 @@ const CreateChallengeScreen: React.FC = () => {
                                         value={formData.targetGroup}
                                         onChangeText={(text) => updateFormField('targetGroup', text)}
                                         placeholder="Choose group (optional)"
+                                        placeholderTextColor={theme.colors.text.disabled}
                                     />
                                 </View>
 
@@ -517,6 +526,7 @@ const CreateChallengeScreen: React.FC = () => {
                                         value={tagsInput}
                                         onChangeText={handleTagsChange}
                                         placeholder="Enter tags separated by commas (e.g., fitness, daily, workout)"
+                                        placeholderTextColor={theme.colors.text.disabled}
                                     />
                                     {formData.tags.length > 0 && (
                                         <View style={styles.tagsPreview}>
@@ -537,6 +547,7 @@ const CreateChallengeScreen: React.FC = () => {
                                         value={formData.reward}
                                         onChangeText={(text) => updateFormField('reward', text)}
                                         placeholder="What's the reward for completing this challenge?"
+                                        placeholderTextColor={theme.colors.text.disabled}
                                     />
                                 </View>
 
@@ -548,6 +559,7 @@ const CreateChallengeScreen: React.FC = () => {
                                         value={formData.penalty}
                                         onChangeText={(text) => updateFormField('penalty', text)}
                                         placeholder="What's the penalty for failing?"
+                                        placeholderTextColor={theme.colors.text.disabled}
                                     />
                                 </View>
                             </View>
@@ -560,7 +572,7 @@ const CreateChallengeScreen: React.FC = () => {
                             disabled={isLoading}
                         >
                             {isLoading ? (
-                                <ActivityIndicator color="white" size="small" />
+                                <ActivityIndicator color={theme.colors.text.inverse} size="small" />
                             ) : (
                                 <Text style={styles.submitButtonText}>Create Challenge</Text>
                             )}
@@ -572,60 +584,58 @@ const CreateChallengeScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     keyboardAvoidingView: {
         flex: 1,
     },
     scrollContent: {
         flexGrow: 1,
-        paddingBottom: 20,
+        paddingBottom: theme.spacing.xl,
     },
     header: {
-        backgroundColor: '#4CAF50',
-        padding: 20,
-        paddingTop: 40,
+        backgroundColor: theme.colors.success.main,
+        padding: theme.spacing.xl,
+        paddingTop: theme.spacing['3xl'],
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'white',
-        marginBottom: 4,
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
+        marginBottom: theme.spacing.xs,
     },
     subtitle: {
-        fontSize: 16,
+        ...theme.typography.body.medium,
         color: 'rgba(255, 255, 255, 0.9)',
     },
     form: {
         flex: 1,
-        backgroundColor: 'white',
-        margin: 16,
-        borderRadius: 12,
-        padding: 20,
-        elevation: 2,
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        shadowOffset: {width: 0, height: 2},
+        backgroundColor: theme.colors.background.primary,
+        margin: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.xl,
+        ...theme.shadows.small,
     },
     formGroup: {
-        marginBottom: 20,
+        marginBottom: theme.spacing.xl,
     },
     label: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginBottom: 8,
-        color: '#333',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.semibold,
+        marginBottom: theme.spacing.sm,
+        color: theme.colors.text.primary,
     },
     input: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        backgroundColor: '#fafafa',
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
+        ...theme.typography.body.medium,
+        backgroundColor: theme.colors.background.secondary,
+        color: theme.colors.text.primary,
     },
     textArea: {
         height: 80,
@@ -633,130 +643,130 @@ const styles = StyleSheet.create({
     },
     pickerContainer: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        backgroundColor: '#fafafa',
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.secondary,
     },
     picker: {
         height: 50,
     },
     sectionToggle: {
-        backgroundColor: '#f0f0f0',
-        padding: 12,
-        borderRadius: 8,
-        marginVertical: 10,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginVertical: theme.spacing.sm,
         alignItems: 'center',
     },
     sectionToggleText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#4CAF50',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.success.main,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 16,
-        color: '#333',
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.semibold,
+        marginBottom: theme.spacing.lg,
+        color: theme.colors.text.primary,
     },
     verificationContainer: {
-        backgroundColor: '#f9f9f9',
-        padding: 16,
-        borderRadius: 8,
-        marginVertical: 8,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        marginVertical: theme.spacing.sm,
     },
     verificationDetailsContainer: {
-        marginTop: 16,
-        padding: 12,
-        backgroundColor: '#fff',
-        borderRadius: 8,
+        marginTop: theme.spacing.lg,
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.md,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: theme.colors.border.light,
     },
     switchContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginVertical: 12,
+        marginVertical: theme.spacing.md,
     },
     locationButton: {
-        backgroundColor: '#4CAF50',
-        padding: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
-        marginVertical: 8,
+        marginVertical: theme.spacing.sm,
     },
     locationButtonText: {
-        color: 'white',
-        fontWeight: '600',
-        fontSize: 16,
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.semibold,
+        fontSize: theme.typography.fontSize.base,
     },
     locationInfo: {
-        backgroundColor: '#f0f8f0',
-        padding: 10,
-        borderRadius: 6,
-        marginVertical: 8,
+        backgroundColor: theme.colors.success.background,
+        padding: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginVertical: theme.spacing.sm,
     },
     locationText: {
-        fontSize: 14,
-        color: '#2e7d32',
-        fontFamily: 'monospace',
+        ...theme.typography.body.small,
+        color: theme.colors.success.dark,
+        fontFamily: theme.typography.fontFamily.mono,
     },
     dateContainer: {
-        backgroundColor: '#f9f9f9',
-        padding: 16,
-        borderRadius: 8,
-        marginVertical: 8,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        marginVertical: theme.spacing.sm,
     },
     dateButton: {
         borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        backgroundColor: '#fafafa',
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.secondary,
         alignItems: 'center',
     },
     dateButtonText: {
-        fontSize: 16,
-        color: '#333',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
     },
     advancedContainer: {
-        backgroundColor: '#f9f9f9',
-        padding: 16,
-        borderRadius: 8,
-        marginVertical: 8,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        marginVertical: theme.spacing.sm,
     },
     tagsPreview: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginTop: 8,
+        marginTop: theme.spacing.sm,
     },
     tag: {
-        backgroundColor: '#e3f2fd',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: theme.colors.info.background,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
         margin: 2,
     },
     tagText: {
-        fontSize: 12,
-        color: '#1976d2',
+        ...theme.typography.caption,
+        color: theme.colors.info.dark,
     },
     submitButton: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
-        marginTop: 20,
+        marginTop: theme.spacing.xl,
     },
     submitButtonDisabled: {
-        backgroundColor: '#a5d6a7',
+        backgroundColor: theme.colors.success.light,
         opacity: 0.7,
     },
     submitButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
     },
-});
+}));
 
 export default CreateChallengeScreen;

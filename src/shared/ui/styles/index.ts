@@ -4,3 +4,6 @@ export * from './modalStyles';
 export * from './cardStyles';
 export * from './listStyles';
 export * from './textStyles';
+export * from './buttonStyles';
+export * from './statusStyles';
+export * from './gameStyles';

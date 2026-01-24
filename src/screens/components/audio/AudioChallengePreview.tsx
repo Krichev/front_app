@@ -1,8 +1,9 @@
 import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {View} from 'react-native';
 import {AudioChallengeHeader} from './AudioChallengeHeader';
 import {ReferenceAudioSection} from './ReferenceAudioSection';
 import {AudioChallengeType} from '../../../types/audioChallenge.types';
+import {createStyles} from '../../../shared/ui/theme';
 
 interface AudioChallengePreviewProps {
   question: {
@@ -19,6 +20,8 @@ interface AudioChallengePreviewProps {
 export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
   question,
 }) => {
+  const styles = themeStyles;
+
   return (
     <View style={styles.container}>
       <AudioChallengeHeader 
@@ -37,8 +40,8 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   container: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.lg,
   },
-});
+}));

@@ -7,7 +7,6 @@ import {
     Platform,
     SafeAreaView,
     ScrollView,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -22,6 +21,8 @@ import {
     useSubmitChallengeCompletionMutation
 } from '../entities/ChallengeState/model/slice/challengeApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -62,6 +63,8 @@ const WWWGameResultsScreen: React.FC = () => {
     const { teamName, score, totalRounds, roundsData, challengeId } = route.params;
     const { user } = useSelector((state: RootState) => state.auth);
     const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
+    const {screen, theme} = useAppStyles();
+    const styles = themeStyles;
 
     // Fetch challenge audio configuration if challengeId exists
     const { data: audioConfig } = useGetChallengeAudioConfigQuery(
@@ -229,7 +232,7 @@ const WWWGameResultsScreen: React.FC = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={screen.container}>
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <Text style={styles.teamName}>{teamName}</Text>
@@ -269,7 +272,7 @@ const WWWGameResultsScreen: React.FC = () => {
                         <MaterialCommunityIcons
                             name={meetsMinimumScore ? "check-circle" : "alert-circle"}
                             size={24}
-                            color={meetsMinimumScore ? "#4CAF50" : "#F44336"}
+                            color={meetsMinimumScore ? theme.colors.success.main : theme.colors.error.main}
                         />
                         <View style={styles.scoreRequirementContent}>
                             <Text style={[
@@ -361,7 +364,7 @@ const WWWGameResultsScreen: React.FC = () => {
                         disabled={submittingChallenge}
                     >
                         {submittingChallenge ? (
-                            <ActivityIndicator size="small" color="white" />
+                            <ActivityIndicator size="small" color={theme.colors.text.inverse} />
                         ) : (
                             <Text style={styles.buttonText}>Play Again</Text>
                         )}
@@ -410,350 +413,323 @@ const WWWGameResultsScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     header: {
-        backgroundColor: '#4CAF50',
-        padding: 16,
+        backgroundColor: theme.colors.success.main,
+        padding: theme.spacing.lg,
     },
     headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     teamName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: 'white',
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     scoreText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: 'white',
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     progressBar: {
         height: 6,
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
+        backgroundColor: theme.colors.overlay.light,
         borderRadius: 3,
         overflow: 'hidden',
     },
     progressFill: {
         height: '100%',
-        backgroundColor: 'white',
+        backgroundColor: theme.colors.background.primary,
     },
     content: {
-        padding: 16,
+        padding: theme.spacing.lg,
         flexGrow: 1,
     },
     scoreContainer: {
-        margin: 16,
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
+        margin: theme.spacing.lg,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
         alignItems: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        ...theme.shadows.small,
     },
-    // scoreText: {
-    //     fontSize: 24,
-    //     fontWeight: 'bold',
-    //     color: '#333',
-    //     marginBottom: 16,
-    // },
     scoreBar: {
         height: 16,
         width: '100%',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background.tertiary,
         borderRadius: 8,
         overflow: 'hidden',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     scoreProgress: {
         height: '100%',
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     scorePercentage: {
-        fontSize: 18,
-        color: '#4CAF50',
-        fontWeight: 'bold',
-        marginBottom: 16,
+        ...theme.typography.heading.h6,
+        color: theme.colors.success.main,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.lg,
     },
     resultMessage: {
-        fontSize: 16,
-        color: '#555',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
     },
     feedbackContainer: {
-        margin: 16,
+        margin: theme.spacing.lg,
         marginTop: 0,
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        ...theme.shadows.small,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     feedbackText: {
-        fontSize: 16,
-        color: '#555',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
         lineHeight: 24,
     },
     performanceContainer: {
-        margin: 16,
+        margin: theme.spacing.lg,
         marginTop: 0,
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        ...theme.shadows.small,
     },
     playerItem: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     playerInfo: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     playerName: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#333',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.text.primary,
     },
     playerStats: {
-        fontSize: 16,
-        color: '#666',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
     },
     playerBar: {
         height: 10,
         width: '100%',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background.tertiary,
         borderRadius: 5,
         overflow: 'hidden',
     },
     playerProgress: {
         height: '100%',
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     questionsContainer: {
-        margin: 16,
+        margin: theme.spacing.lg,
         marginTop: 0,
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        ...theme.shadows.small,
     },
     questionItem: {
-        marginBottom: 24,
+        marginBottom: theme.spacing['2xl'],
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        paddingBottom: 16,
+        borderBottomColor: theme.colors.border.light,
+        paddingBottom: theme.spacing.lg,
     },
     questionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     questionNumber: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     resultBadge: {
         paddingVertical: 4,
-        paddingHorizontal: 12,
-        borderRadius: 16,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     correctBadge: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     incorrectBadge: {
-        backgroundColor: '#F44336',
+        backgroundColor: theme.colors.error.main,
     },
     resultBadgeText: {
-        color: 'white',
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.bold,
         fontSize: 12,
     },
-
     questionText: {
-        fontSize: 16,
-        color: '#333',
-        marginBottom: 8,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.sm,
         lineHeight: 22,
-        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+        fontFamily: Platform.OS === 'ios' ? 'System' : theme.typography.fontFamily.primary,
     },
     answerContainer: {
-        backgroundColor: '#f9f9f9',
-        padding: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     answerItem: {
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     answerLabel: {
-        fontSize: 14,
-        color: '#666',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
     },
     answerText: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.primary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     playerAnswered: {
-        fontSize: 14,
-        color: '#666',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
         fontStyle: 'italic',
-        marginTop: 8,
+        marginTop: theme.spacing.sm,
     },
     buttonsContainer: {
-        margin: 16,
+        margin: theme.spacing.lg,
         marginTop: 0,
-        marginBottom: 32,
+        marginBottom: theme.spacing['3xl'],
     },
     primaryButton: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
         paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.md,
     },
     buttonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     secondaryButton: {
         backgroundColor: 'transparent',
         paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#4CAF50',
+        borderColor: theme.colors.success.main,
     },
     secondaryButtonText: {
-        color: '#4CAF50',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.success.main,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: theme.colors.overlay.medium,
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 24,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing['2xl'],
         width: '80%',
         alignItems: 'center',
     },
     modalTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 16,
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
     },
     modalText: {
-        fontSize: 16,
-        color: '#555',
-        marginBottom: 8,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
         textAlign: 'center',
     },
     modalScore: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-        marginBottom: 24,
+        ...theme.typography.body.large,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.success.main,
+        marginBottom: theme.spacing['2xl'],
         textAlign: 'center',
     },
     modalButton: {
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
     },
     modalButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     disabledButton: {
         opacity: 0.7,
     },
     scoreRequirementContainer: {
         flexDirection: 'row',
-        margin: 16,
+        margin: theme.spacing.lg,
         marginTop: 0,
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        gap: 12,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        ...theme.shadows.small,
+        gap: theme.spacing.md,
         borderLeftWidth: 4,
     },
     scoreRequirementMet: {
-        borderLeftColor: '#4CAF50',
-        backgroundColor: '#f1f8f4',
+        borderLeftColor: theme.colors.success.main,
+        backgroundColor: theme.colors.success.background,
     },
     scoreRequirementNotMet: {
-        borderLeftColor: '#F44336',
-        backgroundColor: '#fef5f5',
+        borderLeftColor: theme.colors.error.main,
+        backgroundColor: theme.colors.error.background,
     },
     scoreRequirementContent: {
         flex: 1,
     },
     scoreRequirementTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
         marginBottom: 4,
     },
     scoreRequirementMetText: {
-        color: '#4CAF50',
+        color: theme.colors.success.main,
     },
     scoreRequirementNotMetText: {
-        color: '#F44336',
+        color: theme.colors.error.main,
     },
     scoreRequirementDescription: {
-        fontSize: 14,
-        color: '#666',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
         marginBottom: 4,
     },
     scoreRequirementHelp: {
-        fontSize: 13,
-        color: '#999',
+        ...theme.typography.caption,
+        color: theme.colors.text.disabled,
         fontStyle: 'italic',
     },
-});
+}));
 
 export default WWWGameResultsScreen;

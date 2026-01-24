@@ -33,7 +33,7 @@ import {
     BeatIndicator,
 } from '../types/rhythmChallenge.types';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
-import {createStyles, useStyles} from '../shared/ui/theme';
+import {createStyles} from '../shared/ui/theme';
 
 // ============================================================================
 // TYPES
@@ -57,7 +57,7 @@ export const RhythmChallengeScreenV2: React.FC = () => {
     const route = useRoute<RhythmChallengeRouteProp>();
     const { questionId, onComplete } = route.params;
     const {theme} = useAppStyles();
-    const styles = useStyles(themeStyles);
+    const styles = themeStyles;
     
     // API hooks
     const { data: question, isLoading: questionLoading } = useGetAudioQuestionQuery(questionId);

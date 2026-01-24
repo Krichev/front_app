@@ -1,9 +1,11 @@
 // src/components/AudioRecorder.tsx
 import React, {useEffect, useRef, useState} from 'react';
-import {Alert, Animated, PermissionsAndroid, Platform, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {Alert, Animated, PermissionsAndroid, Platform, Text, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AudioRecord from 'react-native-audio-record';
 import {ProcessedFileInfo} from '../services/speech/FileService';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 export interface AudioRecorderProps {
     onRecordingComplete: (audioFile: ProcessedFileInfo) => void;
@@ -25,6 +27,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                                                          maxDuration = 300, // 5 minutes default
                                                          quality = 'medium'
                                                      }) => {
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
+    
     const [recordingState, setRecordingState] = useState<RecordingState>({
         isRecording: false,
         isPaused: false,
@@ -284,7 +289,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             <View style={styles.header}>
                 <Text style={styles.title}>Record Audio Question</Text>
                 <TouchableOpacity onPress={onCancel} style={styles.closeButton}>
-                    <MaterialCommunityIcons name="close" size={24} color="#666" />
+                    <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.secondary} />
                 </TouchableOpacity>
             </View>
 
@@ -305,7 +310,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                         <MaterialCommunityIcons
                             name={recordingState.isRecording ? 'stop' : 'microphone'}
                             size={40}
-                            color="#FFF"
+                            color={theme.colors.text.inverse}
                         />
                     </TouchableOpacity>
                 </Animated.View>
@@ -354,7 +359,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                         <MaterialCommunityIcons
                             name={recordingState.isPaused ? 'play' : 'pause'}
                             size={24}
-                            color="#007AFF"
+                            color={theme.colors.primary.main}
                         />
                         <Text style={styles.controlButtonText}>
                             {recordingState.isPaused ? 'Resume' : 'Pause'}
@@ -367,7 +372,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                         onPress={deleteRecording}
                         style={[styles.controlButton, styles.deleteButton]}
                     >
-                        <MaterialCommunityIcons name="delete" size={24} color="#FF3B30" />
+                        <MaterialCommunityIcons name="delete" size={24} color={theme.colors.error.main} />
                         <Text style={[styles.controlButtonText, styles.deleteButtonText]}>
                             Delete
                         </Text>
@@ -385,47 +390,43 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#FFF',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        backgroundColor: theme.colors.background.primary,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.lg,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 32,
+        marginBottom: theme.spacing['3xl'],
     },
     title: {
-        fontSize: 20,
-        fontWeight: '600',
-        color: '#333',
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     closeButton: {
-        padding: 8,
+        padding: theme.spacing.sm,
     },
     recordingArea: {
         alignItems: 'center',
-        paddingVertical: 40,
+        paddingVertical: theme.spacing['4xl'],
     },
     recordButton: {
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: '#FF3B30',
+        backgroundColor: theme.colors.error.main,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 24,
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
+        marginBottom: theme.spacing['2xl'],
+        ...theme.shadows.medium,
     },
     recordButtonActive: {
-        backgroundColor: '#FF6B6B',
+        backgroundColor: theme.colors.secondary.main,
     },
     recordButtonInner: {
         width: '100%',
@@ -437,74 +438,74 @@ const styles = StyleSheet.create({
     durationContainer: {
         flexDirection: 'row',
         alignItems: 'baseline',
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     durationText: {
-        fontSize: 32,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: 32, // Specific large size
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
         fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     },
     maxDurationText: {
-        fontSize: 16,
-        color: '#666',
-        marginLeft: 4,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
+        marginLeft: theme.spacing.xs,
         fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     },
     statusText: {
-        fontSize: 16,
-        color: '#666',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: theme.spacing['2xl'],
     },
     progressContainer: {
         width: '100%',
         height: 4,
-        backgroundColor: '#E5E5E7',
+        backgroundColor: theme.colors.border.light,
         borderRadius: 2,
         overflow: 'hidden',
     },
     progressBar: {
         height: '100%',
-        backgroundColor: '#007AFF',
+        backgroundColor: theme.colors.primary.main,
         borderRadius: 2,
     },
     controls: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 20,
-        marginVertical: 24,
+        gap: theme.spacing.xl,
+        marginVertical: theme.spacing['2xl'],
     },
     controlButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 8,
-        backgroundColor: '#F5F5F7',
+        gap: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.tertiary,
     },
     controlButtonText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#007AFF',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.primary.main,
     },
     deleteButton: {
-        backgroundColor: '#FFF5F5',
+        backgroundColor: theme.colors.error.background,
     },
     deleteButtonText: {
-        color: '#FF3B30',
+        color: theme.colors.error.main,
     },
     infoContainer: {
         marginTop: 'auto',
-        paddingTop: 20,
+        paddingTop: theme.spacing.xl,
     },
     infoText: {
-        fontSize: 14,
-        color: '#666',
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
         lineHeight: 20,
     },
-});
+}));
 
 export default AudioRecorder;

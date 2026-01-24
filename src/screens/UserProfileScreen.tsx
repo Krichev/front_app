@@ -7,7 +7,6 @@ import {
     RefreshControl,
     SafeAreaView,
     ScrollView,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -20,13 +19,15 @@ import {
     useGetMutualConnectionsQuery,
 } from '../entities/UserState/model/slice/relationshipApi';
 import {useGetChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RelationshipStatus, RelationshipType } from '../entities/QuizState/model/types/question.types';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {ApiChallenge} from '../entities/ChallengeState/model/types';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
@@ -35,6 +36,8 @@ const UserProfileScreen: React.FC = () => {
     const route = useRoute<UserProfileRouteProp>();
     const navigation = useNavigation<UserProfileNavigationProp>();
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
+    const {screen, theme} = useAppStyles();
+    const styles = themeStyles;
 
     // FIXED: Handle missing route params and use current user's ID as fallback
     const userId = route.params?.userId || currentUser?.id;
@@ -181,9 +184,11 @@ const UserProfileScreen: React.FC = () => {
     // Render loading state
     if (loadingUser) {
         return (
-            <SafeAreaView style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingText}>Loading profile...</Text>
+            <SafeAreaView style={screen.container}>
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.success.main} />
+                    <Text style={styles.loadingText}>Loading profile...</Text>
+                </View>
             </SafeAreaView>
         );
     }
@@ -191,12 +196,14 @@ const UserProfileScreen: React.FC = () => {
     // Render error state
     if (userError || !user) {
         return (
-            <SafeAreaView style={styles.errorContainer}>
-                <MaterialCommunityIcons name="alert-circle-outline" size={48} color="#F44336" />
-                <Text style={styles.errorText}>Failed to load user profile.</Text>
-                <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
-                    <Text style={styles.retryButtonText}>Try Again</Text>
-                </TouchableOpacity>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error.main} />
+                    <Text style={styles.errorText}>Failed to load user profile.</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
+                        <Text style={styles.retryButtonText}>Try Again</Text>
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         );
     }
@@ -204,7 +211,7 @@ const UserProfileScreen: React.FC = () => {
     // Render stats item
     const renderStatsItem = (icon: string, label: string, value: number | undefined) => (
         <View style={styles.statItem}>
-            <MaterialCommunityIcons name={icon} size={24} color="#4CAF50" />
+            <MaterialCommunityIcons name={icon} size={24} color={theme.colors.success.main} />
             <Text style={styles.statValue}>{value || 0}</Text>
             <Text style={styles.statLabel}>{label}</Text>
         </View>
@@ -260,7 +267,7 @@ const UserProfileScreen: React.FC = () => {
                 )}
                 <View style={styles.challengeFooter}>
                     <View style={styles.challengeTag}>
-                        <MaterialCommunityIcons name="trophy-outline" size={16} color="#4CAF50" />
+                        <MaterialCommunityIcons name="trophy-outline" size={16} color={theme.colors.success.main} />
                         <Text style={styles.challengeTagText}>{item.targetGroup || 'General'}</Text>
                     </View>
                     <Text style={styles.challengeDifficulty}>
@@ -272,7 +279,7 @@ const UserProfileScreen: React.FC = () => {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={screen.container}>
             <ScrollView
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -293,7 +300,7 @@ const UserProfileScreen: React.FC = () => {
                                 style={styles.editAvatarButton}
                                 onPress={handleEditProfile}
                             >
-                                <MaterialCommunityIcons name="camera" size={20} color="white" />
+                                <MaterialCommunityIcons name="camera" size={20} color={theme.colors.text.inverse} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -319,7 +326,7 @@ const UserProfileScreen: React.FC = () => {
                             style={styles.editProfileButton}
                             onPress={handleEditProfile}
                         >
-                            <MaterialCommunityIcons name="pencil" size={18} color="white" />
+                            <MaterialCommunityIcons name="pencil" size={18} color={theme.colors.text.inverse} />
                             <Text style={styles.editProfileButtonText}>Edit Profile</Text>
                         </TouchableOpacity>
                     ) : (
@@ -330,10 +337,10 @@ const UserProfileScreen: React.FC = () => {
                                 disabled={isSendingRequest}
                             >
                                 {isSendingRequest ? (
-                                    <ActivityIndicator size="small" color="white" />
+                                    <ActivityIndicator size="small" color={theme.colors.text.inverse} />
                                 ) : (
                                     <>
-                                        <MaterialCommunityIcons name="account-plus" size={18} color="white" />
+                                        <MaterialCommunityIcons name="account-plus" size={18} color={theme.colors.text.inverse} />
                                         <Text style={styles.addContactButtonText}>Add to Contacts</Text>
                                     </>
                                 )}
@@ -405,7 +412,7 @@ const UserProfileScreen: React.FC = () => {
                         <MaterialCommunityIcons
                             name={showCancelled ? 'eye-off-outline' : 'eye-outline'}
                             size={16}
-                            color="#666"
+                            color={theme.colors.text.secondary}
                         />
                         <Text style={styles.toggleCancelledText}>
                             {showCancelled ? 'Hide Cancelled/Completed' : 'Show All'}
@@ -417,7 +424,7 @@ const UserProfileScreen: React.FC = () => {
                         {activeTab === 'created' ? (
                             loadingCreated ? (
                                 <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="small" color="#4CAF50" />
+                                    <ActivityIndicator size="small" color={theme.colors.success.main} />
                                     <Text style={styles.loadingText}>Loading created challenges...</Text>
                                 </View>
                             ) : activeCreatedChallenges && activeCreatedChallenges.length > 0 ? (
@@ -430,7 +437,7 @@ const UserProfileScreen: React.FC = () => {
                                 />
                             ) : (
                                 <View style={styles.emptyState}>
-                                    <MaterialCommunityIcons name="trophy-outline" size={48} color="#ccc" />
+                                    <MaterialCommunityIcons name="trophy-outline" size={48} color={theme.colors.text.disabled} />
                                     <Text style={styles.emptyStateText}>
                                         {isCurrentUser ? "You haven't created any challenges yet" : 'No challenges created'}
                                     </Text>
@@ -439,7 +446,7 @@ const UserProfileScreen: React.FC = () => {
                         ) : (
                             loadingJoined ? (
                                 <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="small" color="#4CAF50" />
+                                    <ActivityIndicator size="small" color={theme.colors.success.main} />
                                     <Text style={styles.loadingText}>Loading joined challenges...</Text>
                                 </View>
                             ) : activeJoinedChallenges && activeJoinedChallenges.length > 0 ? (
@@ -452,7 +459,7 @@ const UserProfileScreen: React.FC = () => {
                                 />
                             ) : (
                                 <View style={styles.emptyState}>
-                                    <MaterialCommunityIcons name="account-group-outline" size={48} color="#ccc" />
+                                    <MaterialCommunityIcons name="account-group-outline" size={48} color={theme.colors.text.disabled} />
                                     <Text style={styles.emptyStateText}>
                                         {isCurrentUser ? "You haven't joined any challenges yet" : 'No challenges joined'}
                                     </Text>
@@ -466,10 +473,10 @@ const UserProfileScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     scrollView: {
         flex: 1,
@@ -478,59 +485,59 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     loadingText: {
-        marginTop: 10,
-        fontSize: 16,
-        color: '#666',
+        marginTop: theme.spacing.sm,
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     errorText: {
-        fontSize: 18,
-        color: '#F44336',
+        ...theme.typography.body.large,
+        color: theme.colors.error.main,
         textAlign: 'center',
-        marginVertical: 10,
+        marginVertical: theme.spacing.sm,
     },
     retryButton: {
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 5,
-        marginTop: 10,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginTop: theme.spacing.sm,
     },
     retryButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     profileHeader: {
-        backgroundColor: 'white',
-        padding: 20,
+        backgroundColor: theme.colors.background.primary,
+        padding: theme.spacing.xl,
         alignItems: 'center',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: theme.colors.border.light,
     },
     avatarContainer: {
         position: 'relative',
-        marginBottom: 15,
+        marginBottom: theme.spacing.md,
     },
     avatar: {
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#eee',
+        backgroundColor: theme.colors.background.tertiary,
     },
     editAvatarButton: {
         position: 'absolute',
         bottom: 0,
         right: 0,
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
         borderRadius: 15,
         width: 30,
         height: 30,
@@ -539,118 +546,114 @@ const styles = StyleSheet.create({
     },
     userInfo: {
         alignItems: 'center',
-        marginBottom: 15,
+        marginBottom: theme.spacing.md,
     },
     username: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 5,
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.xs,
     },
     bio: {
-        fontSize: 16,
-        color: '#666',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
-        marginBottom: 5,
+        marginBottom: theme.spacing.xs,
     },
     joinDate: {
-        fontSize: 14,
-        color: '#999',
+        ...theme.typography.body.small,
+        color: theme.colors.text.disabled,
     },
     editProfileButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.xl,
     },
     editProfileButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 5,
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginLeft: theme.spacing.xs,
     },
     addContactButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.xl,
     },
     addContactButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 5,
+        color: theme.colors.text.inverse,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginLeft: theme.spacing.xs,
     },
     relationshipBadge: {
-        backgroundColor: '#e8f5e9',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-        marginTop: 5,
+        backgroundColor: theme.colors.success.background,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.xs,
     },
     relationshipText: {
-        color: '#4CAF50',
-        fontSize: 12,
-        fontWeight: 'bold',
+        color: theme.colors.success.main,
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.bold,
         textTransform: 'uppercase',
     },
     pendingBadge: {
-        backgroundColor: '#fff3e0',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
+        backgroundColor: theme.colors.warning.background,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.xl,
     },
     pendingText: {
-        color: '#ff9800',
-        fontSize: 16,
-        fontWeight: 'bold',
+        color: theme.colors.warning.main,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     mutualSection: {
-        backgroundColor: 'white',
-        margin: 10,
-        padding: 20,
-        borderRadius: 10,
+        backgroundColor: theme.colors.background.primary,
+        margin: theme.spacing.sm,
+        padding: theme.spacing.xl,
+        borderRadius: theme.layout.borderRadius.md,
     },
     mutualAvatars: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: theme.spacing.sm,
     },
     mutualAvatarWrapper: {
         borderWidth: 2,
-        borderColor: 'white',
-        borderRadius: 20,
+        borderColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     mutualAvatar: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     mutualMore: {
-        marginLeft: 10,
-        color: '#666',
-        fontSize: 14,
+        marginLeft: theme.spacing.sm,
+        color: theme.colors.text.secondary,
+        ...theme.typography.body.small,
     },
     statsSection: {
-        backgroundColor: 'white',
-        margin: 10,
-        padding: 20,
-        borderRadius: 10,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.22,
-        shadowRadius: 2.22,
+        backgroundColor: theme.colors.background.primary,
+        margin: theme.spacing.sm,
+        padding: theme.spacing.xl,
+        borderRadius: theme.layout.borderRadius.md,
+        ...theme.shadows.small,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.md,
     },
     statsContainer: {
         flexDirection: 'row',
@@ -661,78 +664,74 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     statValue: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
-        marginTop: 5,
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginTop: theme.spacing.xs,
     },
     statLabel: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 2,
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.xs,
     },
     challengesSection: {
-        backgroundColor: 'white',
-        margin: 10,
-        borderRadius: 10,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.22,
-        shadowRadius: 2.22,
+        backgroundColor: theme.colors.background.primary,
+        margin: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.md,
+        ...theme.shadows.small,
     },
     tabContainer: {
         flexDirection: 'row',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        borderBottomColor: theme.colors.border.light,
     },
     tab: {
         flex: 1,
-        paddingVertical: 15,
+        paddingVertical: theme.spacing.md,
         alignItems: 'center',
     },
     activeTab: {
         borderBottomWidth: 2,
-        borderBottomColor: '#4CAF50',
+        borderBottomColor: theme.colors.success.main,
     },
     tabText: {
-        fontSize: 16,
-        color: '#666',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.secondary,
     },
     activeTabText: {
-        color: '#4CAF50',
-        fontWeight: 'bold',
+        color: theme.colors.success.main,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     challengesList: {
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     challengeItem: {
-        padding: 15,
-        borderRadius: 8,
-        backgroundColor: '#f9f9f9',
-        marginVertical: 5,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.secondary,
+        marginVertical: theme.spacing.xs,
     },
     challengeHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     challengeTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
         flex: 1,
-        marginRight: 10,
+        marginRight: theme.spacing.sm,
     },
     challengeDate: {
-        fontSize: 12,
-        color: '#999',
+        ...theme.typography.caption,
+        color: theme.colors.text.disabled,
     },
     challengeDescription: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 10,
+        ...theme.typography.body.small,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.sm,
     },
     challengeFooter: {
         flexDirection: 'row',
@@ -742,72 +741,72 @@ const styles = StyleSheet.create({
     challengeTag: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#e8f5e8',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: theme.colors.success.background,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
     },
     challengeTagText: {
-        fontSize: 12,
-        color: '#4CAF50',
-        marginLeft: 4,
+        ...theme.typography.caption,
+        color: theme.colors.success.main,
+        marginLeft: theme.spacing.xs,
     },
     challengeDifficulty: {
-        fontSize: 12,
-        color: '#666',
-        fontWeight: '500',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     separator: {
         height: 1,
-        backgroundColor: '#eee',
-        marginVertical: 5,
+        backgroundColor: theme.colors.border.light,
+        marginVertical: theme.spacing.xs,
     },
     emptyState: {
         alignItems: 'center',
-        padding: 40,
+        padding: theme.spacing['3xl'],
     },
     emptyStateText: {
-        fontSize: 16,
-        color: '#999',
+        ...theme.typography.body.medium,
+        color: theme.colors.text.disabled,
         textAlign: 'center',
-        marginTop: 10,
+        marginTop: theme.spacing.sm,
     },
     toggleCancelled: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
+        paddingVertical: theme.spacing.sm,
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        gap: 5,
+        borderBottomColor: theme.colors.border.light,
+        gap: theme.spacing.xs,
     },
     toggleCancelledText: {
-        fontSize: 12,
-        color: '#666',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
     },
     cancelledChallenge: {
         opacity: 0.6,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     cancelledText: {
         textDecorationLine: 'line-through',
-        color: '#999',
+        color: theme.colors.text.disabled,
     },
     statusBadge: {
-        backgroundColor: '#F44336',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 4,
-        marginRight: 8,
+        backgroundColor: theme.colors.error.main,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginRight: theme.spacing.sm,
     },
     completedBadge: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     statusBadgeText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: 'bold',
+        color: theme.colors.text.inverse,
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.bold,
     },
-});
+}));
 
 export default UserProfileScreen;

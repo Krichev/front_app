@@ -1,6 +1,6 @@
 // src/screens/HomeScreen.tsx - COMPLETE FINAL VERSION
 import React from 'react';
-import {ActivityIndicator, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, FlatList, SafeAreaView, Text, TouchableOpacity, View} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {CompositeNavigationProp, useNavigation} from '@react-navigation/native';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
@@ -12,6 +12,8 @@ import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/chal
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.tsx";
 import KeychainService from "../services/auth/KeychainService.ts";
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 
 // Correct navigation type for a screen inside bottom tabs
 type HomeScreenNavigationProp = CompositeNavigationProp<
@@ -22,6 +24,8 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 const HomeScreen: React.FC = () => {
     const dispatch = useDispatch();
     const navigation = useNavigation<HomeScreenNavigationProp>();
+    const {screen, theme} = useAppStyles();
+    const styles = themeStyles;
 
     // Read the current authenticated user from your Redux store
     const {user} = useSelector((state: RootState) => state.auth);
@@ -92,21 +96,21 @@ const HomeScreen: React.FC = () => {
 
     if (isLoading || loadingQuizzes) {
         return (
-            <SafeAreaView style={styles.container}>
-                <ActivityIndicator size="large" color="#4CAF50"/>
+            <SafeAreaView style={screen.container}>
+                <ActivityIndicator size="large" color={theme.colors.primary.main}/>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={screen.container}>
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.greeting}>
                     Hello, {user?.username || 'User'}! 👋
                 </Text>
                 <TouchableOpacity onPress={handleLogout}>
-                    <MaterialCommunityIcons name="logout" size={24} color="#333"/>
+                    <MaterialCommunityIcons name="logout" size={24} color={theme.colors.text.primary}/>
                 </TouchableOpacity>
             </View>
 
@@ -122,7 +126,7 @@ const HomeScreen: React.FC = () => {
                                     style={styles.quickActionCard}
                                     onPress={handleCreateWWWQuiz}
                                 >
-                                    <MaterialCommunityIcons name="head-question" size={32} color="#4CAF50"/>
+                                    <MaterialCommunityIcons name="head-question" size={32} color={theme.colors.success.main}/>
                                     <Text style={styles.quickActionText}>Create Quiz</Text>
                                 </TouchableOpacity>
 
@@ -130,7 +134,7 @@ const HomeScreen: React.FC = () => {
                                     style={styles.quickActionCard}
                                     onPress={() => navigation.navigate('CreateChallenge')}
                                 >
-                                    <MaterialCommunityIcons name="trophy-variant" size={32} color="#FF9800"/>
+                                    <MaterialCommunityIcons name="trophy-variant" size={32} color={theme.colors.warning.main}/>
                                     <Text style={styles.quickActionText}>New Challenge</Text>
                                 </TouchableOpacity>
 
@@ -138,7 +142,7 @@ const HomeScreen: React.FC = () => {
                                     style={styles.quickActionCard}
                                     onPress={() => navigation.navigate('Search')}
                                 >
-                                    <MaterialCommunityIcons name="magnify" size={32} color="#2196F3"/>
+                                    <MaterialCommunityIcons name="magnify" size={32} color={theme.colors.info.main}/>
                                     <Text style={styles.quickActionText}>Find Challenges</Text>
                                 </TouchableOpacity>
 
@@ -146,7 +150,7 @@ const HomeScreen: React.FC = () => {
                                     style={styles.quickActionCard}
                                     onPress={() => navigation.navigate('Profile')}
                                 >
-                                    <MaterialCommunityIcons name="account" size={32} color="#9C27B0"/>
+                                    <MaterialCommunityIcons name="account" size={32} color={theme.colors.accent.main}/>
                                     <Text style={styles.quickActionText}>My Profile</Text>
                                 </TouchableOpacity>
                             </View>
@@ -186,7 +190,7 @@ const HomeScreen: React.FC = () => {
                                         <MaterialCommunityIcons
                                             name={item.icon}
                                             size={36}
-                                            color="#4CAF50"
+                                            color={theme.colors.success.main}
                                         />
                                         <Text style={styles.menuText}>{item.title}</Text>
                                     </TouchableOpacity>
@@ -201,92 +205,80 @@ const HomeScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-    },
+const themeStyles = createStyles(theme => ({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 20,
-        backgroundColor: 'white',
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.background.primary,
         borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        borderBottomColor: theme.colors.border.light,
     },
     greeting: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#333',
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     section: {
-        padding: 16,
-        marginBottom: 8,
+        padding: theme.spacing.lg,
+        marginBottom: theme.spacing.sm,
     },
     sectionHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.md,
     },
     sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 12,
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.md,
     },
     seeAllText: {
-        fontSize: 14,
-        color: '#4CAF50',
-        fontWeight: '600',
+        ...theme.typography.body.small,
+        color: theme.colors.success.main,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     quickActionsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     quickActionCard: {
         width: '47%',
-        backgroundColor: 'white',
-        padding: 20,
-        borderRadius: 12,
+        backgroundColor: theme.colors.background.primary,
+        padding: theme.spacing.xl,
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        ...theme.shadows.small,
     },
     quickActionText: {
-        marginTop: 8,
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
+        marginTop: theme.spacing.sm,
+        ...theme.typography.body.small,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     menuGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     menuCard: {
         width: '47%',
-        backgroundColor: 'white',
-        padding: 24,
-        borderRadius: 12,
+        backgroundColor: theme.colors.background.primary,
+        padding: theme.spacing['2xl'],
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        ...theme.shadows.small,
     },
     menuText: {
-        marginTop: 12,
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
+        marginTop: theme.spacing.md,
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
-});
+}));
 
 export default HomeScreen;

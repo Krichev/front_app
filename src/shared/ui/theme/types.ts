@@ -58,6 +58,7 @@ export interface Colors {
     // Primary colors
     primary: ColorScheme;
     secondary: ColorScheme;
+    accent: ColorScheme;
 
     // Neutral colors
     neutral: {
@@ -77,6 +78,7 @@ export interface Colors {
         primary: string;
         secondary: string;
         tertiary: string;
+        dark: string;
     };
 
     // Text colors
