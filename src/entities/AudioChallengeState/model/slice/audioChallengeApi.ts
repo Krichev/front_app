@@ -308,10 +308,34 @@ export const audioChallengeApi = createApi({
                     }
                 }
 
+                // Ensure we have a proper audio content type
+                let contentType = audioFile.type;
+                if (!contentType || contentType === 'application/octet-stream') {
+                    // Determine from filename extension
+                    const extension = audioFile.name?.split('.').pop()?.toLowerCase();
+                    contentType = {
+                        'mp3': 'audio/mpeg',
+                        'wav': 'audio/wav',
+                        'm4a': 'audio/m4a',
+                        'aac': 'audio/aac',
+                        'ogg': 'audio/ogg',
+                        'webm': 'audio/webm',
+                        '3gp': 'audio/3gpp',
+                    }[extension || ''] || 'audio/mpeg'; // Default to audio/mpeg
+                }
+
+                console.log('📤 Submitting audio recording:', {
+                    questionId,
+                    fileUri,
+                    fileName: audioFile.name,
+                    originalType: audioFile.type,
+                    resolvedType: contentType,
+                });
+
                 formData.append('audioFile', {
                     uri: fileUri,
-                    name: audioFile.name,
-                    type: audioFile.type,
+                    name: audioFile.name || `recording_${Date.now()}.mp3`,
+                    type: contentType,
                 } as any);
 
                 return {
