@@ -1,3 +1,8 @@
+import { QuizQuestion, QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
+
+// Re-export entity types
+export { QuizQuestion, QuizRound };
+
 // Define explicit game phases and transitions
 export type GamePhase = 'waiting' | 'question' | 'discussion' | 'answer' | 'feedback' | 'completed';
 
@@ -28,23 +33,6 @@ export interface GameState {
   roundStartTime: Date | null;
 }
 
-// Quiz question with strong typing
-export interface QuizQuestion {
-  id: number;
-  question: string;
-  answer: string;
-  questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
-  audioChallengeType?: string;
-  questionMediaId?: number;
-  questionMediaType?: string;
-}
-
-// Round data from API
-export interface RoundData {
-  id: number;
-  question: QuizQuestion;
-  teamAnswer: string | null;
-  isCorrect: boolean;
-  playerWhoAnswered: string | null;
-  discussionNotes: string | null;
-}
+// Presentation alias for QuizRound to match existing game service usage if needed,
+// but prefer using QuizRound directly where possible.
+export type RoundData = QuizRound;

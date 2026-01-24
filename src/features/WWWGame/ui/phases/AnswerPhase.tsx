@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-nativ
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
-import { QuizQuestion } from '../../model/types';
+import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import VoiceRecorder from '../../../../components/VoiceRecorder';
 import { AudioChallengeContainer } from '../../../../screens/components/audio';
 
@@ -74,7 +74,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       <Text style={styles.title}>Submit Your Answer</Text>
       <Text style={styles.text}>{question.question}</Text>
 
-      {question['additionalInfo'] && (
+      {question.additionalInfo && (
         <View>
           <TouchableOpacity
             style={{ alignSelf: 'center', padding: theme.spacing.sm, marginBottom: theme.spacing.lg }}
@@ -86,7 +86,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
           </TouchableOpacity>
           {showHint && (
             <View style={{ backgroundColor: theme.colors.background.secondary, padding: theme.spacing.md, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg }}>
-              <Text style={{ color: theme.colors.text.secondary, fontStyle: 'italic' }}>{question['additionalInfo']}</Text>
+              <Text style={{ color: theme.colors.text.secondary, fontStyle: 'italic' }}>{question.additionalInfo}</Text>
             </View>
           )}
         </View>

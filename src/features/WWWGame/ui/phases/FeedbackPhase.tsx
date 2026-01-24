@@ -2,10 +2,10 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
-import { RoundData } from '../../model/types';
+import { QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
 
 interface FeedbackPhaseProps {
-  roundData: RoundData;
+  roundData: QuizRound;
   isCorrect: boolean;
   isLastRound: boolean;
   onNextRound: () => void;

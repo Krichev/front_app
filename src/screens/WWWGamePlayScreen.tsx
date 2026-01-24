@@ -30,11 +30,19 @@ const WWWGamePlayScreen: React.FC = () => {
   const { sessionId, challengeId } = route.params;
   const gameSettings = route.params as any; // Legacy params support
   
+  // Guard clause for missing sessionId
+  useEffect(() => {
+    if (!sessionId) {
+      Alert.alert('Error', 'Session ID is required to play');
+      navigation.goBack();
+    }
+  }, [sessionId, navigation]);
+
+  // API controller - only if sessionId exists
+  const controller = useWWWGameController(sessionId || '');
+  
   // State machine
   const { state, actions } = useWWWGameState();
-  
-  // API controller
-  const controller = useWWWGameController(sessionId);
   
   // Timer (initialized when discussion starts)
   const timer = useCountdownTimer({
@@ -80,7 +88,8 @@ const WWWGamePlayScreen: React.FC = () => {
     if (!currentRound) return;
     
     try {
-      await controller.submitAnswer(currentRound.id, {
+      // roundId is string in QuizRound entity
+      await controller.submitAnswer(Number(currentRound.id), {
         teamAnswer: state.teamAnswer,
         playerWhoAnswered: state.selectedPlayer || 'Team',
         discussionNotes: state.discussionNotes,
@@ -96,7 +105,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
     try {
       await controller.submitAudioAnswer(
-        currentRound.id,
+        Number(currentRound.id), // Ensure number if API expects number, or keep string if it expects string
         Number(currentRound.question.id),
         audioFile,
         {
@@ -137,6 +146,9 @@ const WWWGamePlayScreen: React.FC = () => {
       Alert.alert('Error', 'Failed to complete game');
     }
   };
+
+  // If no sessionId, return null (effect handles navigation)
+  if (!sessionId) return null;
 
   // Render current phase
   const renderPhase = () => {

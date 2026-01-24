@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
-import { QuizQuestion } from '../../model/types';
+import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import QuestionMediaViewer from '../../../../screens/CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { MediaType } from '../../../../services/wwwGame/questionService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';

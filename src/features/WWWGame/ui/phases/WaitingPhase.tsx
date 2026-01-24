@@ -28,11 +28,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({
       />
       <Text style={styles.title}>Ready to Start?</Text>
       <Text style={styles.text}>
-        Welcome to WWW_QUIZ!{'
-
-'}        You'll have {roundTime} seconds to discuss each question with your team.{'
-
-'}        When you're ready to begin, press the button below.
+        {`Welcome to WWW_QUIZ!\n\nYou'll have ${roundTime} seconds to discuss each question with your team.\n\nWhen you're ready to begin, press the button below.`}
       </Text>
       <TouchableOpacity
         style={[styles.button, isLoading && styles.disabledButton]}
@@ -46,4 +42,3 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({
     </View>
   );
 };
-
