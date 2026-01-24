@@ -44,12 +44,12 @@ export const ContactsScreen: React.FC = () => {
         data: relationshipPage,
         isLoading: isLoadingContacts,
         isFetching: isFetchingContacts,
-        refetch: refetchContacts
+        refetch: refetchContacts,
     } = useGetRelationshipsQuery({
         type: activeCategory !== 'ALL' && activeCategory !== 'FAVORITES' ? activeCategory as RelationshipType : undefined,
         status: RelationshipStatus.ACCEPTED,
         sort: sortBy,
-        size: 100
+        size: 100,
     });
 
     // Pending Requests Query
@@ -57,39 +57,40 @@ export const ContactsScreen: React.FC = () => {
         data: pendingRequestsPage,
         isLoading: isLoadingPending,
         isFetching: isFetchingPending,
-        refetch: refetchPending
+        refetch: refetchPending,
     } = useGetRelationshipsQuery({
         status: RelationshipStatus.PENDING,
         sort: 'date_desc',
-        size: 100
+        size: 100,
     });
 
-    const [toggleFavorite] = useToggleFavoriteMutation();
-    const [removeRelationship] = useRemoveRelationshipMutation();
-    const [acceptRelationship] = useAcceptRelationshipMutation();
-    const [rejectRelationship] = useRejectRelationshipMutation();
+    const [toggleFavorite, { isLoading: isTogglingFavorite }] = useToggleFavoriteMutation();
+    const [removeRelationship, { isLoading: isRemoving }] = useRemoveRelationshipMutation();
+    const [acceptRelationship, { isLoading: isAccepting }] = useAcceptRelationshipMutation();
+    const [rejectRelationship, { isLoading: isRejecting }] = useRejectRelationshipMutation();
 
     const relationships = useMemo(() => {
         let items = relationshipPage?.content || [];
-        
+
         if (activeCategory === 'FAVORITES') {
             items = items.filter(r => r.isFavorite);
         }
-        
+
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            items = items.filter(r => 
-                r.relatedUserUsername.toLowerCase().includes(query) || 
+            items = items.filter(r =>
+                r.relatedUserUsername.toLowerCase().includes(query) ||
                 (r.nickname && r.nickname.toLowerCase().includes(query))
             );
         }
-        
+
         return items;
     }, [relationshipPage, activeCategory, searchQuery]);
 
     const pendingRequests = pendingRequestsPage?.content || [];
 
     const handleToggleFavorite = async (id: string) => {
+        if (isTogglingFavorite) {return;}
         try {
             await toggleFavorite(id).unwrap();
         } catch (error) {
@@ -98,27 +99,29 @@ export const ContactsScreen: React.FC = () => {
     };
 
     const handleRemove = (id: string, name: string) => {
+        if (isRemoving) {return;}
         Alert.alert(
             'Remove Contact',
             `Are you sure you want to remove ${name}?`,
             [
                 { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Remove', 
-                    style: 'destructive', 
+                {
+                    text: 'Remove',
+                    style: 'destructive',
                     onPress: async () => {
                         try {
                             await removeRelationship(id).unwrap();
                         } catch (error) {
                             Alert.alert('Error', 'Failed to remove contact');
                         }
-                    }
-                }
+                    },
+                },
             ]
         );
     };
 
     const handleAcceptRequest = async (id: string) => {
+        if (isAccepting) {return;}
         try {
             await acceptRelationship(id).unwrap();
             // Automatically switch to contacts view to see new friend? Optional.
@@ -128,6 +131,7 @@ export const ContactsScreen: React.FC = () => {
     };
 
     const handleRejectRequest = (id: string) => {
+        if (isRejecting) {return;}
         Alert.alert(
             'Reject Request',
             'Are you sure you want to reject this request?',
@@ -142,8 +146,8 @@ export const ContactsScreen: React.FC = () => {
                         } catch (error) {
                             Alert.alert('Error', 'Failed to reject request');
                         }
-                    }
-                }
+                    },
+                },
             ]
         );
     };
@@ -161,7 +165,7 @@ export const ContactsScreen: React.FC = () => {
                     </View>
                 )}
             </View>
-            
+
             <View style={styles.contactInfo}>
                 <Text style={styles.contactName}>
                     {item.nickname || item.relatedUserUsername}
@@ -178,10 +182,10 @@ export const ContactsScreen: React.FC = () => {
 
             <View style={styles.actions}>
                 <TouchableOpacity onPress={() => handleToggleFavorite(item.id)} style={styles.actionButton}>
-                    <Icon 
-                        name={item.isFavorite ? "star" : "star-outline"} 
-                        size={22} 
-                        color={item.isFavorite ? "#FFD700" : "#ccc"} 
+                    <Icon
+                        name={item.isFavorite ? 'star' : 'star-outline'}
+                        size={22}
+                        color={item.isFavorite ? '#FFD700' : '#ccc'}
                     />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => handleRemove(item.id, item.relatedUserUsername)} style={styles.actionButton}>
@@ -204,7 +208,7 @@ export const ContactsScreen: React.FC = () => {
                     </View>
                 )}
             </View>
-            
+
             <View style={styles.contactInfo}>
                 <Text style={styles.contactName}>
                     {item.relatedUserUsername}
@@ -235,7 +239,7 @@ export const ContactsScreen: React.FC = () => {
             </View>
 
             <View style={styles.tabContainer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.tab, viewMode === 'contacts' && styles.activeTab]}
                     onPress={() => setViewMode('contacts')}
                 >
@@ -243,7 +247,7 @@ export const ContactsScreen: React.FC = () => {
                         Contacts
                     </Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.tab, viewMode === 'requests' && styles.activeTab]}
                     onPress={() => setViewMode('requests')}
                 >
@@ -270,7 +274,7 @@ export const ContactsScreen: React.FC = () => {
                                 onChangeText={setSearchQuery}
                             />
                         </View>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.sortButton}
                             onPress={() => setSortBy(sortBy === 'name_asc' ? 'date_desc' : 'name_asc')}
                         >
@@ -288,18 +292,18 @@ export const ContactsScreen: React.FC = () => {
                                 <TouchableOpacity
                                     style={[
                                         styles.categoryTab,
-                                        activeCategory === item.id && styles.activeCategoryTab
+                                        activeCategory === item.id && styles.activeCategoryTab,
                                     ]}
                                     onPress={() => setActiveCategory(item.id)}
                                 >
-                                    <Icon 
-                                        name={item.icon} 
-                                        size={18} 
-                                        color={activeCategory === item.id ? '#fff' : '#666'} 
+                                    <Icon
+                                        name={item.icon}
+                                        size={18}
+                                        color={activeCategory === item.id ? '#fff' : '#666'}
                                     />
                                     <Text style={[
                                         styles.categoryLabel,
-                                        activeCategory === item.id && styles.activeCategoryLabel
+                                        activeCategory === item.id && styles.activeCategoryLabel,
                                     ]}>
                                         {item.label}
                                     </Text>

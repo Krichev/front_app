@@ -17,10 +17,10 @@ import {useGetUserProfileQuery, useGetUserStatsQuery} from '../entities/UserStat
 import {
     useGetRelationshipsQuery,
     useCreateRelationshipMutation,
-    useGetMutualConnectionsQuery
+    useGetMutualConnectionsQuery,
 } from '../entities/UserState/model/slice/relationshipApi';
 import {useGetChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
-import {NativeStackNavigationProp} from "@react-navigation/native-stack";
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -58,14 +58,14 @@ const UserProfileScreen: React.FC = () => {
         data: user,
         isLoading: loadingUser,
         error: userError,
-        refetch: refetchUser
+        refetch: refetchUser,
     } = useGetUserProfileQuery(userId!, {
         skip: !userId,
     });
 
     const {
         data: userStats,
-        refetch: refetchStats
+        refetch: refetchStats,
     } = useGetUserStatsQuery(userId!, {
         skip: !userId,
     });
@@ -73,7 +73,7 @@ const UserProfileScreen: React.FC = () => {
     const {
         data: createdChallenges,
         isLoading: loadingCreated,
-        refetch: refetchCreated
+        refetch: refetchCreated,
     } = useGetChallengesQuery({
         creator_id: userId!,
         excludeCancelled: !showCancelled,
@@ -82,7 +82,7 @@ const UserProfileScreen: React.FC = () => {
     const {
         data: joinedChallenges,
         isLoading: loadingJoined,
-        refetch: refetchJoined
+        refetch: refetchJoined,
     } = useGetChallengesQuery({
         participant_id: userId!,
         excludeCancelled: !showCancelled,
@@ -90,17 +90,17 @@ const UserProfileScreen: React.FC = () => {
 
     // Client-side filtering as backup
     const activeCreatedChallenges = useMemo(() => {
-        if (!createdChallenges) return [];
-        if (showCancelled) return createdChallenges;
-        return createdChallenges.filter(c => 
+        if (!createdChallenges) {return [];}
+        if (showCancelled) {return createdChallenges;}
+        return createdChallenges.filter(c =>
             c.status !== 'CANCELLED' && c.status !== 'COMPLETED'
         );
     }, [createdChallenges, showCancelled]);
 
     const activeJoinedChallenges = useMemo(() => {
-        if (!joinedChallenges) return [];
-        if (showCancelled) return joinedChallenges;
-        return joinedChallenges.filter(c => 
+        if (!joinedChallenges) {return [];}
+        if (showCancelled) {return joinedChallenges;}
+        return joinedChallenges.filter(c =>
             c.status !== 'CANCELLED' && c.status !== 'COMPLETED'
         );
     }, [joinedChallenges, showCancelled]);
@@ -147,11 +147,11 @@ const UserProfileScreen: React.FC = () => {
     };
 
     const handleAddContact = async () => {
-        if (!userId) return;
+        if (!userId || isSendingRequest) {return;}
         try {
             await createRelationship({
                 relatedUserId: userId,
-                relationshipType: RelationshipType.FRIEND
+                relationshipType: RelationshipType.FRIEND,
             }).unwrap();
             Alert.alert('Success', 'Relationship request sent');
         } catch (error) {
@@ -219,16 +219,16 @@ const UserProfileScreen: React.FC = () => {
             <TouchableOpacity
                 style={[
                     styles.challengeItem,
-                    isCancelled && styles.cancelledChallenge
+                    isCancelled && styles.cancelledChallenge,
                 ]}
                 onPress={() => navigateToChallengeDetails(item.id)}
             >
                 <View style={styles.challengeHeader}>
-                    <Text 
+                    <Text
                         style={[
                             styles.challengeTitle,
-                            isCancelled && styles.cancelledText
-                        ]} 
+                            isCancelled && styles.cancelledText,
+                        ]}
                         numberOfLines={1}
                     >
                         {item.title}
@@ -248,11 +248,11 @@ const UserProfileScreen: React.FC = () => {
                     </Text>
                 </View>
                 {item.description && (
-                    <Text 
+                    <Text
                         style={[
                             styles.challengeDescription,
-                            isCancelled && styles.cancelledText
-                        ]} 
+                            isCancelled && styles.cancelledText,
+                        ]}
                         numberOfLines={2}
                     >
                         {item.description}
@@ -284,7 +284,7 @@ const UserProfileScreen: React.FC = () => {
                     <View style={styles.avatarContainer}>
                         <Image
                             source={{
-                                uri: user.avatar || 'https://via.placeholder.com/100x100?text=User'
+                                uri: user.avatar || 'https://via.placeholder.com/100x100?text=User',
                             }}
                             style={styles.avatar}
                         />
@@ -302,12 +302,12 @@ const UserProfileScreen: React.FC = () => {
                         <Text style={styles.username}>{user.username}</Text>
                         {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
                         <Text style={styles.joinDate}>{formatJoinDate(user.createdAt)}</Text>
-                        
+
                         {!isCurrentUser && relationship && (
                             <View style={styles.relationshipBadge}>
                                 <Text style={styles.relationshipText}>
-                                    {relationship.status === RelationshipStatus.ACCEPTED 
-                                        ? relationship.relationshipType 
+                                    {relationship.status === RelationshipStatus.ACCEPTED
+                                        ? relationship.relationshipType
                                         : `Request ${relationship.status}`}
                                 </Text>
                             </View>
@@ -353,9 +353,9 @@ const UserProfileScreen: React.FC = () => {
                         <View style={styles.mutualAvatars}>
                             {mutualConnections.slice(0, 5).map((conn, index) => (
                                 <View key={conn.id} style={[styles.mutualAvatarWrapper, { marginLeft: index === 0 ? 0 : -15 }]}>
-                                    <Image 
-                                        source={{ uri: conn.avatar || 'https://via.placeholder.com/40x40?text=U' }} 
-                                        style={styles.mutualAvatar} 
+                                    <Image
+                                        source={{ uri: conn.avatar || 'https://via.placeholder.com/40x40?text=U' }}
+                                        style={styles.mutualAvatar}
                                     />
                                 </View>
                             ))}
@@ -398,17 +398,17 @@ const UserProfileScreen: React.FC = () => {
                     </View>
 
                     {/* NEW: Toggle for cancelled challenges */}
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.toggleCancelled}
                         onPress={() => setShowCancelled(!showCancelled)}
                     >
-                        <MaterialCommunityIcons 
-                            name={showCancelled ? "eye-off-outline" : "eye-outline"} 
-                            size={16} 
-                            color="#666" 
+                        <MaterialCommunityIcons
+                            name={showCancelled ? 'eye-off-outline' : 'eye-outline'}
+                            size={16}
+                            color="#666"
                         />
                         <Text style={styles.toggleCancelledText}>
-                            {showCancelled ? "Hide Cancelled/Completed" : "Show All"}
+                            {showCancelled ? 'Hide Cancelled/Completed' : 'Show All'}
                         </Text>
                     </TouchableOpacity>
 
@@ -432,7 +432,7 @@ const UserProfileScreen: React.FC = () => {
                                 <View style={styles.emptyState}>
                                     <MaterialCommunityIcons name="trophy-outline" size={48} color="#ccc" />
                                     <Text style={styles.emptyStateText}>
-                                        {isCurrentUser ? "You haven't created any challenges yet" : "No challenges created"}
+                                        {isCurrentUser ? "You haven't created any challenges yet" : 'No challenges created'}
                                     </Text>
                                 </View>
                             )
@@ -454,7 +454,7 @@ const UserProfileScreen: React.FC = () => {
                                 <View style={styles.emptyState}>
                                     <MaterialCommunityIcons name="account-group-outline" size={48} color="#ccc" />
                                     <Text style={styles.emptyStateText}>
-                                        {isCurrentUser ? "You haven't joined any challenges yet" : "No challenges joined"}
+                                        {isCurrentUser ? "You haven't joined any challenges yet" : 'No challenges joined'}
                                     </Text>
                                 </View>
                             )

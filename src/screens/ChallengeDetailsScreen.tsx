@@ -18,13 +18,13 @@ import {
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
 } from '../entities/ChallengeState/model/slice/challengeApi';
-import {useStartQuizSessionMutation,} from '../entities/QuizState/model/slice/quizApi';
-import {NativeStackNavigationProp} from "@react-navigation/native-stack";
+import {useStartQuizSessionMutation} from '../entities/QuizState/model/slice/quizApi';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {FormatterService} from '../services/verification/ui/Services';
-import {navigateToTab} from "../utils/navigation.ts";
+import {navigateToTab} from '../utils/navigation.ts';
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 import {AudioChallengeType} from '../entities/ChallengeState/model/types';
 
@@ -82,8 +82,8 @@ const ChallengeDetailsScreen: React.FC = () => {
                 [
                     {
                         text: 'OK',
-                        onPress: () => navigateToTab(navigation, 'Challenges')
-                    }
+                        onPress: () => navigateToTab(navigation, 'Challenges'),
+                    },
                 ]
             );
         }
@@ -111,7 +111,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Prefetch custom questions if needed
     const { data: customQuestions } = useGetQuestionsForChallengeQuery(
-        { challengeId: challengeId! }, 
+        { challengeId: challengeId! },
         { skip: !challengeId || isCancelled } // Skip if cancelled
     );
 
@@ -141,7 +141,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Handle delete quest
     const handleDeleteQuest = () => {
-        if (!challengeId) return;
+        if (!challengeId || isDeleting) {return;}
 
         Alert.alert(
             'Delete Quest',
@@ -163,16 +163,16 @@ const ChallengeDetailsScreen: React.FC = () => {
                                     onPress: () => {
                                         // Navigate back to the list
                                         navigation.goBack();
-                                    }
-                                }
+                                    },
+                                },
                             ]);
                         } catch (error: any) {
                             console.error('Delete quest error:', error);
                             const message = error?.status === 403
                                 ? "You don't have permission to delete this quest"
                                 : error?.status === 404
-                                ? "Quest not found"
-                                : "Failed to delete quest. Please try again.";
+                                ? 'Quest not found'
+                                : 'Failed to delete quest. Please try again.';
                             Alert.alert('Error', message);
                         }
                     },
@@ -183,8 +183,8 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Handle join challenge
     const handleJoinChallenge = async () => {
-        if (!challengeId) {
-            Alert.alert('Error', 'Challenge ID not found');
+        if (!challengeId || isJoining) {
+            if (!challengeId) {Alert.alert('Error', 'Challenge ID not found');}
             return;
         }
         try {
@@ -209,8 +209,8 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Handle submit challenge completion - FIXED
     const handleSubmitCompletion = async () => {
-        if (!challengeId) {
-            Alert.alert('Error', 'Challenge ID not found');
+        if (!challengeId || isSubmitting) {
+            if (!challengeId) {Alert.alert('Error', 'Challenge ID not found');}
             return;
         }
         try {
@@ -218,8 +218,8 @@ const ChallengeDetailsScreen: React.FC = () => {
                 challengeId: challengeId,  // Changed from 'id' to 'challengeId'
                 completionData: {
                     verificationData: {completed: true},
-                    notes: null
-                }
+                    notes: null,
+                },
             }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');
@@ -245,7 +245,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     };
 
     const renderQuizContent = () => {
-        if (!challenge || challenge.type !== 'QUIZ') return null;
+        if (!challenge || challenge.type !== 'QUIZ') {return null;}
 
         let quizConfig: ParsedQuizConfig | null = null;
 
@@ -306,7 +306,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Helper function to check if verification methods array exists
     const hasVerificationMethods = () => {
-        if (!challenge?.verificationMethod) return false;
+        if (!challenge?.verificationMethod) {return false;}
 
         try {
             // If it's already an array
@@ -328,7 +328,7 @@ const ChallengeDetailsScreen: React.FC = () => {
 
     // Helper to get verification methods safely
     const getVerificationMethods = (): any[] => {
-        if (!challenge?.verificationMethod) return [];
+        if (!challenge?.verificationMethod) {return [];}
 
         try {
             // If it's already an array
@@ -454,7 +454,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: config.roundTime || 30,
                 totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
-                questionSource: 'app'
+                questionSource: 'app',
             }).unwrap();
 
             navigation.navigate('WWWGamePlay', {
@@ -497,7 +497,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: blitzRoundTime,
                 totalRounds: config.roundCount || 10,
                 enableAiHost: blitzAIHost,
-                questionSource: 'app'
+                questionSource: 'app',
             }).unwrap();
 
             navigation.navigate('WWWGamePlay', {
@@ -527,7 +527,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: config.roundTime || 20,
                 totalRounds: config.roundCount || 10,
                 enableAiHost: false, // Usually no AI host for standard trivia
-                questionSource: 'app'
+                questionSource: 'app',
             }).unwrap();
 
             // Reuse WWWGamePlay for now, or create TriviaGamePlay later
@@ -562,7 +562,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
                 questionSource: 'user', // Important: source is user/custom
-                customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined
+                customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
             }).unwrap();
 
             navigation.navigate('WWWGamePlay', {

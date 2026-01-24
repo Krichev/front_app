@@ -14,9 +14,9 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSearchUsersQuery } from '../entities/UserState/model/slice/userApi';
 import { useCreateRelationshipMutation } from '../entities/UserState/model/slice/relationshipApi';
-import { 
-    RelationshipType, 
-    UserSearchResult 
+import {
+    RelationshipType,
+    UserSearchResult,
 } from '../entities/QuizState/model/types/question.types';
 
 export const AddContactScreen: React.FC = () => {
@@ -50,13 +50,13 @@ export const AddContactScreen: React.FC = () => {
     };
 
     const handleSendRequest = async (type: RelationshipType) => {
-        if (!selectedUser) return;
+        if (!selectedUser || isCreating) {return;}
 
         try {
             await createRelationship({
                 relatedUserId: selectedUser.id,
                 relationshipType: type,
-                nickname: nickname.trim() || undefined
+                nickname: nickname.trim() || undefined,
             }).unwrap();
 
             Alert.alert('Success', `Relationship request sent to ${selectedUser.username}`);
@@ -85,7 +85,7 @@ export const AddContactScreen: React.FC = () => {
                     <Text style={styles.mutualText}>{item.mutualConnectionsCount} mutual connections</Text>
                 )}
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => handleSelectUser(item)}
             >
@@ -136,7 +136,7 @@ export const AddContactScreen: React.FC = () => {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>Add {selectedUser?.username}</Text>
-                        
+
                         <TextInput
                             style={styles.nicknameInput}
                             placeholder="Add nickname (optional)"
@@ -145,13 +145,14 @@ export const AddContactScreen: React.FC = () => {
                         />
 
                         <Text style={styles.pickerLabel}>Select relationship type:</Text>
-                        
+
                         <View style={styles.typeGrid}>
                             {Object.values(RelationshipType).map((type) => (
                                 <TouchableOpacity
                                     key={type}
-                                    style={styles.typeButton}
+                                    style={[styles.typeButton, isCreating && { opacity: 0.5 }]}
                                     onPress={() => handleSendRequest(type)}
+                                    disabled={isCreating}
                                 >
                                     <Text style={styles.typeButtonText}>
                                         {type.replace('_', ' ')}
@@ -160,9 +161,10 @@ export const AddContactScreen: React.FC = () => {
                             ))}
                         </View>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.cancelButton}
                             onPress={() => setShowTypePicker(false)}
+                            disabled={isCreating}
                         >
                             <Text style={styles.cancelButtonText}>Cancel</Text>
                         </TouchableOpacity>

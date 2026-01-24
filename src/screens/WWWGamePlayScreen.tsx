@@ -20,7 +20,7 @@ import {
     useCompleteQuizSessionMutation,
     useGetQuizRoundsQuery,
     useGetQuizSessionQuery,
-    useSubmitRoundAnswerMutation
+    useSubmitRoundAnswerMutation,
 } from '../entities/QuizState/model/slice/quizApi';
 import {useGetChallengeAudioConfigQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import { useSubmitRecordingMutation } from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
@@ -28,7 +28,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import VoiceRecorder from '../components/VoiceRecorder';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
-import { KaraokeQuestionDisplay } from './components/KaraokeQuestionDisplay';
 import { AudioChallengeContainer } from './components/audio';
 import QuestionMediaViewer from './CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { MediaType } from '../services/wwwGame/questionService';
@@ -49,14 +48,14 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // API hooks - with proper type guards
     const { data: session, isLoading: isLoadingSession } = useGetQuizSessionQuery(sessionId!, {
-        skip: !sessionId
+        skip: !sessionId,
     });
     const { data: rounds = [], isLoading: isLoadingRounds, refetch: refetchRounds } = useGetQuizRoundsQuery(sessionId!, {
-        skip: !sessionId
+        skip: !sessionId,
     });
-    const [beginQuizSession] = useBeginQuizSessionMutation();
-    const [submitRoundAnswer] = useSubmitRoundAnswerMutation();
-    const [completeQuizSession] = useCompleteQuizSessionMutation();
+    const [beginQuizSession, { isLoading: isBeginningSession }] = useBeginQuizSessionMutation();
+    const [submitRoundAnswer, { isLoading: isSubmittingAnswer }] = useSubmitRoundAnswerMutation();
+    const [completeQuizSession, { isLoading: isCompletingSession }] = useCompleteQuizSessionMutation();
     const [submitRecording, { isLoading: isSubmittingAudio }] = useSubmitRecordingMutation();
 
     // Fetch challenge audio configuration if challengeId exists
@@ -98,14 +97,14 @@ const WWWGamePlayScreen: React.FC = () => {
     };
 
     const hasQuestionMedia = (question: any): boolean => {
-        if (!question) return false;
+        if (!question) {return false;}
         // Has media if questionType is not TEXT, or if questionMediaType is set
         const type = question.questionType?.toUpperCase();
         return (type && type !== 'TEXT') || !!question.questionMediaType;
     };
 
     const getMediaType = (question: any): MediaType | null => {
-        if (!question) return null;
+        if (!question) {return null;}
         // Prefer questionMediaType if available
         const mediaType = question.questionMediaType?.toUpperCase();
         if (mediaType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mediaType)) {
@@ -152,7 +151,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         />
                     </View>
                 )}
-                
+
                 {/* Question text */}
                 {showText && (
                     <Text style={styles.question}>{question?.question}</Text>
@@ -224,13 +223,20 @@ const WWWGamePlayScreen: React.FC = () => {
         }
 
         return () => {
-            if (interval) clearInterval(interval);
+            if (interval) {clearInterval(interval);}
         };
     }, [isTimerRunning, timer, gamePhase, session?.roundTimeSeconds, timerAnimation]);
 
     // Start the game session
     const startGame = async () => {
-        if (!session || !sessionId) return;
+        if (!session || !sessionId) {return;}
+        if (isBeginningSession) {return;} // Guard: Already in progress
+
+        if (session.status === 'IN_PROGRESS') {
+            // Session already started, just update UI
+            setGamePhase('question');
+            return;
+        }
 
         try {
             await beginQuizSession(sessionId).unwrap();
@@ -268,7 +274,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Submit audio answer
     const submitAudioAnswer = async () => {
-        if (!recordedAudio || !currentRoundData || !sessionId) return;
+        if (!recordedAudio || !currentRoundData || !sessionId || isSubmittingAudio || isSubmittingAnswer) {return;}
 
         try {
             // Submit to audio challenge API for scoring
@@ -285,7 +291,7 @@ const WWWGamePlayScreen: React.FC = () => {
                     teamAnswer: `Audio submission: ${result.id}`,
                     playerWhoAnswered: selectedPlayer || 'Team',
                     discussionNotes: discussionNotes.trim(),
-                }
+                },
             }).unwrap();
 
             setGamePhase('feedback');
@@ -298,8 +304,8 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Submit round answer (text)
     const submitAnswer = async () => {
-        if (!currentRoundData || !teamAnswer.trim() || !sessionId) {
-            Alert.alert('Error', 'Please provide an answer');
+        if (!currentRoundData || !teamAnswer.trim() || !sessionId || isSubmittingAnswer) {
+            if (!teamAnswer.trim()) Alert.alert('Error', 'Please provide an answer');
             return;
         }
 
@@ -313,7 +319,7 @@ const WWWGamePlayScreen: React.FC = () => {
             await submitRoundAnswer({
                 sessionId,
                 roundId: currentRoundData.id,
-                answer: request
+                answer: request,
             }).unwrap();
 
             // Move to feedback phase
@@ -347,7 +353,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Complete the game
     const completeGame = async () => {
-        if (!sessionId) return;
+        if (!sessionId || isCompletingSession) {return;}
 
         try {
             await completeQuizSession(sessionId).unwrap();
@@ -360,7 +366,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
     // Navigate to results
     const goToResults = () => {
-        if (!sessionId || !session) return;
+        if (!sessionId || !session) {return;}
 
         setShowEndGameModal(false);
 
@@ -371,7 +377,7 @@ const WWWGamePlayScreen: React.FC = () => {
             teamAnswer: round.teamAnswer || '',
             isCorrect: round.isCorrect,
             playerWhoAnswered: round.playerWhoAnswered || '',
-            discussionNotes: round.discussionNotes || ''
+            discussionNotes: round.discussionNotes || '',
         }));
 
         navigation.navigate('WWWGameResults', {
@@ -382,7 +388,7 @@ const WWWGamePlayScreen: React.FC = () => {
             challengeId: challengeId,
             sessionId: sessionId,
             gameStartTime: session.startedAt,
-            gameDuration: session.totalDurationSeconds
+            gameDuration: session.totalDurationSeconds,
         });
     };
 
@@ -410,16 +416,19 @@ const WWWGamePlayScreen: React.FC = () => {
                             When you're ready to begin, press the button below.
                         </Text>
                         <TouchableOpacity
-                            style={styles.primaryButton}
+                            style={[styles.primaryButton, isBeginningSession && styles.disabledButton]}
                             onPress={startGame}
+                            disabled={isBeginningSession}
                         >
-                            <Text style={styles.buttonText}>Start Quiz</Text>
+                            <Text style={styles.buttonText}>
+                                {isBeginningSession ? 'Starting...' : 'Start Quiz'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 );
 
             case 'question':
-                if (!currentRoundData) return null;
+                if (!currentRoundData) {return null;}
                 const questionData = currentRoundData.question;
 
                 // DEBUG: Log question data to verify audio fields are present
@@ -435,7 +444,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         <Text style={styles.questionNumber}>
                             Question {currentRound + 1} of {session?.totalRounds || rounds.length}
                         </Text>
-                        
+
                         {isAudioChallenge(questionData) ? (
                             <AudioChallengeContainer
                                 question={questionData as any}
@@ -450,14 +459,14 @@ const WWWGamePlayScreen: React.FC = () => {
                             onPress={isAudioChallenge(questionData) ? () => setGamePhase('answer') : startDiscussion}
                         >
                             <Text style={styles.buttonText}>
-                                {isAudioChallenge(questionData) ? "Ready to Record" : "Start Discussion"}
+                                {isAudioChallenge(questionData) ? 'Ready to Record' : 'Start Discussion'}
                             </Text>
                         </TouchableOpacity>
                     </View>
                 );
 
             case 'discussion':
-                if (!currentRoundData) return null;
+                if (!currentRoundData) {return null;}
 
                 return (
                     <View style={styles.phaseContainer}>
@@ -471,15 +480,15 @@ const WWWGamePlayScreen: React.FC = () => {
                                             width: timerAnimation.interpolate({
                                                 inputRange: [0, 1],
                                                 outputRange: ['0%', '100%'],
-                                            })
-                                        }
+                                            }),
+                                        },
                                     ]}
                                 />
                             </View>
                         </View>
 
                         <Text style={styles.discussionTitle}>Team Discussion</Text>
-                        
+
                         {isAudioChallenge(currentRoundData.question) ? (
                             <Text style={styles.question}>Audio Challenge</Text>
                         ) : (
@@ -523,7 +532,7 @@ const WWWGamePlayScreen: React.FC = () => {
                 );
 
             case 'answer':
-                if (!currentRoundData) return null;
+                if (!currentRoundData) {return null;}
                 const answerQuestionData = currentRoundData.question;
 
                 if (isAudioChallenge(answerQuestionData)) {
@@ -580,12 +589,12 @@ const WWWGamePlayScreen: React.FC = () => {
                                 <TouchableOpacity
                                     style={[
                                         styles.voiceAnswerButton,
-                                        isRecordingVoiceAnswer && styles.voiceAnswerButtonActive
+                                        isRecordingVoiceAnswer && styles.voiceAnswerButtonActive,
                                     ]}
                                     onPress={toggleVoiceAnswer}
                                 >
                                     <MaterialCommunityIcons
-                                        name={isRecordingVoiceAnswer ? "stop" : "microphone"}
+                                        name={isRecordingVoiceAnswer ? 'stop' : 'microphone'}
                                         size={20}
                                         color="white"
                                     />
@@ -617,13 +626,13 @@ const WWWGamePlayScreen: React.FC = () => {
                                             key={player}
                                             style={[
                                                 styles.playerButton,
-                                                selectedPlayer === player && styles.selectedPlayerButton
+                                                selectedPlayer === player && styles.selectedPlayerButton,
                                             ]}
                                             onPress={() => setSelectedPlayer(player)}
                                         >
                                             <Text style={[
                                                 styles.playerButtonText,
-                                                selectedPlayer === player && styles.selectedPlayerText
+                                                selectedPlayer === player && styles.selectedPlayerText,
                                             ]}>
                                                 {player}
                                             </Text>
@@ -646,17 +655,19 @@ const WWWGamePlayScreen: React.FC = () => {
                         </View>
 
                         <TouchableOpacity
-                            style={[styles.primaryButton, !teamAnswer.trim() && styles.disabledButton]}
+                            style={[styles.primaryButton, (!teamAnswer.trim() || isSubmittingAnswer) && styles.disabledButton]}
                             onPress={submitAnswer}
-                            disabled={!teamAnswer.trim()}
+                            disabled={!teamAnswer.trim() || isSubmittingAnswer}
                         >
-                            <Text style={styles.buttonText}>Submit Answer</Text>
+                            <Text style={styles.buttonText}>
+                                {isSubmittingAnswer ? 'Submitting...' : 'Submit Answer'}
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 );
 
             case 'feedback':
-                if (!currentRoundData) return null;
+                if (!currentRoundData) {return null;}
 
                 const isCorrect = currentRoundData.isCorrect;
 
@@ -676,7 +687,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
                             <View style={[
                                 styles.resultBadge,
-                                isCorrect ? styles.correctBadge : styles.incorrectBadge
+                                isCorrect ? styles.correctBadge : styles.incorrectBadge,
                             ]}>
                                 <Text style={styles.resultBadgeText}>
                                     {isCorrect ? 'CORRECT' : 'INCORRECT'}
