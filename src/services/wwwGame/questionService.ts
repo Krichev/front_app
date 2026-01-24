@@ -218,6 +218,7 @@ export class QuestionService {
             queryParams.append('page', (params.page ?? 0).toString());
             queryParams.append('size', (params.size ?? 20).toString());
 
+            // Uses QuizQuestionSearchController (/api/quiz/questions)
             const url = `${this.baseUrl}/quiz/questions/search/advanced?${queryParams.toString()}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
@@ -244,7 +245,8 @@ export class QuestionService {
      */
     static async getAvailableTopics(): Promise<string[]> {
         try {
-            const url = `${this.baseUrl}/quiz/questions/topics`;
+            // Uses QuizQuestionController (/api/quiz-questions)
+            const url = `${this.baseUrl}/quiz-questions/topics`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -274,6 +276,7 @@ export class QuestionService {
             queryParams.append('count', count.toString());
             if (difficulty) queryParams.append('difficulty', difficulty);
 
+            // Uses QuizQuestionSearchController (/api/quiz/questions)
             const url = `${this.baseUrl}/quiz/questions/random?${queryParams.toString()}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
@@ -305,6 +308,7 @@ export class QuestionService {
             queryParams.append('page', '0');
             queryParams.append('size', count.toString());
 
+            // Uses QuizQuestionSearchController (/api/quiz/questions)
             const url = `${this.baseUrl}/quiz/questions/search?${queryParams.toString()}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
@@ -343,7 +347,8 @@ export class QuestionService {
      */
     static async createUserQuestion(question: Omit<UserQuestion, 'id'>): Promise<UserQuestion> {
         try {
-            const url = `${this.baseUrl}/quiz/questions`;
+            // Uses QuizQuestionController (/api/quiz-questions)
+            const url = `${this.baseUrl}/quiz-questions/questions`;
             const response = await this.fetchWithAuth(url, {
                 method: 'POST',
                 body: JSON.stringify(question)
@@ -365,7 +370,8 @@ export class QuestionService {
      */
     static async getUserQuestions(): Promise<UserQuestion[]> {
         try {
-            const url = `${this.baseUrl}/quiz/questions/me?size=1000`;
+            // Uses QuizQuestionController (/api/quiz-questions)
+            const url = `${this.baseUrl}/quiz-questions/user/my-questions?size=1000`;
             const response = await this.fetchWithAuth(url, {
                 method: 'GET'
             });
@@ -375,8 +381,12 @@ export class QuestionService {
             }
 
             const data = await response.json();
-            // The /me endpoint returns a Page object
-            return data.content || [];
+            // The /me endpoint returns a Page object (or List, check controller)
+            // QuizQuestionController.getUserQuestions returns List<QuizQuestionDTO> (wrapped in ResponseEntity)
+            // But searchUserQuestions returns Page.
+            // In QuizQuestionController.java: ResponseEntity<List<QuizQuestionDTO>> getUserQuestions(...)
+            // So it returns a LIST.
+            return data || [];
         } catch (error) {
             console.error('❌ Error fetching user questions:', error);
             throw new Error('Failed to fetch your questions. Please try again.');
@@ -388,7 +398,8 @@ export class QuestionService {
      */
     static async updateUserQuestion(id: number, question: Partial<UserQuestion>): Promise<UserQuestion> {
         try {
-            const url = `${this.baseUrl}/quiz/questions/${id}`;
+            // Uses QuizQuestionController (/api/quiz-questions)
+            const url = `${this.baseUrl}/quiz-questions/${id}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'PUT',
                 body: JSON.stringify(question)
@@ -410,7 +421,8 @@ export class QuestionService {
      */
     static async deleteUserQuestion(id: number): Promise<void> {
         try {
-            const url = `${this.baseUrl}/quiz/questions/${id}`;
+            // Uses QuizQuestionController (/api/quiz-questions)
+            const url = `${this.baseUrl}/quiz-questions/${id}`;
             const response = await this.fetchWithAuth(url, {
                 method: 'DELETE'
             });
