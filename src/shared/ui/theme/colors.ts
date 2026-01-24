@@ -80,6 +80,13 @@ export const colors: Colors = {
         dark: '#1a1a1a',
     },
 
+    // Overlay colors
+    overlay: {
+        light: 'rgba(0, 0, 0, 0.3)',
+        medium: 'rgba(0, 0, 0, 0.5)',
+        dark: 'rgba(0, 0, 0, 0.7)',
+    },
+
     // Text colors
     text: {
         primary: '#111827',

@@ -477,7 +477,7 @@ const WWWGamePlayScreen: React.FC = () => {
                             <Text style={styles.timerText}>{timer} seconds</Text>
                             <View style={styles.timerBar}>
                                 <Animated.View
-                                    style={[
+                                    style={[ 
                                         styles.timerProgress,
                                         {
                                             width: timerAnimation.interpolate({
@@ -591,7 +591,7 @@ const WWWGamePlayScreen: React.FC = () => {
                         {isVoiceRecordingEnabled && (
                             <View style={styles.voiceAnswerContainer}>
                                 <TouchableOpacity
-                                    style={[
+                                    style={[ 
                                         styles.voiceAnswerButton,
                                         isRecordingVoiceAnswer && styles.voiceAnswerButtonActive,
                                     ]}
@@ -826,7 +826,9 @@ const themeStyles = createStyles(theme => ({
     },
     loadingText: {
         marginTop: theme.spacing.md,
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         color: theme.colors.text.secondary,
     },
     errorContainer: {
@@ -837,7 +839,9 @@ const themeStyles = createStyles(theme => ({
     },
     errorText: {
         marginTop: theme.spacing.md,
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         color: theme.colors.error.main,
         textAlign: 'center',
         marginBottom: theme.spacing['2xl'],
@@ -851,33 +855,40 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing['2xl'],
     },
     waitingTitle: {
-        ...theme.typography.heading.h5,
+        fontSize: theme.typography.heading.h5.fontSize,
+        lineHeight: theme.typography.heading.h5.lineHeight,
+        fontFamily: theme.typography.heading.h5.fontFamily,
+        letterSpacing: theme.typography.heading.h5.letterSpacing,
         fontWeight: theme.typography.fontWeight.bold,
         textAlign: 'center',
         color: theme.colors.text.primary,
         marginBottom: theme.spacing.lg,
     },
     waitingText: {
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         textAlign: 'center',
         color: theme.colors.text.secondary,
-        lineHeight: 24,
         marginBottom: theme.spacing['3xl'],
     },
     questionNumber: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         textAlign: 'center',
         marginBottom: theme.spacing.sm,
     },
     question: {
-        ...theme.typography.heading.h6,
+        fontSize: theme.typography.heading.h6.fontSize,
+        lineHeight: theme.typography.heading.h6.lineHeight,
+        fontFamily: theme.typography.heading.h6.fontFamily,
+        letterSpacing: theme.typography.heading.h6.letterSpacing,
         fontWeight: theme.typography.fontWeight.semibold,
         color: theme.colors.text.primary,
         textAlign: 'center',
         marginBottom: theme.spacing['3xl'],
-        lineHeight: 28,
-        fontFamily: Platform.OS === 'ios' ? 'System' : theme.typography.fontFamily.primary,
     },
     primaryButton: {
         backgroundColor: theme.colors.success.main,
@@ -900,14 +911,18 @@ const themeStyles = createStyles(theme => ({
     },
     buttonText: {
         color: theme.colors.text.inverse,
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
     },
     timerContainer: {
         marginBottom: theme.spacing.lg,
     },
     timerText: {
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
         marginBottom: theme.spacing.sm,
@@ -924,7 +939,9 @@ const themeStyles = createStyles(theme => ({
         backgroundColor: theme.colors.success.main,
     },
     discussionTitle: {
-        ...theme.typography.body.large,
+        fontSize: theme.typography.body.large.fontSize,
+        lineHeight: theme.typography.body.large.lineHeight,
+        fontFamily: theme.typography.body.large.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
         marginBottom: theme.spacing.lg,
@@ -933,7 +950,9 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing.lg,
     },
     notesLabel: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         marginBottom: theme.spacing.sm,
     },
@@ -947,7 +966,9 @@ const themeStyles = createStyles(theme => ({
         color: theme.colors.text.primary,
     },
     answerTitle: {
-        ...theme.typography.body.large,
+        fontSize: theme.typography.body.large.fontSize,
+        lineHeight: theme.typography.body.large.lineHeight,
+        fontFamily: theme.typography.body.large.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
         marginBottom: theme.spacing.lg,
@@ -956,7 +977,9 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing.lg,
     },
     formLabel: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         marginBottom: theme.spacing.sm,
     },
@@ -986,7 +1009,9 @@ const themeStyles = createStyles(theme => ({
         borderColor: theme.colors.border.light,
         borderRadius: theme.layout.borderRadius.md,
         padding: theme.spacing.md,
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         minHeight: 80,
         textAlignVertical: 'top',
         color: theme.colors.text.primary,
@@ -1011,7 +1036,9 @@ const themeStyles = createStyles(theme => ({
         fontStyle: 'italic',
     },
     feedbackTitle: {
-        ...theme.typography.body.large,
+        fontSize: theme.typography.body.large.fontSize,
+        lineHeight: theme.typography.body.large.lineHeight,
+        fontFamily: theme.typography.body.large.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
         marginBottom: theme.spacing.lg,
@@ -1023,12 +1050,16 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing.lg,
     },
     resultLabel: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         marginBottom: 4,
     },
     resultValue: {
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         color: theme.colors.text.primary,
         fontWeight: theme.typography.fontWeight.medium,
         marginBottom: theme.spacing.md,
@@ -1058,7 +1089,9 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing.lg,
     },
     aiFeedbackTitle: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.info.dark,
         fontWeight: theme.typography.fontWeight.bold,
         marginBottom: theme.spacing.sm,
@@ -1083,19 +1116,26 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing.lg,
     },
     modalTitle: {
-        ...theme.typography.heading.h6,
+        fontSize: theme.typography.heading.h6.fontSize,
+        lineHeight: theme.typography.heading.h6.lineHeight,
+        fontFamily: theme.typography.heading.h6.fontFamily,
+        letterSpacing: theme.typography.heading.h6.letterSpacing,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
         marginBottom: theme.spacing.lg,
     },
     modalText: {
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         color: theme.colors.text.secondary,
         marginBottom: theme.spacing.sm,
         textAlign: 'center',
     },
     modalScore: {
-        ...theme.typography.body.large,
+        fontSize: theme.typography.body.large.fontSize,
+        lineHeight: theme.typography.body.large.lineHeight,
+        fontFamily: theme.typography.body.large.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.success.main,
         marginBottom: theme.spacing['2xl'],
@@ -1109,7 +1149,9 @@ const themeStyles = createStyles(theme => ({
     },
     modalButtonText: {
         color: theme.colors.text.inverse,
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
     },
     voiceRecorderContainer: {
@@ -1126,12 +1168,16 @@ const themeStyles = createStyles(theme => ({
     },
     transcriptionLabel: {
         fontWeight: theme.typography.fontWeight.bold,
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         marginBottom: 4,
     },
     transcriptionText: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.primary,
         fontStyle: 'italic',
     },
@@ -1153,7 +1199,9 @@ const themeStyles = createStyles(theme => ({
     },
     voiceAnswerButtonText: {
         color: theme.colors.text.inverse,
-        ...theme.typography.body.medium,
+        fontSize: theme.typography.body.medium.fontSize,
+        lineHeight: theme.typography.body.medium.lineHeight,
+        fontFamily: theme.typography.body.medium.fontFamily,
         fontWeight: theme.typography.fontWeight.bold,
         marginLeft: theme.spacing.sm,
     },
@@ -1172,7 +1220,9 @@ const themeStyles = createStyles(theme => ({
     },
     scoreRequirementText: {
         flex: 1,
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         fontWeight: theme.typography.fontWeight.medium,
     },
@@ -1194,7 +1244,9 @@ const themeStyles = createStyles(theme => ({
         gap: theme.spacing.sm,
     },
     mediaTypeLabel: {
-        ...theme.typography.body.small,
+        fontSize: theme.typography.body.small.fontSize,
+        lineHeight: theme.typography.body.small.lineHeight,
+        fontFamily: theme.typography.body.small.fontFamily,
         color: theme.colors.text.secondary,
         fontWeight: theme.typography.fontWeight.medium,
     },

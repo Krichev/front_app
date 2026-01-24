@@ -81,6 +81,13 @@ export interface Colors {
         dark: string;
     };
 
+    // Overlay colors
+    overlay: {
+        light: string;
+        medium: string;
+        dark: string;
+    };
+
     // Text colors
     text: {
         primary: string;
