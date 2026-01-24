@@ -82,7 +82,9 @@ export type RootStackParamList = {
     UserQuestions: undefined;
     CreateUserQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
-    CreateAudioQuestion: { onSubmit?: (question: any) => void };
+    CreateAudioQuestion: { 
+        returnTo?: 'CreateWWWQuest' | 'UserQuestions';
+    };
     RhythmChallenge: {
         questionId: number;
         onComplete?: (passed: boolean, score: number) => void;

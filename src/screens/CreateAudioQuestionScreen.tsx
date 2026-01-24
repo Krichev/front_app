@@ -21,8 +21,11 @@ import {useAudioQuestionSubmit} from './components/hooks/useAudioQuestionSubmit'
 
 type RootStackParamList = {
     UserQuestions: undefined;
-    CreateAudioQuestion: { onSubmit?: (question: any) => void };
+    CreateAudioQuestion: { 
+        returnTo?: 'CreateWWWQuest' | 'UserQuestions';
+    };
     AudioQuestionDetail: {questionId: number};
+    CreateWWWQuest: undefined;
 };
 
 type CreateAudioQuestionRouteProp = RouteProp<RootStackParamList, 'CreateAudioQuestion'>;
@@ -39,16 +42,14 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateAudio
 const CreateAudioQuestionScreen: React.FC = () => {
     const navigation = useNavigation<NavigationProp>();
     const route = useRoute<CreateAudioQuestionRouteProp>();
-    const onSubmitCallback = route.params?.onSubmit;
-    const [lastSubmittedData, setLastSubmittedData] = useState<AudioQuestionFormData | null>(null);
+    const returnTo = route.params?.returnTo;
     const [formResetKey, setFormResetKey] = useState(0);
 
     const {submitAudioQuestion, isSubmitting, resetMutation} = useAudioQuestionSubmit({
         onSuccess: (questionId) => {
             console.log('✅ Audio question created:', questionId);
-            if (onSubmitCallback && lastSubmittedData) {
-                onSubmitCallback({ ...lastSubmittedData, id: questionId });
-                navigation.goBack();
+            if (returnTo === 'CreateWWWQuest') {
+                navigation.goBack(); // Return to the previous screen (CreateWWWQuestScreen)
             } else {
                 navigation.navigate('UserQuestions');
             }
@@ -62,7 +63,6 @@ const CreateAudioQuestionScreen: React.FC = () => {
         useCallback(() => {
             // Reset mutation state when screen gains focus
             resetMutation();
-            setLastSubmittedData(null);
             // Force form reset by updating key
             setFormResetKey(prev => prev + 1);
             
@@ -74,7 +74,6 @@ const CreateAudioQuestionScreen: React.FC = () => {
 
     const handleSubmit = useCallback(
         async (formData: AudioQuestionFormData) => {
-            setLastSubmittedData(formData);
             await submitAudioQuestion(formData);
         },
         [submitAudioQuestion]

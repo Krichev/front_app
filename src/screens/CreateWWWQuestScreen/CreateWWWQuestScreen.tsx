@@ -139,21 +139,12 @@ const CreateWWWQuestScreen = () => {
         setShowTypeSelector(false);
         if (category === 'KARAOKE') {
             navigation.navigate('CreateAudioQuestion', {
-                onSubmit: handleAudioQuestionCreated
+                returnTo: 'CreateWWWQuest'
             });
         } else {
             setPreSelectedMediaType(null);
             setShowUnifiedQuestionModal(true);
         }
-    };
-
-    const handleAudioQuestionCreated = (question: any) => {
-        // This function will be called from CreateAudioQuestionScreen
-        // with the newly created audio question.
-        // We can then add it to our custom questions list.
-        console.log('Audio question created:', question);
-        // Assuming questionsManager has a method to add a custom question
-        // questionsManager.addCustomQuestion(question);
     };
 
     return (
