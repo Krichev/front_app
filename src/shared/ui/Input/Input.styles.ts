@@ -1,6 +1,6 @@
 import {StyleSheet, TextStyle, ViewStyle} from "react-native";
 import {InputSize, InputState, InputVariant} from "./Input";
-import {theme} from "../theme";
+import type {Theme} from "../theme/types";
 
 // Define the InputStyle type
 interface InputStyle {
@@ -13,7 +13,7 @@ interface InputStyle {
 }
 
 // Helper function to generate size-specific styles
-const getSizeStyles = (size: InputSize): { container: ViewStyle; text: TextStyle } => {
+const getSizeStyles = (size: InputSize, theme: Theme): { container: ViewStyle; text: TextStyle } => {
     const sizeStyles: Record<InputSize, { container: ViewStyle; text: TextStyle }> = {
         [InputSize.SMALL]: {
             container: {
@@ -53,7 +53,7 @@ const getSizeStyles = (size: InputSize): { container: ViewStyle; text: TextStyle
 };
 
 // Helper function to generate variant-specific styles
-const getVariantStyles = (variant: InputVariant): ViewStyle => {
+const getVariantStyles = (variant: InputVariant, theme: Theme): ViewStyle => {
     const variantStyles: Record<InputVariant, ViewStyle> = {
         [InputVariant.DEFAULT]: {
             ...theme.components.input.field,
@@ -84,7 +84,7 @@ const getVariantStyles = (variant: InputVariant): ViewStyle => {
 };
 
 // Helper function to generate state-specific styles
-const getStateStyles = (state: InputState): { field: ViewStyle; text: TextStyle } => {
+const getStateStyles = (state: InputState, theme: Theme): { field: ViewStyle; text: TextStyle } => {
     const stateStyles: Record<InputState, { field: ViewStyle; text: TextStyle }> = {
         [InputState.DEFAULT]: {
             field: {},
@@ -141,7 +141,7 @@ const getStateStyles = (state: InputState): { field: ViewStyle; text: TextStyle 
 };
 
 // Helper function to get support text styles (helper or error)
-const getSupportTextStyles = (isError: boolean): TextStyle => {
+const getSupportTextStyles = (isError: boolean, theme: Theme): TextStyle => {
     return isError
         ? theme.components.input.errorText
         : theme.components.input.helperText;
@@ -153,12 +153,13 @@ export const getInputStyle = (
     size: InputSize,
     state: InputState,
     hasAddons: boolean,
-    isErrorText: boolean = false
+    isErrorText: boolean = false,
+    theme: Theme
 ): InputStyle => {
-    const sizeStyles = getSizeStyles(size);
-    const variantStyles = getVariantStyles(variant);
-    const stateStyles = getStateStyles(state);
-    const supportTextStyles = getSupportTextStyles(isErrorText);
+    const sizeStyles = getSizeStyles(size, theme);
+    const variantStyles = getVariantStyles(variant, theme);
+    const stateStyles = getStateStyles(state, theme);
+    const supportTextStyles = getSupportTextStyles(isErrorText, theme);
 
     const baseContainerStyles: ViewStyle = {
         flexDirection: hasAddons ? 'row' : 'column',
@@ -216,7 +217,7 @@ export const getInputStyle = (
 };
 
 // Helper function to get addon styles
-export const getAddonStyles = (position: 'left' | 'right'): ViewStyle => {
+export const getAddonStyles = (position: 'left' | 'right', theme: Theme): ViewStyle => {
     return StyleSheet.create({
         addon: {
             justifyContent: 'center',
@@ -228,7 +229,7 @@ export const getAddonStyles = (position: 'left' | 'right'): ViewStyle => {
 };
 
 // Helper function to get placeholder text color based on state
-export const getPlaceholderTextColor = (state: InputState): string => {
+export const getPlaceholderTextColor = (state: InputState, theme: Theme): string => {
     switch (state) {
         case InputState.DISABLED:
         case InputState.READONLY:

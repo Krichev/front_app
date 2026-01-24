@@ -1,6 +1,7 @@
 import React, {memo, ReactNode, useEffect, useRef, useState} from 'react';
 import {Text, TextInput, TextInputProps, TextStyle, View, ViewStyle} from 'react-native';
 import {getAddonStyles, getInputStyle, getPlaceholderTextColor} from './Input.styles';
+import {useTheme} from '../theme';
 
 // Input size enumeration
 export enum InputSize {
@@ -67,6 +68,7 @@ export const Input = memo((props: InputProps) => {
         ...otherProps
     } = props;
 
+    const theme = useTheme();
     const ref = useRef<TextInput>(null);
     const [isFocused, setIsFocused] = useState(false);
 
@@ -100,14 +102,14 @@ export const Input = memo((props: InputProps) => {
     const isErrorText = !!errorText;
 
     // Get computed styles
-    const computedStyles = getInputStyle(variant, size, currentState, hasAddons, isErrorText);
-    const placeholderColor = getPlaceholderTextColor(currentState);
+    const computedStyles = getInputStyle(variant, size, currentState, hasAddons, isErrorText, theme);
+    const placeholderColor = getPlaceholderTextColor(currentState, theme);
 
     // Build the input field
     const inputField = (
         <View style={[computedStyles.field, containerStyle]}>
             {addonLeft && (
-                <View style={[computedStyles.addon, getAddonStyles('left')]}>
+                <View style={[computedStyles.addon, getAddonStyles('left', theme)]}>
                     {addonLeft}
                 </View>
             )}
@@ -130,7 +132,7 @@ export const Input = memo((props: InputProps) => {
             />
 
             {addonRight && (
-                <View style={[computedStyles.addon, getAddonStyles('right')]}>
+                <View style={[computedStyles.addon, getAddonStyles('right', theme)]}>
                     {addonRight}
                 </View>
             )}
