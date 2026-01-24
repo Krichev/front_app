@@ -23,7 +23,7 @@ const GamesHomeScreen: React.FC = () => {
             description: 'A team trivia game where players discuss and answer challenging questions.',
             icon: 'brain',
             color: '#4CAF50',
-            onPress: () => navigation.navigate('WWWGameSetup', { selectedQuestions: undefined }), // Fixed: include empty params object
+            onPress: () => navigation.navigate('CreateWWWQuest'),
         },
         {
             id: 'rhythm',
@@ -53,7 +53,7 @@ const GamesHomeScreen: React.FC = () => {
             description: 'Add, edit, and manage questions for the WWW_QUIZ game.',
             icon: 'playlist-edit',
             color: '#673AB7',
-            onPress: () => navigation.navigate('QuestionManagement'),
+            onPress: () => navigation.navigate('QuestionManagement' as any), // Type cast as it might not be in RootStackParamList yet or defined elsewhere
         }
     ];
 
@@ -97,7 +97,7 @@ const GamesHomeScreen: React.FC = () => {
                     <Text style={styles.sectionTitle}>Featured Game</Text>
                     <TouchableOpacity
                         style={styles.featuredGameCard}
-                        onPress={() => navigation.navigate('WWWGameSetup', { selectedQuestions: undefined })} // Fixed: include empty params object
+                        onPress={() => navigation.navigate('CreateWWWQuest')}
                     >
                         <Image
                             source={require('../../assets/www-game-banner.png')}
@@ -112,7 +112,7 @@ const GamesHomeScreen: React.FC = () => {
                             <View style={styles.playButtonContainer}>
                                 <TouchableOpacity
                                     style={styles.playButton}
-                                    onPress={() => navigation.navigate('WWWGameSetup', { selectedQuestions: undefined })} // Fixed: include empty params object
+                                    onPress={() => navigation.navigate('CreateWWWQuest')}
                                 >
                                     <Text style={styles.playButtonText}>PLAY NOW</Text>
                                 </TouchableOpacity>

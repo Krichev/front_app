@@ -18,12 +18,10 @@ import CreateChallengeScreen from '../screens/CreateChallengeScreen';
 import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen/CreateWWWQuestScreen.tsx';
 import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
 import LocationVerificationScreen from '../screens/LocationVerificationScreen';
-import WWWGameSetupScreen from '../screens/WWWGameSetupScreen';
 import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
 import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
-import GamesHomeScreen from '../screens/GamesHomeScreen';
 import {ContactsScreen} from '../screens/ContactsScreen';
 import {AddContactScreen} from '../screens/AddContactScreen';
 import UserQuestionsScreen from '../screens/UserQuestionsScreen';
@@ -56,10 +54,6 @@ export type RootStackParamList = {
     EditProfile: {userId: string};
     Contacts: undefined;
     AddContact: {selectedUserId?: string};
-    WWWGameSetup: {
-        selectedQuestions?: QuizQuestion[];
-        challengeId?: string;
-    };
     WWWGamePlay:
         | (GameSettings & { sessionId?: string; challengeId?: string })
         | { sessionId: string|undefined; challengeId?: string|undefined };
@@ -249,7 +243,6 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen name="UserProfile" component={UserProfileScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="AddContact" component={AddContactScreen} />
-                        <Stack.Screen name="WWWGameSetup" component={WWWGameSetupScreen} />
                         <Stack.Screen name="WWWGamePlay" component={WWWGamePlayScreen} />
                         <Stack.Screen
                             name="WWWGameResults"

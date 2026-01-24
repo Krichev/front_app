@@ -33,7 +33,7 @@ type RootStackParamList = {
         roundsData: RoundData[];
         challengeId?: string; // Optional challenge ID for tracking
     };
-    WWWGameSetup: undefined;
+    CreateWWWQuest: undefined;
     Main: { screen: string };
     QuizResults: {
         challengeId: string;
@@ -118,13 +118,13 @@ const WWWGameResultsScreen: React.FC = () => {
                     },
                     {
                         text: 'No, Play Again',
-                        onPress: () => navigation.navigate('WWWGameSetup')
+                        onPress: () => navigation.navigate('CreateWWWQuest')
                     }
                 ]
             );
         } else {
             // Regular game, just go back to setup
-            navigation.navigate('WWWGameSetup');
+            navigation.navigate('CreateWWWQuest');
         }
     };
 

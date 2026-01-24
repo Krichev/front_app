@@ -46,7 +46,6 @@ type RootStackParamList = {
         challengeId?: string;
         sessionId?: string;
     };
-    WWWGameSetup: undefined;
     QuizResults: undefined;
 };
 

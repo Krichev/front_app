@@ -20,7 +20,7 @@ type RootStackParamList = {
     CreateUserQuestion: undefined;
     CreateAudioQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
-    WWWGameSetup: { userQuestions?: UserQuestion[] };
+    CreateWWWQuest: undefined;
 };
 
 type UserQuestionsNavigationProp = NativeStackNavigationProp<
@@ -107,7 +107,9 @@ const UserQuestionsScreen: React.FC = () => {
             return;
         }
 
-        navigation.navigate('WWWGameSetup', {userQuestions: selectedQuestions});
+        // Navigate to CreateWWWQuest instead of WWWGameSetup
+        // Note: passing selectedQuestions might need to be handled via a global state or context if CreateWWWQuest doesn't support params
+        navigation.navigate('CreateWWWQuest');
     };
 
     const renderQuestionItem = ({item}: { item: UserQuestion }) => {

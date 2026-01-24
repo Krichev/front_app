@@ -22,7 +22,7 @@ import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 // Define navigation types
 type RootStackParamList = {
     QuestionManagement: undefined;
-    WWWGameSetup: { selectedQuestions?: QuizQuestion[] };
+    CreateWWWQuest: undefined;
 };
 
 type QuestionManagementNavigationProp = NativeStackNavigationProp<
@@ -158,9 +158,8 @@ const QuestionManagementScreen: React.FC = () => {
             return;
         }
 
-        navigation.navigate('WWWGameSetup', {
-            selectedQuestions
-        });
+        // Navigate to CreateWWWQuest instead of WWWGameSetup
+        navigation.navigate('CreateWWWQuest');
     };
 
     // Render each question item
@@ -333,7 +332,7 @@ const QuestionManagementScreen: React.FC = () => {
                     <FlatList
                         data={questions}
                         renderItem={renderQuestionItem}
-                        keyExtractor={item => item.id}
+                        keyExtractor={item => item.id.toString()}
                         style={styles.questionsList}
                         contentContainerStyle={styles.questionsContainer}
                     />
