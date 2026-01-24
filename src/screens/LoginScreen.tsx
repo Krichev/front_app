@@ -17,7 +17,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import KeychainService from '../services/auth/KeychainService';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
-import {createStyles, useStyles} from '../shared/ui/theme';
+import {createStyles} from '../shared/ui/theme';
 
 interface FormData {
     username: string;
@@ -47,7 +47,7 @@ const LoginScreen: React.FC = () => {
     const navigation = useNavigation<LoginScreenNavigationProp>();
     const [login, {isLoading}] = useLoginMutation();
     const {screen, form, theme} = useAppStyles();
-    const styles = useStyles(themeStyles);
+    const styles = themeStyles;
 
     const [formData, setFormData] = useState<FormData>({
         username: '',

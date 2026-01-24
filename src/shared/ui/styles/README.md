@@ -45,10 +45,10 @@ const MyComponent = () => {
 For styles that are specific to a single component and not reusable, create a local style object using `createStyles` and access it via `useStyles`:
 
 ```tsx
-import {createStyles, useStyles} from '../../shared/ui/theme';
+import {createStyles} from '../../shared/ui/theme';
 
 const MyComponent = () => {
-  const styles = useStyles(themeStyles);
+  const styles = themeStyles;
   
   return (
     <View style={styles.customContainer}>
