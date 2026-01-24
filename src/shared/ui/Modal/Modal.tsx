@@ -2,7 +2,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, BackHandler, Easing, GestureResponderEvent, Text, TouchableOpacity, View} from 'react-native';
 import {styles} from './Modal.style.js';
-import {useTheme} from "../../../app/providers/ThemeProvider";
+import {useTheme} from '../theme';
 import {Portal} from '../Portal/Portal.js';
 
 const ANIMATION_DELAY = 300;
@@ -22,7 +22,7 @@ export const Modal: React.FC<ModalProps> = ({
                                                 title,
                                                 showCloseButton = true,
                                             }) => {
-    const { theme } = useTheme();
+    const { mode: theme } = useTheme();
     const [visible, setVisible] = useState(isOpen);
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const scaleAnim = useRef(new Animated.Value(0.7)).current;

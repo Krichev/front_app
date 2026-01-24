@@ -9,6 +9,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {StyleSheet} from 'react-native';
 import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
 import {useKeychainInitializer} from './src/hooks/useKeychainInitializer';
+import {ThemeProvider} from './src/shared/ui/theme/ThemeProvider';
 
 /**
  * Inner app content with KeychainService initialization
@@ -33,7 +34,9 @@ const App: React.FC = () => {
     return (
         <GestureHandlerRootView style={styles.container}>
             <Provider store={store}>
-                <AppContent />
+                <ThemeProvider>
+                    <AppContent />
+                </ThemeProvider>
             </Provider>
         </GestureHandlerRootView>
     );
