@@ -1,19 +1,19 @@
-import { QuizQuestion, QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
+import {QuizQuestion, QuizRound} from '../../../entities/QuizState/model/slice/quizApi';
 
 // Re-export entity types
-export { QuizQuestion, QuizRound };
+export type { QuizQuestion, QuizRound };
 
 // Define explicit game phases and transitions
 export type GamePhase = 'waiting' | 'question' | 'discussion' | 'answer' | 'feedback' | 'completed';
 
 // Game events that trigger state transitions
 export type GameEvent =
-  | { type: 'SESSION_STARTED' }
+  | { type: 'SESSION_STARTED'; roundTime?: number }
   | { type: 'START_DISCUSSION'; roundTime: number }
   | { type: 'TIME_UP' }
   | { type: 'SUBMIT_ANSWER' }
   | { type: 'ANSWER_SUBMITTED' }
-  | { type: 'NEXT_ROUND' }
+  | { type: 'NEXT_ROUND'; roundTime?: number }
   | { type: 'GAME_COMPLETED' }
   | { type: 'RESET_ROUND' }
   | { type: 'SET_ANSWER'; answer: string }

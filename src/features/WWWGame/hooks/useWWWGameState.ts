@@ -16,7 +16,14 @@ const initialState: GameState = {
 function gameReducer(state: GameState, event: GameEvent): GameState {
   switch (event.type) {
     case 'SESSION_STARTED':
-      return { ...state, phase: 'discussion', gameStartTime: new Date() };
+      return { 
+        ...state, 
+        phase: 'discussion', 
+        gameStartTime: new Date(),
+        timer: event.roundTime || 0,
+        isTimerRunning: true,
+        roundStartTime: new Date()
+      };
 
     case 'START_DISCUSSION':
       return {
@@ -44,7 +51,9 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
         teamAnswer: '',
         discussionNotes: '',
         selectedPlayer: '',
-        timer: 0,
+        timer: event.roundTime || 0,
+        isTimerRunning: true,
+        roundStartTime: new Date(),
       };
 
     case 'GAME_COMPLETED':
@@ -79,13 +88,13 @@ export function useWWWGameState() {
   const [state, dispatch] = useReducer(gameReducer, initialState);
 
   const actions = {
-    startSession: useCallback(() => dispatch({ type: 'SESSION_STARTED' }), []),
+    startSession: useCallback((roundTime?: number) => dispatch({ type: 'SESSION_STARTED', roundTime }), []),
     startDiscussion: useCallback((roundTime: number) => 
       dispatch({ type: 'START_DISCUSSION', roundTime }), []),
     timeUp: useCallback(() => dispatch({ type: 'TIME_UP' }), []),
     submitAnswer: useCallback(() => dispatch({ type: 'SUBMIT_ANSWER' }), []),
     answerSubmitted: useCallback(() => dispatch({ type: 'ANSWER_SUBMITTED' }), []),
-    nextRound: useCallback(() => dispatch({ type: 'NEXT_ROUND' }), []),
+    nextRound: useCallback((roundTime?: number) => dispatch({ type: 'NEXT_ROUND', roundTime }), []),
     completeGame: useCallback(() => dispatch({ type: 'GAME_COMPLETED' }), []),
     setAnswer: useCallback((answer: string) => dispatch({ type: 'SET_ANSWER', answer }), []),
     setNotes: useCallback((notes: string) => dispatch({ type: 'SET_NOTES', notes }), []),

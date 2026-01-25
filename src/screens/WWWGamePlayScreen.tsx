@@ -28,7 +28,7 @@ const WWWGamePlayScreen: React.FC = () => {
   
   const { sessionId, challengeId } = route.params;
   const gameSettings = route.params as any; // Legacy params support
-  
+
   // Guard clause for missing sessionId
   useEffect(() => {
     if (!sessionId) {
@@ -39,10 +39,10 @@ const WWWGamePlayScreen: React.FC = () => {
 
   // API controller - only if sessionId exists
   const controller = useWWWGameController(sessionId || '');
-  
+
   // State machine
   const { state, actions } = useWWWGameState();
-  
+
   // Timer (initialized when discussion starts)
   const timer = useCountdownTimer({
     duration: controller.session?.roundTimeSeconds || 60,
@@ -56,8 +56,8 @@ const WWWGamePlayScreen: React.FC = () => {
   const handleGameCompletion = useCallback(async () => {
     try {
       await controller.completeGame();
-      
-      if (!controller.session) return;
+
+      if (!controller.session) { return; }
 
       // Prepare results data
       const roundsData = controller.rounds.map(round => ({
@@ -81,6 +81,11 @@ const WWWGamePlayScreen: React.FC = () => {
     }
   }, [controller, navigation, challengeId]);
 
+  const handleNextRound = useCallback(() => {
+    const nextRoundTime = controller.session?.roundTimeSeconds || 60;
+    actions.nextRound(nextRoundTime);
+  }, [actions, controller.session?.roundTimeSeconds]);
+
   // Initialize game when session data is loaded
   useEffect(() => {
     if (controller.session && controller.rounds.length > 0) {
@@ -88,7 +93,8 @@ const WWWGamePlayScreen: React.FC = () => {
         const currentRoundIndex = controller.session.completedRounds || 0;
         if (currentRoundIndex < controller.rounds.length) {
           actions.setRound(currentRoundIndex);
-          actions.startSession();
+          const roundTime = controller.session?.roundTimeSeconds || 60;
+          actions.startSession(roundTime);
         } else {
           // All rounds completed, show results?
           handleGameCompletion();
@@ -103,7 +109,7 @@ const WWWGamePlayScreen: React.FC = () => {
   useEffect(() => {
     if (state.phase === 'discussion' && currentRound) {
       const isAudioChallenge = currentRound.question.questionType === 'AUDIO' && !!currentRound.question.audioChallengeType;
-      
+
       if (isAudioChallenge) {
         // Skip discussion timer for audio challenges, go straight to answer/record
         actions.timeUp();
@@ -112,7 +118,7 @@ const WWWGamePlayScreen: React.FC = () => {
         timer.start();
       }
     }
-    
+
     // Cleanup timer on phase change
     return () => {
       if (state.phase !== 'discussion') {
@@ -124,11 +130,12 @@ const WWWGamePlayScreen: React.FC = () => {
   // Phase-specific handlers
   const handleStartGame = async () => {
     try {
+      const roundTimeValue = controller.session?.roundTimeSeconds || 60;
       if (controller.session?.status === 'IN_PROGRESS') {
-        actions.startSession();
+        actions.startSession(roundTimeValue);
       } else {
         await controller.startSession();
-        actions.startSession();
+        actions.startSession(roundTimeValue);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to start session');
@@ -136,8 +143,8 @@ const WWWGamePlayScreen: React.FC = () => {
   };
 
   const handleSubmitAnswer = async () => {
-    if (!currentRound) return;
-    
+    if (!currentRound) { return; }
+
     try {
       // roundId is string in QuizRound entity
       await controller.submitAnswer(Number(currentRound.id), {
@@ -152,7 +159,7 @@ const WWWGamePlayScreen: React.FC = () => {
   };
 
   const handleAudioRecordingComplete = async (audioFile: { uri: string; name: string; type: string }) => {
-    if (!currentRound) return;
+    if (!currentRound) { return; }
 
     try {
       await controller.submitAudioAnswer(
@@ -171,7 +178,7 @@ const WWWGamePlayScreen: React.FC = () => {
   };
 
   // If no sessionId, return null (effect handles navigation)
-  if (!sessionId) return null;
+  if (!sessionId) { return null; }
 
   // Render current phase
   const renderPhase = () => {
@@ -234,7 +241,7 @@ const WWWGamePlayScreen: React.FC = () => {
             roundData={currentRound}
             isCorrect={currentRound.isCorrect}
             isLastRound={isLastRound}
-            onNextRound={actions.nextRound}
+            onNextRound={handleNextRound}
             onComplete={handleGameCompletion}
           />
         );
