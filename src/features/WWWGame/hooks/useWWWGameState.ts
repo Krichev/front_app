@@ -16,7 +16,7 @@ const initialState: GameState = {
 function gameReducer(state: GameState, event: GameEvent): GameState {
   switch (event.type) {
     case 'SESSION_STARTED':
-      return { ...state, phase: 'question', gameStartTime: new Date() };
+      return { ...state, phase: 'discussion', gameStartTime: new Date() };
 
     case 'START_DISCUSSION':
       return {
@@ -39,7 +39,7 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
     case 'NEXT_ROUND':
       return {
         ...state,
-        phase: 'question',
+        phase: 'discussion',
         currentRound: state.currentRound + 1,
         teamAnswer: '',
         discussionNotes: '',
@@ -58,6 +58,9 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
 
     case 'SET_PLAYER':
       return { ...state, selectedPlayer: event.player };
+
+    case 'SET_ROUND':
+      return { ...state, currentRound: event.roundIndex };
 
     case 'RESET_ROUND':
       return {
@@ -87,6 +90,7 @@ export function useWWWGameState() {
     setAnswer: useCallback((answer: string) => dispatch({ type: 'SET_ANSWER', answer }), []),
     setNotes: useCallback((notes: string) => dispatch({ type: 'SET_NOTES', notes }), []),
     setPlayer: useCallback((player: string) => dispatch({ type: 'SET_PLAYER', player }), []),
+    setRound: useCallback((roundIndex: number) => dispatch({ type: 'SET_ROUND', roundIndex }), []),
   };
 
   return { state, actions, dispatch };

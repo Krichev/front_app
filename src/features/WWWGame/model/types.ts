@@ -18,7 +18,8 @@ export type GameEvent =
   | { type: 'RESET_ROUND' }
   | { type: 'SET_ANSWER'; answer: string }
   | { type: 'SET_NOTES'; notes: string }
-  | { type: 'SET_PLAYER'; player: string };
+  | { type: 'SET_PLAYER'; player: string }
+  | { type: 'SET_ROUND'; roundIndex: number };
 
 // Immutable game state
 export interface GameState {

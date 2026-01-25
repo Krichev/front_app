@@ -4,6 +4,10 @@ import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import VoiceRecorder from '../../../../components/VoiceRecorder';
+import QuestionMediaViewer from '../../../../screens/CreateWWWQuestScreen/components/QuestionMediaViewer';
+import { MediaType } from '../../../../services/wwwGame/questionService';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { AudioChallengeContainer } from '../../../../screens/components/audio/AudioChallengeContainer';
 
 interface DiscussionPhaseProps {
   question: QuizQuestion;
@@ -37,6 +41,22 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
 
   const isAudioChallenge = question.questionType === 'AUDIO' && !!question.audioChallengeType;
 
+  // Helper to determine media type
+  const getMediaType = (q: QuizQuestion): MediaType | null => {
+    const mediaType = q.questionMediaType?.toUpperCase();
+    if (mediaType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mediaType)) {
+      return mediaType as MediaType;
+    }
+    const qType = q.questionType?.toUpperCase();
+    if (qType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(qType)) {
+      return qType as MediaType;
+    }
+    return null;
+  };
+
+  const mediaType = getMediaType(question);
+  const showMedia = !!mediaType && !isAudioChallenge && !!question.questionMediaId;
+
   return (
     <View style={styles.container}>
       <View style={styles.timerContainer}>
@@ -59,23 +79,49 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
       <Text style={styles.title}>Team Discussion</Text>
 
       {isAudioChallenge ? (
-        <Text style={styles.text}>Audio Challenge</Text>
+        <AudioChallengeContainer
+          question={question as any}
+          mode="preview"
+        />
       ) : (
-        <Text style={styles.text}>{question.question}</Text>
+        <View style={styles.questionContent}>
+          {showMedia && mediaType && (
+            <View style={styles.mediaContainer}>
+              <View style={styles.mediaHeader}>
+                <MaterialCommunityIcons
+                  name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
+                  size={16}
+                  color={theme.colors.text.secondary}
+                />
+                <Text style={{ ...theme.typography.body.small, color: theme.colors.text.secondary, fontWeight: theme.typography.fontWeight.medium }}>
+                  {mediaType === 'AUDIO' ? 'Listen to the audio' :
+                   mediaType === 'VIDEO' ? 'Watch the video' : 'View the image'}
+                </Text>
+              </View>
+              <QuestionMediaViewer
+                questionId={Number(question.id)}
+                mediaType={mediaType as MediaType}
+                height={mediaType === 'AUDIO' ? 80 : 200}
+                enableFullscreen={mediaType !== 'AUDIO'}
+              />
+            </View>
+          )}
+          <Text style={styles.text}>{question.question}</Text>
+        </View>
       )}
 
       {isVoiceEnabled && !isAudioChallenge && (
-        <View style={{ marginBottom: theme.spacing.lg, backgroundColor: theme.colors.background.tertiary, padding: theme.spacing.md, borderRadius: theme.layout.borderRadius.md }}>
+        <View style={styles.voiceRecorderContainer}>
           <VoiceRecorder
             onTranscription={handleVoiceTranscription}
             isActive={true}
           />
           {voiceTranscription ? (
-            <View style={{ marginTop: theme.spacing.sm, backgroundColor: theme.colors.background.tertiary, padding: theme.spacing.md, borderRadius: theme.layout.borderRadius.md }}>
-              <Text style={{ fontWeight: theme.typography.fontWeight.bold, ...theme.typography.body.small, color: theme.colors.text.secondary, marginBottom: 4 }}>
+            <View style={styles.transcriptionContainer}>
+              <Text style={styles.transcriptionLabel}>
                 Latest Transcription:
               </Text>
-              <Text style={{ ...theme.typography.body.small, color: theme.colors.text.primary, fontStyle: 'italic' }}>
+              <Text style={styles.transcriptionText}>
                 {voiceTranscription}
               </Text>
             </View>

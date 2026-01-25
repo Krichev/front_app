@@ -1,5 +1,5 @@
 // src/screens/WWWGamePlayScreen.tsx - Orchestration Layer
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { SafeAreaView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
@@ -13,7 +13,6 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 
 import {
   WaitingPhase,
-  QuestionPhase,
   DiscussionPhase,
   AnswerPhase,
   FeedbackPhase,
@@ -54,14 +53,73 @@ const WWWGamePlayScreen: React.FC = () => {
   const currentRound = controller.rounds[state.currentRound];
   const isLastRound = state.currentRound >= controller.rounds.length - 1;
 
+  const handleGameCompletion = useCallback(async () => {
+    try {
+      await controller.completeGame();
+      
+      if (!controller.session) return;
+
+      // Prepare results data
+      const roundsData = controller.rounds.map(round => ({
+        question: round.question.question,
+        correctAnswer: round.question.answer,
+        teamAnswer: round.teamAnswer || '',
+        isCorrect: round.isCorrect,
+        playerWhoAnswered: round.playerWhoAnswered || '',
+        discussionNotes: round.discussionNotes || '',
+      }));
+
+      navigation.navigate('WWWGameResults', {
+        teamName: controller.session.teamName,
+        score: controller.session.correctAnswers,
+        totalRounds: controller.session.totalRounds,
+        roundsData: roundsData,
+        challengeId: challengeId,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to complete game');
+    }
+  }, [controller, navigation, challengeId]);
+
   // Initialize game when session data is loaded
   useEffect(() => {
     if (controller.session && controller.rounds.length > 0) {
       if (controller.session.status === 'IN_PROGRESS' && state.phase === 'waiting') {
-        actions.startSession();
+        const currentRoundIndex = controller.session.completedRounds || 0;
+        if (currentRoundIndex < controller.rounds.length) {
+          actions.setRound(currentRoundIndex);
+          actions.startSession();
+        } else {
+          // All rounds completed, show results?
+          handleGameCompletion();
+        }
       }
     }
-  }, [controller.session, controller.rounds, state.phase, actions]);
+  }, [controller.session, controller.rounds, state.phase, actions, handleGameCompletion]);
+
+  // Auto-start discussion timer when entering discussion phase
+  const roundTime = controller.session?.roundTimeSeconds || 60;
+  const hasCurrentRound = !!currentRound;
+  useEffect(() => {
+    if (state.phase === 'discussion' && currentRound) {
+      const isAudioChallenge = currentRound.question.questionType === 'AUDIO' && !!currentRound.question.audioChallengeType;
+      
+      if (isAudioChallenge) {
+        // Skip discussion timer for audio challenges, go straight to answer/record
+        actions.timeUp();
+      } else {
+        timer.reset(roundTime);
+        timer.start();
+      }
+    }
+    
+    // Cleanup timer on phase change
+    return () => {
+      if (state.phase !== 'discussion') {
+        timer.pause();
+      }
+    };
+  }, [state.phase, state.currentRound, hasCurrentRound, roundTime, actions, timer, currentRound]);
 
   // Phase-specific handlers
   const handleStartGame = async () => {
@@ -75,13 +133,6 @@ const WWWGamePlayScreen: React.FC = () => {
     } catch (error) {
       Alert.alert('Error', 'Failed to start session');
     }
-  };
-
-  const handleStartDiscussion = () => {
-    const roundTime = controller.session?.roundTimeSeconds || 60;
-    actions.startDiscussion(roundTime);
-    timer.reset(roundTime);
-    timer.start();
   };
 
   const handleSubmitAnswer = async () => {
@@ -119,34 +170,6 @@ const WWWGamePlayScreen: React.FC = () => {
     }
   };
 
-  const handleGameCompletion = async () => {
-    try {
-      await controller.completeGame();
-      
-      if (!controller.session) return;
-
-      // Prepare results data
-      const roundsData = controller.rounds.map(round => ({
-        question: round.question.question,
-        correctAnswer: round.question.answer,
-        teamAnswer: round.teamAnswer || '',
-        isCorrect: round.isCorrect,
-        playerWhoAnswered: round.playerWhoAnswered || '',
-        discussionNotes: round.discussionNotes || '',
-      }));
-
-      navigation.navigate('WWWGameResults', {
-        teamName: controller.session.teamName,
-        score: controller.session.correctAnswers,
-        totalRounds: controller.session.totalRounds,
-        roundsData: roundsData,
-        challengeId: challengeId,
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to complete game');
-    }
-  };
-
   // If no sessionId, return null (effect handles navigation)
   if (!sessionId) return null;
 
@@ -170,22 +193,6 @@ const WWWGamePlayScreen: React.FC = () => {
             roundTime={controller.session?.roundTimeSeconds || 60}
             onStart={handleStartGame}
             isLoading={controller.isBeginningSession}
-          />
-        );
-      case 'question':
-        if (!currentRound) return null;
-        return (
-          <QuestionPhase
-            question={currentRound.question}
-            onStartDiscussion={() => {
-              const isAudioChallenge = currentRound.question.questionType === 'AUDIO' && !!currentRound.question.audioChallengeType;
-              if (isAudioChallenge) {
-                // Skip discussion timer for audio challenges, go straight to answer/record
-                actions.timeUp(); // Transition to answer phase directly
-              } else {
-                handleStartDiscussion();
-              }
-            }}
           />
         );
       case 'discussion':

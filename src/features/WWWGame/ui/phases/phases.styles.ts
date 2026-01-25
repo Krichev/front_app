@@ -114,4 +114,44 @@ export const phaseStyles = (theme: Theme) =>
     incorrectBadge: {
       backgroundColor: theme.colors.error.main,
     },
+    mediaContainer: {
+      marginBottom: theme.spacing.lg,
+      backgroundColor: theme.colors.background.tertiary,
+      borderRadius: theme.layout.borderRadius.lg,
+      overflow: 'hidden',
+    },
+    mediaHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: theme.spacing.md,
+      backgroundColor: theme.colors.background.tertiary,
+      gap: theme.spacing.sm,
+    },
+    voiceRecorderContainer: {
+      marginBottom: theme.spacing.lg,
+      backgroundColor: theme.colors.background.tertiary,
+      padding: theme.spacing.md,
+      borderRadius: theme.layout.borderRadius.md,
+    },
+    transcriptionContainer: {
+      marginTop: theme.spacing.sm,
+      backgroundColor: theme.colors.background.tertiary,
+      padding: theme.spacing.md,
+      borderRadius: theme.layout.borderRadius.md,
+    },
+    transcriptionLabel: {
+      fontWeight: theme.typography.fontWeight.bold,
+      ...theme.typography.body.small,
+      color: theme.colors.text.secondary,
+      marginBottom: 4,
+    },
+    transcriptionText: {
+      ...theme.typography.body.small,
+      color: theme.colors.text.primary,
+      fontStyle: 'italic',
+    },
+    questionContent: {
+      width: '100%',
+      marginBottom: theme.spacing.lg,
+    },
   });

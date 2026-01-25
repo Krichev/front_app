@@ -13,6 +13,11 @@ interface QuestionPhaseProps {
   onStartDiscussion: () => void;
 }
 
+/**
+ * @deprecated This phase has been merged into DiscussionPhase.
+ * Timer now starts immediately when quiz begins.
+ * Kept for potential rollback. Remove after confirming new flow works.
+ */
 export const QuestionPhase: React.FC<QuestionPhaseProps> = ({
   question,
   onStartDiscussion,
