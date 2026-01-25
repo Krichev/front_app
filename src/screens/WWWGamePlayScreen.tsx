@@ -82,9 +82,8 @@ const WWWGamePlayScreen: React.FC = () => {
   }, [controller, navigation, challengeId]);
 
   const handleNextRound = useCallback(() => {
-    const nextRoundTime = controller.session?.roundTimeSeconds || 60;
-    actions.nextRound(nextRoundTime);
-  }, [actions, controller.session?.roundTimeSeconds]);
+    actions.nextRound(configuredRoundTime);
+  }, [actions, configuredRoundTime]);
 
   // Initialize game when session data is loaded
   useEffect(() => {
@@ -93,8 +92,7 @@ const WWWGamePlayScreen: React.FC = () => {
         const currentRoundIndex = controller.session.completedRounds || 0;
         if (currentRoundIndex < controller.rounds.length) {
           actions.setRound(currentRoundIndex);
-          const roundTime = controller.session?.roundTimeSeconds || 60;
-          actions.startSession(roundTime);
+          actions.startSession(configuredRoundTime);
         } else {
           // All rounds completed, show results?
           handleGameCompletion();
@@ -104,7 +102,7 @@ const WWWGamePlayScreen: React.FC = () => {
   }, [controller.session, controller.rounds, state.phase, actions, handleGameCompletion]);
 
   // Auto-start discussion timer when entering discussion phase
-  const roundTime = controller.session?.roundTimeSeconds || 60;
+  const configuredRoundTime = controller.session?.roundTimeSeconds || 60;
   const hasCurrentRound = !!currentRound;
   useEffect(() => {
     if (state.phase === 'discussion' && currentRound) {
@@ -114,7 +112,7 @@ const WWWGamePlayScreen: React.FC = () => {
         // Skip discussion timer for audio challenges, go straight to answer/record
         actions.timeUp();
       } else {
-        timer.reset(roundTime);
+        timer.reset(configuredRoundTime);
         timer.start();
       }
     }
@@ -125,17 +123,16 @@ const WWWGamePlayScreen: React.FC = () => {
         timer.pause();
       }
     };
-  }, [state.phase, state.currentRound, hasCurrentRound, roundTime, actions, timer, currentRound]);
+  }, [state.phase, state.currentRound, hasCurrentRound, configuredRoundTime, actions, timer, currentRound]);
 
   // Phase-specific handlers
   const handleStartGame = async () => {
     try {
-      const roundTimeValue = controller.session?.roundTimeSeconds || 60;
       if (controller.session?.status === 'IN_PROGRESS') {
-        actions.startSession(roundTimeValue);
+        actions.startSession(configuredRoundTime);
       } else {
         await controller.startSession();
-        actions.startSession(roundTimeValue);
+        actions.startSession(configuredRoundTime);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to start session');
