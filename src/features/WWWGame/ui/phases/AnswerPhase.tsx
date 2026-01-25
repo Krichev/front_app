@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Animated } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import VoiceRecorder from '../../../../components/VoiceRecorder';
 import { AudioChallengeContainer } from '../../../../screens/components/audio';
+import { useAnswerTimer } from '../../hooks/useAnswerTimer';
 
 interface AnswerPhaseProps {
   question: QuizQuestion;
@@ -38,12 +39,28 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const styles = phaseStyles(theme);
   const [showHint, setShowHint] = useState(false);
   const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
+  const hasStartedTyping = useRef(false);
 
   const isAudioChallenge = question.questionType === 'AUDIO' && !!question.audioChallengeType;
 
+  // Initialize two-phase timer
+  const timer = useAnswerTimer({
+    initialTypingTime: 5,
+    completionTime: 15,
+    onAutoSubmit: onSubmit,
+  });
+
+  const handleAnswerChange = (text: string) => {
+    onAnswerChange(text);
+    if (!hasStartedTyping.current && text.length > 0) {
+      hasStartedTyping.current = true;
+      timer.startCompletionPhase();
+    }
+  };
+
   const handleVoiceTranscription = (text: string) => {
     if (text) {
-      onAnswerChange(answer ? `${answer} ${text}` : text);
+      handleAnswerChange(answer ? `${answer} ${text}` : text);
     }
   };
 
@@ -71,6 +88,29 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Answer Timer Display */}
+      <View style={styles.timerContainer}>
+        <Text style={styles.timerText}>
+          {timer.phase === 'typing'
+            ? `${timer.timeLeft} seconds to start typing`
+            : `${timer.timeLeft} seconds remaining`}
+        </Text>
+        <View style={styles.timerBar}>
+          <Animated.View
+            style={[
+              styles.timerProgress,
+              {
+                backgroundColor: timer.phase === 'typing' ? theme.colors.warning.main : theme.colors.success.main,
+                width: timer.animation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%'],
+                }),
+              },
+            ]}
+          />
+        </View>
+      </View>
+
       <Text style={styles.title}>Submit Your Answer</Text>
       <Text style={styles.text}>{question.question}</Text>
 
@@ -141,7 +181,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         <TextInput
           style={styles.input}
           value={answer}
-          onChangeText={onAnswerChange}
+          onChangeText={handleAnswerChange}
           placeholder="Enter your team's answer..."
           multiline
           placeholderTextColor={theme.colors.text.disabled}
@@ -149,9 +189,9 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       </View>
 
       <TouchableOpacity
-        style={[styles.button, (!answer.trim() || isSubmitting) && styles.disabledButton]}
+        style={[styles.button, (!answer.trim() || isSubmitting || timer.hasAutoSubmitted) && styles.disabledButton]}
         onPress={onSubmit}
-        disabled={!answer.trim() || isSubmitting}
+        disabled={!answer.trim() || isSubmitting || timer.hasAutoSubmitted}
       >
         <Text style={styles.buttonText}>
           {isSubmitting ? 'Submitting...' : 'Submit Answer'}
