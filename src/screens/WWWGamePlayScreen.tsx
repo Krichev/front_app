@@ -1,5 +1,5 @@
 // src/screens/WWWGamePlayScreen.tsx - Orchestration Layer
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { SafeAreaView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
@@ -48,6 +48,7 @@ const WWWGamePlayScreen: React.FC = () => {
     duration: controller.session?.roundTimeSeconds || 60,
     onComplete: actions.timeUp,
   });
+  const { start: timerStart, reset: timerReset, pause: timerPause } = timer;
 
   // Current round data
   const currentRound = controller.rounds[state.currentRound];
@@ -81,6 +82,11 @@ const WWWGamePlayScreen: React.FC = () => {
     }
   }, [controller, navigation, challengeId]);
 
+  // Auto-start discussion timer when entering discussion phase
+  const prevPhaseRef = useRef<string>(state.phase);
+  const prevRoundRef = useRef<number>(state.currentRound);
+  const configuredRoundTime = controller.session?.roundTimeSeconds || 60;
+
   const handleNextRound = useCallback(() => {
     actions.nextRound(configuredRoundTime);
   }, [actions, configuredRoundTime]);
@@ -99,31 +105,36 @@ const WWWGamePlayScreen: React.FC = () => {
         }
       }
     }
-  }, [controller.session, controller.rounds, state.phase, actions, handleGameCompletion]);
+  }, [controller.session, controller.rounds, state.phase, actions, handleGameCompletion, configuredRoundTime]);
 
-  // Auto-start discussion timer when entering discussion phase
-  const configuredRoundTime = controller.session?.roundTimeSeconds || 60;
-  const hasCurrentRound = !!currentRound;
   useEffect(() => {
-    if (state.phase === 'discussion' && currentRound) {
+    const isEnteringDiscussion = state.phase === 'discussion' &&
+      (prevPhaseRef.current !== 'discussion' || prevRoundRef.current !== state.currentRound);
+
+    prevPhaseRef.current = state.phase;
+    prevRoundRef.current = state.currentRound;
+
+    if (isEnteringDiscussion && currentRound) {
       const isAudioChallenge = currentRound.question.questionType === 'AUDIO' && !!currentRound.question.audioChallengeType;
 
       if (isAudioChallenge) {
         // Skip discussion timer for audio challenges, go straight to answer/record
         actions.timeUp();
       } else {
-        timer.reset(configuredRoundTime);
-        timer.start();
+        requestAnimationFrame(() => {
+          timerReset(configuredRoundTime);
+          timerStart();
+        });
       }
     }
+  }, [state.phase, state.currentRound, currentRound, configuredRoundTime, actions, timerReset, timerStart]);
 
-    // Cleanup timer on phase change
-    return () => {
-      if (state.phase !== 'discussion') {
-        timer.pause();
-      }
-    };
-  }, [state.phase, state.currentRound, hasCurrentRound, configuredRoundTime, actions, timer, currentRound]);
+  // Pause timer when leaving discussion phase
+  useEffect(() => {
+    if (state.phase !== 'discussion') {
+      timerPause();
+    }
+  }, [state.phase, timerPause]);
 
   // Phase-specific handlers
   const handleStartGame = async () => {
@@ -200,7 +211,7 @@ const WWWGamePlayScreen: React.FC = () => {
           />
         );
       case 'discussion':
-        if (!currentRound) return null;
+        if (!currentRound) { return null; }
         return (
           <DiscussionPhase
             question={currentRound.question}
@@ -216,7 +227,7 @@ const WWWGamePlayScreen: React.FC = () => {
           />
         );
       case 'answer':
-        if (!currentRound) return null;
+        if (!currentRound) { return null; }
         return (
           <AnswerPhase
             question={currentRound.question}
@@ -232,7 +243,7 @@ const WWWGamePlayScreen: React.FC = () => {
           />
         );
       case 'feedback':
-        if (!currentRound) return null;
+        if (!currentRound) { return null; }
         return (
           <FeedbackPhase
             roundData={currentRound}
