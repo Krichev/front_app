@@ -7,6 +7,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useWWWGameState } from '../features/WWWGame/hooks/useWWWGameState';
 import { useWWWGameController } from '../features/WWWGame/hooks/useWWWGameController';
+import { useReadingTime } from '../features/WWWGame/hooks/useReadingTime';
 import { useCountdownTimer } from '../shared/hooks/useCountdownTimer';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -16,6 +17,8 @@ import {
   DiscussionPhase,
   AnswerPhase,
   FeedbackPhase,
+  ReadingPhase,
+  MediaPlaybackPhase,
 } from '../features/WWWGame/ui/phases';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
@@ -42,6 +45,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
   // State machine
   const { state, actions } = useWWWGameState();
+  const { calculateReadingTime } = useReadingTime();
 
   // Timer (initialized when discussion starts)
   const timer = useCountdownTimer({
@@ -94,7 +98,7 @@ const WWWGamePlayScreen: React.FC = () => {
   // Initialize game when session data is loaded
   useEffect(() => {
     if (controller.session && controller.rounds.length > 0) {
-      if (controller.session.status === 'IN_PROGRESS' && state.phase === 'waiting') {
+      if (controller.session.status === 'IN_PROGRESS' && state.phase === 'waiting' && !state.gameStartTime) {
         const currentRoundIndex = controller.session.completedRounds || 0;
         if (currentRoundIndex < controller.rounds.length) {
           actions.setRound(currentRoundIndex);
@@ -105,7 +109,28 @@ const WWWGamePlayScreen: React.FC = () => {
         }
       }
     }
-  }, [controller.session, controller.rounds, state.phase, actions, handleGameCompletion, configuredRoundTime]);
+  }, [controller.session, controller.rounds, state.phase, state.gameStartTime, actions, handleGameCompletion, configuredRoundTime]);
+
+  // Orchestration: Determine sub-phase when starting round
+  useEffect(() => {
+    if (state.phase === 'waiting' && currentRound && state.gameStartTime && controller.session?.status === 'IN_PROGRESS') {
+      const q = currentRound.question;
+      const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
+      
+      // Check for media
+      const mediaType = q.questionMediaType || q.questionType;
+      const hasMedia = ['VIDEO', 'AUDIO'].includes(mediaType as string) && !!q.questionMediaId;
+
+      if (isAudioChallenge) {
+         actions.startDiscussion(configuredRoundTime);
+      } else if (hasMedia) {
+         actions.startMediaPlayback();
+      } else {
+         const readingTime = calculateReadingTime(q.question);
+         actions.startReading(readingTime);
+      }
+    }
+  }, [state.phase, currentRound, state.gameStartTime, controller.session?.status, actions, calculateReadingTime, configuredRoundTime]);
 
   useEffect(() => {
     const isEnteringDiscussion = state.phase === 'discussion' &&
@@ -150,6 +175,22 @@ const WWWGamePlayScreen: React.FC = () => {
     }
   };
 
+  const handleReadingComplete = useCallback(() => {
+    actions.readingComplete();
+  }, [actions]);
+
+  const handleSkipReading = useCallback(() => {
+    actions.skipReading();
+  }, [actions]);
+
+  const handleMediaComplete = useCallback(() => {
+    actions.startDiscussion(configuredRoundTime);
+  }, [actions, configuredRoundTime]);
+
+  const handleSkipMedia = useCallback(() => {
+    actions.skipMedia();
+  }, [actions]);
+
   const handleSubmitAnswer = async () => {
     if (!currentRound) { return; }
 
@@ -191,7 +232,7 @@ const WWWGamePlayScreen: React.FC = () => {
   // Render current phase
   const renderPhase = () => {
     // Show waiting phase if loading initially
-    if (controller.isLoading && state.phase === 'waiting') {
+    if (controller.isLoading && state.phase === 'waiting' && !state.gameStartTime) {
       return (
         <WaitingPhase
           roundTime={60}
@@ -203,11 +244,40 @@ const WWWGamePlayScreen: React.FC = () => {
 
     switch (state.phase) {
       case 'waiting':
+        // If game is started but we are waiting (round init), show loader or null
+        if (state.gameStartTime) {
+            return (
+                 <WaitingPhase
+                    roundTime={controller.session?.roundTimeSeconds || 60}
+                    onStart={() => {}}
+                    isLoading={true}
+                  />
+            );
+        }
         return (
           <WaitingPhase
             roundTime={controller.session?.roundTimeSeconds || 60}
             onStart={handleStartGame}
             isLoading={controller.isBeginningSession}
+          />
+        );
+      case 'reading':
+        if (!currentRound) { return null; }
+        return (
+          <ReadingPhase
+            question={currentRound.question}
+            timeLeft={state.readingTimeSeconds}
+            onSkip={handleSkipReading}
+            onComplete={handleReadingComplete}
+          />
+        );
+      case 'media_playback':
+        if (!currentRound) { return null; }
+        return (
+          <MediaPlaybackPhase
+            question={currentRound.question}
+            onPlaybackComplete={handleMediaComplete}
+            onSkip={handleSkipMedia}
           />
         );
       case 'discussion':

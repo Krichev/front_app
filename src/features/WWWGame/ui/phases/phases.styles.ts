@@ -154,4 +154,58 @@ export const phaseStyles = (theme: Theme) =>
       width: '100%',
       marginBottom: theme.spacing.lg,
     },
+    readingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: theme.spacing.xl,
+    },
+    readingCountdown: {
+      ...theme.typography.heading.h2,
+      color: theme.colors.success.main,
+      marginVertical: theme.spacing.lg,
+    },
+    skipButton: {
+      backgroundColor: theme.colors.background.tertiary,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: theme.layout.borderRadius.lg,
+      marginTop: theme.spacing.xl,
+    },
+    skipButtonText: {
+      color: theme.colors.text.secondary,
+      ...theme.typography.body.medium,
+      fontWeight: theme.typography.fontWeight.bold,
+    },
+    mediaPlaybackContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      padding: theme.spacing.xl,
+    },
+    playbackProgress: {
+      marginTop: theme.spacing.lg,
+    },
+    replayButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      padding: theme.spacing.md,
+      marginTop: theme.spacing.lg,
+      backgroundColor: theme.colors.background.tertiary,
+      borderRadius: theme.layout.borderRadius.md,
+    },
+    continueButton: {
+      backgroundColor: theme.colors.success.main,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing['2xl'],
+      borderRadius: theme.layout.borderRadius.md,
+      alignItems: 'center',
+      marginTop: theme.spacing.lg,
+    },
+    continueButtonText: {
+      color: theme.colors.text.inverse,
+      ...theme.typography.body.medium,
+      fontWeight: theme.typography.fontWeight.bold,
+    },
   });

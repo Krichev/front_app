@@ -4,11 +4,17 @@ import {QuizQuestion, QuizRound} from '../../../entities/QuizState/model/slice/q
 export type { QuizQuestion, QuizRound };
 
 // Define explicit game phases and transitions
-export type GamePhase = 'waiting' | 'question' | 'discussion' | 'answer' | 'feedback' | 'completed';
+export type GamePhase = 'waiting' | 'reading' | 'media_playback' | 'discussion' | 'answer' | 'feedback' | 'completed';
 
 // Game events that trigger state transitions
 export type GameEvent =
   | { type: 'SESSION_STARTED'; roundTime?: number }
+  | { type: 'START_READING'; readingTime: number }
+  | { type: 'READING_COMPLETE' }
+  | { type: 'START_MEDIA_PLAYBACK'; mediaDuration?: number }
+  | { type: 'MEDIA_PLAYBACK_COMPLETE' }
+  | { type: 'SKIP_READING' }
+  | { type: 'SKIP_MEDIA' }
   | { type: 'START_DISCUSSION'; roundTime: number }
   | { type: 'TIME_UP' }
   | { type: 'SUBMIT_ANSWER' }
@@ -32,6 +38,8 @@ export interface GameState {
   isTimerRunning: boolean;
   gameStartTime: Date | null;
   roundStartTime: Date | null;
+  readingTimeSeconds: number;
+  mediaPlaybackComplete: boolean;
 }
 
 // Presentation alias for QuizRound to match existing game service usage if needed,

@@ -20,6 +20,7 @@ interface AuthenticatedAudioProps {
     style?: ViewStyle;
     showWaveform?: boolean;
     onLoad?: () => void;
+    onEnd?: () => void;
     onError?: (error: any) => void;
 }
 
@@ -34,6 +35,7 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
     style,
     showWaveform = false,
     onLoad,
+    onEnd,
     onError,
 }) => {
     const audioRef = useRef<VideoRef>(null);
@@ -89,7 +91,8 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
         setIsPlaying(false);
         setPosition(0);
         audioRef.current?.seek(0);
-    }, []);
+        onEnd?.();
+    }, [onEnd]);
 
     const handleError = useCallback((error: any) => {
         const errorMsg = error?.error?.errorString || 'Unknown error';

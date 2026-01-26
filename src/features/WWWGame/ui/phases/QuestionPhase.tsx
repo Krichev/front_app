@@ -52,27 +52,27 @@ export const QuestionPhase: React.FC<QuestionPhaseProps> = ({
         />
       ) : (
         <View style={{ width: '100%', marginBottom: theme.spacing.lg }}>
-          {showMedia && mediaType && (
-            <View style={{ marginBottom: theme.spacing.lg, backgroundColor: theme.colors.background.tertiary, borderRadius: theme.layout.borderRadius.lg, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: theme.spacing.md, backgroundColor: theme.colors.background.tertiary, gap: theme.spacing.sm }}>
-                <MaterialCommunityIcons
-                  name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
-                  size={16}
-                  color={theme.colors.text.secondary}
-                />
-                <Text style={{ ...theme.typography.body.small, color: theme.colors.text.secondary, fontWeight: theme.typography.fontWeight.medium }}>
-                  {mediaType === 'AUDIO' ? 'Listen to the audio' :
-                   mediaType === 'VIDEO' ? 'Watch the video' : 'View the image'}
-                </Text>
-              </View>
-              <QuestionMediaViewer
-                questionId={Number(question.id)}
-                mediaType={mediaType as MediaType}
-                height={mediaType === 'AUDIO' ? 80 : 200}
-                enableFullscreen={mediaType !== 'AUDIO'}
-              />
-            </View>
-          )}
+      {showMedia && mediaType && (
+        <View style={styles.mediaContainer}>
+          <View style={styles.mediaHeader}>
+            <MaterialCommunityIcons
+              name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
+              size={16}
+              color={theme.colors.text.secondary}
+            />
+            <Text style={{ ...theme.typography.body.small, color: theme.colors.text.secondary, fontWeight: theme.typography.fontWeight.medium }}>
+              {mediaType === 'AUDIO' ? 'Listen to the audio' :
+               mediaType === 'VIDEO' ? 'Watch the video' : 'View the image'}
+            </Text>
+          </View>
+          <QuestionMediaViewer
+            questionId={Number(question.id)}
+            mediaType={mediaType as MediaType}
+            height={mediaType === 'AUDIO' ? 80 : 200}
+            enableFullscreen={mediaType !== 'AUDIO'}
+          />
+        </View>
+      )}
           <Text style={styles.title}>{question.question}</Text>
         </View>
       )}

@@ -25,6 +25,7 @@ interface AuthenticatedVideoProps {
     showPlayButton?: boolean;
     onProgress?: (data: OnProgressData) => void;
     onLoad?: (data: OnLoadData) => void;
+    onEnd?: () => void;
     onError?: (error: any) => void;
 }
 
@@ -45,6 +46,7 @@ const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
     showPlayButton = true,
     onProgress,
     onLoad,
+    onEnd,
     onError,
 }) => {
     const videoRef = useRef<VideoRef>(null);
@@ -106,7 +108,8 @@ const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
         if (!isLooping) {
             setIsPlaying(false);
         }
-    }, [isLooping]);
+        onEnd?.();
+    }, [isLooping, onEnd]);
 
     const togglePlayPause = useCallback(() => {
         if (isPlaying) {

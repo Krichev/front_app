@@ -11,6 +11,8 @@ const initialState: GameState = {
   isTimerRunning: false,
   gameStartTime: null,
   roundStartTime: null,
+  readingTimeSeconds: 0,
+  mediaPlaybackComplete: false,
 };
 
 function gameReducer(state: GameState, event: GameEvent): GameState {
@@ -18,11 +20,49 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
     case 'SESSION_STARTED':
       return { 
         ...state, 
-        phase: 'discussion', 
+        phase: 'waiting', // Wait for orchestration to decide reading vs media
         gameStartTime: new Date(),
         timer: event.roundTime || 0,
-        isTimerRunning: true,
+        isTimerRunning: false,
         roundStartTime: new Date()
+      };
+
+    case 'START_READING':
+      return {
+        ...state,
+        phase: 'reading',
+        readingTimeSeconds: event.readingTime,
+        isTimerRunning: false, // We'll use a different timer or handle it in UI
+      };
+
+    case 'READING_COMPLETE':
+    case 'SKIP_READING':
+      return {
+        ...state,
+        phase: 'discussion',
+        isTimerRunning: true,
+      };
+
+    case 'START_MEDIA_PLAYBACK':
+      return {
+        ...state,
+        phase: 'media_playback',
+        mediaPlaybackComplete: false,
+        isTimerRunning: false,
+      };
+
+    case 'MEDIA_PLAYBACK_COMPLETE':
+      return {
+        ...state,
+        mediaPlaybackComplete: true,
+      };
+
+    case 'SKIP_MEDIA':
+      return {
+        ...state,
+        phase: 'discussion',
+        isTimerRunning: true,
+        mediaPlaybackComplete: true,
       };
 
     case 'START_DISCUSSION':
@@ -46,14 +86,15 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
     case 'NEXT_ROUND':
       return {
         ...state,
-        phase: 'discussion',
+        phase: 'waiting', // Wait for orchestration to decide next phase
         currentRound: state.currentRound + 1,
         teamAnswer: '',
         discussionNotes: '',
         selectedPlayer: '',
         timer: event.roundTime || 0,
-        isTimerRunning: true,
+        isTimerRunning: false,
         roundStartTime: new Date(),
+        mediaPlaybackComplete: false,
       };
 
     case 'GAME_COMPLETED':
@@ -89,6 +130,12 @@ export function useWWWGameState() {
 
   const actions = {
     startSession: useCallback((roundTime?: number) => dispatch({ type: 'SESSION_STARTED', roundTime }), []),
+    startReading: useCallback((readingTime: number) => dispatch({ type: 'START_READING', readingTime }), []),
+    readingComplete: useCallback(() => dispatch({ type: 'READING_COMPLETE' }), []),
+    skipReading: useCallback(() => dispatch({ type: 'SKIP_READING' }), []),
+    startMediaPlayback: useCallback((mediaDuration?: number) => dispatch({ type: 'START_MEDIA_PLAYBACK', mediaDuration }), []),
+    mediaPlaybackComplete: useCallback(() => dispatch({ type: 'MEDIA_PLAYBACK_COMPLETE' }), []),
+    skipMedia: useCallback(() => dispatch({ type: 'SKIP_MEDIA' }), []),
     startDiscussion: useCallback((roundTime: number) => 
       dispatch({ type: 'START_DISCUSSION', roundTime }), []),
     timeUp: useCallback(() => dispatch({ type: 'TIME_UP' }), []),
