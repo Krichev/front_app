@@ -9,10 +9,22 @@ import { AppLanguage } from '../../../entities/SettingsState/model/types/setting
 
 const LANGUAGE_CACHE_KEY = '@app_language';
 
-/**
- * Get device language code
- */
-const getDeviceLanguage = (): AppLanguage => {
+// Language detector for React Native
+const languageDetector = {
+  type: 'languageDetector' as const,
+  async: true,
+  detect: async (callback: (lng: string) => void) => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem(LANGUAGE_CACHE_KEY);
+      if (savedLanguage && ['en', 'ru'].includes(savedLanguage)) {
+          callback(savedLanguage);
+          return;
+      }
+    } catch (error) {
+      console.warn('Failed to load cached language:', error);
+    }
+    
+    // Fallback to device language
     try {
         const deviceLanguage =
             Platform.OS === 'ios'
@@ -21,58 +33,65 @@ const getDeviceLanguage = (): AppLanguage => {
                 : NativeModules.I18nManager?.localeIdentifier;
 
         const languageCode = deviceLanguage?.split(/[-_]/)?.[0]?.toLowerCase() || 'en';
-        
-        // Return only supported languages
-        return ['en', 'ru'].includes(languageCode) ? (languageCode as AppLanguage) : 'en';
-    } catch (error) {
-        console.warn('Failed to get device language:', error);
-        return 'en';
+        callback(['en', 'ru'].includes(languageCode) ? languageCode : 'en');
+    } catch {
+        callback('en');
     }
+  },
+  init: () => {},
+  cacheUserLanguage: async (lng: string) => {
+    try {
+      await AsyncStorage.setItem(LANGUAGE_CACHE_KEY, lng);
+    } catch (error) {
+      console.error('Failed to cache language:', error);
+    }
+  },
 };
 
 /**
  * Initialize i18n with optional saved language
  */
 export const initI18n = async (savedLanguage?: AppLanguage | null): Promise<typeof i18n> => {
-    let language = savedLanguage;
-
-    // Try to get cached language if not provided
-    if (!language) {
-        try {
-            const cached = await AsyncStorage.getItem(LANGUAGE_CACHE_KEY);
-            if (cached && ['en', 'ru'].includes(cached)) {
-                language = cached as AppLanguage;
-            }
-        } catch (error) {
-            console.warn('Failed to load cached language:', error);
+    if (i18n.isInitialized) {
+        if (savedLanguage && savedLanguage !== i18n.language) {
+             await i18n.changeLanguage(savedLanguage);
         }
+        return i18n;
     }
 
-    // Fall back to device language
-    const defaultLanguage = language || getDeviceLanguage();
-    console.log('Initializing i18n with language:', defaultLanguage);
-
-    await i18n.use(initReactI18next).init({
+    const options: any = {
         resources: {
             en: { translation: en },
             ru: { translation: ru },
         },
-        lng: defaultLanguage,
         fallbackLng: 'en',
         interpolation: {
             escapeValue: false,
         },
         react: {
             useSuspense: false,
+            bindI18n: 'languageChanged',
+            bindI18nStore: 'added removed',
         },
         // Development: warn about missing keys
         saveMissing: __DEV__,
         missingKeyHandler: __DEV__
-            ? (lngs, ns, key) => {
+            ? (lngs: any, ns: any, key: any) => {
                 console.warn(`Missing translation key: "${key}" [${lngs}/${ns}]`);
             }
             : undefined,
-    });
+    };
+
+    if (savedLanguage) {
+        options.lng = savedLanguage;
+    }
+
+    await i18n
+        .use(languageDetector)
+        .use(initReactI18next)
+        .init(options);
+
+    console.log('Initializing i18n. Language:', i18n.language);
 
     return i18n;
 };

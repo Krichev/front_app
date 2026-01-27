@@ -4,6 +4,7 @@ import {NavigationContainer, NavigationContainerRef} from '@react-navigation/nat
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 // Import screens
 import LoginScreen from '../screens/LoginScreen';
@@ -109,6 +110,7 @@ export const navigationRef = React.createRef<NavigationContainerRef<RootStackPar
 
 // Main tab navigator
 function MainTabs() {
+    const { t } = useTranslation();
     const { data: pendingData } = useGetRelationshipsQuery({
         status: RelationshipStatus.PENDING,
         size: 1
@@ -197,7 +199,7 @@ function MainTabs() {
                         <MaterialCommunityIcons name="cog-outline" size={size} color={color} />
                     ),
                     tabBarLabel: ({color}) => {
-                        return <Text style={{color, fontSize: 10}}>Settings</Text>;
+                        return <Text style={{color, fontSize: 10}}>{t('navigation.settings')}</Text>;
                     },
                 }}
             />
@@ -206,6 +208,7 @@ function MainTabs() {
 }
 
 const AppNavigator: React.FC = () => {
+    const { t } = useTranslation();
     const {isAuthenticated, isInitialized} = useSelector(
         (state: RootState) => state.auth,
     );
@@ -282,7 +285,7 @@ const AppNavigator: React.FC = () => {
                             component={CreateAudioQuestionScreen}
                             options={{
                                 headerShown: false,
-                                title: 'Create Audio Question',
+                                title: t('navigation.createAudioQuestion'),
                             }}
                         />
                         <Stack.Screen 

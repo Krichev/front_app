@@ -49,6 +49,7 @@ const en = {
         contacts: 'Contacts',
         profile: 'Profile',
         settings: 'Settings',
+        createAudioQuestion: 'Create Audio Question',
     },
     auth: {
         login: 'Login',

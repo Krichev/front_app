@@ -49,6 +49,7 @@ const ru = {
         contacts: 'Контакты',
         profile: 'Профиль',
         settings: 'Настройки',
+        createAudioQuestion: 'Создать аудио вопрос',
     },
     auth: {
         login: 'Вход',
