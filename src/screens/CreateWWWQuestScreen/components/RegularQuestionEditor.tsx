@@ -19,6 +19,12 @@ import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
+import {
+    isValidYouTubeUrl,
+    extractYouTubeVideoId,
+    getYouTubeThumbnail,
+    detectVideoPlatform,
+} from '../../../utils/youtubeUtils';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -59,13 +65,46 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const [isSelectingMedia, setIsSelectingMedia] = useState(false);
     const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
 
+    // Media input mode for video: upload file or paste link
+    const [mediaInputMode, setMediaInputMode] = useState<'upload' | 'link'>('upload');
 
+    // External video URL state
+    const [externalVideoUrl, setExternalVideoUrl] = useState('');
+    const [detectedPlatform, setDetectedPlatform] = useState<'youtube' | 'vimeo' | 'direct' | null>(null);
+    const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+
+    // Video timing (optional, in seconds)
+    const [videoStartTime, setVideoStartTime] = useState<string>('');
+    const [videoEndTime, setVideoEndTime] = useState<string>('');
+
+    // Validate and detect platform when URL changes
+    useEffect(() => {
+        if (externalVideoUrl.trim()) {
+            const platform = detectVideoPlatform(externalVideoUrl);
+            setDetectedPlatform(platform);
+            
+            if (platform === 'youtube') {
+                const videoId = extractYouTubeVideoId(externalVideoUrl);
+                setYoutubeVideoId(videoId);
+            } else {
+                setYoutubeVideoId(null);
+            }
+        } else {
+            setDetectedPlatform(null);
+            setYoutubeVideoId(null);
+        }
+    }, [externalVideoUrl]);
 
     /**
      * Determine question type based on selected media (IMPLICIT)
      * Returns TEXT if no media selected
      */
     const getQuestionType = (): QuestionType => {
+        // Check for external video URL first
+        if (mediaInputMode === 'link' && externalVideoUrl.trim() && detectedPlatform) {
+            return 'VIDEO';
+        }
+
         if (!selectedMedia) {
             return 'TEXT';
         }
@@ -236,6 +275,25 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
         const questionType = getQuestionType();
 
+        // Validate external video if in link mode
+        if (questionType === 'VIDEO' && mediaInputMode === 'link') {
+            if (!externalVideoUrl.trim()) {
+                Alert.alert('Error', 'Please enter a video URL');
+                return;
+            }
+            if (!detectedPlatform) {
+                Alert.alert('Error', 'Please enter a valid video URL (YouTube, Vimeo, or direct video link)');
+                return;
+            }
+            // Validate time range if both provided
+            const startTime = videoStartTime ? parseFloat(videoStartTime) : undefined;
+            const endTime = videoEndTime ? parseFloat(videoEndTime) : undefined;
+            if (startTime !== undefined && endTime !== undefined && endTime <= startTime) {
+                Alert.alert('Error', 'End time must be greater than start time');
+                return;
+            }
+        }
+
         // DETAILED LOGGING for debugging
         console.log('🎬 [RegularQuestionEditor] handleSubmit called');
         console.log('🎬 [RegularQuestionEditor] selectedMedia:', selectedMedia ? {
@@ -256,11 +314,18 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             additionalInfo: additionalInfo.trim(),
             questionType,
             // CRITICAL: Pass the raw file info for the mutation to handle
-            mediaFile: selectedMedia ? {
+            mediaFile: (mediaInputMode === 'upload' && selectedMedia) ? {
                 uri: selectedMedia.uri,
                 name: selectedMedia.name || `media_${Date.now()}.${selectedMedia.type?.split('/')[1] || 'mp4'}`,
                 type: selectedMedia.type || 'video/mp4',
             } : undefined,
+            // External media (new)
+            mediaSourceType: mediaInputMode === 'link' && detectedPlatform 
+                ? (detectedPlatform === 'youtube' ? 'YOUTUBE' : detectedPlatform === 'vimeo' ? 'VIMEO' : 'EXTERNAL_URL')
+                : (selectedMedia ? 'UPLOADED' : undefined),
+            externalMediaUrl: mediaInputMode === 'link' ? externalVideoUrl.trim() : undefined,
+            questionVideoStartTime: videoStartTime ? parseFloat(videoStartTime) : undefined,
+            questionVideoEndTime: videoEndTime ? parseFloat(videoEndTime) : undefined,
         };
 
         console.log('📤 [RegularQuestionEditor] Submitting with mediaFile:', !!questionData.mediaFile);
@@ -293,6 +358,13 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         setSelectedTopicId(undefined);
         setAdditionalInfo('');
         setSelectedMedia(undefined);
+        // Reset external video state
+        setMediaInputMode('upload');
+        setExternalVideoUrl('');
+        setVideoStartTime('');
+        setVideoEndTime('');
+        setDetectedPlatform(null);
+        setYoutubeVideoId(null);
     };
 
     /**
@@ -434,7 +506,17 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
-                                onPress={() => handleSelectMedia('video')}
+                                onPress={() => {
+                                    // Clear any previous selection and default to upload mode for new selection
+                                    // unless we are already in link mode with data
+                                    if (mediaInputMode === 'link' && externalVideoUrl) {
+                                        // Keep link mode
+                                    } else {
+                                        setMediaInputMode('upload');
+                                        setSelectedMedia(undefined);
+                                        handleSelectMedia('video');
+                                    }
+                                }}
                                 disabled={isSelectingMedia}
                             >
                                 {isSelectingMedia && mediaSelectionType === 'video' ? (
@@ -458,8 +540,188 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                             </TouchableOpacity>
                         </View>
 
-                        {/* Media Preview */}
-                        {renderMediaPreview()}
+                        {/* Video Input Mode Selector - Shows after clicking Video button or when video selected */}
+                        {(getQuestionType() === 'VIDEO' || selectedMedia?.type?.startsWith('video/') || (mediaInputMode === 'link' && externalVideoUrl)) && (
+                            <View style={styles.videoModeSection}>
+                                <Text style={form.sectionTitle}>Video Source</Text>
+                                
+                                {/* Mode Toggle */}
+                                <View style={styles.modeToggleContainer}>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.modeToggleButton,
+                                            mediaInputMode === 'upload' && styles.modeToggleButtonActive
+                                        ]}
+                                        onPress={() => {
+                                            setMediaInputMode('upload');
+                                            setExternalVideoUrl('');
+                                            setVideoStartTime('');
+                                            setVideoEndTime('');
+                                            // Only trigger picker if no media selected yet
+                                            if (!selectedMedia) {
+                                                handleSelectMedia('video');
+                                            }
+                                        }}
+                                    >
+                                        <MaterialCommunityIcons 
+                                            name="upload" 
+                                            size={18} 
+                                            color={mediaInputMode === 'upload' ? '#fff' : theme.colors.primary.main} 
+                                        />
+                                        <Text style={[
+                                            styles.modeToggleText,
+                                            mediaInputMode === 'upload' && styles.modeToggleTextActive
+                                        ]}>
+                                            Upload
+                                        </Text>
+                                    </TouchableOpacity>
+                                    
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.modeToggleButton,
+                                            mediaInputMode === 'link' && styles.modeToggleButtonActive
+                                        ]}
+                                        onPress={() => {
+                                            setMediaInputMode('link');
+                                            setSelectedMedia(undefined);
+                                        }}
+                                    >
+                                        <MaterialCommunityIcons 
+                                            name="link" 
+                                            size={18} 
+                                            color={mediaInputMode === 'link' ? '#fff' : theme.colors.primary.main} 
+                                        />
+                                        <Text style={[
+                                            styles.modeToggleText,
+                                            mediaInputMode === 'link' && styles.modeToggleTextActive
+                                        ]}>
+                                            Link
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Link Input Mode */}
+                                {mediaInputMode === 'link' && (
+                                    <View style={styles.linkInputSection}>
+                                        {/* URL Input */}
+                                        <View style={styles.urlInputContainer}>
+                                            <TextInput
+                                                style={[styles.urlInput, !detectedPlatform && externalVideoUrl.trim().length > 0 && styles.urlInputError]}
+                                                placeholder="Paste YouTube or video URL..."
+                                                placeholderTextColor={theme.colors.text.disabled}
+                                                value={externalVideoUrl}
+                                                onChangeText={setExternalVideoUrl}
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
+                                                keyboardType="url"
+                                            />
+                                            {externalVideoUrl.trim().length > 0 && (
+                                                <View style={styles.urlValidationIcon}>
+                                                    <MaterialCommunityIcons
+                                                        name={detectedPlatform ? 'check-circle' : 'alert-circle'}
+                                                        size={20}
+                                                        color={detectedPlatform ? '#4CAF50' : '#F44336'}
+                                                    />
+                                                </View>
+                                            )}
+                                        </View>
+
+                                        {/* Platform Detection Badge */}
+                                        {detectedPlatform && (
+                                            <View style={styles.platformBadge}>
+                                                <MaterialCommunityIcons
+                                                    name={detectedPlatform === 'youtube' ? 'youtube' : detectedPlatform === 'vimeo' ? 'vimeo' : 'video'}
+                                                    size={16}
+                                                    color={detectedPlatform === 'youtube' ? '#FF0000' : theme.colors.primary.main}
+                                                />
+                                                <Text style={styles.platformBadgeText}>
+                                                    {detectedPlatform === 'youtube' ? 'YouTube' : detectedPlatform === 'vimeo' ? 'Vimeo' : 'Direct Video'}
+                                                </Text>
+                                            </View>
+                                        )}
+
+                                        {/* YouTube Thumbnail Preview */}
+                                        {youtubeVideoId && (
+                                            <View style={styles.thumbnailPreview}>
+                                                <Image
+                                                    source={{ uri: getYouTubeThumbnail(youtubeVideoId) }}
+                                                    style={styles.youtubeThumbnail}
+                                                    resizeMode="cover"
+                                                />
+                                                <View style={styles.playIconOverlay}>
+                                                    <MaterialCommunityIcons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {/* Time Range Inputs (Optional) */}
+                                        <View style={styles.timeRangeSection}>
+                                            <Text style={styles.timeRangeLabel}>Playback Range (optional)</Text>
+                                            <View style={styles.timeInputsRow}>
+                                                <View style={styles.timeInputContainer}>
+                                                    <Text style={styles.timeInputLabel}>Start (sec)</Text>
+                                                    <TextInput
+                                                        style={styles.timeInput}
+                                                        placeholder="0"
+                                                        placeholderTextColor={theme.colors.text.disabled}
+                                                        value={videoStartTime}
+                                                        onChangeText={setVideoStartTime}
+                                                        keyboardType="numeric"
+                                                    />
+                                                </View>
+                                                <View style={styles.timeInputContainer}>
+                                                    <Text style={styles.timeInputLabel}>End (sec)</Text>
+                                                    <TextInput
+                                                        style={styles.timeInput}
+                                                        placeholder="auto"
+                                                        placeholderTextColor={theme.colors.text.disabled}
+                                                        value={videoEndTime}
+                                                        onChangeText={setVideoEndTime}
+                                                        keyboardType="numeric"
+                                                    />
+                                                </View>
+                                            </View>
+                                        </View>
+
+                                        {/* Clear Link Button */}
+                                        {externalVideoUrl.length > 0 && (
+                                            <TouchableOpacity
+                                                style={styles.clearLinkButton}
+                                                onPress={() => {
+                                                    setExternalVideoUrl('');
+                                                    setVideoStartTime('');
+                                                    setVideoEndTime('');
+                                                }}
+                                            >
+                                                <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.error.main} />
+                                                <Text style={styles.clearLinkText}>Clear Link</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                )}
+
+                                {/* Upload Mode - Show pick button if no media selected */}
+                                {mediaInputMode === 'upload' && !selectedMedia && (
+                                    <TouchableOpacity
+                                        style={styles.pickVideoButton}
+                                        onPress={handleVideoPick}
+                                        disabled={isSelectingMedia}
+                                    >
+                                        {isSelectingMedia ? (
+                                            <ActivityIndicator size="small" color={theme.colors.primary.main} />
+                                        ) : (
+                                            <>
+                                                <MaterialCommunityIcons name="folder-video" size={24} color={theme.colors.primary.main} />
+                                                <Text style={styles.pickVideoButtonText}>Select Video from Device</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        )}
+
+                        {/* Media Preview - Only show for non-link modes (image/audio or uploaded video) */}
+                        {mediaInputMode !== 'link' && renderMediaPreview()}
                     </View>
 
                     {/* Question Field */}
@@ -688,6 +950,158 @@ const themeStyles = createStyles(theme => ({
     },
     difficultyTextActive: {
         color: theme.colors.text.inverse,
+    },
+    // Video mode section styles
+    videoModeSection: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 12,
+    },
+    modeToggleContainer: {
+        flexDirection: 'row',
+        marginBottom: 16,
+        borderRadius: 8,
+        backgroundColor: '#e9ecef',
+        padding: 4,
+    },
+    modeToggleButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 6,
+        gap: 6,
+    },
+    modeToggleButtonActive: {
+        backgroundColor: '#007AFF',
+    },
+    modeToggleText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#007AFF',
+    },
+    modeToggleTextActive: {
+        color: '#fff',
+    },
+    linkInputSection: {
+        gap: 12,
+    },
+    urlInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#ddd',
+    },
+    urlInput: {
+        flex: 1,
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        fontSize: 14,
+        color: '#333',
+    },
+    urlInputError: {
+        borderColor: '#F44336',
+    },
+    urlValidationIcon: {
+        paddingRight: 12,
+    },
+    platformBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        backgroundColor: '#e3f2fd',
+        borderRadius: 12,
+    },
+    platformBadgeText: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#1976d2',
+    },
+    thumbnailPreview: {
+        position: 'relative',
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    youtubeThumbnail: {
+        width: '100%',
+        height: 180,
+        backgroundColor: '#000',
+    },
+    playIconOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
+    timeRangeSection: {
+        marginTop: 8,
+    },
+    timeRangeLabel: {
+        fontSize: 12,
+        color: '#666',
+        marginBottom: 8,
+    },
+    timeInputsRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    timeInputContainer: {
+        flex: 1,
+    },
+    timeInputLabel: {
+        fontSize: 11,
+        color: '#888',
+        marginBottom: 4,
+    },
+    timeInput: {
+        backgroundColor: '#fff',
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 14,
+        color: '#333',
+    },
+    clearLinkButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 8,
+    },
+    clearLinkText: {
+        fontSize: 14,
+        color: '#F44336',
+    },
+    pickVideoButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: '#007AFF',
+        borderStyle: 'dashed',
+    },
+    pickVideoButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#007AFF',
     },
 }));
 

@@ -58,6 +58,11 @@ export interface QuestionFormData {
         name: string;
         type: string;
     };
+    // NEW: External media support
+    mediaSourceType?: 'UPLOADED' | 'EXTERNAL_URL' | 'YOUTUBE' | 'VIMEO' | 'SOUNDCLOUD';
+    externalMediaUrl?: string;
+    questionVideoStartTime?: number;
+    questionVideoEndTime?: number;
 }
 
 // ============================================================================

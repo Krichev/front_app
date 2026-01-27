@@ -29,3 +29,28 @@ export const parseTimestampToSeconds = (timestamp: string): number => {
     }
     return 0;
 };
+
+export const isValidVideoUrl = (url: string): boolean => {
+    if (!url) return false;
+    // Check YouTube
+    if (isValidYouTubeUrl(url)) return true;
+    // Check Vimeo
+    if (/vimeo\.com\/\d+/.test(url)) return true;
+    // Check direct video URL
+    if (/\.(mp4|webm|mov|avi)(\?|$)/i.test(url)) return true;
+    // Check if it's a valid URL at all
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+export const detectVideoPlatform = (url: string): 'youtube' | 'vimeo' | 'direct' | null => {
+    if (!url) return null;
+    if (isValidYouTubeUrl(url)) return 'youtube';
+    if (/vimeo\.com\/\d+/.test(url)) return 'vimeo';
+    if (/\.(mp4|webm|mov|avi)(\?|$)/i.test(url)) return 'direct';
+    return null;
+};
