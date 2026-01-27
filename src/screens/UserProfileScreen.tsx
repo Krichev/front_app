@@ -20,6 +20,7 @@ import {
 } from '../entities/UserState/model/slice/relationshipApi';
 import {useGetChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
+import {useTranslation} from 'react-i18next';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -33,6 +34,7 @@ type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
 
 const UserProfileScreen: React.FC = () => {
+    const { t } = useTranslation();
     const route = useRoute<UserProfileRouteProp>();
     const navigation = useNavigation<UserProfileNavigationProp>();
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
@@ -175,10 +177,7 @@ const UserProfileScreen: React.FC = () => {
     // Format join date
     const formatJoinDate = (dateString: string) => {
         const date = new Date(dateString);
-        return `Joined ${date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-        })}`;
+        return t('profile.joinedDate', { date: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) });
     };
 
     // Render loading state
@@ -187,7 +186,7 @@ const UserProfileScreen: React.FC = () => {
             <SafeAreaView style={screen.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={theme.colors.success.main} />
-                    <Text style={styles.loadingText}>Loading profile...</Text>
+                    <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -199,9 +198,9 @@ const UserProfileScreen: React.FC = () => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
                     <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error.main} />
-                    <Text style={styles.errorText}>Failed to load user profile.</Text>
+                    <Text style={styles.errorText}>{t('profile.errorProfile')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={onRefresh}>
-                        <Text style={styles.retryButtonText}>Try Again</Text>
+                        <Text style={styles.retryButtonText}>{t('profile.tryAgain')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -251,7 +250,7 @@ const UserProfileScreen: React.FC = () => {
                         </View>
                     )}
                     <Text style={styles.challengeDate}>
-                        {formatDate(item.createdAt)}
+                        {formatDate(item.created_at)}
                     </Text>
                 </View>
                 {item.description && (
@@ -321,42 +320,41 @@ const UserProfileScreen: React.FC = () => {
                         )}
                     </View>
 
-                    {isCurrentUser ? (
-                        <TouchableOpacity
-                            style={styles.editProfileButton}
-                            onPress={handleEditProfile}
-                        >
-                            <MaterialCommunityIcons name="pencil" size={18} color={theme.colors.text.inverse} />
-                            <Text style={styles.editProfileButtonText}>Edit Profile</Text>
-                        </TouchableOpacity>
-                    ) : (
-                        !relationship ? (
-                            <TouchableOpacity
-                                style={styles.addContactButton}
-                                onPress={handleAddContact}
-                                disabled={isSendingRequest}
-                            >
-                                {isSendingRequest ? (
-                                    <ActivityIndicator size="small" color={theme.colors.text.inverse} />
-                                ) : (
-                                    <>
-                                        <MaterialCommunityIcons name="account-plus" size={18} color={theme.colors.text.inverse} />
-                                        <Text style={styles.addContactButtonText}>Add to Contacts</Text>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        ) : relationship.status === RelationshipStatus.PENDING ? (
-                            <View style={styles.pendingBadge}>
-                                <Text style={styles.pendingText}>Request Pending</Text>
-                            </View>
-                        ) : null
-                    )}
-                </View>
+                                            {isCurrentUser ? (
+                                            <TouchableOpacity
+                                                style={styles.editProfileButton}
+                                                onPress={handleEditProfile}
+                                            >
+                                                <MaterialCommunityIcons name="pencil" size={18} color={theme.colors.text.inverse} />
+                                                <Text style={styles.editProfileButtonText}>{t('profile.editProfile')}</Text>
+                                            </TouchableOpacity>
+                                        ) : (
+                                            !relationship ? (
+                                                <TouchableOpacity
+                                                    style={styles.addContactButton}
+                                                    onPress={handleAddContact}
+                                                    disabled={isSendingRequest}
+                                                >
+                                                    {isSendingRequest ? (
+                                                        <ActivityIndicator size="small" color={theme.colors.text.inverse} />
+                                                    ) : (
+                                                        <>
+                                                            <MaterialCommunityIcons name="account-plus" size={18} color={theme.colors.text.inverse} />
+                                                            <Text style={styles.addContactButtonText}>{t('profile.addToContacts')}</Text>
+                                                        </>
+                                                    )}
+                                                </TouchableOpacity>
+                                            ) : relationship.status === RelationshipStatus.PENDING ? (
+                                                <View style={styles.pendingBadge}>
+                                                    <Text style={styles.pendingText}>{t('profile.requestPending')}</Text>
+                                                </View>
+                                            ) : null
+                                        )}                </View>
 
                 {/* Mutual Connections Section */}
                 {!isCurrentUser && mutualConnections && mutualConnections.length > 0 && (
                     <View style={styles.mutualSection}>
-                        <Text style={styles.sectionTitle}>Mutual Connections</Text>
+                        <Text style={styles.sectionTitle}>{t('profile.mutualConnections')}</Text>
                         <View style={styles.mutualAvatars}>
                             {mutualConnections.slice(0, 5).map((conn, index) => (
                                 <View key={conn.id} style={[styles.mutualAvatarWrapper, { marginLeft: index === 0 ? 0 : -15 }]}>
@@ -375,11 +373,11 @@ const UserProfileScreen: React.FC = () => {
 
                 {/* Stats Section */}
                 <View style={styles.statsSection}>
-                    <Text style={styles.sectionTitle}>Stats</Text>
+                    <Text style={styles.sectionTitle}>{t('profile.stats')}</Text>
                     <View style={styles.statsContainer}>
-                        {renderStatsItem('trophy', 'Completed', userStats?.completed)}
-                        {renderStatsItem('plus-circle', 'Created', userStats?.created)}
-                        {renderStatsItem('check-circle', 'Success Rate', userStats?.success)}
+                        {renderStatsItem('trophy', t('profile.completed'), userStats?.completed)}
+                        {renderStatsItem('plus-circle', t('profile.created'), userStats?.created)}
+                        {renderStatsItem('check-circle', t('profile.winRate'), userStats?.success)}
                     </View>
                 </View>
 
@@ -391,7 +389,7 @@ const UserProfileScreen: React.FC = () => {
                             onPress={() => setActiveTab('created')}
                         >
                             <Text style={[styles.tabText, activeTab === 'created' && styles.activeTabText]}>
-                                Created ({activeCreatedChallenges?.length || 0})
+                                {t('profile.createdTab')} ({activeCreatedChallenges?.length || 0})
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -399,7 +397,7 @@ const UserProfileScreen: React.FC = () => {
                             onPress={() => setActiveTab('joined')}
                         >
                             <Text style={[styles.tabText, activeTab === 'joined' && styles.activeTabText]}>
-                                Joined ({activeJoinedChallenges?.length || 0})
+                                {t('profile.joinedTab')} ({activeJoinedChallenges?.length || 0})
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -415,7 +413,7 @@ const UserProfileScreen: React.FC = () => {
                             color={theme.colors.text.secondary}
                         />
                         <Text style={styles.toggleCancelledText}>
-                            {showCancelled ? 'Hide Cancelled/Completed' : 'Show All'}
+                            {showCancelled ? t('profile.hideCancelled') : t('profile.showAll')}
                         </Text>
                     </TouchableOpacity>
 
@@ -425,7 +423,7 @@ const UserProfileScreen: React.FC = () => {
                             loadingCreated ? (
                                 <View style={styles.loadingContainer}>
                                     <ActivityIndicator size="small" color={theme.colors.success.main} />
-                                    <Text style={styles.loadingText}>Loading created challenges...</Text>
+                                    <Text style={styles.loadingText}>{t('profile.loadingCreated')}</Text>
                                 </View>
                             ) : activeCreatedChallenges && activeCreatedChallenges.length > 0 ? (
                                 <FlatList
@@ -439,7 +437,7 @@ const UserProfileScreen: React.FC = () => {
                                 <View style={styles.emptyState}>
                                     <MaterialCommunityIcons name="trophy-outline" size={48} color={theme.colors.text.disabled} />
                                     <Text style={styles.emptyStateText}>
-                                        {isCurrentUser ? "You haven't created any challenges yet" : 'No challenges created'}
+                                        {isCurrentUser ? t('profile.noCreatedSelf') : t('profile.noCreated')}
                                     </Text>
                                 </View>
                             )
@@ -447,7 +445,7 @@ const UserProfileScreen: React.FC = () => {
                             loadingJoined ? (
                                 <View style={styles.loadingContainer}>
                                     <ActivityIndicator size="small" color={theme.colors.success.main} />
-                                    <Text style={styles.loadingText}>Loading joined challenges...</Text>
+                                    <Text style={styles.loadingText}>{t('profile.loadingJoined')}</Text>
                                 </View>
                             ) : activeJoinedChallenges && activeJoinedChallenges.length > 0 ? (
                                 <FlatList
@@ -461,7 +459,7 @@ const UserProfileScreen: React.FC = () => {
                                 <View style={styles.emptyState}>
                                     <MaterialCommunityIcons name="account-group-outline" size={48} color={theme.colors.text.disabled} />
                                     <Text style={styles.emptyStateText}>
-                                        {isCurrentUser ? "You haven't joined any challenges yet" : 'No challenges joined'}
+                                        {isCurrentUser ? t('profile.noJoinedSelf') : t('profile.noJoined')}
                                     </Text>
                                 </View>
                             )

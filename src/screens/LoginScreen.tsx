@@ -13,6 +13,7 @@ import {useDispatch} from 'react-redux';
 import {setTokens} from '../entities/AuthState/model/slice/authSlice';
 import {useLoginMutation} from '../entities/AuthState/model/slice/authApi';
 import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/AppNavigator';
 import KeychainService from '../services/auth/KeychainService';
@@ -43,6 +44,7 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 const LoginScreen: React.FC = () => {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigation = useNavigation<LoginScreenNavigationProp>();
     const [login, {isLoading}] = useLoginMutation();
@@ -65,7 +67,7 @@ const LoginScreen: React.FC = () => {
         const {username, password} = formData;
 
         if (!username.trim() || !password.trim()) {
-            Alert.alert('Error', 'Please fill in all fields');
+            Alert.alert(t('common.error'), t('auth.fillAllFields'));
             return;
         }
 
@@ -108,8 +110,8 @@ const LoginScreen: React.FC = () => {
         } catch (err: any) {
             console.error('❌ Login error:', err);
             const errorMessage =
-                err?.data?.message || err?.message || 'Invalid credentials';
-            Alert.alert('Login Failed', errorMessage);
+                err?.data?.message || err?.message || t('auth.invalidCredentials');
+            Alert.alert(t('auth.loginFailed'), errorMessage);
         }
     };
 
@@ -122,12 +124,12 @@ const LoginScreen: React.FC = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={screen.container}>
             <View style={styles.formContainer}>
-                <Text style={styles.title}>Welcome Back!</Text>
-                <Text style={styles.subtitle}>Sign in to continue</Text>
+                <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+                <Text style={styles.subtitle}>{t('auth.signInSubtitle')}</Text>
 
                 <TextInput
                     style={[form.input, styles.inputMargin]}
-                    placeholder="Username"
+                    placeholder={t('auth.username')}
                     placeholderTextColor={theme.colors.text.disabled}
                     value={formData.username}
                     onChangeText={value => handleInputChange('username', value)}
@@ -136,7 +138,7 @@ const LoginScreen: React.FC = () => {
 
                 <TextInput
                     style={[form.input, styles.inputMargin]}
-                    placeholder="Password"
+                    placeholder={t('auth.password')}
                     placeholderTextColor={theme.colors.text.disabled}
                     value={formData.password}
                     onChangeText={value => handleInputChange('password', value)}
@@ -149,7 +151,7 @@ const LoginScreen: React.FC = () => {
                     onPress={handleLogin}
                     disabled={isLoading}>
                     <Text style={form.submitButtonText}>
-                        {isLoading ? 'Logging in...' : 'Login'}
+                        {isLoading ? t('auth.loggingIn') : t('auth.login')}
                     </Text>
                 </TouchableOpacity>
 
@@ -157,7 +159,7 @@ const LoginScreen: React.FC = () => {
                     style={styles.signupButton}
                     onPress={handleSignupNavigation}>
                     <Text style={styles.signupText}>
-                        Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
+                        {t('auth.noAccount')} <Text style={styles.signupLink}>{t('auth.signup')}</Text>
                     </Text>
                 </TouchableOpacity>
             </View>

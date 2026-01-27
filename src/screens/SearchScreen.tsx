@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useSearchChallengesQuery } from '../entities/ChallengeState/model/slice/challengeApi';
 import { useSearchUsersQuery } from '../entities/UserState/model/slice/userApi';
@@ -24,6 +25,7 @@ const PREVIEW_LIMIT = 3;
 
 const SearchScreen: React.FC = () => {
     const navigation = useNavigation<SearchScreenNavigationProp>();
+    const { t } = useTranslation();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -233,7 +235,7 @@ const SearchScreen: React.FC = () => {
                     <MaterialCommunityIcons name='magnify' size={22} color='#888' />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder='Search users, quizzes, challenges...'
+                        placeholder={t('search.placeholder')}
                         placeholderTextColor='#999'
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -257,7 +259,7 @@ const SearchScreen: React.FC = () => {
                 {isLoading && debouncedQuery.length >= 2 && (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size='large' color='#007AFF' />
-                        <Text style={styles.loadingText}>Searching...</Text>
+                        <Text style={styles.loadingText}>{t('search.loading')}</Text>
                     </View>
                 )}
 
@@ -265,15 +267,15 @@ const SearchScreen: React.FC = () => {
                 {debouncedQuery.length < 2 && searchQuery.length === 0 && (
                     <View style={styles.emptyState}>
                         <MaterialCommunityIcons name='magnify' size={64} color='#ddd' />
-                        <Text style={styles.emptyStateTitle}>Search WWW Quest</Text>
+                        <Text style={styles.emptyStateTitle}>{t('search.title')}</Text>
                         <Text style={styles.emptyStateText}>
-                            Find users, quizzes, and challenges
+                            {t('search.subtitle')}
                         </Text>
 
                         {/* Recent Searches */}
                         {recentSearches.length > 0 && (
                             <View style={styles.recentContainer}>
-                                <Text style={styles.recentTitle}>Recent Searches</Text>
+                                <Text style={styles.recentTitle}>{t('search.recent')}</Text>
                                 {recentSearches.map((term, i) => (
                                     <TouchableOpacity
                                         key={i}
@@ -292,7 +294,7 @@ const SearchScreen: React.FC = () => {
                 {/* Min chars hint */}
                 {searchQuery.length > 0 && searchQuery.length < 2 && (
                     <View style={styles.hintContainer}>
-                        <Text style={styles.hintText}>Type at least 2 characters to search</Text>
+                        <Text style={styles.hintText}>{t('search.minChars')}</Text>
                     </View>
                 )}
 
@@ -300,9 +302,9 @@ const SearchScreen: React.FC = () => {
                 {!isLoading && debouncedQuery.length >= 2 && !hasResults && (
                     <View style={styles.emptyState}>
                         <MaterialCommunityIcons name='emoticon-sad-outline' size={64} color='#ddd' />
-                        <Text style={styles.emptyStateTitle}>No results found</Text>
+                        <Text style={styles.emptyStateTitle}>{t('search.noResults')}</Text>
                         <Text style={styles.emptyStateText}>
-                            Try a different search term
+                            {t('search.tryDifferent')}
                         </Text>
                     </View>
                 )}
@@ -311,14 +313,14 @@ const SearchScreen: React.FC = () => {
                 {!isLoading && hasResults && (
                     <View style={styles.summaryContainer}>
                         <Text style={styles.summaryText}>
-                            Found {totalResults} result{totalResults !== 1 ? 's' : ''} for "{debouncedQuery}"
+                            {t('search.foundResults', { count: totalResults, plural: totalResults !== 1 ? 's' : '', query: debouncedQuery })}
                         </Text>
                     </View>
                 )}
 
                 {/* Users Section */}
                 {!isLoading && renderSection(
-                    'Users',
+                    t('search.users'),
                     'account-group',
                     users,
                     'users',
@@ -327,7 +329,7 @@ const SearchScreen: React.FC = () => {
 
                 {/* Quizzes Section */}
                 {!isLoading && renderSection(
-                    'Quizzes',
+                    t('search.quizzes'),
                     'brain',
                     quizResults,
                     'quizzes',
@@ -336,7 +338,7 @@ const SearchScreen: React.FC = () => {
 
                 {/* Challenges Section */}
                 {!isLoading && renderSection(
-                    'Challenges',
+                    t('search.challenges'),
                     'trophy',
                     challengeOnlyResults,
                     'challenges',

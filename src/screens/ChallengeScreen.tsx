@@ -11,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -35,6 +36,7 @@ type ChallengesScreenRouteProp = RouteProp<MainTabParamList, 'Challenges'>;
 type ChallengesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Challenges'>;
 
 const ChallengesScreen: React.FC = () => {
+    const { t } = useTranslation();
     const route = useRoute<ChallengesScreenRouteProp>();
     const navigation = useNavigation<ChallengesScreenNavigationProp>();
     const {user} = useSelector((state: RootState) => state.auth);
@@ -85,19 +87,19 @@ const ChallengesScreen: React.FC = () => {
     // Simplified create challenge menu - 2 options
     const handleCreateChallengePress = () => {
         Alert.alert(
-            'Create Challenge',
-            'Choose the type of challenge you want to create:',
+            t('challenges.createTitle'),
+            t('challenges.createMessage'),
             [
                 {
-                    text: 'Quiz Challenge',
+                    text: t('challenges.quizChallenge'),
                     onPress: () => navigation.navigate('CreateWWWQuest')
                 },
                 {
-                    text: 'Standard Challenge',
+                    text: t('challenges.standardChallenge'),
                     onPress: () => navigation.navigate('CreateChallenge')
                 },
                 {
-                    text: 'Cancel',
+                    text: t('common.cancel'),
                     style: 'cancel'
                 }
             ]
@@ -108,7 +110,7 @@ const ChallengesScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             {/* Screen Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Challenges</Text>
+                <Text style={styles.headerTitle}>{t('challenges.title')}</Text>
 
                 <TouchableOpacity
                     style={styles.refreshButton}
@@ -124,7 +126,7 @@ const ChallengesScreen: React.FC = () => {
                 onSelectType={setSelectedType}
             />
             <View style={styles.roleFiltersContainer}>
-                <Text style={styles.filterLabel}>Show challenges where I am:</Text>
+                <Text style={styles.filterLabel}>{t('challenges.filterLabel')}</Text>
                 <View style={styles.checkboxRow}>
                     <TouchableOpacity
                         style={styles.checkboxContainer}
@@ -135,7 +137,7 @@ const ChallengesScreen: React.FC = () => {
                                 <MaterialCommunityIcons name="check" size={16} color="white" />
                             )}
                         </View>
-                        <Text style={styles.checkboxLabel}>Participant</Text>
+                        <Text style={styles.checkboxLabel}>{t('challenges.participant')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -147,7 +149,7 @@ const ChallengesScreen: React.FC = () => {
                                 <MaterialCommunityIcons name="check" size={16} color="white" />
                             )}
                         </View>
-                        <Text style={styles.checkboxLabel}>Creator</Text>
+                        <Text style={styles.checkboxLabel}>{t('challenges.creator')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -157,26 +159,26 @@ const ChallengesScreen: React.FC = () => {
                 {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#4CAF50"/>
-                        <Text style={styles.loadingText}>Loading challenges...</Text>
+                        <Text style={styles.loadingText}>{t('challenges.loading')}</Text>
                     </View>
                 ) : error ? (
                     <View style={styles.errorContainer}>
                         <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
-                        <Text style={styles.errorText}>Failed to load challenges</Text>
+                        <Text style={styles.errorText}>{t('challenges.error')}</Text>
                         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                            <Text style={styles.retryButtonText}>Retry</Text>
+                            <Text style={styles.retryButtonText}>{t('challenges.retry')}</Text>
                         </TouchableOpacity>
                     </View>
                 ) : filteredChallenges.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <MaterialCommunityIcons name="trophy-outline" size={64} color="#999"/>
-                        <Text style={styles.emptyText}>No challenges found</Text>
+                        <Text style={styles.emptyText}>{t('challenges.emptyTitle')}</Text>
                         <Text style={styles.emptySubtext}>
                             {showParticipating && !showCreated
-                                ? "You haven't joined any challenges yet"
+                                ? t('challenges.emptyJoined')
                                 : !showParticipating && showCreated
-                                    ? "You haven't created any challenges yet"
-                                    : "Try adjusting your filters"}
+                                    ? t('challenges.emptyCreated')
+                                    : t('challenges.emptyAdjust')}
                         </Text>
                     </View>
                 ) : (

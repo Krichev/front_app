@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import {StackNavigationProp} from '@react-navigation/stack';
 import {useDispatch} from 'react-redux';
+import {useTranslation} from 'react-i18next';
 import {useSignupMutation} from "../entities/AuthState/model/slice/authApi.ts";
 import {setTokens} from "../entities/AuthState/model/slice/authSlice.ts";
 import {RootStackParamList} from "../navigation/AppNavigator.tsx";
@@ -49,6 +50,7 @@ interface SignupApiResponse {
 }
 
 const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState<FormData>({
         username: '',
         email: '',
@@ -71,25 +73,25 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
         // Input Validation
         if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-            Alert.alert('Error', 'Please fill in all fields');
+            Alert.alert(t('common.error'), t('auth.fillAllFields'));
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert('Error', 'Passwords do not match');
+            Alert.alert(t('common.error'), t('auth.passwordsDoNotMatch'));
             return;
         }
 
         // Basic email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            Alert.alert('Error', 'Please enter a valid email address');
+            Alert.alert(t('common.error'), t('auth.invalidEmail'));
             return;
         }
 
         // Password strength validation
         if (password.length < 6) {
-            Alert.alert('Error', 'Password must be at least 6 characters long');
+            Alert.alert(t('common.error'), t('auth.passwordTooShort'));
             return;
         }
 
@@ -161,23 +163,23 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
             console.error('Error details:', JSON.stringify(err, null, 2));
 
             // Enhanced error handling with more context
-            let errorMessage = 'Signup failed. Please try again.';
+            let errorMessage = t('auth.genericError');
 
             if (err?.data?.message) {
                 errorMessage = err.data.message;
             } else if (err?.message) {
                 errorMessage = err.message;
             } else if (err?.status === 'FETCH_ERROR') {
-                errorMessage = 'Network error. Please check your connection.';
+                errorMessage = t('errors.networkError');
             } else if (err?.status === 400) {
-                errorMessage = 'Invalid signup data. Please check your inputs.';
+                errorMessage = t('auth.invalidCredentials'); // Or generic bad request
             } else if (err?.status === 409) {
-                errorMessage = 'Username or email already exists.';
+                errorMessage = t('auth.usernameOrEmailExists');
             } else if (err?.status === 500) {
-                errorMessage = 'Server error. Please try again later.';
+                errorMessage = t('errors.serverError');
             }
 
-            Alert.alert('Signup Failed', errorMessage);
+            Alert.alert(t('auth.signupFailed'), errorMessage);
         }
     };
 
@@ -217,17 +219,17 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
                 {/* Form Container */}
                 <View style={styles.formContainer}>
-                    <Text style={styles.title}>Create Account</Text>
+                    <Text style={styles.title}>{t('auth.createAccount')}</Text>
 
                     {/* Username Input */}
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Username</Text>
+                        <Text style={styles.label}>{t('auth.username')}</Text>
                         <TextInput
                             style={[
                                 styles.input,
                                 focusedInput === 'username' && styles.inputFocused
                             ]}
-                            placeholder="Choose a username"
+                            placeholder={t('auth.chooseUsername')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={formData.username}
                             onChangeText={(value) => handleInputChange('username', value)}
@@ -242,13 +244,13 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
                     {/* Email Input */}
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Email</Text>
+                        <Text style={styles.label}>{t('auth.email')}</Text>
                         <TextInput
                             style={[
                                 styles.input,
                                 focusedInput === 'email' && styles.inputFocused
                             ]}
-                            placeholder="Enter your email"
+                            placeholder={t('auth.enterEmail')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={formData.email}
                             onChangeText={(value) => handleInputChange('email', value)}
@@ -264,13 +266,13 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
                     {/* Password Input */}
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Password</Text>
+                        <Text style={styles.label}>{t('auth.password')}</Text>
                         <TextInput
                             style={[
                                 styles.input,
                                 focusedInput === 'password' && styles.inputFocused
                             ]}
-                            placeholder="Enter your password"
+                            placeholder={t('auth.enterPassword')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={formData.password}
                             onChangeText={(value) => handleInputChange('password', value)}
@@ -286,13 +288,13 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
                     {/* Confirm Password Input */}
                     <View style={styles.inputContainer}>
-                        <Text style={styles.label}>Confirm Password</Text>
+                        <Text style={styles.label}>{t('auth.confirmPassword')}</Text>
                         <TextInput
                             style={[
                                 styles.input,
                                 focusedInput === 'confirmPassword' && styles.inputFocused
                             ]}
-                            placeholder="Confirm your password"
+                            placeholder={t('auth.confirmPasswordPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={formData.confirmPassword}
                             onChangeText={(value) => handleInputChange('confirmPassword', value)}
@@ -321,7 +323,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                             styles.signupButtonText,
                             (isLoading || !isFormValid()) && styles.signupButtonTextDisabled
                         ]}>
-                            {isLoading ? 'Creating Account...' : 'Sign Up'}
+                            {isLoading ? t('auth.creatingAccount') : t('auth.signup')}
                         </Text>
                     </TouchableOpacity>
 
@@ -330,8 +332,8 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                         <View style={styles.errorContainer}>
                             <Text style={styles.errorText}>
                                 {isFetchBaseQueryError(error)
-                                    ? (error.data as { message?: string })?.message ?? "Signup failed"
-                                    : "Network error"}
+                                    ? (error.data as { message?: string })?.message ?? t('auth.signupFailed')
+                                    : t('errors.networkError')}
                             </Text>
                         </View>
                     )}
@@ -339,9 +341,9 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
 
                 {/* Login Link */}
                 <View style={styles.loginContainer}>
-                    <Text style={styles.loginText}>Already have an account? </Text>
+                    <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
                     <TouchableOpacity onPress={handleLoginNavigation} activeOpacity={0.7}>
-                        <Text style={styles.loginLink}>Sign In</Text>
+                        <Text style={styles.loginLink}>{t('auth.signInLink')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

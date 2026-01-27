@@ -3,6 +3,7 @@ import React from 'react';
 import {ActivityIndicator, FlatList, SafeAreaView, Text, TouchableOpacity, View} from 'react-native';
 import {useDispatch, useSelector} from 'react-redux';
 import {CompositeNavigationProp, useNavigation} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 import {RootState} from "../app/providers/StoreProvider/store.ts";
 import {logout} from "../entities/AuthState/model/slice/authSlice.ts";
 import {BottomTabNavigationProp} from "@react-navigation/bottom-tabs";
@@ -22,6 +23,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 const HomeScreen: React.FC = () => {
+    const { t } = useTranslation();
     const dispatch = useDispatch();
     const navigation = useNavigation<HomeScreenNavigationProp>();
     const {screen, theme} = useAppStyles();
@@ -66,10 +68,10 @@ const HomeScreen: React.FC = () => {
     };
 
     const menuItems: MenuItem[] = [
-        {id: '1', title: 'Challenges', icon: 'trophy', screen: 'Challenges'},
-        {id: '2', title: 'Search', icon: 'magnify', screen: 'Search'},
-        {id: '3', title: 'Groups', icon: 'account-group', screen: 'Groups'},
-        {id: '4', title: 'My Profile', icon: 'account', screen: 'Profile'},
+        {id: '1', title: t('navigation.challenges'), icon: 'trophy', screen: 'Challenges'},
+        {id: '2', title: t('navigation.search'), icon: 'magnify', screen: 'Search'},
+        {id: '3', title: t('navigation.groups'), icon: 'account-group', screen: 'Groups'},
+        {id: '4', title: t('navigation.profile'), icon: 'account', screen: 'Profile'},
     ];
 
     const handleLogout = async () => {
@@ -107,7 +109,7 @@ const HomeScreen: React.FC = () => {
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.greeting}>
-                    Hello, {user?.username || 'User'}! 👋
+                    {t('home.greeting')}, {user?.username || 'User'}! 👋
                 </Text>
                 <TouchableOpacity onPress={handleLogout}>
                     <MaterialCommunityIcons name="logout" size={24} color={theme.colors.text.primary}/>
@@ -120,14 +122,14 @@ const HomeScreen: React.FC = () => {
                     <View>
                         {/* Quick Actions Section */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Quick Actions</Text>
+                            <Text style={styles.sectionTitle}>{t('home.quickActions')}</Text>
                             <View style={styles.quickActionsGrid}>
                                 <TouchableOpacity
                                     style={styles.quickActionCard}
                                     onPress={handleCreateWWWQuiz}
                                 >
                                     <MaterialCommunityIcons name="head-question" size={32} color={theme.colors.success.main}/>
-                                    <Text style={styles.quickActionText}>Create Quiz</Text>
+                                    <Text style={styles.quickActionText}>{t('home.createQuiz')}</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -135,7 +137,7 @@ const HomeScreen: React.FC = () => {
                                     onPress={() => navigation.navigate('CreateChallenge')}
                                 >
                                     <MaterialCommunityIcons name="trophy-variant" size={32} color={theme.colors.warning.main}/>
-                                    <Text style={styles.quickActionText}>New Challenge</Text>
+                                    <Text style={styles.quickActionText}>{t('home.newChallenge')}</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -143,7 +145,7 @@ const HomeScreen: React.FC = () => {
                                     onPress={() => navigation.navigate('Search')}
                                 >
                                     <MaterialCommunityIcons name="magnify" size={32} color={theme.colors.info.main}/>
-                                    <Text style={styles.quickActionText}>Find Challenges</Text>
+                                    <Text style={styles.quickActionText}>{t('home.findChallenges')}</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
@@ -151,7 +153,7 @@ const HomeScreen: React.FC = () => {
                                     onPress={() => navigation.navigate('Profile')}
                                 >
                                     <MaterialCommunityIcons name="account" size={32} color={theme.colors.accent.main}/>
-                                    <Text style={styles.quickActionText}>My Profile</Text>
+                                    <Text style={styles.quickActionText}>{t('home.myProfile')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -160,11 +162,11 @@ const HomeScreen: React.FC = () => {
                         {wwwQuizzes.length > 0 && (
                             <View style={styles.section}>
                                 <View style={styles.sectionHeader}>
-                                    <Text style={styles.sectionTitle}>WWW Quiz Challenges</Text>
+                                    <Text style={styles.sectionTitle}>{t('home.wwwQuizChallenges')}</Text>
                                     <TouchableOpacity
                                         onPress={() => navigation.navigate('Challenges', {initialFilter: 'WWW_QUIZ'})}
                                     >
-                                        <Text style={styles.seeAllText}>See All →</Text>
+                                        <Text style={styles.seeAllText}>{t('home.seeAll')}</Text>
                                     </TouchableOpacity>
                                 </View>
                                 {wwwQuizzes.slice(0, 3).map((challenge) => (
@@ -179,7 +181,7 @@ const HomeScreen: React.FC = () => {
 
                         {/* Main Menu Grid */}
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Explore</Text>
+                            <Text style={styles.sectionTitle}>{t('home.explore')}</Text>
                             <View style={styles.menuGrid}>
                                 {menuItems.map((item) => (
                                     <TouchableOpacity

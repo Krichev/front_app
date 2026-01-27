@@ -23,6 +23,7 @@ import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
 import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import GroupsScreen from '../screens/GroupsScreen';
 import {ContactsScreen} from '../screens/ContactsScreen';
 import {AddContactScreen} from '../screens/AddContactScreen';
 import UserQuestionsScreen from '../screens/UserQuestionsScreen';
@@ -98,6 +99,7 @@ export type MainTabParamList = {
     Challenges: undefined;
     Search: undefined;
     Contacts: undefined;
+    Groups: undefined;
     Profile: undefined;
     Settings: undefined;
 };
@@ -131,6 +133,7 @@ function MainTabs() {
                     tabBarIcon: ({color, size}) => (
                         <MaterialCommunityIcons name="home" size={size} color={color} />
                     ),
+                    tabBarLabel: t('navigation.home'),
                 }}
             />
             <Tab.Screen
@@ -140,6 +143,7 @@ function MainTabs() {
                     tabBarIcon: ({color, size}) => (
                         <MaterialCommunityIcons name="trophy" size={size} color={color} />
                     ),
+                    tabBarLabel: t('navigation.challenges'),
                 }}
             />
             <Tab.Screen
@@ -149,6 +153,7 @@ function MainTabs() {
                     tabBarIcon: ({color, size}) => (
                         <MaterialCommunityIcons name="magnify" size={size} color={color} />
                     ),
+                    tabBarLabel: t('navigation.search'),
                 }}
             />
             <Tab.Screen
@@ -180,6 +185,17 @@ function MainTabs() {
                             )}
                         </View>
                     ),
+                    tabBarLabel: t('navigation.contacts'),
+                }}
+            />
+            <Tab.Screen
+                name="Groups"
+                component={GroupsScreen}
+                options={{
+                    tabBarIcon: ({color, size}) => (
+                        <MaterialCommunityIcons name="account-group" size={size} color={color} />
+                    ),
+                    tabBarLabel: t('navigation.groups'),
                 }}
             />
             <Tab.Screen
@@ -189,6 +205,7 @@ function MainTabs() {
                     tabBarIcon: ({color, size}) => (
                         <MaterialCommunityIcons name="account" size={size} color={color} />
                     ),
+                    tabBarLabel: t('navigation.profile'),
                 }}
             />
             <Tab.Screen
