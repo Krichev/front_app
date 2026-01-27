@@ -8,6 +8,14 @@ export enum QuestionVisibility {
     PUBLIC = 'PUBLIC'
 }
 
+export enum MediaSourceType {
+    UPLOADED = 'UPLOADED',
+    EXTERNAL_URL = 'EXTERNAL_URL',
+    YOUTUBE = 'YOUTUBE',
+    VIMEO = 'VIMEO',
+    SOUNDCLOUD = 'SOUNDCLOUD'
+}
+
 export interface CreateQuizQuestionRequest {
     question: string;
     answer: string;
@@ -22,6 +30,16 @@ export interface CreateQuizQuestionRequest {
     questionMediaId?: string;
     questionMediaUrl?: string;
     questionMediaType?: string; // MediaType enum value
+    
+    // External Media Support
+    mediaSourceType?: MediaSourceType;
+    externalMediaUrl?: string;
+    questionVideoStartTime?: number;
+    questionVideoEndTime?: number;
+    answerMediaUrl?: string;
+    answerVideoStartTime?: number;
+    answerVideoEndTime?: number;
+    answerTextVerification?: string;
 }
 
 export interface UpdateQuestionVisibilityRequest {

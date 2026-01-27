@@ -7,6 +7,7 @@ import { AudioChallengeType } from '../../types/audioChallenge.types';
 import { KaraokeQuestionDisplay } from './KaraokeQuestionDisplay';
 import QuestionMediaViewer from '../CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { AudioPlayer } from './AudioPlayer';
+import VideoQuestionDisplay from '../../components/VideoQuestionDisplay';
 
 export interface QuestionDisplayProps {
   question: {
@@ -120,7 +121,12 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
       {/* Media Content */}
       {hasMedia && (
         <View style={styles.mediaContainer}>
-          {isRegularAudio ? (
+          {question.questionType === QuestionType.VIDEO ? (
+             <VideoQuestionDisplay 
+                question={question as any}
+                showAnswer={phase === 'answer'}
+             />
+          ) : isRegularAudio ? (
             // For regular audio, use AudioPlayer if URL is available, or QuestionMediaViewer if using ID
             question.questionMediaUrl ? (
               <AudioPlayer 

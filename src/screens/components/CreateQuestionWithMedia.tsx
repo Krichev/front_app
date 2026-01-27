@@ -25,7 +25,8 @@ import {QuestionService, UserQuestion} from '../../services/wwwGame/questionServ
 import {
     getVisibilityDescription,
     getVisibilityLabel,
-    QuestionVisibility
+    QuestionVisibility,
+    MediaSourceType
 } from "../../entities/QuizState/model/types/question.types.ts";
 import {getVisibilityIcon} from "../../entities/ChallengeState/model/types.ts";
 import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
@@ -35,6 +36,9 @@ import AudioChallengeSection, {
     DEFAULT_AUDIO_CONFIG,
 } from './AudioChallengeSection';
 import {AudioChallengeType, AUDIO_CHALLENGE_TYPES} from '../../entities/ChallengeState/model/types';
+import TimeRangeInput from '../../components/TimeRangeInput';
+import ExternalVideoPlayer from '../../components/ExternalVideoPlayer';
+import {isValidYouTubeUrl, extractYouTubeVideoId} from '../../utils/youtubeUtils';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -73,6 +77,15 @@ export interface QuestionFormData {
     media?: MediaInfo;
     visibility: QuestionVisibility;
     audioConfig?: AudioChallengeConfig;
+    // External Media
+    mediaSourceType?: MediaSourceType;
+    externalMediaUrl?: string;
+    questionVideoStartTime?: number;
+    questionVideoEndTime?: number;
+    answerMediaUrl?: string;
+    answerVideoStartTime?: number;
+    answerVideoEndTime?: number;
+    answerTextVerification?: string;
 }
 
 /**
@@ -112,6 +125,19 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
         (existingQuestion?.visibility as QuestionVisibility) || QuestionVisibility.PRIVATE
     );
     const [audioConfig, setAudioConfig] = useState<AudioChallengeConfig>(DEFAULT_AUDIO_CONFIG);
+
+    // External Media State
+    const [mediaSourceType, setMediaSourceType] = useState<MediaSourceType>(MediaSourceType.UPLOADED);
+    const [externalUrl, setExternalUrl] = useState('');
+    const [qStartTime, setQStartTime] = useState(0);
+    const [qEndTime, setQEndTime] = useState<number | undefined>(undefined);
+    
+    // Answer Media State
+    const [answerMediaType, setAnswerMediaType] = useState<'SAME' | 'DIFFERENT' | 'TEXT'>('TEXT');
+    const [answerUrl, setAnswerUrl] = useState('');
+    const [aStartTime, setAStartTime] = useState(0);
+    const [aEndTime, setAEndTime] = useState<number | undefined>(undefined);
+    const [answerTextVerification, setAnswerTextVerification] = useState('');
 
     // Handle topic selection
     const handleSelectTopic = (selectedTopic: SelectableTopic | null) => {
@@ -364,8 +390,32 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 };
 
                 // Add media info if available for IMAGE/VIDEO
-                if (uploadedMediaInfo && (questionType === 'IMAGE' || questionType === 'VIDEO')) {
-                    questionData.mediaFileId = uploadedMediaInfo.mediaId;
+                if (questionType === 'IMAGE' || questionType === 'VIDEO') {
+                    if (mediaSourceType === MediaSourceType.UPLOADED && uploadedMediaInfo) {
+                        questionData.mediaFileId = uploadedMediaInfo.mediaId;
+                        questionData.mediaSourceType = MediaSourceType.UPLOADED;
+                    } else if (mediaSourceType !== MediaSourceType.UPLOADED && externalUrl) {
+                        // Handle External Media
+                        // Determine actual type (YOUTUBE vs EXTERNAL_URL)
+                        const isYouTube = isValidYouTubeUrl(externalUrl);
+                        questionData.mediaSourceType = isYouTube ? MediaSourceType.YOUTUBE : MediaSourceType.EXTERNAL_URL;
+                        questionData.externalMediaUrl = externalUrl;
+                        questionData.questionVideoStartTime = qStartTime;
+                        questionData.questionVideoEndTime = qEndTime;
+                        
+                        // Answer Media
+                        if (answerMediaType === 'SAME') {
+                            questionData.answerMediaUrl = externalUrl; // Same as question
+                            questionData.answerVideoStartTime = aStartTime;
+                            questionData.answerVideoEndTime = aEndTime;
+                        } else if (answerMediaType === 'DIFFERENT' && answerUrl) {
+                            questionData.answerMediaUrl = answerUrl;
+                            questionData.answerVideoStartTime = aStartTime;
+                            questionData.answerVideoEndTime = aEndTime;
+                        }
+                        
+                        questionData.answerTextVerification = answerTextVerification;
+                    }
                 }
 
                 // Add audio challenge config for AUDIO type
@@ -666,87 +716,218 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                     Media ({questionType === 'IMAGE' ? 'Image' : 'Video'}) *
                                 </Text>
 
-                                {!selectedMedia ? (
-                                    <TouchableOpacity
-                                        style={styles.mediaButton}
-                                        onPress={showMediaOptions}
-                                    >
-                                        <MaterialCommunityIcons name="image-plus" size={24} color="#4CAF50" />
-                                        <Text style={styles.mediaButtonText}>Select Media</Text>
-                                    </TouchableOpacity>
-                                ) : (
-                                    <View style={styles.mediaPreviewContainer}>
-                                        {selectedMedia.isImage && (
-                                            <Image
-                                                source={{ uri: selectedMedia.uri }}
-                                                style={styles.mediaPreview}
-                                                resizeMode="cover"
-                                            />
-                                        )}
-                                        {selectedMedia.isVideo && (
-                                            <View style={styles.videoPlaceholder}>
-                                                <MaterialCommunityIcons name="video" size={48} color="#666" />
-                                                <Text style={styles.videoText}>Video Selected</Text>
-                                            </View>
-                                        )}
-                                        {!selectedMedia.isImage && !selectedMedia.isVideo && (
-                                            <View style={styles.videoPlaceholder}>
-                                                <MaterialCommunityIcons name="music" size={48} color="#666" />
-                                                <Text style={styles.videoText}>Audio Selected</Text>
-                                            </View>
-                                        )}
-
-                                        <View style={styles.mediaInfo}>
-                                            <Text style={styles.mediaName} numberOfLines={1}>
-                                                {selectedMedia.name}
-                                            </Text>
-                                            <Text style={styles.mediaSize}>
-                                                {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : selectedMedia.isVideo ? 'Video' : 'Audio'}
-                                            </Text>
-                                        </View>
-
-                                        <TouchableOpacity
-                                            style={styles.removeButton}
-                                            onPress={handleRemoveMedia}
+                                {questionType === 'VIDEO' && (
+                                    <View style={{flexDirection: 'row', marginBottom: 16, backgroundColor: '#e0e0e0', borderRadius: 8, padding: 4}}>
+                                        <TouchableOpacity 
+                                            style={{
+                                                flex: 1, 
+                                                padding: 8, 
+                                                alignItems: 'center', 
+                                                borderRadius: 6,
+                                                backgroundColor: mediaSourceType === MediaSourceType.UPLOADED ? '#fff' : 'transparent',
+                                                shadowOpacity: mediaSourceType === MediaSourceType.UPLOADED ? 0.1 : 0
+                                            }}
+                                            onPress={() => setMediaSourceType(MediaSourceType.UPLOADED)}
                                         >
-                                            <MaterialCommunityIcons name="close" size={24} color="#f44336" />
+                                            <Text style={{fontWeight: '600', color: '#333'}}>Upload File</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={{
+                                                flex: 1, 
+                                                padding: 8, 
+                                                alignItems: 'center', 
+                                                borderRadius: 6,
+                                                backgroundColor: mediaSourceType !== MediaSourceType.UPLOADED ? '#fff' : 'transparent',
+                                                shadowOpacity: mediaSourceType !== MediaSourceType.UPLOADED ? 0.1 : 0
+                                            }}
+                                            onPress={() => setMediaSourceType(MediaSourceType.EXTERNAL_URL)}
+                                        >
+                                            <Text style={{fontWeight: '600', color: '#333'}}>External Link</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
 
-                                {/* Upload Progress */}
-                                {isUploading && (
-                                    <View style={styles.uploadProgressContainer}>
-                                        <Text style={styles.uploadProgressText}>
-                                            Uploading... {Math.round(uploadProgress)}%
-                                        </Text>
-                                        <View style={styles.progressBar}>
-                                            <View
-                                                style={[
-                                                    styles.progressFill,
-                                                    { width: `${uploadProgress}%` }
-                                                ]}
+                                {mediaSourceType === MediaSourceType.UPLOADED ? (
+                                    <>
+                                        {!selectedMedia ? (
+                                            <TouchableOpacity
+                                                style={styles.mediaButton}
+                                                onPress={showMediaOptions}
+                                            >
+                                                <MaterialCommunityIcons name="image-plus" size={24} color="#4CAF50" />
+                                                <Text style={styles.mediaButtonText}>Select Media</Text>
+                                            </TouchableOpacity>
+                                        ) : (
+                                            <View style={styles.mediaPreviewContainer}>
+                                                {selectedMedia.isImage && (
+                                                    <Image
+                                                        source={{ uri: selectedMedia.uri }}
+                                                        style={styles.mediaPreview}
+                                                        resizeMode="cover"
+                                                    />
+                                                )}
+                                                {selectedMedia.isVideo && (
+                                                    <View style={styles.videoPlaceholder}>
+                                                        <MaterialCommunityIcons name="video" size={48} color="#666" />
+                                                        <Text style={styles.videoText}>Video Selected</Text>
+                                                    </View>
+                                                )}
+                                                {!selectedMedia.isImage && !selectedMedia.isVideo && (
+                                                    <View style={styles.videoPlaceholder}>
+                                                        <MaterialCommunityIcons name="music" size={48} color="#666" />
+                                                        <Text style={styles.videoText}>Audio Selected</Text>
+                                                    </View>
+                                                )}
+
+                                                <View style={styles.mediaInfo}>
+                                                    <Text style={styles.mediaName} numberOfLines={1}>
+                                                        {selectedMedia.name}
+                                                    </Text>
+                                                    <Text style={styles.mediaSize}>
+                                                        {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : selectedMedia.isVideo ? 'Video' : 'Audio'}
+                                                    </Text>
+                                                </View>
+
+                                                <TouchableOpacity
+                                                    style={styles.removeButton}
+                                                    onPress={handleRemoveMedia}
+                                                >
+                                                    <MaterialCommunityIcons name="close" size={24} color="#f44336" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+
+                                        {/* Upload Progress */}
+                                        {isUploading && (
+                                            <View style={styles.uploadProgressContainer}>
+                                                <Text style={styles.uploadProgressText}>
+                                                    Uploading... {Math.round(uploadProgress)}%
+                                                </Text>
+                                                <View style={styles.progressBar}>
+                                                    <View
+                                                        style={[
+                                                            styles.progressFill,
+                                                            { width: `${uploadProgress}%` }
+                                                        ]}
+                                                    />
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {/* Upload Button */}
+                                        {selectedMedia && !uploadedMediaInfo && !isUploading && (
+                                            <TouchableOpacity
+                                                style={styles.uploadButton}
+                                                onPress={handleUploadMedia}
+                                            >
+                                                <MaterialCommunityIcons name="cloud-upload" size={20} color="#fff" />
+                                                <Text style={styles.buttonText}>Upload Media</Text>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {/* Success Message */}
+                                        {uploadedMediaInfo && (
+                                            <View style={styles.successContainer}>
+                                                <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
+                                                <Text style={styles.successText}>Media uploaded successfully!</Text>
+                                            </View>
+                                        )}
+                                    </>
+                                ) : (
+                                    <View>
+                                        <Text style={[styles.label, {fontSize: 14}]}>Video URL (YouTube/Vimeo)</Text>
+                                        <TextInput
+                                            style={styles.input}
+                                            value={externalUrl}
+                                            onChangeText={setExternalUrl}
+                                            placeholder="https://www.youtube.com/watch?v=..."
+                                            placeholderTextColor="#999"
+                                            autoCapitalize="none"
+                                        />
+                                        
+                                        {externalUrl && (
+                                            <View style={{marginTop: 12}}>
+                                                <ExternalVideoPlayer
+                                                    mediaSourceType={isValidYouTubeUrl(externalUrl) ? MediaSourceType.YOUTUBE : MediaSourceType.EXTERNAL_URL}
+                                                    videoUrl={externalUrl}
+                                                    videoId={extractYouTubeVideoId(externalUrl) || undefined}
+                                                    startTime={qStartTime}
+                                                    endTime={qEndTime}
+                                                    height={200}
+                                                />
+                                                
+                                                <Text style={[styles.label, {marginTop: 12, fontSize: 14}]}>Question Segment (Start - End)</Text>
+                                                <TimeRangeInput
+                                                    startTime={qStartTime}
+                                                    endTime={qEndTime}
+                                                    onStartTimeChange={setQStartTime}
+                                                    onEndTimeChange={setQEndTime}
+                                                />
+                                            </View>
+                                        )}
+
+                                        {/* Answer Configuration */}
+                                        <View style={{marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee'}}>
+                                            <Text style={styles.label}>Answer Verification</Text>
+                                            
+                                            <Text style={[styles.label, {fontSize: 14}]}>Answer Video</Text>
+                                            <View style={{flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12}}>
+                                                {['TEXT', 'SAME', 'DIFFERENT'].map((type) => (
+                                                    <TouchableOpacity
+                                                        key={type}
+                                                        onPress={() => setAnswerMediaType(type as any)}
+                                                        style={{
+                                                            paddingHorizontal: 12,
+                                                            paddingVertical: 6,
+                                                            borderRadius: 16,
+                                                            backgroundColor: answerMediaType === type ? '#4CAF50' : '#f0f0f0',
+                                                        }}
+                                                    >
+                                                        <Text style={{color: answerMediaType === type ? '#fff' : '#666', fontSize: 12}}>
+                                                            {type === 'TEXT' ? 'Text Only' : type === 'SAME' ? 'Same Video' : 'Diff Video'}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+
+                                            {answerMediaType === 'SAME' && (
+                                                <View>
+                                                    <Text style={[styles.label, {fontSize: 14}]}>Answer Segment</Text>
+                                                    <TimeRangeInput
+                                                        startTime={aStartTime}
+                                                        endTime={aEndTime}
+                                                        onStartTimeChange={setAStartTime}
+                                                        onEndTimeChange={setAEndTime}
+                                                    />
+                                                </View>
+                                            )}
+
+                                            {answerMediaType === 'DIFFERENT' && (
+                                                <View>
+                                                    <TextInput
+                                                        style={[styles.input, {marginBottom: 8}]}
+                                                        value={answerUrl}
+                                                        onChangeText={setAnswerUrl}
+                                                        placeholder="Answer Video URL..."
+                                                    />
+                                                    <TimeRangeInput
+                                                        startTime={aStartTime}
+                                                        endTime={aEndTime}
+                                                        onStartTimeChange={setAStartTime}
+                                                        onEndTimeChange={setAEndTime}
+                                                    />
+                                                </View>
+                                            )}
+
+                                            <Text style={[styles.label, {fontSize: 14, marginTop: 12}]}>Text Verification (Optional)</Text>
+                                            <TextInput
+                                                style={[styles.input, {minHeight: 60}]}
+                                                value={answerTextVerification}
+                                                onChangeText={setAnswerTextVerification}
+                                                placeholder="Explanation shown after answering..."
+                                                multiline
                                             />
                                         </View>
-                                    </View>
-                                )}
-
-                                {/* Upload Button */}
-                                {selectedMedia && !uploadedMediaInfo && !isUploading && (
-                                    <TouchableOpacity
-                                        style={styles.uploadButton}
-                                        onPress={handleUploadMedia}
-                                    >
-                                        <MaterialCommunityIcons name="cloud-upload" size={20} color="#fff" />
-                                        <Text style={styles.buttonText}>Upload Media</Text>
-                                    </TouchableOpacity>
-                                )}
-
-                                {/* Success Message */}
-                                {uploadedMediaInfo && (
-                                    <View style={styles.successContainer}>
-                                        <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
-                                        <Text style={styles.successText}>Media uploaded successfully!</Text>
                                     </View>
                                 )}
                             </View>

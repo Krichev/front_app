@@ -2,7 +2,7 @@
 import {BaseQueryArg, createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
-import {CreateQuizQuestionRequest, QuestionVisibility} from "../types/question.types";
+import {CreateQuizQuestionRequest, QuestionVisibility, MediaSourceType} from "../types/question.types";
 import {RootStateForApi} from '../../../../app/providers/StoreProvider/storeTypes';
 import {Platform} from 'react-native';
 
@@ -28,6 +28,15 @@ export interface CreateQuestionRequest {
     questionMediaType?: MediaType;
     // Access control
     visibility?: QuestionVisibility;
+    // External Media
+    mediaSourceType?: MediaSourceType;
+    externalMediaUrl?: string;
+    questionVideoStartTime?: number;
+    questionVideoEndTime?: number;
+    answerMediaUrl?: string;
+    answerVideoStartTime?: number;
+    answerVideoEndTime?: number;
+    answerTextVerification?: string;
 }
 
 /**
@@ -61,6 +70,18 @@ export interface QuizQuestion {
     questionMediaId?: string;
     questionMediaType?: MediaType;
     questionThumbnailUrl?: string;
+
+    // External Media Support
+    mediaSourceType?: MediaSourceType;
+    externalMediaUrl?: string;
+    externalMediaId?: string;
+    questionVideoStartTime?: number;
+    questionVideoEndTime?: number;
+    answerMediaUrl?: string;
+    answerExternalMediaId?: string;
+    answerVideoStartTime?: number;
+    answerVideoEndTime?: number;
+    answerTextVerification?: string;
 
     // ===== AUDIO CHALLENGE FIELDS =====
     /** Type of audio challenge - only set for audio questions */

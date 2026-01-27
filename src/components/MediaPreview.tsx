@@ -5,6 +5,9 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import AuthenticatedImage from './AuthenticatedImage';
 import AuthenticatedVideo from './AuthenticatedVideo';
 import AuthenticatedAudio from './AuthenticatedAudio';
+import {MediaSourceType} from '../entities/QuizState/model/types/question.types';
+import ExternalVideoPlayer from './ExternalVideoPlayer';
+import {extractYouTubeVideoId} from '../utils/youtubeUtils';
 
 interface MediaPreviewProps {
     // Primary identifiers - use questionId when possible
@@ -15,6 +18,10 @@ interface MediaPreviewProps {
     thumbnailUrl?: string;
     // Media type - required to render correct component
     mediaType?: 'image' | 'video' | 'audio' | 'IMAGE' | 'VIDEO' | 'AUDIO';
+    // External Media Props
+    mediaSourceType?: MediaSourceType;
+    videoStartTime?: number;
+    videoEndTime?: number;
     // Display options
     style?: ViewStyle;
     height?: number;
@@ -95,6 +102,19 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
             );
 
         case 'VIDEO':
+            if (mediaSourceType && mediaSourceType !== MediaSourceType.UPLOADED) {
+                return (
+                    <ExternalVideoPlayer
+                        mediaSourceType={mediaSourceType}
+                        videoId={mediaSourceType === MediaSourceType.YOUTUBE ? (extractYouTubeVideoId(mediaUrl || '') || undefined) : undefined}
+                        videoUrl={mediaUrl}
+                        startTime={videoStartTime}
+                        endTime={videoEndTime}
+                        shouldPlay={autoPlay}
+                        style={{ height }}
+                    />
+                );
+            }
             return (
                 <AuthenticatedVideo
                     questionId={questionId}
