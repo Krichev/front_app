@@ -10,7 +10,7 @@ import {StyleSheet} from 'react-native';
 import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
 import {useKeychainInitializer} from './src/hooks/useKeychainInitializer';
 import {ThemeProvider} from './src/shared/ui/theme/ThemeProvider';
-import { I18nProvider } from './src/app/providers/I18nProvider';
+import { I18nProvider, useI18n } from './src/app/providers/I18nProvider';
 
 /**
  * Inner app content with KeychainService initialization
@@ -18,11 +18,12 @@ import { I18nProvider } from './src/app/providers/I18nProvider';
 const AppContent: React.FC = () => {
     // Initialize KeychainService once on app start
     useKeychainInitializer();
+    const { currentLanguage } = useI18n();
 
     return (
         <AuthInitializer>
             <WWWGameProvider>
-                <AppNavigation />
+                <AppNavigation key={currentLanguage} />
             </WWWGameProvider>
         </AuthInitializer>
     );
