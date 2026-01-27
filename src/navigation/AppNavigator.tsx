@@ -25,6 +25,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import {ContactsScreen} from '../screens/ContactsScreen';
 import {AddContactScreen} from '../screens/AddContactScreen';
 import UserQuestionsScreen from '../screens/UserQuestionsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -97,6 +98,7 @@ export type MainTabParamList = {
     Search: undefined;
     Contacts: undefined;
     Profile: undefined;
+    Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -185,6 +187,18 @@ function MainTabs() {
                     tabBarIcon: ({color, size}) => (
                         <MaterialCommunityIcons name="account" size={size} color={color} />
                     ),
+                }}
+            />
+            <Tab.Screen
+                name="Settings"
+                component={SettingsScreen}
+                options={{
+                    tabBarIcon: ({color, size}) => (
+                        <MaterialCommunityIcons name="cog-outline" size={size} color={color} />
+                    ),
+                    tabBarLabel: ({color}) => {
+                        return <Text style={{color, fontSize: 10}}>Settings</Text>;
+                    },
                 }}
             />
         </Tab.Navigator>

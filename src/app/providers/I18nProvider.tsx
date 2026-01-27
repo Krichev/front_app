@@ -1,53 +1,127 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+// src/app/providers/I18nProvider.tsx
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { initI18n, changeLanguage, getCurrentLanguage, getAvailableLanguages } from '../../shared/config/i18n/i18n';
+import { useSelector } from 'react-redux';
+import { RootState } from '../providers/StoreProvider/store';
+import { initI18n, changeAppLanguage, getCurrentLanguage } from '../../shared/config/i18n/i18n';
+import { 
+    useGetAppSettingsQuery, 
+    useUpdateLanguageMutation,
+    getCachedSettings,
+} from '../../entities/SettingsState/model/slice/settingsApi';
+import { AppLanguage, AVAILABLE_LANGUAGES } from '../../entities/SettingsState/model/types/settings.types';
 
 interface I18nContextType {
-  isInitialized: boolean;
-  currentLanguage: string;
-  availableLanguages: { code: string; name: string; nativeName: string }[];
-  changeLanguage: (language: string) => Promise<void>;
+    isInitialized: boolean;
+    currentLanguage: AppLanguage;
+    availableLanguages: typeof AVAILABLE_LANGUAGES;
+    changeLanguage: (language: AppLanguage) => Promise<void>;
+    isChangingLanguage: boolean;
 }
 
 const I18nContext = createContext<I18nContextType>({
-  isInitialized: false,
-  currentLanguage: 'en',
-  availableLanguages: getAvailableLanguages(),
-  changeLanguage: async () => {},
+    isInitialized: false,
+    currentLanguage: 'en',
+    availableLanguages: AVAILABLE_LANGUAGES,
+    changeLanguage: async () => {},
+    isChangingLanguage: false,
 });
 
 export const useI18n = () => useContext(I18nContext);
 
-export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const { i18n } = useTranslation();
+interface I18nProviderProps {
+    children: React.ReactNode;
+}
 
-  useEffect(() => {
-    const init = async () => {
-      await initI18n();
-      setIsInitialized(true);
+export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
+    const [isInitialized, setIsInitialized] = useState(false);
+    const [isChangingLanguage, setIsChangingLanguage] = useState(false);
+    const { i18n } = useTranslation();
+    
+    // Get current user from auth state
+    const authState = useSelector((state: RootState) => state.auth);
+    const isAuthenticated = authState?.isAuthenticated || false;
+    
+    // Fetch user settings from DB (only if authenticated)
+    const { data: settings } = useGetAppSettingsQuery(undefined, {
+        skip: !isAuthenticated,
+    });
+    
+    // Mutation to update language in DB
+    const [updateLanguageInDb] = useUpdateLanguageMutation();
+
+    // Initialize i18n on mount
+    useEffect(() => {
+        const init = async () => {
+            try {
+                // First, try to get cached settings for faster startup
+                const cached = await getCachedSettings();
+                await initI18n(cached?.language || null);
+                setIsInitialized(true);
+                console.log('✅ I18n initialized');
+            } catch (error) {
+                console.error('Failed to initialize i18n:', error);
+                // Initialize with default language on error
+                await initI18n('en');
+                setIsInitialized(true);
+            }
+        };
+        init();
+    }, []);
+
+    // Sync with DB settings when they load
+    useEffect(() => {
+        if (settings?.language && settings.language !== i18n.language) {
+            console.log('Syncing language from DB:', settings.language);
+            changeAppLanguage(settings.language);
+        }
+    }, [settings?.language, i18n.language]);
+
+    // Change language handler - updates both local and DB
+    const handleChangeLanguage = useCallback(async (language: AppLanguage) => {
+        if (language === i18n.language) {
+            console.log('Language already set to:', language);
+            return;
+        }
+        
+        setIsChangingLanguage(true);
+        try {
+            // Update local immediately for instant feedback
+            await changeAppLanguage(language);
+            
+            // Sync to DB if authenticated
+            if (isAuthenticated) {
+                try {
+                    await updateLanguageInDb(language).unwrap();
+                    console.log('✅ Language synced to DB:', language);
+                } catch (dbError) {
+                    // Don't revert local change - DB sync failed but local works
+                    console.warn('Failed to sync language to DB:', dbError);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to change language:', error);
+        } finally {
+            setIsChangingLanguage(false);
+        }
+    }, [isAuthenticated, updateLanguageInDb, i18n.language]);
+
+    const contextValue: I18nContextType = {
+        isInitialized,
+        currentLanguage: (i18n.language as AppLanguage) || 'en',
+        availableLanguages: AVAILABLE_LANGUAGES,
+        changeLanguage: handleChangeLanguage,
+        isChangingLanguage,
     };
-    init();
-  }, []);
 
-  const handleChangeLanguage = async (language: string) => {
-    await changeLanguage(language);
-  };
+    // Show nothing until i18n is initialized (prevents flash)
+    if (!isInitialized) {
+        return null;
+    }
 
-  const contextValue: I18nContextType = {
-    isInitialized,
-    currentLanguage: i18n.language || getCurrentLanguage(),
-    availableLanguages: getAvailableLanguages(),
-    changeLanguage: handleChangeLanguage,
-  };
-
-  if (!isInitialized) {
-    return null; // Or a loading spinner
-  }
-
-  return (
-    <I18nContext.Provider value={contextValue}>
-      {children}
-    </I18nContext.Provider>
-  );
+    return (
+        <I18nContext.Provider value={contextValue}>
+            {children}
+        </I18nContext.Provider>
+    );
 };

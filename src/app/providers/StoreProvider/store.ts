@@ -15,6 +15,7 @@ import {topicApi} from '../../../entities/TopicState/model/slice/topicApi';
 import {audioChallengeApi} from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import {relationshipApi} from '../../../entities/UserState/model/slice/relationshipApi';
 import {rhythmApi} from '../../../entities/RhythmChallengeState/model/slice/rhythmApi';
+import {settingsApi} from '../../../entities/SettingsState/model/slice/settingsApi';
 
 export const store = configureStore({
     reducer: {
@@ -33,6 +34,7 @@ export const store = configureStore({
         [audioChallengeApi.reducerPath]: audioChallengeApi.reducer,
         [relationshipApi.reducerPath]: relationshipApi.reducer,
         [rhythmApi.reducerPath]: rhythmApi.reducer,
+        [settingsApi.reducerPath]: settingsApi.reducer,
     },
 
     middleware: (getDefaultMiddleware) =>
@@ -48,6 +50,7 @@ export const store = configureStore({
             audioChallengeApi.middleware,
             relationshipApi.middleware,
             rhythmApi.middleware,
+            settingsApi.middleware,
         ),
 
     devTools: process.env.NODE_ENV !== 'production', // Enable Redux DevTools in development
