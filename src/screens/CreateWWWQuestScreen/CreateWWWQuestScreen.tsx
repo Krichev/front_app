@@ -20,7 +20,6 @@ import {RootState} from '../../app/providers/StoreProvider/store';
 import BasicInfoForm from './components/BasicInfoForm';
 import QuizConfigForm from './components/QuizConfigForm';
 import QuestionSourceSelector from './components/QuestionSourceSelector';
-import QuestionList from './components/QuestionList';
 import SelectedQuestionsPreview from './components/SelectedQuestionsPreview';
 
 import {useQuestCreator} from './hooks/useQuestCreator';
@@ -30,6 +29,7 @@ import RegularQuestionEditor from "./components/RegularQuestionEditor";
 import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
 import {QuestionCategory} from './types/question.types';
 import {APIDifficulty} from '../../services/wwwGame/questionService';
+import {QuestionList} from "./index.ts";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 

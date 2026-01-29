@@ -1,6 +1,6 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionList.tsx
-import React, {useState, useEffect} from 'react';
-import {ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import React, {useEffect} from 'react';
+import {ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
@@ -687,3 +687,5 @@ const QuestionList: React.FC<QuestionListProps> = ({
         </View>
     );
 };
+
+export default QuestionList;
