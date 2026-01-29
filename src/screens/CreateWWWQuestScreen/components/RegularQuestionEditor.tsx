@@ -66,6 +66,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
     const [isSelectingMedia, setIsSelectingMedia] = useState(false);
     const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
+    const [showVideoModeSelector, setShowVideoModeSelector] = useState(false);
 
     // Media input mode for video: upload file or paste link
     const [mediaInputMode, setMediaInputMode] = useState<'upload' | 'link'>('upload');
@@ -96,6 +97,23 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             setYoutubeVideoId(null);
         }
     }, [externalVideoUrl]);
+
+    /**
+     * Get safe icon name with fallback
+     */
+    const getMediaIconName = (questionType: QuestionType): string => {
+        switch (questionType) {
+            case 'VIDEO':
+                return 'video';
+            case 'AUDIO':
+                return 'music';
+            case 'IMAGE':
+                return 'image';
+            case 'TEXT':
+            default:
+                return 'file-document';
+        }
+    };
 
     /**
      * Determine question type based on selected media (IMPLICIT)
@@ -367,6 +385,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         setVideoEndTime('');
         setDetectedPlatform(null);
         setYoutubeVideoId(null);
+        setShowVideoModeSelector(false);
     };
 
     /**
@@ -424,7 +443,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 {(currentQuestionType === 'VIDEO' || currentQuestionType === 'AUDIO') && selectedMedia && (
                     <View style={styles.mediaPlaceholder}>
                         <MaterialCommunityIcons
-                            name={currentQuestionType === 'VIDEO' ? 'video' : 'music'}
+                            name={getMediaIconName(currentQuestionType)}
                             size={48}
                             color={theme.colors.primary.main}
                         />
@@ -509,14 +528,16 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
                                 onPress={() => {
-                                    // Clear any previous selection and default to upload mode for new selection
-                                    // unless we are already in link mode with data
-                                    if (mediaInputMode === 'link' && externalVideoUrl) {
-                                        // Keep link mode
+                                    // Show the video mode selector instead of immediately opening picker
+                                    // If already showing and in video mode, toggle off
+                                    if (showVideoModeSelector) {
+                                        setShowVideoModeSelector(false);
                                     } else {
-                                        setMediaInputMode('upload');
-                                        setSelectedMedia(undefined);
-                                        handleSelectMedia('video');
+                                        setShowVideoModeSelector(true);
+                                        // Default to upload mode if no link present
+                                        if (mediaInputMode !== 'link' || !externalVideoUrl) {
+                                            setMediaInputMode('upload');
+                                        }
                                     }
                                 }}
                                 disabled={isSelectingMedia}
@@ -543,7 +564,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                         </View>
 
                         {/* Video Input Mode Selector - Shows after clicking Video button or when video selected */}
-                        {(getQuestionType() === 'VIDEO' || selectedMedia?.type?.startsWith('video/') || (mediaInputMode === 'link' && externalVideoUrl)) && (
+                        {(showVideoModeSelector || getQuestionType() === 'VIDEO' || selectedMedia?.type?.startsWith('video/') || (mediaInputMode === 'link' && externalVideoUrl)) && (
                             <View style={styles.videoModeSection}>
                                 <Text style={form.sectionTitle}>{t('createQuest.questionEditor.videoSource')}</Text>
                                 

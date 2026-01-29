@@ -9,6 +9,9 @@ export interface StoredAuthData {
     user: any;
 }
 
+// Module-level flag - survives hot reload better than class property
+let moduleInitialized = false;
+
 class KeychainService {
     private static instance: KeychainService | null = null;
     private mutex: Mutex;
@@ -28,24 +31,34 @@ class KeychainService {
     }
 
     public async initialize(): Promise<void> {
+        // Module-level guard for hot reload protection
+        if (moduleInitialized) {
+            console.log('🔐 KeychainService already initialized (module level)');
+            return;
+        }
+        
         if (this.isInitialized) {
-            console.log('🔐 KeychainService already initialized');
+            console.log('🔐 KeychainService already initialized (instance level)');
             return;
         }
 
         return await this.mutex.runExclusive(async () => {
-            if (!this.isInitialized) {
-                console.log(`🔐 Initializing KeychainService for ${Platform.OS}...`);
-
-                if (Platform.OS === 'android') {
-                    console.log('📱 Android: Using Android Keystore');
-                } else if (Platform.OS === 'ios') {
-                    console.log('🍎 iOS: Using iOS Keychain');
-                }
-
-                this.isInitialized = true;
-                console.log('✅ KeychainService initialized successfully');
+            // Double-check inside mutex
+            if (this.isInitialized || moduleInitialized) {
+                return;
             }
+            
+            console.log(`🔐 Initializing KeychainService for ${Platform.OS}...`);
+
+            if (Platform.OS === 'android') {
+                console.log('📱 Android: Using Android Keystore');
+            } else if (Platform.OS === 'ios') {
+                console.log('🍎 iOS: Using iOS Keychain');
+            }
+
+            this.isInitialized = true;
+            moduleInitialized = true;
+            console.log('✅ KeychainService initialized successfully');
         });
     }
 
@@ -190,6 +203,7 @@ class KeychainService {
         if (__DEV__) {
             console.warn('⚠️ Resetting KeychainService singleton (DEV only)');
             KeychainService.instance = null;
+            moduleInitialized = false;
         } else {
             throw new Error('resetInstance() can only be called in development mode');
         }

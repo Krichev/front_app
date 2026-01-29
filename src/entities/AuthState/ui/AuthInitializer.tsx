@@ -18,7 +18,7 @@ export const AuthInitializer: React.FC<{children: React.ReactNode}> = ({children
             try {
                 console.log('🔄 Initializing authentication...');
 
-                // Ensure keychain is initialized
+                // Initialize keychain (has internal guards against double-init)
                 await KeychainService.initialize();
 
                 // Load tokens from storage
@@ -26,8 +26,6 @@ export const AuthInitializer: React.FC<{children: React.ReactNode}> = ({children
 
                 if (storedData) {
                     console.log('✅ Found stored tokens, restoring session...');
-
-                    // Restore auth state
                     dispatch(
                         setTokens({
                             accessToken: storedData.accessToken,
@@ -39,8 +37,15 @@ export const AuthInitializer: React.FC<{children: React.ReactNode}> = ({children
                     console.log('ℹ️ No stored tokens found, user needs to log in');
                     dispatch(setInitialized());
                 }
-            } catch (error) {
-                console.error('❌ Error initializing authentication:', error);
+            } catch (error: any) {
+                // Handle DataStore error gracefully - don't crash the app
+                const errorMessage = error?.message || String(error);
+                if (errorMessage.includes('DataStore') || errorMessage.includes('multiple')) {
+                    console.warn('⚠️ DataStore conflict detected, proceeding without stored tokens');
+                } else {
+                    console.error('❌ Error initializing authentication:', error);
+                }
+                // Always initialize auth state to prevent app from being stuck
                 dispatch(setInitialized());
             } finally {
                 setIsLoading(false);
