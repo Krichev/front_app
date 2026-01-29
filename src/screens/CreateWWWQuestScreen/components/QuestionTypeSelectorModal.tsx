@@ -3,6 +3,7 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { QuestionCategory } from '../types/question.types';
 
 interface QuestionTypeSelectorModalProps {
@@ -11,23 +12,25 @@ interface QuestionTypeSelectorModalProps {
   onSelect: (category: QuestionCategory) => void;
 }
 
-const optionData = [
-  { 
-    category: 'REGULAR' as QuestionCategory, 
-    icon: 'help-circle-outline', 
-    label: 'Regular Question', 
-    description: 'Create a classic quiz question with optional image, video, or audio.' 
-  },
-  { 
-    category: 'KARAOKE' as QuestionCategory, 
-    icon: 'microphone-variant', 
-    label: 'Karaoke Question', 
-    description: 'Create an audio challenge where users sing or match sounds.', 
-    opensNewScreen: true 
-  },
-];
-
 const QuestionTypeSelectorModal: React.FC<QuestionTypeSelectorModalProps> = ({ visible, onClose, onSelect }) => {
+  const { t } = useTranslation();
+
+  const optionData = [
+    { 
+      category: 'REGULAR' as QuestionCategory, 
+      icon: 'help-circle-outline', 
+      label: t('createQuest.typeSelector.regularQuestion'), 
+      description: t('createQuest.typeSelector.regularDescription') 
+    },
+    { 
+      category: 'KARAOKE' as QuestionCategory, 
+      icon: 'microphone-variant', 
+      label: t('createQuest.typeSelector.karaokeQuestion'), 
+      description: t('createQuest.typeSelector.karaokeDescription'), 
+      opensNewScreen: true 
+    },
+  ];
+
   return (
     <Modal
       visible={visible}
@@ -38,7 +41,7 @@ const QuestionTypeSelectorModal: React.FC<QuestionTypeSelectorModalProps> = ({ v
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Select Question Type</Text>
+            <Text style={styles.headerTitle}>{t('createQuest.typeSelector.title')}</Text>
             <TouchableOpacity onPress={onClose}>
               <MaterialCommunityIcons name="close" size={24} color="#666" />
             </TouchableOpacity>

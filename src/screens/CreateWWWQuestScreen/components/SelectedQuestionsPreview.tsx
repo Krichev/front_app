@@ -2,6 +2,7 @@
 import React, {useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 
 interface SelectedQuestionsPreviewProps {
     questions: any[];
@@ -16,6 +17,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                                                                isCollapsed,
                                                                                onToggleCollapse,
                                                                            }) => {
+    const {t} = useTranslation();
     const [previewPage, setPreviewPage] = useState(1);
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
@@ -53,6 +55,16 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
         }
     };
 
+    const getDifficultyLabel = (difficulty?: string): string => {
+        const normalizedDifficulty = (difficulty || 'MEDIUM').toUpperCase();
+        switch (normalizedDifficulty) {
+            case 'EASY': return t('createQuest.quizConfig.easy');
+            case 'MEDIUM': return t('createQuest.quizConfig.medium');
+            case 'HARD': return t('createQuest.quizConfig.hard');
+            default: return difficulty || 'MEDIUM';
+        }
+    };
+
     if (totalQuestions === 0) {
         return null;
     }
@@ -70,7 +82,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                         color="#4CAF50"
                     />
                     <Text style={styles.sectionTitle}>
-                        Selected Questions ({totalQuestions})
+                        {t('createQuest.preview.title')} ({totalQuestions})
                     </Text>
                 </View>
                 <MaterialCommunityIcons
@@ -91,7 +103,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                 <View style={styles.previewCardHeader}>
                                     <View style={styles.previewCardHeaderLeft}>
                                         <Text style={styles.questionNumber}>
-                                            Q{globalIndex + 1}
+                                            {t('createQuest.preview.questionNumber', { number: globalIndex + 1 })}
                                         </Text>
                                         <View
                                             style={[
@@ -100,13 +112,13 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                             ]}
                                         >
                                             <Text style={styles.difficultyText}>
-                                                {question.difficulty || 'MEDIUM'}
+                                                {getDifficultyLabel(question.difficulty)}
                                             </Text>
                                         </View>
                                         <View style={styles.sourceBadge}>
                                             <Text style={styles.sourceText}>
-                                                {question.source === 'app' ? 'App' :
-                                                     'User'}
+                                                {question.source === 'app' ? t('createQuest.preview.fromApp') :
+                                                     t('createQuest.preview.fromUser')}
                                             </Text>
                                         </View>
                                     </View>
@@ -135,22 +147,22 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                 {isExpanded && (
                                     <View style={styles.expandedContent}>
                                         <View style={styles.detailRow}>
-                                            <Text style={styles.detailLabel}>Question:</Text>
+                                            <Text style={styles.detailLabel}>{t('createQuest.questionList.question')}:</Text>
                                             <Text style={styles.detailText}>{question.question}</Text>
                                         </View>
                                         <View style={styles.detailRow}>
-                                            <Text style={styles.detailLabel}>Answer:</Text>
+                                            <Text style={styles.detailLabel}>{t('createQuest.questionList.answer')}:</Text>
                                             <Text style={styles.detailText}>{question.answer}</Text>
                                         </View>
                                         {question.topic && (
                                             <View style={styles.detailRow}>
-                                                <Text style={styles.detailLabel}>Topic:</Text>
+                                                <Text style={styles.detailLabel}>{t('createQuest.questionList.topic')}:</Text>
                                                 <Text style={styles.detailText}>{question.topic}</Text>
                                             </View>
                                         )}
                                         {question.additionalInfo && (
                                             <View style={styles.detailRow}>
-                                                <Text style={styles.detailLabel}>Additional Info:</Text>
+                                                <Text style={styles.detailLabel}>{t('createQuest.questionList.additionalInfo')}:</Text>
                                                 <Text style={styles.detailText}>{question.additionalInfo}</Text>
                                             </View>
                                         )}
@@ -179,7 +191,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                             </TouchableOpacity>
 
                             <Text style={styles.paginationText}>
-                                Page {previewPage} of {totalPages}
+                                {t('createQuest.preview.page', { current: previewPage, total: totalPages })}
                             </Text>
 
                             <TouchableOpacity

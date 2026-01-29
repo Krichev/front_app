@@ -2,6 +2,7 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 import {QuestionSource} from '../../../services/wwwGame/questionService';
 
 interface QuestionSourceSelectorProps {
@@ -15,16 +16,18 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                                                                            onSourceChange,
                                                                            onAddQuestion,
                                                                        }) => {
+    const {t} = useTranslation();
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.sectionTitle}>Select Question Source</Text>
+                <Text style={styles.sectionTitle}>{t('createQuest.questionSource.sectionTitle')}</Text>
                 <TouchableOpacity
                     style={styles.addButton}
                     onPress={onAddQuestion}
                 >
                     <MaterialCommunityIcons name="plus-circle" size={24} color="#007AFF" />
-                    <Text style={styles.addButtonText}>Add Custom</Text>
+                    <Text style={styles.addButtonText}>{t('createQuest.questionSource.addQuestion')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -47,7 +50,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                             questionSource === 'app' && styles.toggleTextActive
                         ]}
                     >
-                        App Questions
+                        {t('createQuest.questionSource.appQuestions')}
                     </Text>
                     <Text
                         style={[
@@ -55,7 +58,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                             questionSource === 'app' && styles.toggleSubtextActive
                         ]}
                     >
-                        Curated questions
+                        {t('createQuest.questionSource.appQuestionsDesc')}
                     </Text>
                 </TouchableOpacity>
 
@@ -77,7 +80,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                             questionSource === 'user' && styles.toggleTextActive
                         ]}
                     >
-                        My Questions
+                        {t('createQuest.questionSource.myQuestions')}
                     </Text>
                     <Text
                         style={[
@@ -85,7 +88,7 @@ const QuestionSourceSelector: React.FC<QuestionSourceSelectorProps> = ({
                             questionSource === 'user' && styles.toggleSubtextActive
                         ]}
                     >
-                        Your created questions
+                        {t('createQuest.questionSource.myQuestionsDesc')}
                     </Text>
                 </TouchableOpacity>
             </View>

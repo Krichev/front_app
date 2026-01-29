@@ -2,6 +2,7 @@
 import React, {useState, useEffect} from 'react';
 import {ActivityIndicator, Image, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
 import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi";
 import QuestionMediaViewer from './QuestionMediaViewer';
@@ -130,6 +131,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                                        availableTopics,
                                                        isLoadingTopics,
                                                    }) => {
+    const {t} = useTranslation();
     const questions = questionSource === 'app' ? appQuestions : userQuestions;
     const selectedQuestionIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
     const isLoading = questionSource === 'app' ? isLoadingApp : isLoadingUser;
@@ -195,7 +197,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
             >
                 <View style={styles.topicPickerContainer}>
                     <View style={styles.topicPickerHeader}>
-                        <Text style={styles.topicPickerTitle}>Select Topic</Text>
+                        <Text style={styles.topicPickerTitle}>{t('createQuest.questionList.filterByTopic')}</Text>
                         <TouchableOpacity onPress={() => onShowTopicPicker(false)}>
                             <MaterialCommunityIcons name="close" size={24} color="#333"/>
                         </TouchableOpacity>
@@ -212,7 +214,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     onShowTopicPicker(false);
                                 }}
                             >
-                                <Text style={styles.topicItemText}>All Topics</Text>
+                                <Text style={styles.topicItemText}>{t('createQuest.questionList.allTopics')}</Text>
                             </TouchableOpacity>
 
                             {availableTopics.map((topic) => (
@@ -262,7 +264,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                 </TouchableOpacity>
 
                 <Text style={styles.paginationText}>
-                    Page {currentPage + 1} of {totalPages}
+                    {t('createQuest.questionList.page', { current: currentPage + 1, total: totalPages })}
                 </Text>
 
                 <TouchableOpacity
@@ -291,7 +293,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                         <MaterialCommunityIcons name="magnify" size={24} color="#666"/>
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="Search questions..."
+                            placeholder={t('createQuest.questionList.searchPlaceholder')}
                             value={searchKeyword}
                             onChangeText={onSearchKeywordChange}
                             placeholderTextColor="#999"
@@ -310,7 +312,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                         >
                             <MaterialCommunityIcons name="tag" size={20} color="#007AFF"/>
                             <Text style={styles.filterButtonText}>
-                                {searchTopic || 'All Topics'}
+                                {searchTopic || t('createQuest.questionList.allTopics')}
                             </Text>
                         </TouchableOpacity>
 
@@ -334,7 +336,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                             searchDifficulty === diff && styles.difficultyChipTextSelected,
                                         ]}
                                     >
-                                        {diff === 'ALL' ? 'All' : diff}
+                                        {diff === 'ALL' ? t('createQuest.questionList.allDifficulties') : diff}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -343,7 +345,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
                     <TouchableOpacity style={styles.searchButton} onPress={onSearch}>
                         <MaterialCommunityIcons name="magnify" size={20} color="#fff"/>
-                        <Text style={styles.searchButtonText}>Search</Text>
+                        <Text style={styles.searchButtonText}>{t('createQuest.questionList.search')}</Text>
                     </TouchableOpacity>
                 </>
             )}
@@ -540,7 +542,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                 {isExpanded && (
                     <View style={styles.questionContent}>
                         <View style={styles.questionTextContainer}>
-                            <Text style={styles.questionLabel}>Question:</Text>
+                            <Text style={styles.questionLabel}>{t('createQuest.questionList.question')}</Text>
                             <Text style={styles.questionText}>{question.question}</Text>
                         </View>
 
@@ -578,7 +580,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
                         <View style={styles.answerContainer}>
                             <View style={styles.answerHeader}>
-                                <Text style={styles.answerLabel}>Answer:</Text>
+                                <Text style={styles.answerLabel}>{t('createQuest.questionList.answer')}</Text>
                                 <TouchableOpacity
                                     onPress={() => onToggleAnswerVisibility(question.id)}
                                     style={styles.toggleAnswerButton}
@@ -589,7 +591,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                         color="#007AFF"
                                     />
                                     <Text style={styles.toggleAnswerText}>
-                                        {isAnswerVisible ? 'Hide' : 'Show'}
+                                        {isAnswerVisible ? t('createQuest.questionList.hideAnswer') : t('createQuest.questionList.showAnswer')}
                                     </Text>
                                 </TouchableOpacity>
                             </View>
@@ -600,7 +602,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
                         {question.additionalInfo && (
                             <View style={styles.additionalInfoContainer}>
-                                <Text style={styles.additionalInfoLabel}>Additional Info:</Text>
+                                <Text style={styles.additionalInfoLabel}>{t('createQuest.questionList.additionalInfo')}</Text>
                                 <Text style={styles.additionalInfoText}>{question.additionalInfo}</Text>
                             </View>
                         )}
@@ -611,7 +613,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                 onPress={() => onDeleteUserQuestion(question.id)}
                             >
                                 <MaterialCommunityIcons name="delete" size={20} color="#fff"/>
-                                <Text style={styles.deleteButtonText}>Delete Question</Text>
+                                <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -634,7 +636,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
             {isLoading ? (
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#007AFF"/>
-                    <Text style={styles.loadingText}>Loading questions...</Text>
+                    <Text style={styles.loadingText}>{t('createQuest.questionList.loading')}</Text>
                 </View>
             ) : (
                 <>
@@ -651,15 +653,15 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                 />
                                 <Text style={styles.bulkActionText}>
                                     {expandedQuestions.size === questions.length
-                                        ? 'Collapse All'
-                                        : 'Expand All'}
+                                        ? t('createQuest.questionList.collapse') + ' ' + t('common.all', {defaultValue: 'All'})
+                                        : t('createQuest.questionList.expand') + ' ' + t('common.all', {defaultValue: 'All'})}
                                 </Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     <Text style={styles.resultsText}>
-                        {totalQuestions} question{totalQuestions !== 1 ? 's' : ''} found
+                        {t('createQuest.quizConfig.summaryQuestions', { count: totalQuestions })}
                     </Text>
                     <ScrollView style={styles.questionsList} showsVerticalScrollIndicator={false}>
                         {questions.map((question, index) => renderQuestionItem(question, index))}
@@ -685,447 +687,3 @@ const QuestionList: React.FC<QuestionListProps> = ({
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-    },
-    searchContainer: {
-        marginBottom: 16,
-    },
-    searchInputContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        marginBottom: 12,
-    },
-    searchInput: {
-        flex: 1,
-        marginLeft: 8,
-        fontSize: 16,
-        color: '#333',
-    },
-    filterRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-        gap: 8,
-    },
-    filterButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        gap: 4,
-    },
-    filterButtonText: {
-        fontSize: 14,
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    difficultyScroll: {
-        flex: 1,
-    },
-    difficultyChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f5f5f5',
-        marginRight: 8,
-    },
-    difficultyChipSelected: {
-        backgroundColor: '#007AFF',
-    },
-    difficultyChipText: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '600',
-    },
-    difficultyChipTextSelected: {
-        color: '#fff',
-    },
-    searchButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#007AFF',
-        paddingVertical: 12,
-        borderRadius: 12,
-        gap: 8,
-    },
-    searchButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '700',
-    },
-    bulkActionsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        marginBottom: 12,
-    },
-    bulkActionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        padding: 8,
-    },
-    bulkActionText: {
-        fontSize: 14,
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    resultsText: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 12,
-    },
-    questionsList: {
-        flex: 1,
-    },
-    questionCard: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        overflow: 'hidden',
-    },
-    questionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        minHeight: 72,
-    },
-    questionHeaderLeft: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        overflow: 'hidden',
-    },
-    checkbox: {
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        borderWidth: 2,
-        borderColor: '#007AFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    checkboxSelected: {
-        backgroundColor: '#007AFF',
-    },
-    mediaThumbnailContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        overflow: 'hidden',
-        backgroundColor: '#f5f5f5',
-        position: 'relative',
-    },
-    mediaThumbnailWrapper: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    mediaThumbnail: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        backgroundColor: '#f5f5f5',
-    },
-    mediaThumbnailPlaceholder: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    thumbnailLoadingOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 8,
-    },
-    thumbnailErrorOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: '#FFEBEE',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 8,
-    },
-    mediaTypeOverlay: {
-        position: 'absolute',
-        bottom: 2,
-        right: 2,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: 10,
-        padding: 2,
-    },
-    questionInfo: {
-        flex: 1,
-        flexShrink: 1,
-        minWidth: 0,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: 8,
-    },
-    questionPreviewText: {
-        fontSize: 14,
-        color: '#333',
-        lineHeight: 20,
-        flexShrink: 1,
-    },
-    difficultyBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    difficultyEASY: {
-        backgroundColor: '#4CAF50',
-    },
-    difficultyMEDIUM: {
-        backgroundColor: '#FF9800',
-    },
-    difficultyHARD: {
-        backgroundColor: '#F44336',
-    },
-    difficultyBadgeText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    topicBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#E3F2FD',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 4,
-    },
-    topicText: {
-        fontSize: 12,
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    mediaBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F5F5F5',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
-        gap: 4,
-    },
-    mediaText: {
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    questionContent: {
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
-    },
-    questionTextContainer: {
-        marginBottom: 16,
-    },
-    questionLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 4,
-    },
-    questionText: {
-        fontSize: 16,
-        color: '#333',
-        lineHeight: 24,
-    },
-    mediaSection: {
-        marginBottom: 16,
-    },
-    mediaErrorSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFEBEE',
-        padding: 16,
-        borderRadius: 12,
-        marginBottom: 16,
-        gap: 12,
-    },
-    mediaErrorText: {
-        flex: 1,
-        fontSize: 14,
-        color: '#F44336',
-        lineHeight: 20,
-    },
-    answerContainer: {
-        marginBottom: 16,
-    },
-    answerHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    answerLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#333',
-    },
-    toggleAnswerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    toggleAnswerText: {
-        fontSize: 14,
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    answerText: {
-        fontSize: 16,
-        color: '#333',
-        lineHeight: 24,
-        backgroundColor: '#F5F5F5',
-        padding: 12,
-        borderRadius: 8,
-    },
-    additionalInfoContainer: {
-        marginBottom: 16,
-    },
-    additionalInfoLabel: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#333',
-        marginBottom: 4,
-    },
-    additionalInfoText: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-    },
-    deleteButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F44336',
-        paddingVertical: 10,
-        borderRadius: 8,
-        gap: 8,
-    },
-    deleteButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    errorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFEBEE',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
-        gap: 8,
-    },
-    errorText: {
-        flex: 1,
-        fontSize: 14,
-        color: '#F44336',
-    },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-    },
-    loadingText: {
-        fontSize: 16,
-        color: '#666',
-    },
-    paginationContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 20,
-        gap: 16,
-    },
-    paginationButton: {
-        padding: 8,
-    },
-    paginationButtonDisabled: {
-        opacity: 0.5,
-    },
-    paginationText: {
-        fontSize: 14,
-        color: '#333',
-        fontWeight: '600',
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
-    },
-    topicPickerContainer: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        maxHeight: '70%',
-    },
-    topicPickerHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
-    },
-    topicPickerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#333',
-    },
-    topicList: {
-        maxHeight: 400,
-    },
-    topicItem: {
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    topicItemSelected: {
-        backgroundColor: '#E3F2FD',
-    },
-    topicItemText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    topicItemTextSelected: {
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-});
-
-export default QuestionList;

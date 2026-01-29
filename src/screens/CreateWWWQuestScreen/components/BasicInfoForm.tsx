@@ -1,6 +1,7 @@
 // src/screens/CreateWWWQuestScreen/components/BasicInfoForm.tsx
 import React from 'react';
 import {Text, TextInput, View} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 
 interface BasicInfoFormProps {
@@ -20,30 +21,31 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
                                                          onDescriptionChange,
                                                          onRewardChange,
                                                      }) => {
+    const {t} = useTranslation();
     const {form, theme} = useAppStyles();
 
     return (
         <View style={form.section}>
-            <Text style={form.sectionTitle}>Basic Information</Text>
+            <Text style={form.sectionTitle}>{t('createQuest.basicInfo.sectionTitle')}</Text>
 
             <View style={form.formGroup}>
-                <Text style={form.label}>Title</Text>
+                <Text style={form.label}>{t('createQuest.basicInfo.title')}</Text>
                 <TextInput
                     style={form.input}
                     value={title}
                     onChangeText={onTitleChange}
-                    placeholder="Enter quest title"
+                    placeholder={t('createQuest.basicInfo.titlePlaceholder')}
                     placeholderTextColor={theme.colors.text.disabled}
                 />
             </View>
 
             <View style={form.formGroup}>
-                <Text style={form.label}>Description</Text>
+                <Text style={form.label}>{t('createQuest.basicInfo.description')}</Text>
                 <TextInput
                     style={[form.input, form.textArea]}
                     value={description}
                     onChangeText={onDescriptionChange}
-                    placeholder="Describe your quest"
+                    placeholder={t('createQuest.basicInfo.descriptionPlaceholder')}
                     placeholderTextColor={theme.colors.text.disabled}
                     multiline
                     numberOfLines={3}
@@ -51,12 +53,12 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
             </View>
 
             <View style={form.formGroup}>
-                <Text style={form.label}>Reward</Text>
+                <Text style={form.label}>{t('createQuest.basicInfo.reward')}</Text>
                 <TextInput
                     style={form.input}
                     value={reward}
                     onChangeText={onRewardChange}
-                    placeholder="What's the reward?"
+                    placeholder={t('createQuest.basicInfo.rewardPlaceholder')}
                     placeholderTextColor={theme.colors.text.disabled}
                 />
             </View>

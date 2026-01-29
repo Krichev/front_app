@@ -12,6 +12,7 @@ import {
     View,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {QuestionType} from "../../../services/wwwGame/questionService";
@@ -43,6 +44,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                                                    isSubmitting = false,
                                                                    preSelectedMediaType,
                                                                }) => {
+    const {t} = useTranslation();
     const {modal, form, theme} = useAppStyles();
     const styles = themeStyles;
 
@@ -104,7 +106,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             }
         } catch (error) {
             console.error('Error in handleSelectMedia:', error);
-            Alert.alert('Error', 'Failed to select media. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         }
     };
 
@@ -120,7 +122,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 // Validate file
                 const validation = FileService.validateFile(result);
                 if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid image');
+                    Alert.alert(t('createQuest.questionEditor.invalidFile'), validation.error || t('createQuest.questionEditor.validImage'));
                     return;
                 }
                 console.log('📷 Image selected:', result.name, result.sizeFormatted);
@@ -128,7 +130,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             }
         } catch (error) {
             console.error('Error picking image:', error);
-            Alert.alert('Error', 'Failed to pick image. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         } finally {
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
@@ -148,7 +150,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 // Validate file
                 const validation = FileService.validateFile(result);
                 if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid video');
+                    Alert.alert(t('createQuest.questionEditor.invalidFile'), validation.error || t('createQuest.questionEditor.validVideo'));
                     return;
                 }
                 console.log('🎥 Video selected:', result.name, result.sizeFormatted);
@@ -156,7 +158,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             }
         } catch (error) {
             console.error('Error picking video:', error);
-            Alert.alert('Error', 'Failed to pick video. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         } finally {
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
@@ -175,7 +177,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 // Validate file
                 const validation = FileService.validateFile(result);
                 if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid audio');
+                    Alert.alert(t('createQuest.questionEditor.invalidFile'), validation.error || t('createQuest.questionEditor.validAudio'));
                     return;
                 }
                 console.log('🎵 Audio selected:', result.name, result.sizeFormatted);
@@ -183,7 +185,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             }
         } catch (error) {
             console.error('Error picking audio:', error);
-            Alert.alert('Error', 'Failed to pick audio. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         } finally {
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
@@ -195,15 +197,15 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      */
     const handleRemoveMedia = () => {
         Alert.alert(
-            'Remove Media',
-            'Are you sure you want to remove this media?',
+            t('createQuest.questionEditor.removeMedia'),
+            t('createQuest.questionEditor.removeMediaConfirm'),
             [
                 {
-                    text: 'Cancel',
+                    text: t('common.cancel'),
                     style: 'cancel',
                 },
                 {
-                    text: 'Remove',
+                    text: t('createQuest.questionEditor.remove'),
                     style: 'destructive',
                     onPress: () => {
                         setSelectedMedia(undefined);
@@ -220,15 +222,15 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const handleSubmit = async () => {
         // Validate required fields
         if (!question.trim()) {
-            Alert.alert('Error', 'Please enter a question');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorQuestion'));
             return;
         }
         if (!answer.trim()) {
-            Alert.alert('Error', 'Please enter an answer');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorAnswer'));
             return;
         }
         if (!topic.trim()) {
-            Alert.alert('Error', 'Please select or enter a topic');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorTopic'));
             return;
         }
 
@@ -299,15 +301,15 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const handleClose = () => {
         if (selectedMedia || question || answer || topic || additionalInfo) {
             Alert.alert(
-                'Discard Changes?',
-                'You have unsaved changes. Are you sure you want to close?',
+                t('createQuest.questionEditor.discardChanges'),
+                t('createQuest.questionEditor.discardChangesMessage'),
                 [
                     {
-                        text: 'Cancel',
+                        text: t('common.cancel'),
                         style: 'cancel',
                     },
                     {
-                        text: 'Discard',
+                        text: t('createQuest.questionEditor.discard'),
                         style: 'destructive',
                         onPress: () => {
                             handleReset();
@@ -333,7 +335,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
         return (
             <View style={styles.mediaPreviewContainer}>
-                <Text style={form.sectionTitle}>Media Preview</Text>
+                <Text style={form.sectionTitle}>{t('createQuest.questionEditor.mediaPreview')}</Text>
 
                 {/* Image Preview */}
                 {currentQuestionType === 'IMAGE' && selectedMedia && (
@@ -374,7 +376,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                         color={theme.colors.primary.main}
                     />
                     <Text style={styles.mediaStatusText}>
-                        {`${getQuestionType()} Selected - will upload when saved`}
+                        {t('createQuest.questionEditor.mediaSelected', { type: getQuestionType() })}
                     </Text>
                 </View>
 
@@ -384,7 +386,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                     onPress={handleRemoveMedia}
                 >
                     <MaterialCommunityIcons name="delete" size={20} color={theme.colors.error.main}/>
-                    <Text style={styles.removeMediaText}>Remove Media</Text>
+                    <Text style={styles.removeMediaText}>{t('createQuest.questionEditor.removeMedia')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -403,12 +405,12 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                     <TouchableOpacity onPress={handleClose} disabled={isSubmitting}>
                         <MaterialCommunityIcons name="close" size={24} color={isSubmitting ? theme.colors.text.disabled : theme.colors.primary.main}/>
                     </TouchableOpacity>
-                    <Text style={modal.headerTitle}>Add Question</Text>
+                    <Text style={modal.headerTitle}>{t('createQuest.addQuestion.title')}</Text>
                     <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? (
                             <ActivityIndicator size="small" color={theme.colors.primary.main} />
                         ) : (
-                            <Text style={styles.saveButton}>Save</Text>
+                            <Text style={styles.saveButton}>{t('common.save')}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -416,7 +418,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                     {/* Media Selection - Inline Buttons */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Add Media (Optional)</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.questionEditor.addMedia')} (Optional)</Text>
                         <View style={styles.mediaButtonsContainer}>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -428,7 +430,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                 ) : (
                                     <MaterialCommunityIcons name="image" size={24} color={theme.colors.primary.main} />
                                 )}
-                                <Text style={styles.mediaButtonText}>Image</Text>
+                                <Text style={styles.mediaButtonText}>{t('questions.image')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -440,7 +442,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                 ) : (
                                     <MaterialCommunityIcons name="video" size={24} color={theme.colors.primary.main} />
                                 )}
-                                <Text style={styles.mediaButtonText}>Video</Text>
+                                <Text style={styles.mediaButtonText}>{t('questions.video')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -452,7 +454,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                 ) : (
                                     <MaterialCommunityIcons name="music" size={24} color={theme.colors.primary.main} />
                                 )}
-                                <Text style={styles.mediaButtonText}>Audio</Text>
+                                <Text style={styles.mediaButtonText}>{t('questions.audioType')}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -462,10 +464,10 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
                     {/* Question Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Question *</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.questionLabel')}</Text>
                         <TextInput
                             style={form.input}
-                            placeholder="Enter your question..."
+                            placeholder={t('createQuest.addQuestion.questionPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={question}
                             onChangeText={setQuestion}
@@ -476,10 +478,10 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
                     {/* Answer Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Answer *</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.answerLabel')}</Text>
                         <TextInput
                             style={form.input}
-                            placeholder="Enter the correct answer..."
+                            placeholder={t('createQuest.addQuestion.answerPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={answer}
                             onChangeText={setAnswer}
@@ -490,7 +492,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
                     {/* Difficulty Selector */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Difficulty *</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.difficultyLabel')} *</Text>
                         <View style={styles.difficultyContainer}>
                             {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
                                 <TouchableOpacity
@@ -507,7 +509,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                                             difficulty === level && styles.difficultyTextActive,
                                         ]}
                                     >
-                                        {level}
+                                        {t(`createQuest.quizConfig.${level.toLowerCase()}` as any)}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -521,18 +523,18 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                             selectedTopicName={topic}
                             onSelectTopic={handleSelectTopic}
                             allowCreate={true}
-                            placeholder="Select or create a topic..."
-                            label="Topic"
+                            placeholder={t('createQuest.addQuestion.topicPlaceholder')}
+                            label={t('createQuest.addQuestion.topicLabel')}
                             required={true}
                         />
                     </View>
 
                     {/* Additional Info Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Additional Info (Optional)</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.additionalInfoLabel')}</Text>
                         <TextInput
                             style={form.input}
-                            placeholder="Add any helpful context or hints..."
+                            placeholder={t('createQuest.addQuestion.additionalInfoPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={additionalInfo}
                             onChangeText={setAdditionalInfo}

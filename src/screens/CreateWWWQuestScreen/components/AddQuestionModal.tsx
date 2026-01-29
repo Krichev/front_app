@@ -2,6 +2,7 @@
 import React, {useState} from 'react';
 import {Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 import {CustomQuestion} from '../hooks/useQuestionsManager';
 import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
@@ -17,6 +18,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                                                                onClose,
                                                                onSubmit,
                                                            }) => {
+    const {t} = useTranslation();
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
@@ -37,11 +39,11 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
 
     const handleSubmit = () => {
         if (!question.trim()) {
-            Alert.alert('Error', 'Please enter a question');
+            Alert.alert(t('createQuest.addQuestion.errorTitle'), t('createQuest.addQuestion.errorQuestion'));
             return;
         }
         if (!answer.trim()) {
-            Alert.alert('Error', 'Please enter an answer');
+            Alert.alert(t('createQuest.addQuestion.errorTitle'), t('createQuest.addQuestion.errorAnswer'));
             return;
         }
 
@@ -72,6 +74,15 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         onClose();
     };
 
+    const getDifficultyLabel = (diff: 'EASY' | 'MEDIUM' | 'HARD') => {
+        switch (diff) {
+            case 'EASY': return t('createQuest.quizConfig.easy');
+            case 'MEDIUM': return t('createQuest.quizConfig.medium');
+            case 'HARD': return t('createQuest.quizConfig.hard');
+            default: return diff;
+        }
+    };
+
     return (
         <>
             <Modal
@@ -83,7 +94,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Add Custom Question</Text>
+                            <Text style={styles.modalTitle}>{t('createQuest.addQuestion.title')}</Text>
                             <TouchableOpacity onPress={handleClose}>
                                 <MaterialCommunityIcons name="close" size={28} color="#333" />
                             </TouchableOpacity>
@@ -91,31 +102,31 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
 
                         <ScrollView showsVerticalScrollIndicator={false}>
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Question *</Text>
+                                <Text style={styles.label}>{t('createQuest.addQuestion.questionLabel')}</Text>
                                 <TextInput
                                     style={[styles.input, styles.textArea]}
                                     value={question}
                                     onChangeText={setQuestion}
-                                    placeholder="Enter your question"
+                                    placeholder={t('createQuest.addQuestion.questionPlaceholder')}
                                     multiline
                                     numberOfLines={3}
                                 />
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Answer *</Text>
+                                <Text style={styles.label}>{t('createQuest.addQuestion.answerLabel')}</Text>
                                 <TextInput
                                     style={[styles.input, styles.textArea]}
                                     value={answer}
                                     onChangeText={setAnswer}
-                                    placeholder="Enter the answer"
+                                    placeholder={t('createQuest.addQuestion.answerPlaceholder')}
                                     multiline
                                     numberOfLines={3}
                                 />
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Difficulty</Text>
+                                <Text style={styles.label}>{t('createQuest.addQuestion.difficultyLabel')}</Text>
                                 <View style={styles.difficultyContainer}>
                                     {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
                                         <TouchableOpacity
@@ -132,7 +143,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                                                     difficulty === diff && styles.difficultyChipTextSelected,
                                                 ]}
                                             >
-                                                {diff}
+                                                {getDifficultyLabel(diff)}
                                             </Text>
                                         </TouchableOpacity>
                                     ))}
@@ -145,19 +156,19 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                                     selectedTopicName={topic}
                                     onSelectTopic={handleSelectTopic}
                                     allowCreate={true}
-                                    placeholder="Select or create a topic..."
-                                    label="Topic (Optional)"
+                                    placeholder={t('createQuest.addQuestion.topicPlaceholder')}
+                                    label={t('createQuest.addQuestion.topicLabel')}
                                     required={false}
                                 />
                             </View>
 
                             <View style={styles.inputContainer}>
-                                <Text style={styles.label}>Additional Info (Optional)</Text>
+                                <Text style={styles.label}>{t('createQuest.addQuestion.additionalInfoLabel')}</Text>
                                 <TextInput
                                     style={[styles.input, styles.textArea]}
                                     value={additionalInfo}
                                     onChangeText={setAdditionalInfo}
-                                    placeholder="Any extra information about this question"
+                                    placeholder={t('createQuest.addQuestion.additionalInfoPlaceholder')}
                                     multiline
                                     numberOfLines={2}
                                 />
@@ -166,11 +177,11 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
 
                         <View style={styles.modalFooter}>
                             <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text style={styles.cancelButtonText}>{t('createQuest.addQuestion.cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
                                 <MaterialCommunityIcons name="check" size={20} color="#fff" />
-                                <Text style={styles.submitButtonText}>Add Question</Text>
+                                <Text style={styles.submitButtonText}>{t('createQuest.addQuestion.submit')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

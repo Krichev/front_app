@@ -12,6 +12,7 @@ import {
     View,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {QuestionType} from "../../../services/wwwGame/questionService";
@@ -49,6 +50,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                                    isSubmitting = false,
                                                                    preSelectedMediaType,
                                                                }) => {
+    const {t} = useTranslation();
     const {modal, form, theme} = useAppStyles();
     const styles = themeStyles;
 
@@ -133,7 +135,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 // Validate file
                 const validation = FileService.validateFile(result);
                 if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid image');
+                    Alert.alert(t('createQuest.questionEditor.invalidFile'), validation.error || t('createQuest.questionEditor.validImage'));
                     return;
                 }
                 console.log('📷 Image selected:', result.name, result.sizeFormatted);
@@ -141,7 +143,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             }
         } catch (error) {
             console.error('Error picking image:', error);
-            Alert.alert('Error', 'Failed to pick image. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         } finally {
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
@@ -161,7 +163,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 // Validate file
                 const validation = FileService.validateFile(result);
                 if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid video');
+                    Alert.alert(t('createQuest.questionEditor.invalidFile'), validation.error || t('createQuest.questionEditor.validVideo'));
                     return;
                 }
                 console.log('🎥 Video selected:', result.name, result.sizeFormatted);
@@ -169,7 +171,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             }
         } catch (error) {
             console.error('Error picking video:', error);
-            Alert.alert('Error', 'Failed to pick video. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         } finally {
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
@@ -188,7 +190,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 // Validate file
                 const validation = FileService.validateFile(result);
                 if (!validation.isValid) {
-                    Alert.alert('Invalid File', validation.error || 'Please select a valid audio');
+                    Alert.alert(t('createQuest.questionEditor.invalidFile'), validation.error || t('createQuest.questionEditor.validAudio'));
                     return;
                 }
                 console.log('🎵 Audio selected:', result.name, result.sizeFormatted);
@@ -196,7 +198,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             }
         } catch (error) {
             console.error('Error picking audio:', error);
-            Alert.alert('Error', 'Failed to pick audio. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         } finally {
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
@@ -221,7 +223,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             }
         } catch (error) {
             console.error('Error in handleSelectMedia:', error);
-            Alert.alert('Error', 'Failed to select media. Please try again.');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         }
     }, [handleImagePick, handleVideoPick, handleAudioPick]);
 
@@ -236,15 +238,15 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
      */
     const handleRemoveMedia = () => {
         Alert.alert(
-            'Remove Media',
-            'Are you sure you want to remove this media?',
+            t('createQuest.questionEditor.removeMedia'),
+            t('createQuest.questionEditor.removeMediaConfirm'),
             [
                 {
-                    text: 'Cancel',
+                    text: t('common.cancel'),
                     style: 'cancel',
                 },
                 {
-                    text: 'Remove',
+                    text: t('createQuest.questionEditor.remove'),
                     style: 'destructive',
                     onPress: () => {
                         setSelectedMedia(undefined);
@@ -261,15 +263,15 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const handleSubmit = async () => {
         // Validate required fields
         if (!question.trim()) {
-            Alert.alert('Error', 'Please enter a question');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorQuestion'));
             return;
         }
         if (!answer.trim()) {
-            Alert.alert('Error', 'Please enter an answer');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorAnswer'));
             return;
         }
         if (!topic.trim()) {
-            Alert.alert('Error', 'Please select or enter a topic');
+            Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorTopic'));
             return;
         }
 
@@ -278,18 +280,18 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         // Validate external video if in link mode
         if (questionType === 'VIDEO' && mediaInputMode === 'link') {
             if (!externalVideoUrl.trim()) {
-                Alert.alert('Error', 'Please enter a video URL');
+                Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.enterVideoUrl'));
                 return;
             }
             if (!detectedPlatform) {
-                Alert.alert('Error', 'Please enter a valid video URL (YouTube, Vimeo, or direct video link)');
+                Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.validVideoUrl'));
                 return;
             }
             // Validate time range if both provided
             const startTime = videoStartTime ? parseFloat(videoStartTime) : undefined;
             const endTime = videoEndTime ? parseFloat(videoEndTime) : undefined;
             if (startTime !== undefined && endTime !== undefined && endTime <= startTime) {
-                Alert.alert('Error', 'End time must be greater than start time');
+                Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.endTimeError'));
                 return;
             }
         }
@@ -373,15 +375,15 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const handleClose = () => {
         if (selectedMedia || question || answer || topic || additionalInfo) {
             Alert.alert(
-                'Discard Changes?',
-                'You have unsaved changes. Are you sure you want to close?',
+                t('createQuest.questionEditor.discardChanges'),
+                t('createQuest.questionEditor.discardChangesMessage'),
                 [
                     {
-                        text: 'Cancel',
+                        text: t('common.cancel'),
                         style: 'cancel',
                     },
                     {
-                        text: 'Discard',
+                        text: t('createQuest.questionEditor.discard'),
                         style: 'destructive',
                         onPress: () => {
                             handleReset();
@@ -407,7 +409,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
         return (
             <View style={styles.mediaPreviewContainer}>
-                <Text style={form.sectionTitle}>Media Preview</Text>
+                <Text style={form.sectionTitle}>{t('createQuest.questionEditor.mediaPreview')}</Text>
 
                 {/* Image Preview */}
                 {currentQuestionType === 'IMAGE' && selectedMedia && (
@@ -458,7 +460,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     onPress={handleRemoveMedia}
                 >
                     <MaterialCommunityIcons name="delete" size={20} color={theme.colors.error.main}/>
-                    <Text style={styles.removeMediaText}>Remove Media</Text>
+                    <Text style={styles.removeMediaText}>{t('createQuest.questionEditor.removeMedia')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -477,12 +479,12 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     <TouchableOpacity onPress={handleClose} disabled={isSubmitting}>
                         <MaterialCommunityIcons name="close" size={24} color={isSubmitting ? theme.colors.text.disabled : theme.colors.primary.main}/>
                     </TouchableOpacity>
-                    <Text style={modal.headerTitle}>Regular Question</Text>
+                    <Text style={modal.headerTitle}>{t('createQuest.questionEditor.title')}</Text>
                     <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
                         {isSubmitting ? (
                             <ActivityIndicator size="small" color={theme.colors.primary.main} />
                         ) : (
-                            <Text style={styles.saveButton}>Save</Text>
+                            <Text style={styles.saveButton}>{t('common.save')}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -490,7 +492,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                     {/* Media Selection - Inline Buttons */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Add Media (Optional)</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.questionEditor.addMedia')} (Optional)</Text>
                         <View style={styles.mediaButtonsContainer}>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -502,7 +504,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 ) : (
                                     <MaterialCommunityIcons name="image" size={24} color={theme.colors.primary.main} />
                                 )}
-                                <Text style={styles.mediaButtonText}>Image</Text>
+                                <Text style={styles.mediaButtonText}>{t('questions.image')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -524,7 +526,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 ) : (
                                     <MaterialCommunityIcons name="video" size={24} color={theme.colors.primary.main} />
                                 )}
-                                <Text style={styles.mediaButtonText}>Video</Text>
+                                <Text style={styles.mediaButtonText}>{t('questions.video')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.mediaButton, isSelectingMedia && styles.mediaButtonDisabled]}
@@ -536,14 +538,14 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 ) : (
                                     <MaterialCommunityIcons name="music" size={24} color={theme.colors.primary.main} />
                                 )}
-                                <Text style={styles.mediaButtonText}>Audio (Narration)</Text>
+                                <Text style={styles.mediaButtonText}>{t('questions.audioType')}</Text>
                             </TouchableOpacity>
                         </View>
 
                         {/* Video Input Mode Selector - Shows after clicking Video button or when video selected */}
                         {(getQuestionType() === 'VIDEO' || selectedMedia?.type?.startsWith('video/') || (mediaInputMode === 'link' && externalVideoUrl)) && (
                             <View style={styles.videoModeSection}>
-                                <Text style={form.sectionTitle}>Video Source</Text>
+                                <Text style={form.sectionTitle}>{t('createQuest.questionEditor.videoSource')}</Text>
                                 
                                 {/* Mode Toggle */}
                                 <View style={styles.modeToggleContainer}>
@@ -572,7 +574,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             styles.modeToggleText,
                                             mediaInputMode === 'upload' && styles.modeToggleTextActive
                                         ]}>
-                                            Upload
+                                            {t('createQuest.questionEditor.upload')}
                                         </Text>
                                     </TouchableOpacity>
                                     
@@ -595,7 +597,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             styles.modeToggleText,
                                             mediaInputMode === 'link' && styles.modeToggleTextActive
                                         ]}>
-                                            Link
+                                            {t('createQuest.questionEditor.link')}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -607,7 +609,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                         <View style={styles.urlInputContainer}>
                                             <TextInput
                                                 style={[styles.urlInput, !detectedPlatform && externalVideoUrl.trim().length > 0 && styles.urlInputError]}
-                                                placeholder="Paste YouTube or video URL..."
+                                                placeholder={t('createQuest.questionEditor.pasteLinkPlaceholder')}
                                                 placeholderTextColor={theme.colors.text.disabled}
                                                 value={externalVideoUrl}
                                                 onChangeText={setExternalVideoUrl}
@@ -656,10 +658,10 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
                                         {/* Time Range Inputs (Optional) */}
                                         <View style={styles.timeRangeSection}>
-                                            <Text style={styles.timeRangeLabel}>Playback Range (optional)</Text>
+                                            <Text style={styles.timeRangeLabel}>{t('createQuest.questionEditor.playbackRange')}</Text>
                                             <View style={styles.timeInputsRow}>
                                                 <View style={styles.timeInputContainer}>
-                                                    <Text style={styles.timeInputLabel}>Start (sec)</Text>
+                                                    <Text style={styles.timeInputLabel}>{t('createQuest.questionEditor.startSec')}</Text>
                                                     <TextInput
                                                         style={styles.timeInput}
                                                         placeholder="0"
@@ -670,7 +672,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                     />
                                                 </View>
                                                 <View style={styles.timeInputContainer}>
-                                                    <Text style={styles.timeInputLabel}>End (sec)</Text>
+                                                    <Text style={styles.timeInputLabel}>{t('createQuest.questionEditor.endSec')}</Text>
                                                     <TextInput
                                                         style={styles.timeInput}
                                                         placeholder="auto"
@@ -694,7 +696,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                 }}
                                             >
                                                 <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.error.main} />
-                                                <Text style={styles.clearLinkText}>Clear Link</Text>
+                                                <Text style={styles.clearLinkText}>{t('createQuest.questionEditor.clearLink')}</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -712,7 +714,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                         ) : (
                                             <>
                                                 <MaterialCommunityIcons name="folder-video" size={24} color={theme.colors.primary.main} />
-                                                <Text style={styles.pickVideoButtonText}>Select Video from Device</Text>
+                                                <Text style={styles.pickVideoButtonText}>{t('createQuest.questionEditor.selectVideoDevice')}</Text>
                                             </>
                                         )}
                                     </TouchableOpacity>
@@ -726,10 +728,10 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
                     {/* Question Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Question *</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.questionLabel')}</Text>
                         <TextInput
                             style={form.input}
-                            placeholder="Enter your question..."
+                            placeholder={t('createQuest.addQuestion.questionPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={question}
                             onChangeText={setQuestion}
@@ -740,10 +742,10 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
                     {/* Answer Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Answer *</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.answerLabel')}</Text>
                         <TextInput
                             style={form.input}
-                            placeholder="Enter the correct answer..."
+                            placeholder={t('createQuest.addQuestion.answerPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={answer}
                             onChangeText={setAnswer}
@@ -754,7 +756,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
                     {/* Difficulty Selector */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Difficulty *</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.difficultyLabel')} *</Text>
                         <View style={styles.difficultyContainer}>
                             {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
                                 <TouchableOpacity
@@ -771,7 +773,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             difficulty === level && styles.difficultyTextActive,
                                         ]}
                                     >
-                                        {level}
+                                        {t(`createQuest.quizConfig.${level.toLowerCase()}` as any)}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -785,18 +787,18 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                             selectedTopicName={topic}
                             onSelectTopic={handleSelectTopic}
                             allowCreate={true}
-                            placeholder="Select or create a topic..."
-                            label="Topic"
+                            placeholder={t('createQuest.addQuestion.topicPlaceholder')}
+                            label={t('createQuest.addQuestion.topicLabel')}
                             required={true}
                         />
                     </View>
 
                     {/* Additional Info Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>Additional Info (Optional)</Text>
+                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.additionalInfoLabel')}</Text>
                         <TextInput
                             style={form.input}
-                            placeholder="Add any helpful context or hints..."
+                            placeholder={t('createQuest.addQuestion.additionalInfoPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                             value={additionalInfo}
                             onChangeText={setAdditionalInfo}

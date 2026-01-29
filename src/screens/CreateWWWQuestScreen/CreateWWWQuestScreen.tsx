@@ -14,6 +14,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
+import {useTranslation} from 'react-i18next';
 import {RootState} from '../../app/providers/StoreProvider/store';
 
 import BasicInfoForm from './components/BasicInfoForm';
@@ -34,6 +35,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CreateWWWQuestScreen = () => {
     const navigation = useNavigation<NavigationProp>();
+    const { t } = useTranslation();
     const { user } = useSelector((state: RootState) => state.auth);
     const questCreator = useQuestCreator();
     const questionsManager = useQuestionsManager();
@@ -84,12 +86,15 @@ const CreateWWWQuestScreen = () => {
         const selectedQuestions = questionsManager.getSelectedQuestionsArray();
 
         if (selectedQuestions.length === 0) {
-            Alert.alert('No Questions Selected', 'Please select at least one question to create a quest.');
+            Alert.alert(
+                t('createQuest.alerts.validationError'),
+                t('createQuest.alerts.minQuestions', { min: 1 })
+            );
             return;
         }
 
         if (!user?.id) {
-            Alert.alert('Error', 'User not authenticated');
+            Alert.alert(t('common.error'), t('createQuest.alerts.loginRequired'));
             return;
         }
 
@@ -101,11 +106,11 @@ const CreateWWWQuestScreen = () => {
 
             if (result.success && result.sessionId) {
                 Alert.alert(
-                    'Quest Created!',
-                    'Your quest has been created successfully.',
+                    t('createQuest.alerts.createSuccess'),
+                    t('createQuest.alerts.createSuccess'),
                     [
                         {
-                            text: 'Start Playing',
+                            text: t('game.startGame'),
                             onPress: () => {
                                 questionsManager.selectedAppQuestionIds.clear();
                                 questionsManager.selectedUserQuestionIds.clear();
@@ -117,7 +122,7 @@ const CreateWWWQuestScreen = () => {
                             },
                         },
                         {
-                            text: 'Back to Home',
+                            text: t('common.back'),
                             onPress: () => {
                                 questionsManager.selectedAppQuestionIds.clear();
                                 questionsManager.selectedUserQuestionIds.clear();
@@ -131,7 +136,7 @@ const CreateWWWQuestScreen = () => {
             }
         } catch (error) {
             console.error('Error creating quest:', error);
-            Alert.alert('Error', 'Failed to create quest. Please try again.');
+            Alert.alert(t('common.error'), t('createQuest.alerts.createError'));
         }
     };
 
@@ -153,7 +158,7 @@ const CreateWWWQuestScreen = () => {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Create Quest</Text>
+                <Text style={styles.headerTitle}>{t('createQuest.title')}</Text>
                 <View style={{width: 24}} />
             </View>
 
@@ -245,13 +250,13 @@ const CreateWWWQuestScreen = () => {
                     {questCreator.isCreating ? (
                         <>
                             <ActivityIndicator color="#fff" />
-                            <Text style={styles.createButtonText}>Creating...</Text>
+                            <Text style={styles.createButtonText}>{t('createQuest.creating')}</Text>
                         </>
                     ) : (
                         <>
                             <MaterialCommunityIcons name="check-circle" size={24} color="#fff" />
                             <Text style={styles.createButtonText}>
-                                Create Quest ({totalSelectedQuestions})
+                                {t('createQuest.createButton', { count: totalSelectedQuestions })}
                             </Text>
                         </>
                     )}

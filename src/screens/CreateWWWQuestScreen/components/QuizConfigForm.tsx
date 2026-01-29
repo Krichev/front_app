@@ -2,6 +2,7 @@
 import {Picker} from '@react-native-picker/picker';
 import React from 'react';
 import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {QuizConfig} from '../hooks/useQuestCreator';
 import {APIDifficulty} from '../../../services/wwwGame/questionService';
 
@@ -24,6 +25,8 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                                                            onAddTeamMember,
                                                            onRemoveTeamMember,
                                                        }) => {
+    const {t} = useTranslation();
+
     const updateConfig = (updates: Partial<QuizConfig>) => {
         if (!config) return;
         onConfigChange({ ...config, ...updates });
@@ -34,7 +37,12 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
     // Helper function to display difficulty with proper capitalization
     const formatDifficultyDisplay = (difficulty: APIDifficulty): string => {
-        return difficulty.charAt(0) + difficulty.slice(1).toLowerCase();
+        switch (difficulty) {
+            case 'EASY': return t('createQuest.quizConfig.easy');
+            case 'MEDIUM': return t('createQuest.quizConfig.medium');
+            case 'HARD': return t('createQuest.quizConfig.hard');
+            default: return difficulty;
+        }
     };
 
     // Early return if config is not provided
@@ -42,7 +50,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
         return (
             <View style={styles.container}>
                 <View style={styles.section}>
-                    <Text style={styles.label}>Loading configuration...</Text>
+                    <Text style={styles.label}>{t('createQuest.quizConfig.loadingConfig')}</Text>
                 </View>
             </View>
         );
@@ -52,27 +60,27 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
         <View style={styles.container}>
             {/* Game Type */}
             <View style={styles.section}>
-                <Text style={styles.label}>Game Type</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.gameType')}</Text>
                 <View style={styles.infoBox}>
-                    <Text style={styles.infoText}>WWW Quiz</Text>
+                    <Text style={styles.infoText}>{t('createQuest.quizConfig.wwwQuiz')}</Text>
                 </View>
             </View>
 
             {/* Team Name */}
             <View style={styles.section}>
-                <Text style={styles.label}>Team Name *</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.teamNameRequired')}</Text>
                 <TextInput
                     style={styles.input}
                     value={config?.teamName || ''}
                     onChangeText={(text) => updateConfig({ teamName: text })}
-                    placeholder="Enter your team name"
+                    placeholder={t('createQuest.quizConfig.teamNamePlaceholder')}
                     placeholderTextColor="#999"
                 />
             </View>
 
             {/* Team Members */}
             <View style={styles.section}>
-                <Text style={styles.label}>Team Members *</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.teamMembersRequired')}</Text>
 
                 {/* Display current members */}
                 {(config?.teamMembers || []).map((member: string, index: number) => (
@@ -82,7 +90,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                             onPress={() => onRemoveTeamMember(index)}
                             style={styles.removeButton}
                         >
-                            <Text style={styles.removeButtonText}>Remove</Text>
+                            <Text style={styles.removeButtonText}>{t('createQuest.quizConfig.remove')}</Text>
                         </TouchableOpacity>
                     </View>
                 ))}
@@ -93,21 +101,21 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                         style={[styles.input, styles.memberInput]}
                         value={teamMemberInput}
                         onChangeText={onTeamMemberInputChange}
-                        placeholder="Add team member"
+                        placeholder={t('createQuest.quizConfig.addMemberPlaceholder')}
                         placeholderTextColor="#999"
                     />
                     <TouchableOpacity
                         onPress={onAddTeamMember}
                         style={styles.addButton}
                     >
-                        <Text style={styles.addButtonText}>Add</Text>
+                        <Text style={styles.addButtonText}>{t('createQuest.quizConfig.add')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* Difficulty Selection */}
             <View style={styles.section}>
-                <Text style={styles.label}>Difficulty *</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.difficulty')} *</Text>
                 <View style={styles.difficultyContainer}>
                     {difficulties.map((diff: APIDifficulty) => (
                         <TouchableOpacity
@@ -133,7 +141,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
             {/* Round Time */}
             <View style={styles.section}>
-                <Text style={styles.label}>Discussion Time (seconds) *</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.timePerQuestion')} *</Text>
                 <View style={styles.timeContainer}>
                     <TouchableOpacity
                         onPress={() => updateConfig({ roundTime: Math.max(10, (config?.roundTime || 60) - 10) })}
@@ -141,7 +149,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                     >
                         <Text style={styles.timeButtonText}>-</Text>
                     </TouchableOpacity>
-                    <Text style={styles.timeValue}>{config?.roundTime || 60}s</Text>
+                    <Text style={styles.timeValue}>{t('createQuest.quizConfig.seconds', { count: config?.roundTime || 60 })}</Text>
                     <TouchableOpacity
                         onPress={() => updateConfig({ roundTime: Math.min(300, (config?.roundTime || 60) + 10) })}
                         style={styles.timeButton}
@@ -153,12 +161,12 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
             {/* Selected Questions Count - READ ONLY */}
             <View style={styles.section}>
-                <Text style={styles.label}>Number of Questions</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.roundCount')}</Text>
                 <View style={[styles.infoBox, selectedQuestionsCount === 0 && styles.warningBox]}>
                     <Text style={[styles.infoText, selectedQuestionsCount === 0 && styles.warningText]}>
                         {selectedQuestionsCount === 0
-                            ? 'No questions selected - choose questions below'
-                            : `${selectedQuestionsCount} question${selectedQuestionsCount !== 1 ? 's' : ''} selected`}
+                            ? t('createQuest.preview.noQuestionsDesc')
+                            : t('createQuest.quizConfig.rounds', { count: selectedQuestionsCount })}
                     </Text>
                 </View>
             </View>
@@ -167,9 +175,9 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
             <View style={styles.section}>
                 <View style={styles.toggleRow}>
                     <View style={styles.toggleInfo}>
-                        <Text style={styles.label}>Enable AI Host</Text>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.enableAIHost')}</Text>
                         <Text style={styles.helperText}>
-                            AI will provide hints and feedback during the quiz
+                            {t('createQuest.quizConfig.aiHostDescription')}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -193,9 +201,9 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
             <View style={styles.section}>
                 <View style={styles.toggleRow}>
                     <View style={styles.toggleInfo}>
-                        <Text style={styles.label}>Team Based Quiz</Text>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.teamBased')}</Text>
                         <Text style={styles.helperText}>
-                            Enable collaborative gameplay
+                            {t('createQuest.quizConfig.teamBasedDescription')}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -217,12 +225,12 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
             {/* Participation Settings */}
             <View style={styles.section}>
-                <Text style={styles.label}>Participation Settings</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.participationSettings')}</Text>
                 <View style={styles.toggleRow}>
                     <View style={styles.toggleInfo}>
-                        <Text style={styles.label}>Open Enrollment</Text>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.openEnrollment')}</Text>
                         <Text style={styles.helperText}>
-                            Allow users to join without an invitation.
+                            {t('createQuest.quizConfig.openEnrollmentDesc')}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -241,12 +249,12 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                     </TouchableOpacity>
                 </View>
                 <View style={styles.inputRow}>
-                    <Text style={styles.label}>Max Participants</Text>
+                    <Text style={styles.label}>{t('createQuest.quizConfig.maxParticipants')}</Text>
                     <TextInput
                         style={styles.input}
                         value={config?.maxParticipants?.toString() || ''}
                         onChangeText={(text) => updateConfig({ maxParticipants: text ? parseInt(text) : undefined })}
-                        placeholder="Unlimited"
+                        placeholder={t('createQuest.quizConfig.unlimited')}
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                     />
@@ -255,12 +263,12 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
             {/* Completion Settings */}
             <View style={styles.section}>
-                <Text style={styles.label}>Completion Settings</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.completionSettings')}</Text>
                 <View style={styles.toggleRow}>
                     <View style={styles.toggleInfo}>
-                        <Text style={styles.label}>Shuffle Questions</Text>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.shuffleQuestions')}</Text>
                         <Text style={styles.helperText}>
-                            Randomize question order for each participant.
+                            {t('createQuest.quizConfig.shuffleQuestionsDesc')}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -279,7 +287,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                     </TouchableOpacity>
                 </View>
                 <View style={styles.inputRow}>
-                    <Text style={styles.label}>Max Attempts Per User</Text>
+                    <Text style={styles.label}>{t('createQuest.quizConfig.maxAttempts')}</Text>
                     <TextInput
                         style={styles.input}
                         value={config?.maxAttempts?.toString() || ''}
@@ -293,12 +301,12 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
             {/* Result Sharing Settings */}
             <View style={styles.section}>
-                <Text style={styles.label}>Result Sharing Settings</Text>
+                <Text style={styles.label}>{t('createQuest.quizConfig.resultSharing')}</Text>
                 <View style={styles.toggleRow}>
                     <View style={styles.toggleInfo}>
-                        <Text style={styles.label}>Require Result Consent</Text>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.requireConsent')}</Text>
                         <Text style={styles.helperText}>
-                            Ask participant before sharing their results.
+                            {t('createQuest.quizConfig.requireConsentDesc')}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -320,14 +328,14 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
 
             {/* Configuration Summary */}
             <View style={styles.summaryBox}>
-                <Text style={styles.summaryTitle}>Configuration Summary</Text>
-                <Text style={styles.summaryText}>• Team: {config?.teamName || 'Not set'}</Text>
-                <Text style={styles.summaryText}>• Members: {config?.teamMembers?.length || 0}</Text>
-                <Text style={styles.summaryText}>• Difficulty: {config?.difficulty ? formatDifficultyDisplay(config.difficulty) : 'Not set'}</Text>
-                <Text style={styles.summaryText}>• Time per question: {config?.roundTime || 60}s</Text>
-                <Text style={styles.summaryText}>• Total questions: {selectedQuestionsCount}</Text>
-                <Text style={styles.summaryText}>• AI Host: {config?.enableAIHost ? 'Yes' : 'No'}</Text>
-                <Text style={styles.summaryText}>• Team Based: {config?.teamBased ? 'Yes' : 'No'}</Text>
+                <Text style={styles.summaryTitle}>{t('createQuest.quizConfig.configSummary')}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.teamName')}: {config?.teamName || t('createQuest.quizConfig.notSet')}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.teamMembers')}: {config?.teamMembers?.length || 0}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryDifficulty', { value: config?.difficulty ? formatDifficultyDisplay(config.difficulty) : t('createQuest.quizConfig.notSet') })}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryTime', { value: config?.roundTime || 60 })}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryQuestions', { count: selectedQuestionsCount })}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryAIHost', { value: config?.enableAIHost ? t('createQuest.quizConfig.yes') : t('createQuest.quizConfig.no') })}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryTeamBased', { value: config?.teamBased ? t('createQuest.quizConfig.yes') : t('createQuest.quizConfig.no') })}</Text>
             </View>
         </View>
     );
