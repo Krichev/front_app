@@ -4,7 +4,7 @@ import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useNavigation} from '@react-navigation/native';
 import {FormatterService} from '../../../services/verification/ui/Services';
-import {ApiChallenge} from "../model/slice/challengeApi.ts";
+import {ApiChallenge} from "../model/slice/challengeApi";
 import {isWWWQuiz, parseQuizConfig} from "../model/types";
 
 interface QuizChallengeCardProps {
