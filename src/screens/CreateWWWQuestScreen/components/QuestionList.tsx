@@ -516,7 +516,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
                             {question.topic && (
                                 <View style={styles.topicBadge}>
-                                    <MaterialCommunityIcons name="tag" size={14} color="#007AFF"/>
+                                    <MaterialCommunityIcons name="tag" size={14} color="#FFFFFF"/>
                                     <Text style={styles.topicText}>{question.topic}</Text>
                                 </View>
                             )}
@@ -993,7 +993,7 @@ const themeStyles = createStyles(theme => ({
     },
     topicText: {
         fontSize: theme.typography.fontSize.xs,
-        color: theme.colors.primary.main,
+        color: theme.colors.neutral.white,
         fontWeight: theme.typography.fontWeight.semibold,
     },
     mediaBadge: {
