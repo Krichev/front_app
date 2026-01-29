@@ -3,6 +3,8 @@ import React, {useEffect} from 'react';
 import {ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../../shared/ui/theme';
 import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
 import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi";
 import QuestionMediaViewer from './QuestionMediaViewer';
@@ -132,6 +134,8 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                                        isLoadingTopics,
                                                    }) => {
     const {t} = useTranslation();
+    const {screen, form, theme} = useAppStyles();
+    const styles = themeStyles;
     const questions = questionSource === 'app' ? appQuestions : userQuestions;
     const selectedQuestionIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
     const isLoading = questionSource === 'app' ? isLoadingApp : isLoadingUser;
@@ -687,5 +691,459 @@ const QuestionList: React.FC<QuestionListProps> = ({
         </View>
     );
 };
+
+const themeStyles = createStyles(theme => ({
+    // Container styles
+    container: {
+        flex: 1,
+        backgroundColor: theme.colors.background.primary,
+    },
+    
+    // Search styles
+    searchContainer: {
+        marginBottom: theme.spacing.md,
+    },
+    searchInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: theme.spacing.sm,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+    },
+    searchButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.primary.main,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        gap: theme.spacing.sm,
+    },
+    searchButtonText: {
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+    },
+    
+    // Filter styles
+    filterRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: theme.spacing.sm,
+        gap: theme.spacing.sm,
+    },
+    filterButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.secondary,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.md,
+        gap: theme.spacing.xs,
+    },
+    filterButtonText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    difficultyScroll: {
+        flex: 1,
+    },
+    difficultyChip: {
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.full,
+        backgroundColor: theme.colors.background.secondary,
+        marginRight: theme.spacing.sm,
+    },
+    difficultyChipSelected: {
+        backgroundColor: theme.colors.primary.main,
+    },
+    difficultyChipText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    difficultyChipTextSelected: {
+        color: theme.colors.neutral.white,
+    },
+    
+    // Topic picker modal styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    topicPickerContainer: {
+        backgroundColor: theme.colors.background.primary,
+        borderTopLeftRadius: theme.layout.borderRadius.lg,
+        borderTopRightRadius: theme.layout.borderRadius.lg,
+        maxHeight: '70%',
+    },
+    topicPickerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: theme.spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.border.light,
+    },
+    topicPickerTitle: {
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+    },
+    topicList: {
+        maxHeight: 400,
+    },
+    topicItem: {
+        padding: theme.spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.background.tertiary,
+    },
+    topicItemSelected: {
+        backgroundColor: theme.colors.primary.light,
+    },
+    topicItemText: {
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+    },
+    topicItemTextSelected: {
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    
+    // Pagination styles
+    paginationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: theme.spacing.lg,
+        gap: theme.spacing.md,
+    },
+    paginationButton: {
+        padding: theme.spacing.sm,
+    },
+    paginationButtonDisabled: {
+        opacity: 0.5,
+    },
+    paginationText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.primary,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    
+    // Bulk actions
+    bulkActionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginBottom: theme.spacing.sm,
+    },
+    bulkActionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.xs,
+        padding: theme.spacing.sm,
+    },
+    bulkActionText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    
+    // Results
+    resultsText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.md,
+    },
+    questionsList: {
+        flex: 1,
+    },
+    
+    // Question item styles
+    questionCard: {
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.lg,
+        marginBottom: theme.spacing.md,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        overflow: 'hidden',
+    },
+    questionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: theme.spacing.md,
+        minHeight: 72,
+    },
+    questionHeaderLeft: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.md,
+        overflow: 'hidden',
+    },
+    checkbox: {
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: theme.colors.primary.main,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxSelected: {
+        backgroundColor: theme.colors.primary.main,
+    },
+    
+    // Media Thumbnail
+    mediaThumbnailContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: theme.layout.borderRadius.sm,
+        overflow: 'hidden',
+        backgroundColor: theme.colors.background.secondary,
+        position: 'relative',
+    },
+    mediaThumbnailWrapper: {
+        width: 48,
+        height: 48,
+        borderRadius: theme.layout.borderRadius.sm,
+        overflow: 'hidden',
+    },
+    mediaThumbnail: {
+        width: 48,
+        height: 48,
+        borderRadius: theme.layout.borderRadius.sm,
+        backgroundColor: theme.colors.background.secondary,
+    },
+    mediaThumbnailPlaceholder: {
+        width: 48,
+        height: 48,
+        borderRadius: theme.layout.borderRadius.sm,
+        backgroundColor: theme.colors.background.tertiary,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    mediaTypeOverlay: {
+        position: 'absolute',
+        bottom: 2,
+        right: 2,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 10,
+        padding: 2,
+    },
+    
+    questionInfo: {
+        flex: 1,
+        flexShrink: 1,
+        minWidth: 0,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+    },
+    questionPreviewText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.primary,
+        lineHeight: 20,
+        flexShrink: 1,
+    },
+    
+    // Badges
+    difficultyBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: theme.layout.borderRadius.lg,
+    },
+    difficultyEASY: {
+        backgroundColor: theme.colors.success.main,
+    },
+    difficultyMEDIUM: {
+        backgroundColor: theme.colors.warning.main,
+    },
+    difficultyHARD: {
+        backgroundColor: theme.colors.error.main,
+    },
+    difficultyBadgeText: {
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.bold,
+    },
+    topicBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.primary.light,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.layout.borderRadius.lg,
+        gap: 4,
+    },
+    topicText: {
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    mediaBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.secondary,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.layout.borderRadius.lg,
+        gap: 4,
+    },
+    mediaText: {
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    
+    // Question content (expanded)
+    questionContent: {
+        padding: theme.spacing.md,
+        borderTopWidth: 1,
+        borderTopColor: theme.colors.border.light,
+    },
+    questionTextContainer: {
+        marginBottom: theme.spacing.md,
+    },
+    questionLabel: {
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: 4,
+    },
+    questionText: {
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+        lineHeight: 24,
+    },
+    
+    // Media section
+    mediaSection: {
+        marginBottom: theme.spacing.md,
+    },
+    mediaErrorSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.error.light,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.md,
+        gap: theme.spacing.sm,
+    },
+    mediaErrorText: {
+        flex: 1,
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.error.main,
+        lineHeight: 20,
+    },
+    
+    // Answer styles
+    answerContainer: {
+        marginBottom: theme.spacing.md,
+    },
+    answerHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.sm,
+    },
+    answerLabel: {
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+    },
+    toggleAnswerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    toggleAnswerText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    answerText: {
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+        lineHeight: 24,
+        backgroundColor: theme.colors.background.secondary,
+        padding: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.md,
+    },
+    
+    // Additional info
+    additionalInfoContainer: {
+        marginBottom: theme.spacing.md,
+    },
+    additionalInfoLabel: {
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: 4,
+    },
+    additionalInfoText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        lineHeight: 20,
+    },
+    
+    // Delete button
+    deleteButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.error.main,
+        paddingVertical: 10,
+        borderRadius: theme.layout.borderRadius.md,
+        gap: theme.spacing.sm,
+    },
+    deleteButtonText: {
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+    },
+    
+    // Error container
+    errorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.error.light,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.md,
+        gap: theme.spacing.sm,
+    },
+    errorText: {
+        flex: 1,
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.error.main,
+    },
+    
+    // Loading container
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: theme.spacing.sm,
+    },
+    loadingText: {
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.secondary,
+    },
+}));
 
 export default QuestionList;
