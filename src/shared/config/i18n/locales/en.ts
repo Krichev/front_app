@@ -18,6 +18,13 @@ const en = {
         search: 'Search',
         noResults: 'No results found',
         close: 'Close',
+        localizedInput: {
+            english: 'EN',
+            russian: 'RU',
+            fillAtLeastOne: 'Please fill in at least one language',
+            fillBothLanguages: 'Please fill in both languages',
+            emptyLanguageHint: 'Empty - will use {{fallback}} version',
+        },
     },
     createQuest: {
         // Main screen

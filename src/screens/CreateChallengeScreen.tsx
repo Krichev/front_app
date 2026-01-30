@@ -20,10 +20,13 @@ import {ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationType
 import Geolocation from '@react-native-community/geolocation';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
+import { LocalizedInput } from '../shared/ui/LocalizedInput';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty } from '../shared/types/localized';
+import { useI18n } from '../app/providers/I18nProvider';
 
 interface CreateChallengeFormData {
-    title: string;
-    description: string;
+    title: LocalizedString;
+    description: LocalizedString;
     type: ChallengeType;
     visibility: ChallengeVisibility;
     reward?: string;
@@ -54,6 +57,7 @@ const CreateChallengeScreen: React.FC = () => {
     const [createChallenge, { isLoading }] = useCreateChallengeMutation();
     const {screen, theme} = useAppStyles();
     const styles = themeStyles;
+    const { currentLanguage } = useI18n();
 
     // Loading states
     const [locationFetching, setLocationFetching] = useState<boolean>(false);
@@ -65,8 +69,8 @@ const CreateChallengeScreen: React.FC = () => {
 
     // Form state
     const [formData, setFormData] = useState<CreateChallengeFormData>({
-        title: '',
-        description: '',
+        title: EMPTY_LOCALIZED_STRING,
+        description: EMPTY_LOCALIZED_STRING,
         type: 'QUEST',
         visibility: 'PUBLIC',
         reward: '',
@@ -151,12 +155,12 @@ const CreateChallengeScreen: React.FC = () => {
     // Form submission
     const handleSubmit = async () => {
         // Basic validation
-        if (!formData.title.trim()) {
+        if (isLocalizedStringEmpty(formData.title)) {
             Alert.alert('Error', 'Please enter a challenge title');
             return;
         }
 
-        if (!formData.description.trim()) {
+        if (isLocalizedStringEmpty(formData.description)) {
             Alert.alert('Error', 'Please enter a challenge description');
             return;
         }
@@ -189,8 +193,10 @@ const CreateChallengeScreen: React.FC = () => {
 
         try {
             const requestData: CreateChallengeRequest = {
-                title: formData.title.trim(),
-                description: formData.description.trim(),
+                title: getLocalizedValue(formData.title, currentLanguage),
+                description: getLocalizedValue(formData.description, currentLanguage),
+                titleLocalized: formData.title,
+                descriptionLocalized: formData.description,
                 type: formData.type,
                 visibility: formData.visibility,
                 status: 'ACTIVE',
@@ -351,27 +357,31 @@ const CreateChallengeScreen: React.FC = () => {
                     <View style={styles.form}>
                         {/* Title */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Title *</Text>
-                            <TextInput
-                                style={styles.input}
+                            <LocalizedInput
+                                label="Title *"
                                 value={formData.title}
-                                onChangeText={(text) => updateFormField('title', text)}
-                                placeholder="Enter challenge title"
-                                placeholderTextColor={theme.colors.text.disabled}
+                                onChangeLocalized={(text) => updateFormField('title', text)}
+                                placeholder={{
+                                    en: 'Enter challenge title',
+                                    ru: 'Введите название челленджа'
+                                }}
+                                required
                             />
                         </View>
 
                         {/* Description */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Description *</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label="Description *"
                                 value={formData.description}
-                                onChangeText={(text) => updateFormField('description', text)}
-                                placeholder="Describe your challenge"
+                                onChangeLocalized={(text) => updateFormField('description', text)}
+                                placeholder={{
+                                    en: 'Describe your challenge',
+                                    ru: 'Опишите ваш челлендж'
+                                }}
                                 multiline
                                 numberOfLines={3}
-                                placeholderTextColor={theme.colors.text.disabled}
+                                required
                             />
                         </View>
 

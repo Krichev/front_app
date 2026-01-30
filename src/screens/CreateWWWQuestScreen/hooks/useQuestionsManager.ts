@@ -12,6 +12,7 @@ import {QuestionService} from "../../../services/wwwGame";
 import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService";
 import {BaseQuestionForQuest} from "../types/question.types";
 import {CreateQuizQuestionRequest, QuestionVisibility} from "../../../entities/QuizState/model/types/question.types";
+import { LocalizedString } from '../../../shared/types/localized';
 
 // ============================================================================
 // TYPES
@@ -44,6 +45,9 @@ export interface QuestionFormData {
     difficulty: APIDifficulty;
     topic?: string;
     additionalInfo?: string;
+    questionLocalized?: LocalizedString;
+    answerLocalized?: LocalizedString;
+    additionalInfoLocalized?: LocalizedString;
     questionType: QuestionType;
     // DEPRECATED: Remove after migration - media is uploaded separately (old flow)
     media?: {
@@ -233,6 +237,9 @@ export const useQuestionsManager = () => {
                 difficulty: data.difficulty,
                 topic: data.topic,
                 additionalInfo: data.additionalInfo,
+                questionLocalized: data.questionLocalized,
+                answerLocalized: data.answerLocalized,
+                additionalInfoLocalized: data.additionalInfoLocalized,
                 visibility: QuestionVisibility.PRIVATE,
                 questionType: data.questionType,
             };

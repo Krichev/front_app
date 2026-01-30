@@ -27,6 +27,8 @@ import {TopicTreeSelector} from '../shared/ui/TopicSelector';
 import {SelectableTopic} from '../entities/TopicState';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import { LocalizedInput } from '../shared/ui/LocalizedInput';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../shared/types/localized';
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -40,6 +42,7 @@ type CreateQuestionNavigationProp = NativeStackNavigationProp<RootStackParamList
 const CreateUserQuestionScreen: React.FC = () => {
     const { t } = useTranslation();
     const { theme } = useAppStyles();
+    const { currentLanguage } = useI18n();
     const route = useRoute<CreateQuestionRouteProp>();
     const navigation = useNavigation<CreateQuestionNavigationProp>();
 
@@ -48,15 +51,19 @@ const CreateUserQuestionScreen: React.FC = () => {
     const existingQuestion = isEditing ? route.params?.question : undefined;
 
     // Form state
-    const [question, setQuestion] = useState<string>(existingQuestion?.question || '');
-    const [answer, setAnswer] = useState<string>(existingQuestion?.answer || '');
+    const [question, setQuestion] = useState<LocalizedString>(
+        existingQuestion?.questionLocalized || (existingQuestion?.question ? createLocalizedString(existingQuestion.question, 'en') : EMPTY_LOCALIZED_STRING)
+    );
+    const [answer, setAnswer] = useState<LocalizedString>(
+        existingQuestion?.answerLocalized || (existingQuestion?.answer ? createLocalizedString(existingQuestion.answer, 'en') : EMPTY_LOCALIZED_STRING)
+    );
     const [difficulty, setDifficulty] = useState<APIDifficulty>(
         existingQuestion?.difficulty || 'MEDIUM'
     );
     const [topic, setTopic] = useState<string>(existingQuestion?.topic || '');
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
-    const [additionalInfo, setAdditionalInfo] = useState<string>(
-        existingQuestion?.additionalInfo || ''
+    const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(
+        existingQuestion?.additionalInfoLocalized || (existingQuestion?.additionalInfo ? createLocalizedString(existingQuestion.additionalInfo, 'en') : EMPTY_LOCALIZED_STRING)
     );
     const [visibility, setVisibility] = useState<QuestionVisibility>(
         existingQuestion?.visibility || QuestionVisibility.PRIVATE
@@ -77,12 +84,12 @@ const CreateUserQuestionScreen: React.FC = () => {
 
     const handleSubmit = async () => {
         // Validate inputs
-        if (!question.trim()) {
+        if (isLocalizedStringEmpty(question)) {
             Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.questionRequiredError'));
             return;
         }
 
-        if (!answer.trim()) {
+        if (isLocalizedStringEmpty(answer)) {
             Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.answerRequiredError'));
             return;
         }
@@ -93,11 +100,14 @@ const CreateUserQuestionScreen: React.FC = () => {
             if (isEditing && existingQuestion) {
                 // Update existing question - Pass ID as first argument
                 await QuestionService.updateUserQuestion(existingQuestion.id, {
-                    question: question.trim(),
-                    answer: answer.trim(),
+                    question: getLocalizedValue(question, currentLanguage),
+                    answer: getLocalizedValue(answer, currentLanguage),
+                    questionLocalized: question,
+                    answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
-                    additionalInfo: additionalInfo.trim() || undefined,
+                    additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
+                    additionalInfoLocalized: additionalInfo,
                     visibility,
                 });
 
@@ -105,11 +115,14 @@ const CreateUserQuestionScreen: React.FC = () => {
             } else {
                 // Create new question - Use createUserQuestion
                 await QuestionService.createUserQuestion({
-                    question: question.trim(),
-                    answer: answer.trim(),
+                    question: getLocalizedValue(question, currentLanguage),
+                    answer: getLocalizedValue(answer, currentLanguage),
+                    questionLocalized: question,
+                    answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
-                    additionalInfo: additionalInfo.trim() || undefined,
+                    additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
+                    additionalInfoLocalized: additionalInfo,
                     visibility,
                 });
 
@@ -142,31 +155,33 @@ const CreateUserQuestionScreen: React.FC = () => {
                     <View style={styles.form}>
                         {/* Question Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>{t('userQuestions.questionRequired')}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label={t('userQuestions.questionRequired')}
                                 value={question}
-                                onChangeText={setQuestion}
-                                placeholder={t('userQuestions.questionPlaceholder')}
-                                placeholderTextColor={theme.colors.text.disabled}
+                                onChangeLocalized={setQuestion}
+                                placeholder={{
+                                    en: t('userQuestions.questionPlaceholder'),
+                                    ru: t('userQuestions.questionPlaceholder'),
+                                }}
                                 multiline
                                 numberOfLines={4}
-                                textAlignVertical="top"
+                                required
                             />
                         </View>
 
                         {/* Answer Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>{t('userQuestions.answerRequired')}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label={t('userQuestions.answerRequired')}
                                 value={answer}
-                                onChangeText={setAnswer}
-                                placeholder={t('userQuestions.answerPlaceholder')}
-                                placeholderTextColor={theme.colors.text.disabled}
+                                onChangeLocalized={setAnswer}
+                                placeholder={{
+                                    en: t('userQuestions.answerPlaceholder'),
+                                    ru: t('userQuestions.answerPlaceholder'),
+                                }}
                                 multiline
                                 numberOfLines={3}
-                                textAlignVertical="top"
+                                required
                             />
                         </View>
 
@@ -224,16 +239,16 @@ const CreateUserQuestionScreen: React.FC = () => {
 
                         {/* Additional Info Input (Optional) */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>{t('userQuestions.additionalInfoLabel')}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label={t('userQuestions.additionalInfoLabel')}
                                 value={additionalInfo}
-                                onChangeText={setAdditionalInfo}
-                                placeholder={t('userQuestions.additionalInfoPlaceholder')}
-                                placeholderTextColor={theme.colors.text.disabled}
+                                onChangeLocalized={setAdditionalInfo}
+                                placeholder={{
+                                    en: t('userQuestions.additionalInfoPlaceholder'),
+                                    ru: t('userQuestions.additionalInfoPlaceholder'),
+                                }}
                                 multiline
                                 numberOfLines={3}
-                                textAlignVertical="top"
                             />
                         </View>
 

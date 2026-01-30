@@ -32,6 +32,9 @@ import {
 } from 'react-native-image-picker';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import { LocalizedInput } from '../shared/ui/LocalizedInput';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, createLocalizedString } from '../shared/types/localized';
+import { useI18n } from '../app/providers/I18nProvider';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -50,6 +53,7 @@ const EditProfileScreen: React.FC = () => {
     const navigation = useNavigation<EditProfileNavigationProp>();
     const { userId } = route.params;
     const { user: currentUser } = useSelector((state: RootState) => state.auth);
+    const { currentLanguage } = useI18n();
 
     // Check if user is editing their own profile
     const isOwn = currentUser?.id === userId;
@@ -61,7 +65,7 @@ const EditProfileScreen: React.FC = () => {
     // Form state
     const [formData, setFormData] = useState({
         username: '',
-        bio: '',
+        bio: EMPTY_LOCALIZED_STRING as LocalizedString,
         avatar: '',
     });
 
@@ -72,7 +76,7 @@ const EditProfileScreen: React.FC = () => {
         if (userProfile) {
             setFormData({
                 username: userProfile.username || '',
-                bio: userProfile.bio || '',
+                bio: userProfile.bioLocalized || (userProfile.bio ? createLocalizedString(userProfile.bio, 'en') : EMPTY_LOCALIZED_STRING),
                 avatar: userProfile.avatar || '',
             });
             setAvatarUri(userProfile.avatar || null);
@@ -80,7 +84,7 @@ const EditProfileScreen: React.FC = () => {
     }, [userProfile]);
 
     // Handle input changes
-    const handleInputChange = (field: keyof typeof formData, value: string) => {
+    const handleInputChange = (field: keyof typeof formData, value: string | LocalizedString) => {
         setFormData(prev => ({
             ...prev,
             [field]: value
@@ -161,7 +165,7 @@ const EditProfileScreen: React.FC = () => {
             Alert.alert(t('userQuestions.errorTitle'), t('validation.maxLength', { count: 50 }));
             return false;
         }
-        if (formData.bio.length > 500) {
+        if (getLocalizedValue(formData.bio, currentLanguage).length > 500) {
             Alert.alert(t('userQuestions.errorTitle'), t('validation.maxLength', { count: 500 }));
             return false;
         }
@@ -185,7 +189,8 @@ const EditProfileScreen: React.FC = () => {
 
             const updateData = {
                 username: formData.username.trim(),
-                bio: formData.bio.trim(),
+                bio: getLocalizedValue(formData.bio, currentLanguage).trim(),
+                bioLocalized: formData.bio,
                 avatar: formData.avatar,
             };
 
@@ -199,7 +204,7 @@ const EditProfileScreen: React.FC = () => {
                 const updatedUser = {
                     ...currentUser,
                     username: formData.username.trim(),
-                    bio: formData.bio.trim(),
+                    bio: getLocalizedValue(formData.bio, currentLanguage).trim(),
                     avatar: formData.avatar,
                 };
 
@@ -338,21 +343,18 @@ const EditProfileScreen: React.FC = () => {
                         </View>
 
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('editProfile.bioLabel')}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label={t('editProfile.bioLabel')}
                                 value={formData.bio}
-                                onChangeText={(value) => handleInputChange('bio', value)}
-                                placeholder={t('editProfile.bioPlaceholder')}
-                                placeholderTextColor={theme.colors.text.disabled}
+                                onChangeLocalized={(value) => handleInputChange('bio', value)}
+                                placeholder={{
+                                    en: t('editProfile.bioPlaceholder'),
+                                    ru: t('editProfile.bioPlaceholder'),
+                                }}
                                 multiline
                                 numberOfLines={4}
                                 maxLength={500}
-                                textAlignVertical="top"
                             />
-                            <Text style={styles.helperText}>
-                                {formData.bio.length}/500
-                            </Text>
                         </View>
                     </View>
                 </ScrollView>

@@ -15,6 +15,8 @@ import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCar
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../shared/ui/theme';
 import {useTranslation} from 'react-i18next';
+import { LocalizedInput } from '../../shared/ui/LocalizedInput';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty } from '../../shared/types/localized';
 
 // ============================================================================
 // TYPES
@@ -24,13 +26,13 @@ export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface AudioQuestionFormData {
     // Core question fields
-    question: string;
-    answer: string;
+    question: LocalizedString;
+    answer: LocalizedString;
     difficulty: Difficulty;
     topic: string;
     topicId?: number;
     visibility: QuestionVisibility;
-    additionalInfo: string;
+    additionalInfo: LocalizedString;
 
     // Audio challenge specific
     audioChallengeType: AudioChallengeType | null;
@@ -64,13 +66,13 @@ interface AudioQuestionFormProps {
 const TIME_SIGNATURES = ['4/4', '3/4', '2/4', '6/8', '12/8', '5/4', '7/8'];
 
 const DEFAULT_FORM_DATA: AudioQuestionFormData = {
-    question: '',
-    answer: '',
+    question: EMPTY_LOCALIZED_STRING,
+    answer: EMPTY_LOCALIZED_STRING,
     difficulty: 'MEDIUM',
     topic: '',
     topicId: undefined,
     visibility: QuestionVisibility.PRIVATE,
-    additionalInfo: '',
+    additionalInfo: EMPTY_LOCALIZED_STRING,
     audioChallengeType: null,
     referenceAudioFile: null,
     audioSegmentStart: 0,
@@ -94,6 +96,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     const {t} = useTranslation();
     const {screen, form, theme} = useAppStyles();
     const styles = themeStyles;
+    const { currentLanguage } = useI18n();
     // ============================================================================
     // STATE
     // ============================================================================
@@ -306,13 +309,13 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
         // Auto-fill optional fields for audio challenges
         const submissionData = { ...formData };
-        if (!submissionData.question.trim()) {
+        if (isLocalizedStringEmpty(submissionData.question)) {
             // Use instructions from type info if available, or default
             const typeLabel = formData.audioChallengeType ? AUDIO_CHALLENGE_TYPES_INFO[formData.audioChallengeType]?.label : 'Audio Challenge';
-            submissionData.question = `Complete the ${typeLabel}`;
+            submissionData.question = createLocalizedString(`Complete the ${typeLabel}`, currentLanguage);
         }
-        if (!submissionData.answer.trim()) {
-            submissionData.answer = "Audio Response";
+        if (isLocalizedStringEmpty(submissionData.answer)) {
+            submissionData.answer = createLocalizedString("Audio Response", currentLanguage);
         }
 
         try {
@@ -321,7 +324,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             console.error('Submit error:', error);
             Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
         }
-    }, [formData, validateForm, onSubmit, t]);
+    }, [formData, validateForm, onSubmit, t, currentLanguage]);
 
     // ============================================================================
     // RENDER HELPERS
@@ -691,17 +694,16 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
                 {/* Additional Info */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>{t('userQuestions.additionalInfoLabel')}</Text>
-                    <TextInput
-                        style={[form.input, form.textArea]}
+                    <LocalizedInput
+                        label={t('userQuestions.additionalInfoLabel')}
                         value={formData.additionalInfo}
-                        onChangeText={(text) => updateField('additionalInfo', text)}
-                        placeholder={t('userQuestions.additionalInfoPlaceholder')}
-                        placeholderTextColor={theme.colors.text.disabled}
+                        onChangeLocalized={(value) => updateField('additionalInfo', value)}
+                        placeholder={{
+                            en: t('userQuestions.additionalInfoPlaceholder'),
+                            ru: t('userQuestions.additionalInfoPlaceholder'),
+                        }}
                         multiline
                         numberOfLines={2}
-                        textAlignVertical="top"
-                        editable={!isSubmitting}
                     />
                 </View>
             </View>
@@ -729,17 +731,16 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             {/* Question Text */}
             <View style={form.section}>
                 <View style={form.formGroup}>
-                    <Text style={form.label}>{t('audioQuestion.questionLabel')}</Text>
-                    <TextInput
-                        style={[form.input, form.textArea]}
+                    <LocalizedInput
+                        label={t('audioQuestion.questionLabel')}
                         value={formData.question}
-                        onChangeText={(text) => updateField('question', text)}
-                        placeholder={t('audioQuestion.questionPlaceholder')}
-                        placeholderTextColor={theme.colors.text.disabled}
+                        onChangeLocalized={(value) => updateField('question', value)}
+                        placeholder={{
+                            en: t('audioQuestion.questionPlaceholder'),
+                            ru: t('audioQuestion.questionPlaceholder'),
+                        }}
                         multiline
                         numberOfLines={3}
-                        textAlignVertical="top"
-                        editable={!isSubmitting}
                     />
                     {errors.question && (
                         <Text style={form.errorText}>{errors.question}</Text>
@@ -748,17 +749,16 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
                 {/* Answer/Description */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>{t('userQuestions.answerLabel')}</Text>
-                    <TextInput
-                        style={[form.input, form.textArea]}
+                     <LocalizedInput
+                        label={t('userQuestions.answerLabel')}
                         value={formData.answer}
-                        onChangeText={(text) => updateField('answer', text)}
-                        placeholder={t('userQuestions.answerPlaceholder')}
-                        placeholderTextColor={theme.colors.text.disabled}
+                        onChangeLocalized={(value) => updateField('answer', value)}
+                        placeholder={{
+                            en: t('userQuestions.answerPlaceholder'),
+                            ru: t('userQuestions.answerPlaceholder'),
+                        }}
                         multiline
                         numberOfLines={2}
-                        textAlignVertical="top"
-                        editable={!isSubmitting}
                     />
                 </View>
             </View>

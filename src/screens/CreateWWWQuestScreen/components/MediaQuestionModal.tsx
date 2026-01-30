@@ -20,6 +20,9 @@ import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
+import { LocalizedInput } from '../../../shared/ui/LocalizedInput';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty } from '../../../shared/types/localized';
+import { useI18n } from '../../../app/providers/I18nProvider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -47,14 +50,15 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const {t} = useTranslation();
     const {modal, form, theme} = useAppStyles();
     const styles = themeStyles;
+    const { currentLanguage } = useI18n();
 
     // Form state
-    const [question, setQuestion] = useState('');
-    const [answer, setAnswer] = useState('');
+    const [question, setQuestion] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
+    const [answer, setAnswer] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
-    const [additionalInfo, setAdditionalInfo] = useState('');
+    const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
@@ -221,11 +225,11 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      */
     const handleSubmit = async () => {
         // Validate required fields
-        if (!question.trim()) {
+        if (isLocalizedStringEmpty(question)) {
             Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorQuestion'));
             return;
         }
-        if (!answer.trim()) {
+        if (isLocalizedStringEmpty(answer)) {
             Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorAnswer'));
             return;
         }
@@ -249,11 +253,14 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
         // Build question data
         const questionData: QuestionFormData = {
-            question: question.trim(),
-            answer: answer.trim(),
+            question: getLocalizedValue(question, currentLanguage),
+            answer: getLocalizedValue(answer, currentLanguage),
+            questionLocalized: question,
+            answerLocalized: answer,
             difficulty,
             topic: topic.trim(),
-            additionalInfo: additionalInfo.trim(),
+            additionalInfo: getLocalizedValue(additionalInfo, currentLanguage),
+            additionalInfoLocalized: additionalInfo,
             questionType,
             // CRITICAL: Pass the raw file info for the mutation to handle
             mediaFile: selectedMedia ? {
@@ -286,12 +293,12 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      * Reset form to initial state
      */
     const handleReset = () => {
-        setQuestion('');
-        setAnswer('');
+        setQuestion(EMPTY_LOCALIZED_STRING);
+        setAnswer(EMPTY_LOCALIZED_STRING);
         setDifficulty('MEDIUM');
         setTopic('');
         setSelectedTopicId(undefined);
-        setAdditionalInfo('');
+        setAdditionalInfo(EMPTY_LOCALIZED_STRING);
         setSelectedMedia(undefined);
     };
 
@@ -299,7 +306,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
      * Handle modal close with unsaved changes warning
      */
     const handleClose = () => {
-        if (selectedMedia || question || answer || topic || additionalInfo) {
+        if (selectedMedia || !isLocalizedStringEmpty(question) || !isLocalizedStringEmpty(answer) || topic || !isLocalizedStringEmpty(additionalInfo)) {
             Alert.alert(
                 t('createQuest.questionEditor.discardChanges'),
                 t('createQuest.questionEditor.discardChangesMessage'),
@@ -464,29 +471,33 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
                     {/* Question Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.questionLabel')}</Text>
-                        <TextInput
-                            style={form.input}
-                            placeholder={t('createQuest.addQuestion.questionPlaceholder')}
-                            placeholderTextColor={theme.colors.text.disabled}
+                        <LocalizedInput
+                            label={t('createQuest.addQuestion.questionLabel')}
                             value={question}
-                            onChangeText={setQuestion}
+                            onChangeLocalized={setQuestion}
+                            placeholder={{
+                                en: t('createQuest.addQuestion.questionPlaceholder'),
+                                ru: t('createQuest.addQuestion.questionPlaceholder'),
+                            }}
                             multiline
                             numberOfLines={3}
+                            required
                         />
                     </View>
 
                     {/* Answer Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.answerLabel')}</Text>
-                        <TextInput
-                            style={form.input}
-                            placeholder={t('createQuest.addQuestion.answerPlaceholder')}
-                            placeholderTextColor={theme.colors.text.disabled}
+                        <LocalizedInput
+                            label={t('createQuest.addQuestion.answerLabel')}
                             value={answer}
-                            onChangeText={setAnswer}
+                            onChangeLocalized={setAnswer}
+                            placeholder={{
+                                en: t('createQuest.addQuestion.answerPlaceholder'),
+                                ru: t('createQuest.addQuestion.answerPlaceholder'),
+                            }}
                             multiline
                             numberOfLines={2}
+                            required
                         />
                     </View>
 
@@ -531,13 +542,14 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
 
                     {/* Additional Info Field */}
                     <View style={form.section}>
-                        <Text style={form.sectionTitle}>{t('createQuest.addQuestion.additionalInfoLabel')}</Text>
-                        <TextInput
-                            style={form.input}
-                            placeholder={t('createQuest.addQuestion.additionalInfoPlaceholder')}
-                            placeholderTextColor={theme.colors.text.disabled}
+                        <LocalizedInput
+                            label={t('createQuest.addQuestion.additionalInfoLabel')}
                             value={additionalInfo}
-                            onChangeText={setAdditionalInfo}
+                            onChangeLocalized={setAdditionalInfo}
+                            placeholder={{
+                                en: t('createQuest.addQuestion.additionalInfoPlaceholder'),
+                                ru: t('createQuest.addQuestion.additionalInfoPlaceholder'),
+                            }}
                             multiline
                             numberOfLines={3}
                         />

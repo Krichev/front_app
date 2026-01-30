@@ -6,6 +6,7 @@
 // ============================================================================
 
 import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
+import { LocalizedString } from '../../../shared/types/localized';
 
 export enum PaymentType {
     FREE = 'FREE',
@@ -128,6 +129,8 @@ export interface ApiChallenge {
 export interface CreateChallengeRequest {
     title: string;
     description?: string;
+    titleLocalized?: LocalizedString;
+    descriptionLocalized?: LocalizedString;
     type: string;
     visibility: string;
     status: string;

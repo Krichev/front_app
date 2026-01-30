@@ -1,5 +1,7 @@
 // src/entities/QuizState/model/types/question.types.ts
 
+import { LocalizedString } from '../../../../shared/types/localized';
+
 export enum QuestionVisibility {
     PRIVATE = 'PRIVATE',
     FRIENDS_FAMILY = 'FRIENDS_FAMILY',
@@ -40,6 +42,11 @@ export interface CreateQuizQuestionRequest {
     answerVideoStartTime?: number;
     answerVideoEndTime?: number;
     answerTextVerification?: string;
+
+    // New localized fields (optional for backward compatibility)
+    questionLocalized?: LocalizedString;
+    answerLocalized?: LocalizedString;
+    additionalInfoLocalized?: LocalizedString;
 }
 
 export interface UpdateQuestionVisibilityRequest {

@@ -41,6 +41,8 @@ import ExternalVideoPlayer from '../../components/ExternalVideoPlayer';
 import {isValidYouTubeUrl, extractYouTubeVideoId} from '../../utils/youtubeUtils';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
+import { LocalizedInput } from '../../shared/ui/LocalizedInput';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -75,6 +77,9 @@ export interface QuestionFormData {
     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     topic: string;
     additionalInfo: string;
+    questionLocalized?: LocalizedString;
+    answerLocalized?: LocalizedString;
+    additionalInfoLocalized?: LocalizedString;
     questionType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
     media?: MediaInfo;
     visibility: QuestionVisibility;
@@ -108,6 +113,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                                          }) => {
     const { t } = useTranslation();
     const { theme } = useAppStyles();
+    const { currentLanguage } = useI18n();
     const route = useRoute<CreateQuestionRouteProp>();
     const navigation = useNavigation<CreateQuestionNavigationProp>();
 
@@ -116,14 +122,20 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
     const existingQuestion = isEditing ? route.params?.question : undefined;
 
     // Form state
-    const [questionText, setQuestionText] = useState(existingQuestion?.question || '');
-    const [answer, setAnswer] = useState(existingQuestion?.answer || '');
+    const [questionText, setQuestionText] = useState<LocalizedString>(
+        existingQuestion?.questionLocalized || (existingQuestion?.question ? createLocalizedString(existingQuestion.question, 'en') : EMPTY_LOCALIZED_STRING)
+    );
+    const [answer, setAnswer] = useState<LocalizedString>(
+        existingQuestion?.answerLocalized || (existingQuestion?.answer ? createLocalizedString(existingQuestion.answer, 'en') : EMPTY_LOCALIZED_STRING)
+    );
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>(
         existingQuestion?.difficulty || 'MEDIUM'
     );
     const [topic, setTopic] = useState(existingQuestion?.topic || '');
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
-    const [additionalInfo, setAdditionalInfo] = useState(existingQuestion?.additionalInfo || '');
+    const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(
+        existingQuestion?.additionalInfoLocalized || (existingQuestion?.additionalInfo ? createLocalizedString(existingQuestion.additionalInfo, 'en') : EMPTY_LOCALIZED_STRING)
+    );
     const [questionType, setQuestionType] = useState<'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO'>('TEXT');
     const [visibility, setVisibility] = useState<QuestionVisibility>(
         (existingQuestion?.visibility as QuestionVisibility) || QuestionVisibility.PRIVATE
@@ -325,12 +337,12 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
      * Validate form before submission
      */
     const validateForm = (): boolean => {
-        if (!questionText.trim()) {
+        if (isLocalizedStringEmpty(questionText)) {
             Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.questionRequiredError'));
             return false;
         }
 
-        if (!answer.trim()) {
+        if (isLocalizedStringEmpty(answer)) {
             Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.answerRequiredError'));
             return false;
         }
@@ -372,11 +384,14 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
         try {
             if (isEditing && existingQuestion) {
                 await QuestionService.updateUserQuestion(existingQuestion.id, {
-                    question: questionText.trim(),
-                    answer: answer.trim(),
+                    question: getLocalizedValue(questionText, currentLanguage),
+                    answer: getLocalizedValue(answer, currentLanguage),
+                    questionLocalized: questionText,
+                    answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
-                    additionalInfo: additionalInfo.trim() || undefined,
+                    additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
+                    additionalInfoLocalized: additionalInfo,
                     visibility,
                 });
 
@@ -384,11 +399,14 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
             } else {
                 // Create new question
                 const questionData: any = {
-                    question: questionText.trim(),
-                    answer: answer.trim(),
+                    question: getLocalizedValue(questionText, currentLanguage),
+                    answer: getLocalizedValue(answer, currentLanguage),
+                    questionLocalized: questionText,
+                    answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
-                    additionalInfo: additionalInfo.trim() || undefined,
+                    additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
+                    additionalInfoLocalized: additionalInfo,
                     visibility,
                     questionType,
                 };
@@ -599,28 +617,31 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
                         {/* Question Text */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('userQuestions.questionRequired')}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label={t('userQuestions.questionRequired')}
                                 value={questionText}
-                                onChangeText={setQuestionText}
-                                placeholder={t('mediaQuestion.questionPlaceholder')}
-                                placeholderTextColor="#999"
+                                onChangeLocalized={setQuestionText}
+                                placeholder={{
+                                    en: t('mediaQuestion.questionPlaceholder'),
+                                    ru: t('mediaQuestion.questionPlaceholder'),
+                                }}
                                 multiline
                                 numberOfLines={3}
-                                textAlignVertical="top"
+                                required
                             />
                         </View>
 
                         {/* Answer */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('userQuestions.answerRequired')}</Text>
-                            <TextInput
-                                style={styles.input}
+                            <LocalizedInput
+                                label={t('userQuestions.answerRequired')}
                                 value={answer}
-                                onChangeText={setAnswer}
-                                placeholder={t('mediaQuestion.answerPlaceholder')}
-                                placeholderTextColor="#999"
+                                onChangeLocalized={setAnswer}
+                                placeholder={{
+                                    en: t('mediaQuestion.answerPlaceholder'),
+                                    ru: t('mediaQuestion.answerPlaceholder'),
+                                }}
+                                required
                             />
                         </View>
 
@@ -700,16 +721,16 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
                         {/* Additional Info */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>{t('userQuestions.additionalInfoLabel')}</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea]}
+                            <LocalizedInput
+                                label={t('userQuestions.additionalInfoLabel')}
                                 value={additionalInfo}
-                                onChangeText={setAdditionalInfo}
-                                placeholder={t('userQuestions.additionalInfoPlaceholder')}
-                                placeholderTextColor="#999"
+                                onChangeLocalized={setAdditionalInfo}
+                                placeholder={{
+                                    en: t('userQuestions.additionalInfoPlaceholder'),
+                                    ru: t('userQuestions.additionalInfoPlaceholder'),
+                                }}
                                 multiline
                                 numberOfLines={2}
-                                textAlignVertical="top"
                             />
                         </View>
 

@@ -18,6 +18,13 @@ const ru = {
         search: 'Поиск',
         noResults: 'Ничего не найдено',
         close: 'Закрыть',
+        localizedInput: {
+            english: 'EN',
+            russian: 'RU',
+            fillAtLeastOne: 'Пожалуйста, заполните хотя бы один язык',
+            fillBothLanguages: 'Пожалуйста, заполните оба языка',
+            emptyLanguageHint: 'Пусто - будет использована {{fallback}} версия',
+        },
     },
     createQuest: {
         title: 'Создать квест',

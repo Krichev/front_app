@@ -9,6 +9,8 @@ import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/sli
 import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
 import {BaseQuestionForQuest, extractQuestionIds} from "../types/question.types.ts";
 import {mapQuizConfigToBackend} from "../../../utils/quizConfigMapper.ts";
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue } from '../../../shared/types/localized.ts';
+import { useI18n } from '../../../app/providers/I18nProvider.tsx';
 
 export interface QuizConfig {
     gameType: 'WWW';
@@ -34,11 +36,12 @@ export interface SelectedQuestion {
 export const useQuestCreator = () => {
     const [createQuizChallenge, { isLoading: isCreatingChallenge }] = useCreateQuizChallengeMutation();
     const [startQuizSession, { isLoading: isStartingSession }] = useStartQuizSessionMutation();
+    const { currentLanguage } = useI18n();
 
     // Basic Info
-    const [title, setTitle] = useState('Quiz Challenge');
-    const [description, setDescription] = useState('Test your knowledge in this team-based quiz game.');
-    const [reward, setReward] = useState('Points and bragging rights!');
+    const [title, setTitle] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
+    const [description, setDescription] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
+    const [reward, setReward] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
 
     // Quiz Configuration
     const [quizConfig, setQuizConfig] = useState<QuizConfig>({
@@ -83,8 +86,8 @@ export const useQuestCreator = () => {
 
             // Step 2: Create Quiz Challenge with proper payload
             const challengePayload: CreateQuizChallengeRequest = {
-                title,
-                description,
+                title: getLocalizedValue(title, currentLanguage),
+                description: getLocalizedValue(description, currentLanguage),
                 visibility: 'PUBLIC',
                 frequency: 'ONE_TIME',
                 startDate: new Date(),
