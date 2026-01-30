@@ -470,6 +470,145 @@ const ru = {
         unknownError: 'Произошла неизвестная ошибка.',
         sessionExpired: 'Сессия истекла. Войдите снова.',
     },
+    userQuestions: {
+        createTitle: 'Создать вопрос',
+        editTitle: 'Редактировать вопрос',
+        listTitle: 'Мои вопросы',
+
+        questionLabel: 'Вопрос',
+        questionRequired: 'Вопрос *',
+        questionPlaceholder: 'Введите ваш вопрос',
+
+        answerLabel: 'Ответ',
+        answerRequired: 'Ответ *',
+        answerPlaceholder: 'Введите ответ',
+
+        difficultyLabel: 'Сложность',
+        difficultyRequired: 'Сложность *',
+
+        visibilityLabel: 'Кто может видеть?',
+        visibilityRequired: 'Кто может видеть? *',
+
+        topicLabel: 'Тема (необязательно)',
+        topicPlaceholder: 'Выберите или создайте тему...',
+
+        additionalInfoLabel: 'Дополнительно (необязательно)',
+        additionalInfoPlaceholder: 'Источники, подсказки или контекст',
+
+        easy: 'Лёгкий',
+        medium: 'Средний',
+        hard: 'Сложный',
+
+        create: 'Создать',
+        update: 'Обновить',
+        creating: 'Создание...',
+        updating: 'Обновление...',
+        cancel: 'Отмена',
+        delete: 'Удалить',
+
+        errorTitle: 'Ошибка',
+        successTitle: 'Успешно',
+        questionRequiredError: 'Пожалуйста, введите вопрос',
+        answerRequiredError: 'Пожалуйста, введите ответ',
+        createSuccess: 'Вопрос успешно создан',
+        updateSuccess: 'Вопрос успешно обновлён',
+        saveFailed: 'Не удалось сохранить вопрос. Попробуйте снова.',
+        loadFailed: 'Не удалось загрузить ваши вопросы',
+
+        deleteTitle: 'Удалить вопрос',
+        deleteConfirm: 'Вы уверены, что хотите удалить этот вопрос?',
+        deleteSuccess: 'Вопрос успешно удалён',
+        deleteFailed: 'Не удалось удалить вопрос',
+    },
+    editProfile: {
+        title: 'Редактировать профиль',
+        save: 'Сохранить',
+        saving: 'Сохранение...',
+        changePhoto: 'Нажмите, чтобы изменить фото профиля',
+        selectPicture: 'Выбрать фото профиля',
+        chooseSource: 'Выберите источник фото',
+        camera: 'Камера',
+        gallery: 'Галерея',
+        cancel: 'Отмена',
+
+        usernameLabel: 'Имя пользователя',
+        usernameRequired: 'Имя пользователя *',
+        usernamePlaceholder: 'Введите имя пользователя',
+        usernameHelper: 'От 3 до 50 символов',
+
+        bioLabel: 'О себе',
+        bioPlaceholder: 'Расскажите о себе...',
+
+        updateSuccess: 'Профиль успешно обновлён',
+        updateFailed: 'Не удалось обновить профиль',
+        permissionDenied: 'Доступ запрещён',
+        cameraPermissionMessage: 'Для съёмки фото требуется разрешение камеры',
+    },
+    mediaQuestion: {
+        questionTypeLabel: 'Тип вопроса',
+        textQuestion: 'Текстовый вопрос',
+        imageQuestion: 'Вопрос с изображением',
+        videoQuestion: 'Видео вопрос',
+        audioChallenge: 'Аудио челлендж',
+
+        questionLabel: 'Вопрос',
+        questionRequired: 'Вопрос *',
+        questionPlaceholder: 'Введите ваш вопрос...',
+
+        answerLabel: 'Ответ',
+        answerRequired: 'Ответ *',
+        answerPlaceholder: 'Введите ответ...',
+
+        selectMedia: 'Выбрать медиа',
+        uploadImage: 'Загрузить изображение',
+        uploadVideo: 'Загрузить видео',
+        uploadAudio: 'Загрузить аудио',
+        removeMedia: 'Удалить',
+
+        visibilityLabel: 'Видимость',
+        public: 'Публичный',
+        private: 'Приватный',
+        friendsOnly: 'Только для друзей',
+    },
+    audioQuestion: {
+        title: 'Создать аудио вопрос',
+
+        challengeTypeLabel: 'Тип челленджа',
+        selectChallengeType: 'Выберите тип челленджа',
+
+        questionLabel: 'Вопрос / Инструкции',
+        questionPlaceholder: 'Опишите, что должен сделать игрок...',
+
+        referenceAudio: 'Эталонное аудио',
+        uploadReference: 'Загрузить эталонное аудио',
+        recordReference: 'Записать эталон',
+
+        bpmLabel: 'BPM (ударов в минуту)',
+        timeSignatureLabel: 'Размер',
+        minimumScoreLabel: 'Минимальный балл для прохождения',
+
+        segmentLabel: 'Сегмент аудио',
+        startTime: 'Время начала',
+        endTime: 'Время конца',
+
+        create: 'Создать аудио вопрос',
+        creating: 'Создание...',
+
+        createSuccess: 'Аудио вопрос успешно создан',
+        createFailed: 'Не удалось создать аудио вопрос. Попробуйте снова.',
+        audioRequired: 'Для этого типа челленджа требуется эталонное аудио',
+    },
+    challenge: {
+        paymentOptions: 'Параметры оплаты',
+        paymentType: 'Тип оплаты',
+        free: 'Бесплатно - без оплаты',
+        entryFee: 'Вступительный взнос',
+        prizePool: 'Призовой фонд - взносы формируют призы',
+
+        requireEntryFee: 'Требовать вступительный взнос',
+        amount: 'Сумма',
+        currency: 'Валюта',
+    },
 };
 
 export default ru;

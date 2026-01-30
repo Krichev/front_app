@@ -14,6 +14,8 @@ import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {QuestionService, UserQuestion} from '../services/wwwGame/questionService';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -29,6 +31,8 @@ type UserQuestionsNavigationProp = NativeStackNavigationProp<
 >;
 
 const UserQuestionsScreen: React.FC = () => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
     const navigation = useNavigation<UserQuestionsNavigationProp>();
     const [questions, setQuestions] = useState<UserQuestion[]>([]);
     const [loading, setLoading] = useState(true);
@@ -41,11 +45,11 @@ const UserQuestionsScreen: React.FC = () => {
             setQuestions(userQuestions);
         } catch (error) {
             console.error('Error loading user questions:', error);
-            Alert.alert('Error', 'Failed to load your questions');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.loadFailed'));
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [t]);
 
     useFocusEffect(
         useCallback(() => {
@@ -55,12 +59,12 @@ const UserQuestionsScreen: React.FC = () => {
 
     const handleDeleteQuestion = async (id: number) => {
         Alert.alert(
-            'Delete Question',
-            'Are you sure you want to delete this question?',
+            t('userQuestions.deleteTitle'),
+            t('userQuestions.deleteConfirm'),
             [
-                {text: 'Cancel', style: 'cancel'},
+                {text: t('common.cancel'), style: 'cancel'},
                 {
-                    text: 'Delete',
+                    text: t('userQuestions.delete'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -71,7 +75,7 @@ const UserQuestionsScreen: React.FC = () => {
                             loadUserQuestions();
                         } catch (error) {
                             console.error('Error deleting question:', error);
-                            Alert.alert('Error', 'Failed to delete question');
+                            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.deleteFailed'));
                         }
                     }
                 }
@@ -103,7 +107,7 @@ const UserQuestionsScreen: React.FC = () => {
 
     const handleUseSelected = () => {
         if (selectedQuestions.length === 0) {
-            Alert.alert('No Questions Selected', 'Please select at least one question');
+            Alert.alert(t('questionList.noQuestions'), t('questionEditor.minQuestions', { min: 1 }));
             return;
         }
 
@@ -121,7 +125,9 @@ const UserQuestionsScreen: React.FC = () => {
                 onPress={() => toggleQuestionSelection(item)}
             >
                 <View style={styles.questionHeader}>
-                    <Text style={styles.difficultyBadge}>{item.difficulty || 'Medium'}</Text>
+                    <Text style={styles.difficultyBadge}>
+                        {t(`userQuestions.${item.difficulty.toLowerCase()}` as any)}
+                    </Text>
                     <TouchableOpacity
                         onPress={() => handleEditQuestion(item)}
                         style={styles.editButton}
@@ -133,19 +139,19 @@ const UserQuestionsScreen: React.FC = () => {
                 <Text style={styles.questionText}>{item.question}</Text>
 
                 <View style={styles.answerContainer}>
-                    <Text style={styles.answerLabel}>Answer:</Text>
+                    <Text style={styles.answerLabel}>{t('userQuestions.answerLabel')}:</Text>
                     <Text style={styles.answerText}>{item.answer}</Text>
                 </View>
 
                 <View style={styles.questionFooter}>
                     <Text style={styles.dateText}>
-                        Created: {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Unknown'}
+                        {t('profile.created')}: {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Unknown'}
                     </Text>
                     <TouchableOpacity
                         onPress={() => handleDeleteQuestion(item.id)}
                         style={styles.deleteButton}
                     >
-                        <MaterialCommunityIcons name="delete" size={20} color="#F44336"/>
+                        <MaterialCommunityIcons name="delete" size={20} color={theme.colors.error.main}/>
                     </TouchableOpacity>
                 </View>
             </TouchableOpacity>
@@ -155,35 +161,35 @@ const UserQuestionsScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>My Questions</Text>
+                <Text style={styles.headerTitle}>{t('userQuestions.listTitle')}</Text>
                 <Text style={styles.headerSubtitle}>
-                    Selected: {selectedQuestions.length} questions
+                    {t('questionList.selected', { count: selectedQuestions.length })}
                 </Text>
             </View>
 
             {loading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4CAF50"/>
-                    <Text style={styles.loadingText}>Loading your questions...</Text>
+                    <ActivityIndicator size="large" color={theme.colors.primary.main}/>
+                    <Text style={styles.loadingText}>{t('questionList.loading')}</Text>
                 </View>
             ) : questions.length === 0 ? (
                 <View style={styles.emptyContainer}>
                     <MaterialCommunityIcons name="help-circle-outline" size={60} color="#e0e0e0"/>
                     <Text style={styles.emptyText}>
-                        You haven't created any questions yet
+                        {t('questions.noQuestions')}
                     </Text>
                     <View style={styles.emptyButtonContainer}>
                         <TouchableOpacity
                             style={styles.createFirstButton}
                             onPress={handleCreateQuestion}
                         >
-                            <Text style={styles.createButtonText}>Create Standard Question</Text>
+                            <Text style={styles.createButtonText}>{t('mediaQuestion.textQuestion')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.createFirstButton, {backgroundColor: '#2196F3', marginTop: 12}]}
+                            style={[styles.createFirstButton, {backgroundColor: theme.colors.primary.main, marginTop: 12}]}
                             onPress={handleCreateAudioQuestion}
                         >
-                            <Text style={styles.createButtonText}>Create Audio Question</Text>
+                            <Text style={styles.createButtonText}>{t('mediaQuestion.audioChallenge')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -203,14 +209,14 @@ const UserQuestionsScreen: React.FC = () => {
                         onPress={handleCreateQuestion}
                     >
                         <MaterialCommunityIcons name="plus" size={20} color="white"/>
-                        <Text style={styles.buttonText}>Standard</Text>
+                        <Text style={styles.buttonText}>{t('mediaQuestion.textQuestion')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.createButton, {flex: 1, backgroundColor: '#2196F3'}]}
+                        style={[styles.createButton, {flex: 1, backgroundColor: theme.colors.primary.main}]}
                         onPress={handleCreateAudioQuestion}
                     >
                         <MaterialCommunityIcons name="microphone" size={20} color="white"/>
-                        <Text style={styles.buttonText}>Audio</Text>
+                        <Text style={styles.buttonText}>{t('mediaQuestion.audioChallenge')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -224,7 +230,7 @@ const UserQuestionsScreen: React.FC = () => {
                         disabled={selectedQuestions.length === 0}
                     >
                         <MaterialCommunityIcons name="check" size={20} color="white"/>
-                        <Text style={styles.buttonText}>Use Selected Questions</Text>
+                        <Text style={styles.buttonText}>{t('preview.title')}</Text>
                     </TouchableOpacity>
                 )}
             </View>

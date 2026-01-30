@@ -4,12 +4,16 @@ import {Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity
 import {Picker} from '@react-native-picker/picker';
 import {useCreateChallengeMutation} from '../../entities/ChallengeState/model/slice/challengeApi';
 import {CurrencyType, PaymentType} from '../../entities/ChallengeState/model/types/challenge.types';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 
 interface CreateChallengeFormProps {
     navigation: any;
 }
 
 export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ navigation }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
     const [createChallenge, { isLoading }] = useCreateChallengeMutation();
 
     // Basic fields
@@ -34,7 +38,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
 
     const handleSubmit = async () => {
         if (!title.trim()) {
-            Alert.alert('Error', 'Please enter a challenge title');
+            Alert.alert(t('userQuestions.errorTitle'), t('alerts.validationError'));
             return;
         }
 
@@ -60,12 +64,12 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
 
         try {
             await createChallenge(challengeData).unwrap();
-            Alert.alert('Success', 'Challenge created successfully!', [
-                { text: 'OK', onPress: () => navigation.goBack() }
+            Alert.alert(t('userQuestions.successTitle'), t('alerts.createSuccess'), [
+                { text: t('common.ok'), onPress: () => navigation.goBack() }
             ]);
         } catch (error) {
             console.error('Failed to create challenge:', error);
-            Alert.alert('Error', 'Failed to create challenge. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), t('alerts.createError'));
         }
     };
 
@@ -74,27 +78,27 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
             <View style={styles.content}>
                 {/* Basic Information Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Basic Information</Text>
+                    <Text style={styles.sectionTitle}>{t('createQuest.basicInfo.sectionTitle')}</Text>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Title *</Text>
+                        <Text style={styles.label}>{t('createQuest.basicInfo.title')} *</Text>
                         <TextInput
                             style={styles.input}
                             value={title}
                             onChangeText={setTitle}
-                            placeholder="Enter challenge title"
-                            placeholderTextColor="#999"
+                            placeholder={t('createQuest.basicInfo.titlePlaceholder')}
+                            placeholderTextColor={theme.colors.text.disabled}
                         />
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Description</Text>
+                        <Text style={styles.label}>{t('createQuest.basicInfo.description')}</Text>
                         <TextInput
                             style={[styles.input, styles.textArea]}
                             value={description}
                             onChangeText={setDescription}
-                            placeholder="Describe your challenge"
-                            placeholderTextColor="#999"
+                            placeholder={t('createQuest.basicInfo.descriptionPlaceholder')}
+                            placeholderTextColor={theme.colors.text.disabled}
                             multiline
                             numberOfLines={4}
                             textAlignVertical="top"
@@ -102,7 +106,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Type *</Text>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.gameType')} *</Text>
                         <View style={styles.pickerContainer}>
                             <Picker
                                 selectedValue={type}
@@ -119,15 +123,15 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                     </View>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Visibility *</Text>
+                        <Text style={styles.label}>{t('mediaQuestion.visibilityLabel')} *</Text>
                         <View style={styles.pickerContainer}>
                             <Picker
                                 selectedValue={visibility}
                                 onValueChange={(value) => setVisibility(value as 'PUBLIC' | 'PRIVATE')}
                                 style={styles.picker}
                             >
-                                <Picker.Item label="Public - Anyone can find and join" value="PUBLIC" />
-                                <Picker.Item label="Private - Only invited users" value="PRIVATE" />
+                                <Picker.Item label={`${t('mediaQuestion.public')} - Anyone can find and join`} value="PUBLIC" />
+                                <Picker.Item label={`${t('mediaQuestion.private')} - Only invited users`} value="PRIVATE" />
                             </Picker>
                         </View>
                     </View>
@@ -150,19 +154,19 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
 
                 {/* Payment Options Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>💰 Payment Options</Text>
+                    <Text style={styles.sectionTitle}>💰 {t('challenge.paymentOptions')}</Text>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Payment Type</Text>
+                        <Text style={styles.label}>{t('challenge.paymentType')}</Text>
                         <View style={styles.pickerContainer}>
                             <Picker
                                 selectedValue={paymentType}
                                 onValueChange={(value) => setPaymentType(value as PaymentType)}
                                 style={styles.picker}
                             >
-                                <Picker.Item label="Free - No payment required" value={PaymentType.FREE} />
-                                <Picker.Item label="Entry Fee - Fixed fee to join" value={PaymentType.ENTRY_FEE} />
-                                <Picker.Item label="Prize Pool - Fees create prize pool" value={PaymentType.PRIZE_POOL} />
+                                <Picker.Item label={t('challenge.free')} value={PaymentType.FREE} />
+                                <Picker.Item label={t('challenge.entryFee')} value={PaymentType.ENTRY_FEE} />
+                                <Picker.Item label={t('challenge.prizePool')} value={PaymentType.PRIZE_POOL} />
                             </Picker>
                         </View>
                     </View>
@@ -170,7 +174,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                     {paymentType !== PaymentType.FREE && (
                         <>
                             <View style={styles.switchGroup}>
-                                <Text style={styles.label}>Require Entry Fee</Text>
+                                <Text style={styles.label}>{t('challenge.requireEntryFee')}</Text>
                                 <Switch
                                     value={hasEntryFee}
                                     onValueChange={setHasEntryFee}
@@ -181,18 +185,18 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                             {hasEntryFee && (
                                 <View style={styles.rowGroup}>
                                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                        <Text style={styles.label}>Amount</Text>
+                                        <Text style={styles.label}>{t('challenge.amount')}</Text>
                                         <TextInput
                                             style={styles.input}
                                             value={entryFeeAmount}
                                             onChangeText={setEntryFeeAmount}
                                             placeholder="0.00"
                                             keyboardType="decimal-pad"
-                                            placeholderTextColor="#999"
+                                            placeholderTextColor={theme.colors.text.disabled}
                                         />
                                     </View>
                                     <View style={[styles.inputGroup, { flex: 1 }]}>
-                                        <Text style={styles.label}>Currency</Text>
+                                        <Text style={styles.label}>{t('challenge.currency')}</Text>
                                         <View style={styles.pickerContainer}>
                                             <Picker
                                                 selectedValue={entryFeeCurrency}
@@ -230,11 +234,11 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                                     onChangeText={setPrizeAmount}
                                     placeholder="0.00"
                                     keyboardType="decimal-pad"
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={theme.colors.text.disabled}
                                 />
                             </View>
                             <View style={[styles.inputGroup, { flex: 1 }]}>
-                                <Text style={styles.label}>Currency</Text>
+                                <Text style={styles.label}>{t('challenge.currency')}</Text>
                                 <View style={styles.pickerContainer}>
                                     <Picker
                                         selectedValue={prizeCurrency}
@@ -267,14 +271,14 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Invite Users (comma-separated IDs)</Text>
+                            <Text style={styles.label}>{t('groups.inviteMembers')} (comma-separated IDs)</Text>
                             <TextInput
                                 style={styles.input}
                                 value={invitedUserIds}
                                 onChangeText={setInvitedUserIds}
                                 placeholder="e.g., 1, 2, 5, 10"
                                 keyboardType="number-pad"
-                                placeholderTextColor="#999"
+                                placeholderTextColor={theme.colors.text.disabled}
                             />
                             <Text style={styles.helperText}>
                                 Leave empty to manually invite users later
@@ -290,7 +294,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                         onPress={() => navigation.goBack()}
                         disabled={isLoading}
                     >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -299,7 +303,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                         disabled={isLoading}
                     >
                         <Text style={styles.submitButtonText}>
-                            {isLoading ? 'Creating...' : 'Create Challenge'}
+                            {isLoading ? t('createQuest.creating') : t('challenges.createTitle')}
                         </Text>
                     </TouchableOpacity>
                 </View>

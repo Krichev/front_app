@@ -480,6 +480,163 @@ const en = {
         unknownError: 'An unknown error occurred.',
         sessionExpired: 'Session expired. Please login again.',
     },
+    userQuestions: {
+        // Screen titles
+        createTitle: 'Create New Question',
+        editTitle: 'Edit Question',
+        listTitle: 'My Questions',
+
+        // Form labels
+        questionLabel: 'Question',
+        questionRequired: 'Question *',
+        questionPlaceholder: 'Enter your question',
+
+        answerLabel: 'Answer',
+        answerRequired: 'Answer *',
+        answerPlaceholder: 'Enter the answer',
+
+        difficultyLabel: 'Difficulty',
+        difficultyRequired: 'Difficulty *',
+
+        visibilityLabel: 'Who Can See This?',
+        visibilityRequired: 'Who Can See This? *',
+
+        topicLabel: 'Topic (Optional)',
+        topicPlaceholder: 'Select or create a topic...',
+
+        additionalInfoLabel: 'Additional Info (Optional)',
+        additionalInfoPlaceholder: 'Add sources, hints, or extra context',
+
+        // Difficulty options
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+
+        // Buttons
+        create: 'Create',
+        update: 'Update',
+        creating: 'Creating...',
+        updating: 'Updating...',
+        cancel: 'Cancel',
+        delete: 'Delete',
+
+        // Alerts & Messages
+        errorTitle: 'Error',
+        successTitle: 'Success',
+        questionRequiredError: 'Please enter a question',
+        answerRequiredError: 'Please enter an answer',
+        createSuccess: 'Question created successfully',
+        updateSuccess: 'Question updated successfully',
+        saveFailed: 'Failed to save question. Please try again.',
+        loadFailed: 'Failed to load your questions',
+
+        // Delete confirmation
+        deleteTitle: 'Delete Question',
+        deleteConfirm: 'Are you sure you want to delete this question?',
+        deleteSuccess: 'Question deleted successfully',
+        deleteFailed: 'Failed to delete question',
+    },
+    editProfile: {
+        title: 'Edit Profile',
+        save: 'Save',
+        saving: 'Saving...',
+        changePhoto: 'Tap to change profile picture',
+        selectPicture: 'Select Profile Picture',
+        chooseSource: 'Choose from where you want to select a profile picture',
+        camera: 'Camera',
+        gallery: 'Gallery',
+        cancel: 'Cancel',
+
+        // Form fields
+        usernameLabel: 'Username',
+        usernameRequired: 'Username *',
+        usernamePlaceholder: 'Enter your username',
+        usernameHelper: 'Minimum 3 characters, maximum 50',
+
+        bioLabel: 'Bio',
+        bioPlaceholder: 'Tell something about yourself...',
+
+        // Messages
+        updateSuccess: 'Profile updated successfully',
+        updateFailed: 'Failed to update profile',
+        permissionDenied: 'Permission denied',
+        cameraPermissionMessage: 'Camera permission is required to take photos',
+    },
+    mediaQuestion: {
+        // Question types
+        questionTypeLabel: 'Question Type',
+        textQuestion: 'Text Question',
+        imageQuestion: 'Image Question',
+        videoQuestion: 'Video Question',
+        audioChallenge: 'Audio Challenge',
+
+        // Form fields
+        questionLabel: 'Question',
+        questionRequired: 'Question *',
+        questionPlaceholder: 'Enter your question here...',
+
+        answerLabel: 'Answer',
+        answerRequired: 'Answer *',
+        answerPlaceholder: 'Enter the answer...',
+
+        // Media
+        selectMedia: 'Select Media',
+        uploadImage: 'Upload Image',
+        uploadVideo: 'Upload Video',
+        uploadAudio: 'Upload Audio',
+        removeMedia: 'Remove',
+
+        // Visibility
+        visibilityLabel: 'Visibility',
+        public: 'Public',
+        private: 'Private',
+        friendsOnly: 'Friends Only',
+    },
+    audioQuestion: {
+        title: 'Create Audio Question',
+
+        // Challenge types
+        challengeTypeLabel: 'Challenge Type',
+        selectChallengeType: 'Select a challenge type',
+
+        // Form fields
+        questionLabel: 'Question / Instructions',
+        questionPlaceholder: 'Describe what the player should do...',
+
+        referenceAudio: 'Reference Audio',
+        uploadReference: 'Upload Reference Audio',
+        recordReference: 'Record Reference',
+
+        // Sliders
+        bpmLabel: 'BPM (Beats Per Minute)',
+        timeSignatureLabel: 'Time Signature',
+        minimumScoreLabel: 'Minimum Score to Pass',
+
+        segmentLabel: 'Audio Segment',
+        startTime: 'Start Time',
+        endTime: 'End Time',
+
+        // Buttons
+        create: 'Create Audio Question',
+        creating: 'Creating...',
+
+        // Messages
+        createSuccess: 'Audio question created successfully',
+        createFailed: 'Failed to create audio question. Please try again.',
+        audioRequired: 'Reference audio is required for this challenge type',
+    },
+    challenge: {
+        // Payment options
+        paymentOptions: 'Payment Options',
+        paymentType: 'Payment Type',
+        free: 'Free - No payment required',
+        entryFee: 'Entry Fee - Fixed fee to join',
+        prizePool: 'Prize Pool - Fees create prize pool',
+
+        requireEntryFee: 'Require Entry Fee',
+        amount: 'Amount',
+        currency: 'Currency',
+    },
 };
 
 export default en;

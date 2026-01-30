@@ -25,6 +25,8 @@ import {
 } from '../entities/QuizState/model/types/question.types';
 import {TopicTreeSelector} from '../shared/ui/TopicSelector';
 import {SelectableTopic} from '../entities/TopicState';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 
 type RootStackParamList = {
     UserQuestions: undefined;
@@ -36,6 +38,8 @@ type CreateQuestionRouteProp = RouteProp<RootStackParamList, 'CreateUserQuestion
 type CreateQuestionNavigationProp = NativeStackNavigationProp<RootStackParamList, 'CreateUserQuestion' | 'EditUserQuestion'>;
 
 const CreateUserQuestionScreen: React.FC = () => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
     const route = useRoute<CreateQuestionRouteProp>();
     const navigation = useNavigation<CreateQuestionNavigationProp>();
 
@@ -74,12 +78,12 @@ const CreateUserQuestionScreen: React.FC = () => {
     const handleSubmit = async () => {
         // Validate inputs
         if (!question.trim()) {
-            Alert.alert('Error', 'Please enter a question');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.questionRequiredError'));
             return;
         }
 
         if (!answer.trim()) {
-            Alert.alert('Error', 'Please enter an answer');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.answerRequiredError'));
             return;
         }
 
@@ -97,7 +101,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                     visibility,
                 });
 
-                Alert.alert('Success', 'Question updated successfully');
+                Alert.alert(t('userQuestions.successTitle'), t('userQuestions.updateSuccess'));
             } else {
                 // Create new question - Use createUserQuestion
                 await QuestionService.createUserQuestion({
@@ -109,14 +113,14 @@ const CreateUserQuestionScreen: React.FC = () => {
                     visibility,
                 });
 
-                Alert.alert('Success', 'Question created successfully');
+                Alert.alert(t('userQuestions.successTitle'), t('userQuestions.createSuccess'));
             }
 
             // Navigate back to the questions list
             navigation.navigate('UserQuestions');
         } catch (error) {
             console.error('Error saving question:', error);
-            Alert.alert('Error', 'Failed to save question. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -131,19 +135,20 @@ const CreateUserQuestionScreen: React.FC = () => {
                 <ScrollView style={styles.scrollView}>
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>
-                            {isEditing ? 'Edit Question' : 'Create New Question'}
+                            {isEditing ? t('userQuestions.editTitle') : t('userQuestions.createTitle')}
                         </Text>
                     </View>
 
                     <View style={styles.form}>
                         {/* Question Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Question *</Text>
+                            <Text style={styles.label}>{t('userQuestions.questionRequired')}</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={question}
                                 onChangeText={setQuestion}
-                                placeholder="Enter your question"
+                                placeholder={t('userQuestions.questionPlaceholder')}
+                                placeholderTextColor={theme.colors.text.disabled}
                                 multiline
                                 numberOfLines={4}
                                 textAlignVertical="top"
@@ -152,12 +157,13 @@ const CreateUserQuestionScreen: React.FC = () => {
 
                         {/* Answer Input */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Answer *</Text>
+                            <Text style={styles.label}>{t('userQuestions.answerRequired')}</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={answer}
                                 onChangeText={setAnswer}
-                                placeholder="Enter the answer"
+                                placeholder={t('userQuestions.answerPlaceholder')}
+                                placeholderTextColor={theme.colors.text.disabled}
                                 multiline
                                 numberOfLines={3}
                                 textAlignVertical="top"
@@ -166,23 +172,23 @@ const CreateUserQuestionScreen: React.FC = () => {
 
                         {/* Difficulty Picker */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Difficulty *</Text>
+                            <Text style={styles.label}>{t('userQuestions.difficultyRequired')}</Text>
                             <View style={styles.pickerContainer}>
                                 <Picker
                                     selectedValue={difficulty}
                                     onValueChange={(value) => setDifficulty(value as APIDifficulty)}
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="Easy" value="EASY" />
-                                    <Picker.Item label="Medium" value="MEDIUM" />
-                                    <Picker.Item label="Hard" value="HARD" />
+                                    <Picker.Item label={t('userQuestions.easy')} value="EASY" />
+                                    <Picker.Item label={t('userQuestions.medium')} value="MEDIUM" />
+                                    <Picker.Item label={t('userQuestions.hard')} value="HARD" />
                                 </Picker>
                             </View>
                         </View>
 
                         {/* Visibility Picker */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Who Can See This? *</Text>
+                            <Text style={styles.label}>{t('userQuestions.visibilityRequired')}</Text>
                             <View style={styles.pickerContainer}>
                                 <Picker
                                     selectedValue={visibility}
@@ -192,7 +198,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                                     {Object.values(QuestionVisibility).map((vis) => (
                                         <Picker.Item
                                             key={vis}
-                                            label={`${getVisibilityIcon(vis)} ${getVisibilityLabel(vis)}`}
+                                            label={`${getVisibilityIcon(vis)} ${t(`mediaQuestion.${vis.toLowerCase()}` as any) || getVisibilityLabel(vis)}`}
                                             value={vis}
                                         />
                                     ))}
@@ -210,20 +216,21 @@ const CreateUserQuestionScreen: React.FC = () => {
                                 selectedTopicName={topic}
                                 onSelectTopic={handleSelectTopic}
                                 allowCreate={true}
-                                placeholder="Select or create a topic..."
-                                label="Topic (Optional)"
+                                placeholder={t('userQuestions.topicPlaceholder')}
+                                label={t('userQuestions.topicLabel')}
                                 required={false}
                             />
                         </View>
 
                         {/* Additional Info Input (Optional) */}
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <Text style={styles.label}>{t('userQuestions.additionalInfoLabel')}</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={additionalInfo}
                                 onChangeText={setAdditionalInfo}
-                                placeholder="Add sources, hints, or extra context"
+                                placeholder={t('userQuestions.additionalInfoPlaceholder')}
+                                placeholderTextColor={theme.colors.text.disabled}
                                 multiline
                                 numberOfLines={3}
                                 textAlignVertical="top"
@@ -238,7 +245,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                                 disabled={isSubmitting}
                             >
                                 <MaterialCommunityIcons name="close" size={20} color="#666" />
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text style={styles.cancelButtonText}>{t('userQuestions.cancel')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -257,8 +264,8 @@ const CreateUserQuestionScreen: React.FC = () => {
                                 />
                                 <Text style={styles.submitButtonText}>
                                     {isSubmitting
-                                        ? (isEditing ? 'Updating...' : 'Creating...')
-                                        : (isEditing ? 'Update' : 'Create')
+                                        ? (isEditing ? t('userQuestions.updating') : t('userQuestions.creating'))
+                                        : (isEditing ? t('userQuestions.update') : t('userQuestions.create'))
                                     }
                                 </Text>
                             </TouchableOpacity>

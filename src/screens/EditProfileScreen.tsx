@@ -30,6 +30,8 @@ import {
     MediaType,
     PhotoQuality
 } from 'react-native-image-picker';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -41,6 +43,8 @@ type EditProfileRouteProp = RouteProp<RootStackParamList, 'EditProfile'>;
 type EditProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'EditProfile'>;
 
 const EditProfileScreen: React.FC = () => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
     const dispatch = useDispatch();
     const route = useRoute<EditProfileRouteProp>();
     const navigation = useNavigation<EditProfileNavigationProp>();
@@ -86,19 +90,19 @@ const EditProfileScreen: React.FC = () => {
     // Handle avatar selection
     const selectAvatar = () => {
         Alert.alert(
-            'Select Profile Picture',
-            'Choose from where you want to select a profile picture',
+            t('editProfile.selectPicture'),
+            t('editProfile.chooseSource'),
             [
                 {
-                    text: 'Camera',
+                    text: t('editProfile.camera'),
                     onPress: () => openCamera(),
                 },
                 {
-                    text: 'Gallery',
+                    text: t('editProfile.gallery'),
                     onPress: () => openImageLibrary(),
                 },
                 {
-                    text: 'Cancel',
+                    text: t('editProfile.cancel'),
                     style: 'cancel',
                 },
             ]
@@ -150,15 +154,15 @@ const EditProfileScreen: React.FC = () => {
     // Validation
     const validateForm = (): boolean => {
         if (formData.username.trim().length < 3) {
-            Alert.alert('Validation Error', 'Username must be at least 3 characters long.');
+            Alert.alert(t('userQuestions.errorTitle'), t('validation.minLength', { count: 3 }));
             return false;
         }
         if (formData.username.trim().length > 50) {
-            Alert.alert('Validation Error', 'Username must be less than 50 characters.');
+            Alert.alert(t('userQuestions.errorTitle'), t('validation.maxLength', { count: 50 }));
             return false;
         }
         if (formData.bio.length > 500) {
-            Alert.alert('Validation Error', 'Bio must be less than 500 characters.');
+            Alert.alert(t('userQuestions.errorTitle'), t('validation.maxLength', { count: 500 }));
             return false;
         }
         return true;
@@ -175,7 +179,7 @@ const EditProfileScreen: React.FC = () => {
             const usernameChanged = originalUsername !== formData.username.trim();
 
             if (!userId) {
-                Alert.alert('Error', 'User ID not found');
+                Alert.alert(t('userQuestions.errorTitle'), t('errors.unknownError'));
                 return;
             }
 
@@ -204,13 +208,11 @@ const EditProfileScreen: React.FC = () => {
             }
 
             Alert.alert(
-                'Success',
-                usernameChanged
-                    ? 'Profile and username updated successfully!'
-                    : 'Profile updated successfully!',
+                t('userQuestions.successTitle'),
+                t('editProfile.updateSuccess'),
                 [
                     {
-                        text: 'OK',
+                        text: t('common.ok'),
                         onPress: () => navigation.goBack(),
                     },
                 ]
@@ -218,8 +220,8 @@ const EditProfileScreen: React.FC = () => {
         } catch (error: any) {
             console.error('Error updating profile:', error);
             Alert.alert(
-                'Error',
-                error?.data?.message || 'Failed to update profile. Please try again.'
+                t('userQuestions.errorTitle'),
+                error?.data?.message || t('editProfile.updateFailed')
             );
         }
     };
@@ -227,11 +229,11 @@ const EditProfileScreen: React.FC = () => {
     // Handle cancel
     const handleCancel = () => {
         Alert.alert(
-            'Discard Changes?',
-            'Are you sure you want to discard your changes?',
+            t('questionEditor.discardChanges'),
+            t('questionEditor.discardChangesMessage'),
             [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('questionEditor.discard'), style: 'destructive', onPress: () => navigation.goBack() },
             ]
         );
     };
@@ -241,7 +243,7 @@ const EditProfileScreen: React.FC = () => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={styles.loadingText}>Loading profile...</Text>
+                    <Text style={styles.loadingText}>{t('profile.loadingProfile')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -251,9 +253,9 @@ const EditProfileScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Failed to load profile</Text>
+                    <Text style={styles.errorText}>{t('profile.errorProfile')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
-                        <Text style={styles.retryButtonText}>Go Back</Text>
+                        <Text style={styles.retryButtonText}>{t('common.back')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -264,9 +266,9 @@ const EditProfileScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>You can only edit your own profile</Text>
+                    <Text style={styles.errorText}>{t('profile.errorProfile')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
-                        <Text style={styles.retryButtonText}>Go Back</Text>
+                        <Text style={styles.retryButtonText}>{t('common.back')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -282,9 +284,9 @@ const EditProfileScreen: React.FC = () => {
                 {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
-                        <Text style={styles.cancelText}>Cancel</Text>
+                        <Text style={styles.cancelText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Edit Profile</Text>
+                    <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
                     <TouchableOpacity
                         onPress={handleSaveProfile}
                         style={[styles.headerButton, isUpdating && styles.disabledButton]}
@@ -293,7 +295,7 @@ const EditProfileScreen: React.FC = () => {
                         {isUpdating ? (
                             <ActivityIndicator size="small" color="#007AFF" />
                         ) : (
-                            <Text style={styles.saveText}>Save</Text>
+                            <Text style={styles.saveText}>{t('editProfile.save')}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -315,39 +317,41 @@ const EditProfileScreen: React.FC = () => {
                                 <MaterialCommunityIcons name="camera" size={16} color="white" />
                             </View>
                         </TouchableOpacity>
-                        <Text style={styles.changePhotoText}>Tap to change profile picture</Text>
+                        <Text style={styles.changePhotoText}>{t('editProfile.changePhoto')}</Text>
                     </View>
 
                     {/* Form Fields */}
                     <View style={styles.formContainer}>
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Username *</Text>
+                            <Text style={styles.label}>{t('editProfile.usernameRequired')}</Text>
                             <TextInput
                                 style={styles.input}
                                 value={formData.username}
                                 onChangeText={(value) => handleInputChange('username', value)}
-                                placeholder="Enter your username"
+                                placeholder={t('editProfile.usernamePlaceholder')}
+                                placeholderTextColor={theme.colors.text.disabled}
                                 maxLength={50}
                                 autoCapitalize="none"
                                 autoCorrect={false}
                             />
-                            <Text style={styles.helperText}>Minimum 3 characters, maximum 50</Text>
+                            <Text style={styles.helperText}>{t('editProfile.usernameHelper')}</Text>
                         </View>
 
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Bio</Text>
+                            <Text style={styles.label}>{t('editProfile.bioLabel')}</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={formData.bio}
                                 onChangeText={(value) => handleInputChange('bio', value)}
-                                placeholder="Tell something about yourself..."
+                                placeholder={t('editProfile.bioPlaceholder')}
+                                placeholderTextColor={theme.colors.text.disabled}
                                 multiline
                                 numberOfLines={4}
                                 maxLength={500}
                                 textAlignVertical="top"
                             />
                             <Text style={styles.helperText}>
-                                {formData.bio.length}/500 characters
+                                {formData.bio.length}/500
                             </Text>
                         </View>
                     </View>

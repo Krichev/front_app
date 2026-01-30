@@ -39,6 +39,8 @@ import {AudioChallengeType, AUDIO_CHALLENGE_TYPES} from '../../entities/Challeng
 import TimeRangeInput from '../../components/TimeRangeInput';
 import ExternalVideoPlayer from '../../components/ExternalVideoPlayer';
 import {isValidYouTubeUrl, extractYouTubeVideoId} from '../../utils/youtubeUtils';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -104,6 +106,8 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                                              onQuestionSubmit,
                                                                              onCancel
                                                                          }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
     const route = useRoute<CreateQuestionRouteProp>();
     const navigation = useNavigation<CreateQuestionNavigationProp>();
 
@@ -177,7 +181,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
             const validation = FileService.validateFile(result);
             if (!validation.isValid) {
-                Alert.alert('Invalid File', validation.error || 'Please select a valid file');
+                Alert.alert(t('questionEditor.invalidFile'), validation.error || t('questionEditor.validImage'));
                 return;
             }
 
@@ -194,7 +198,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
             console.log('Media selected:', result.name, result.sizeFormatted);
         } catch (error) {
             console.error('Error picking media:', error);
-            Alert.alert('Error', 'Failed to select media. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
         }
     };
 
@@ -216,7 +220,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
             const validation = FileService.validateFile(result);
             if (!validation.isValid) {
-                Alert.alert('Invalid File', validation.error || 'Please select a valid video');
+                Alert.alert(t('questionEditor.invalidFile'), validation.error || t('questionEditor.validVideo'));
                 return;
             }
 
@@ -227,7 +231,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
             console.log('Video selected:', result.name, result.sizeFormatted);
         } catch (error) {
             console.error('Error picking video:', error);
-            Alert.alert('Error', 'Failed to select video. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
         }
     };
 
@@ -269,7 +273,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 console.log('Audio selection cancelled');
             } else {
                 console.error('Error picking audio:', error);
-                Alert.alert('Error', 'Failed to select audio. Please try again.');
+                Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
             }
         }
     };
@@ -279,7 +283,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
      */
     const handleUploadMedia = async () => {
         if (!selectedMedia) {
-            Alert.alert('No Media', 'Please select media first');
+            Alert.alert('No Media', t('questionEditor.errorMedia'));
             return;
         }
 
@@ -304,14 +308,14 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 };
 
                 setUploadedMediaInfo(mediaInfo);
-                Alert.alert('Success', 'Media uploaded successfully!');
+                Alert.alert(t('userQuestions.successTitle'), 'Media uploaded successfully!');
                 console.log('Upload response:', response);
             } else {
-                Alert.alert('Upload Failed', response.error || 'Failed to upload media');
+                Alert.alert(t('userQuestions.errorTitle'), response.error || 'Failed to upload media');
             }
         } catch (error) {
             console.error('Upload error:', error);
-            Alert.alert('Error', 'Failed to upload media. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), 'Failed to upload media. Please try again.');
         } finally {
             setIsUploading(false);
         }
@@ -322,32 +326,32 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
      */
     const validateForm = (): boolean => {
         if (!questionText.trim()) {
-            Alert.alert('Validation Error', 'Please enter a question');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.questionRequiredError'));
             return false;
         }
 
         if (!answer.trim()) {
-            Alert.alert('Validation Error', 'Please enter an answer');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.answerRequiredError'));
             return false;
         }
 
         // Image/Video validation
         if ((questionType === 'IMAGE' || questionType === 'VIDEO') && !uploadedMediaInfo && !isEditing) {
-            Alert.alert('Validation Error', 'Please upload media first or change question type to TEXT');
+            Alert.alert(t('userQuestions.errorTitle'), 'Please upload media first or change question type to TEXT');
             return false;
         }
 
         // Audio challenge validation
         if (questionType === 'AUDIO') {
             if (!audioConfig.audioChallengeType) {
-                Alert.alert('Validation Error', 'Please select an audio challenge type');
+                Alert.alert(t('userQuestions.errorTitle'), t('audioQuestion.createFailed'));
                 return false;
             }
 
             // Check if reference audio is required
             const typeInfo = AUDIO_CHALLENGE_TYPES.find(t => t.type === audioConfig.audioChallengeType);
             if (typeInfo?.requiresReferenceAudio && !audioConfig.referenceAudioFile) {
-                Alert.alert('Validation Error', 'Reference audio is required for this challenge type');
+                Alert.alert(t('userQuestions.errorTitle'), t('audioQuestion.audioRequired'));
                 return false;
             }
         }
@@ -376,7 +380,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                     visibility,
                 });
 
-                Alert.alert('Success', 'Question updated successfully');
+                Alert.alert(t('userQuestions.successTitle'), t('userQuestions.updateSuccess'));
             } else {
                 // Create new question
                 const questionData: any = {
@@ -438,7 +442,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 if (questionType === 'AUDIO' && audioConfig.referenceAudioFile) {
                     // For audio questions with reference file, use multipart upload
                     await submitAudioQuestion(questionData, audioConfig.referenceAudioFile);
-                    Alert.alert('Success', 'Audio question created successfully');
+                    Alert.alert(t('userQuestions.successTitle'), t('audioQuestion.createSuccess'));
                 } else if (onQuestionSubmit) {
                     // Call the custom handler if provided
                     onQuestionSubmit({
@@ -449,7 +453,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 } else {
                     // Default behavior: save to backend
                     await QuestionService.createUserQuestion(questionData);
-                    Alert.alert('Success', 'Question created successfully');
+                    Alert.alert(t('userQuestions.successTitle'), t('userQuestions.createSuccess'));
                 }
             }
 
@@ -457,7 +461,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
             navigation.navigate('UserQuestions');
         } catch (error) {
             console.error('Error saving question:', error);
-            Alert.alert('Error', 'Failed to save question. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -526,23 +530,23 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
      */
     const showMediaOptions = () => {
         Alert.alert(
-            'Select Media Type',
+            t('mediaQuestion.selectMedia'),
             'Choose the type of media to upload',
             [
                 {
-                    text: 'Image',
+                    text: t('mediaQuestion.uploadImage'),
                     onPress: handleMediaPick,
                 },
                 {
-                    text: 'Video',
+                    text: t('mediaQuestion.uploadVideo'),
                     onPress: handleVideoPick,
                 },
                 {
-                    text: 'Audio',
+                    text: t('mediaQuestion.uploadAudio'),
                     onPress: handleAudioPick,
                 },
                 {
-                    text: 'Cancel',
+                    text: t('common.cancel'),
                     style: 'cancel',
                 },
             ]
@@ -558,7 +562,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 <ScrollView style={styles.scrollView}>
                     <View style={styles.header}>
                         <Text style={styles.headerTitle}>
-                            {isEditing ? 'Edit Question' : 'Create New Question'}
+                            {isEditing ? t('userQuestions.editTitle') : t('userQuestions.createTitle')}
                         </Text>
                     </View>
 
@@ -566,7 +570,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                         {/* Question Type Selector - Only show when creating new */}
                         {!isEditing && (
                             <View style={styles.formGroup}>
-                                <Text style={styles.label}>Question Type *</Text>
+                                <Text style={styles.label}>{t('mediaQuestion.questionTypeLabel')} *</Text>
                                 <View style={styles.pickerContainer}>
                                     <Picker
                                         selectedValue={questionType}
@@ -584,10 +588,10 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                         }}
                                         style={styles.picker}
                                     >
-                                        <Picker.Item label="Text Only" value="TEXT" />
-                                        <Picker.Item label="Image Question" value="IMAGE" />
-                                        <Picker.Item label="Video Question" value="VIDEO" />
-                                        <Picker.Item label="🎤 Audio Challenge" value="AUDIO" />
+                                        <Picker.Item label={t('mediaQuestion.textQuestion')} value="TEXT" />
+                                        <Picker.Item label={t('mediaQuestion.imageQuestion')} value="IMAGE" />
+                                        <Picker.Item label={t('mediaQuestion.videoQuestion')} value="VIDEO" />
+                                        <Picker.Item label={t('mediaQuestion.audioChallenge')} value="AUDIO" />
                                     </Picker>
                                 </View>
                             </View>
@@ -595,12 +599,12 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
                         {/* Question Text */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Question *</Text>
+                            <Text style={styles.label}>{t('userQuestions.questionRequired')}</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={questionText}
                                 onChangeText={setQuestionText}
-                                placeholder="Enter your question here..."
+                                placeholder={t('mediaQuestion.questionPlaceholder')}
                                 placeholderTextColor="#999"
                                 multiline
                                 numberOfLines={3}
@@ -610,28 +614,28 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
                         {/* Answer */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Answer *</Text>
+                            <Text style={styles.label}>{t('userQuestions.answerRequired')}</Text>
                             <TextInput
                                 style={styles.input}
                                 value={answer}
                                 onChangeText={setAnswer}
-                                placeholder="Enter the answer..."
+                                placeholder={t('mediaQuestion.answerPlaceholder')}
                                 placeholderTextColor="#999"
                             />
                         </View>
 
                         {/* Difficulty */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Difficulty *</Text>
+                            <Text style={styles.label}>{t('userQuestions.difficultyRequired')}</Text>
                             <View style={styles.pickerContainer}>
                                 <Picker
                                     selectedValue={difficulty}
                                     onValueChange={(value) => setDifficulty(value)}
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label="Easy" value="EASY" />
-                                    <Picker.Item label="Medium" value="MEDIUM" />
-                                    <Picker.Item label="Hard" value="HARD" />
+                                    <Picker.Item label={t('userQuestions.easy')} value="EASY" />
+                                    <Picker.Item label={t('userQuestions.medium')} value="MEDIUM" />
+                                    <Picker.Item label={t('userQuestions.hard')} value="HARD" />
                                 </Picker>
                             </View>
                         </View>
@@ -643,17 +647,17 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                 selectedTopicName={topic}
                                 onSelectTopic={handleSelectTopic}
                                 allowCreate={true}
-                                placeholder="Select or create a topic..."
-                                label="Topic (Optional)"
+                                placeholder={t('userQuestions.topicPlaceholder')}
+                                label={t('userQuestions.topicLabel')}
                                 required={false}
                             />
                         </View>
 
                         {/* Visibility / Access Policy */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Who can use this question? *</Text>
+                            <Text style={styles.label}>{t('userQuestions.visibilityRequired')}</Text>
                             <Text style={styles.helperText}>
-                                Choose who can find and use this question in their quizzes
+                                {t('mediaQuestion.visibilityLabel')}
                             </Text>
 
                             {[
@@ -678,7 +682,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                 styles.visibilityLabel,
                                                 visibility === visibilityOption && styles.visibilityLabelSelected
                                             ]}>
-                                                {getVisibilityLabel(visibilityOption as QuestionVisibility)}
+                                                {t(`mediaQuestion.${visibilityOption.toLowerCase()}` as any) || getVisibilityLabel(visibilityOption as QuestionVisibility)}
                                             </Text>
                                             <Text style={styles.visibilityDescription}>
                                                 {getVisibilityDescription(visibilityOption as QuestionVisibility)}
@@ -696,12 +700,12 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
                         {/* Additional Info */}
                         <View style={styles.formGroup}>
-                            <Text style={styles.label}>Additional Info (Optional)</Text>
+                            <Text style={styles.label}>{t('userQuestions.additionalInfoLabel')}</Text>
                             <TextInput
                                 style={[styles.input, styles.textArea]}
                                 value={additionalInfo}
                                 onChangeText={setAdditionalInfo}
-                                placeholder="Any additional context or notes..."
+                                placeholder={t('userQuestions.additionalInfoPlaceholder')}
                                 placeholderTextColor="#999"
                                 multiline
                                 numberOfLines={2}
@@ -713,7 +717,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                         {!isEditing && (questionType === 'IMAGE' || questionType === 'VIDEO') && (
                             <View style={styles.formGroup}>
                                 <Text style={styles.label}>
-                                    Media ({questionType === 'IMAGE' ? 'Image' : 'Video'}) *
+                                    {t('mediaQuestion.selectMedia')} ({questionType === 'IMAGE' ? t('questions.image') : t('questions.video')}) *
                                 </Text>
 
                                 {questionType === 'VIDEO' && (
@@ -729,7 +733,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                             }}
                                             onPress={() => setMediaSourceType(MediaSourceType.UPLOADED)}
                                         >
-                                            <Text style={{fontWeight: '600', color: '#333'}}>Upload File</Text>
+                                            <Text style={{fontWeight: '600', color: '#333'}}>{t('questionEditor.upload')}</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity 
                                             style={{
@@ -742,7 +746,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                             }}
                                             onPress={() => setMediaSourceType(MediaSourceType.EXTERNAL_URL)}
                                         >
-                                            <Text style={{fontWeight: '600', color: '#333'}}>External Link</Text>
+                                            <Text style={{fontWeight: '600', color: '#333'}}>{t('questionEditor.link')}</Text>
                                         </TouchableOpacity>
                                     </View>
                                 )}
@@ -755,7 +759,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                 onPress={showMediaOptions}
                                             >
                                                 <MaterialCommunityIcons name="image-plus" size={24} color="#4CAF50" />
-                                                <Text style={styles.mediaButtonText}>Select Media</Text>
+                                                <Text style={styles.mediaButtonText}>{t('mediaQuestion.selectMedia')}</Text>
                                             </TouchableOpacity>
                                         ) : (
                                             <View style={styles.mediaPreviewContainer}>
@@ -769,13 +773,13 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                 {selectedMedia.isVideo && (
                                                     <View style={styles.videoPlaceholder}>
                                                         <MaterialCommunityIcons name="video" size={48} color="#666" />
-                                                        <Text style={styles.videoText}>Video Selected</Text>
+                                                        <Text style={styles.videoText}>{t('questionEditor.videoFile')}</Text>
                                                     </View>
                                                 )}
                                                 {!selectedMedia.isImage && !selectedMedia.isVideo && (
                                                     <View style={styles.videoPlaceholder}>
                                                         <MaterialCommunityIcons name="music" size={48} color="#666" />
-                                                        <Text style={styles.videoText}>Audio Selected</Text>
+                                                        <Text style={styles.videoText}>{t('questionEditor.audioFile')}</Text>
                                                     </View>
                                                 )}
 
@@ -784,7 +788,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                         {selectedMedia.name}
                                                     </Text>
                                                     <Text style={styles.mediaSize}>
-                                                        {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? 'Image' : selectedMedia.isVideo ? 'Video' : 'Audio'}
+                                                        {selectedMedia.sizeFormatted} • {selectedMedia.isImage ? t('questions.image') : selectedMedia.isVideo ? t('questions.video') : t('questions.audioType')}
                                                     </Text>
                                                 </View>
 
@@ -821,7 +825,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                 onPress={handleUploadMedia}
                                             >
                                                 <MaterialCommunityIcons name="cloud-upload" size={20} color="#fff" />
-                                                <Text style={styles.buttonText}>Upload Media</Text>
+                                                <Text style={styles.buttonText}>{t('questionEditor.upload')}</Text>
                                             </TouchableOpacity>
                                         )}
 
@@ -840,7 +844,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                             style={styles.input}
                                             value={externalUrl}
                                             onChangeText={setExternalUrl}
-                                            placeholder="https://www.youtube.com/watch?v=..."
+                                            placeholder={t('questionEditor.pasteLinkPlaceholder')}
                                             placeholderTextColor="#999"
                                             autoCapitalize="none"
                                         />
@@ -856,7 +860,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                                     height={200}
                                                 />
                                                 
-                                                <Text style={[styles.label, {marginTop: 12, fontSize: 14}]}>Question Segment (Start - End)</Text>
+                                                <Text style={[styles.label, {marginTop: 12, fontSize: 14}]}>{t('questionEditor.playbackRange')}</Text>
                                                 <TimeRangeInput
                                                     startTime={qStartTime}
                                                     endTime={qEndTime}
@@ -955,7 +959,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                             <ActivityIndicator color="#fff" />
                         ) : (
                             <Text style={styles.buttonText}>
-                                {isEditing ? 'Update Question' : 'Create Question'}
+                                {isEditing ? t('userQuestions.update') : t('userQuestions.create')}
                             </Text>
                         )}
                     </TouchableOpacity>

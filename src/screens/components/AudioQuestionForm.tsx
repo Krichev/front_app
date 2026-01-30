@@ -14,6 +14,7 @@ import FileService, {ProcessedFileInfo} from '../../services/speech/FileService'
 import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCard';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../shared/ui/theme';
+import {useTranslation} from 'react-i18next';
 
 // ============================================================================
 // TYPES
@@ -90,6 +91,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     isEditing = false,
     isSubmitting = false,
 }) => {
+    const {t} = useTranslation();
     const {screen, form, theme} = useAppStyles();
     const styles = themeStyles;
     // ============================================================================
@@ -199,7 +201,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
             const file = result[0];
             if (!file) {
-                throw new Error('No file selected');
+                throw new Error(t('questionEditor.errorMedia'));
             }
 
             // Process the file info
@@ -216,7 +218,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             // Validate file
             const validation = FileService.validateFile(processedFile);
             if (!validation.isValid) {
-                Alert.alert('Invalid File', validation.error || 'Please select a valid audio file');
+                Alert.alert(t('questionEditor.invalidFile'), validation.error || t('questionEditor.validAudio'));
                 return;
             }
 
@@ -228,12 +230,12 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         } catch (error) {
             if (!DocumentPicker.isCancel(error)) {
                 console.error('Audio pick error:', error);
-                Alert.alert('Error', 'Failed to select audio file. Please try again.');
+                Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
             }
         } finally {
             setIsUploading(false);
         }
-    }, [updateField]);
+    }, [updateField, t]);
 
     const handleRecordingComplete = useCallback((path: string) => {
         const processedFile: ProcessedFileInfo = {
@@ -261,17 +263,17 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         // Question/Answer are optional for audio challenges (will be auto-filled)
         
         if (!formData.audioChallengeType) {
-            newErrors.audioChallengeType = 'Please select a challenge type';
+            newErrors.audioChallengeType = t('audioQuestion.selectChallengeType');
         }
 
         // Reference audio validation (only if required by type)
         if (requiresReferenceAudio && !formData.referenceAudioFile) {
-            newErrors.referenceAudioFile = 'Reference audio is required for this challenge type';
+            newErrors.referenceAudioFile = t('audioQuestion.audioRequired');
         }
 
         // Segment time validation
         if (formData.audioSegmentEnd !== null && formData.audioSegmentStart >= formData.audioSegmentEnd) {
-            newErrors.audioSegmentEnd = 'End time must be greater than start time';
+            newErrors.audioSegmentEnd = t('questionEditor.endTimeError');
         }
 
         // Score validation
@@ -294,11 +296,11 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [formData, requiresReferenceAudio, showRhythmSettings]);
+    }, [formData, requiresReferenceAudio, showRhythmSettings, t]);
 
     const handleSubmit = useCallback(async () => {
         if (!validateForm()) {
-            Alert.alert('Validation Error', 'Please fix the errors before submitting');
+            Alert.alert(t('userQuestions.errorTitle'), t('alerts.validationError'));
             return;
         }
 
@@ -317,9 +319,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             await onSubmit(submissionData);
         } catch (error) {
             console.error('Submit error:', error);
-            Alert.alert('Error', 'Failed to save question. Please try again.');
+            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
         }
-    }, [formData, validateForm, onSubmit]);
+    }, [formData, validateForm, onSubmit, t]);
 
     // ============================================================================
     // RENDER HELPERS
@@ -339,7 +341,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 <View style={form.sectionHeader}>
                     <MaterialCommunityIcons name="file-music" size={20} color={theme.colors.text.primary} />
                     <Text style={form.sectionTitle}>
-                        Reference Audio {isRequired ? '*' : '(Optional)'}
+                        {t('audioQuestion.referenceAudio')} {isRequired ? '*' : `(${t('userQuestions.topicLabel').split(' ')[1]})`}
                     </Text>
                 </View>
 
@@ -356,7 +358,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 color={audioInputMode === 'record' ? theme.colors.primary.main : theme.colors.text.secondary} 
                             />
                             <Text style={[styles.tabText, audioInputMode === 'record' && styles.activeTabText]}>
-                                Record
+                                {t('audioQuestion.recordReference')}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -369,7 +371,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 color={audioInputMode === 'upload' ? theme.colors.primary.main : theme.colors.text.secondary} 
                             />
                             <Text style={[styles.tabText, audioInputMode === 'upload' && styles.activeTabText]}>
-                                Upload
+                                {t('questionEditor.upload')}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -423,7 +425,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 ) : (
                                     <>
                                         <MaterialCommunityIcons name="upload" size={24} color={theme.colors.primary.main} />
-                                        <Text style={styles.uploadButtonText}>Select Audio File</Text>
+                                        <Text style={styles.uploadButtonText}>{t('audioQuestion.uploadReference')}</Text>
                                     </>
                                 )}
                             </TouchableOpacity>
@@ -438,14 +440,14 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 {/* Audio Segment Picker (moved from separate logic) */}
                 {formData.referenceAudioFile && showAudioSegmentTrim && (
                     <View style={styles.segmentSection}>
-                        <Text style={styles.subsectionTitle}>Audio Segment (Optional)</Text>
+                        <Text style={styles.subsectionTitle}>{t('audioQuestion.segmentLabel')} ({t('userQuestions.topicLabel').split(' ')[1]})</Text>
                         <Text style={form.helperText}>
                             Specify which portion of the audio to use for the challenge
                         </Text>
                         
                         <View style={styles.segmentInputs}>
                             <View style={styles.segmentInputGroup}>
-                                <Text style={form.label}>Start (sec)</Text>
+                                <Text style={form.label}>{t('audioQuestion.startTime')}</Text>
                                 <TextInput
                                     style={styles.segmentInput}
                                     value={String(formData.audioSegmentStart)}
@@ -460,7 +462,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             </View>
                             <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.text.disabled} />
                             <View style={styles.segmentInputGroup}>
-                                <Text style={form.label}>End (sec)</Text>
+                                <Text style={form.label}>{t('audioQuestion.endTime')}</Text>
                                 <TextInput
                                     style={styles.segmentInput}
                                     value={formData.audioSegmentEnd !== null ? String(formData.audioSegmentEnd) : ''}
@@ -495,11 +497,11 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             <View style={form.section}>
                 <View style={form.sectionHeader}>
                     <MaterialCommunityIcons name="target" size={20} color={theme.colors.text.primary} />
-                    <Text style={form.sectionTitle}>Passing Criteria</Text>
+                    <Text style={form.sectionTitle}>{t('audioQuestion.minimumScoreLabel')}</Text>
                 </View>
 
                 <Text style={styles.subsectionTitle}>
-                    Minimum Score to Pass: {formData.minimumScorePercentage}%
+                    {t('audioQuestion.minimumScoreLabel')}: {formData.minimumScorePercentage}%
                 </Text>
 
                 <View style={styles.sliderContainer}>
@@ -554,7 +556,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             <View style={form.section}>
                 <View style={form.sectionHeader}>
                     <MaterialCommunityIcons name="metronome" size={20} color={theme.colors.text.primary} />
-                    <Text style={form.sectionTitle}>Rhythm Settings</Text>
+                    <Text style={form.sectionTitle}>{t('audioQuestion.bpmLabel')}</Text>
                 </View>
 
                 {rhythmSettingsHint && (
@@ -565,7 +567,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
                 {/* BPM Input */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>BPM (Beats Per Minute)</Text>
+                    <Text style={form.label}>{t('audioQuestion.bpmLabel')}</Text>
                     <View style={styles.bpmContainer}>
                         <TouchableOpacity
                             style={styles.bpmButton}
@@ -630,7 +632,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
                 {/* Time Signature Picker */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>Time Signature</Text>
+                    <Text style={form.label}>{t('audioQuestion.timeSignatureLabel')}</Text>
                     <View style={form.pickerContainer}>
                         <Picker
                             selectedValue={formData.rhythmTimeSignature}
@@ -654,12 +656,12 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             <View style={form.section}>
                 <View style={form.sectionHeader}>
                     <MaterialCommunityIcons name="tag" size={20} color={theme.colors.text.primary} />
-                    <Text style={form.sectionTitle}>Classification</Text>
+                    <Text style={form.sectionTitle}>{t('questionList.additionalInfo')}</Text>
                 </View>
 
                 {/* Difficulty */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>Difficulty</Text>
+                    <Text style={form.label}>{t('userQuestions.difficultyLabel')}</Text>
                     <View style={form.pickerContainer}>
                         <Picker
                             selectedValue={formData.difficulty}
@@ -667,9 +669,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             style={form.picker}
                             enabled={!isSubmitting}
                         >
-                            <Picker.Item label="Easy" value="EASY" />
-                            <Picker.Item label="Medium" value="MEDIUM" />
-                            <Picker.Item label="Hard" value="HARD" />
+                            <Picker.Item label={t('userQuestions.easy')} value="EASY" />
+                            <Picker.Item label={t('userQuestions.medium')} value="MEDIUM" />
+                            <Picker.Item label={t('userQuestions.hard')} value="HARD" />
                         </Picker>
                     </View>
                 </View>
@@ -681,20 +683,20 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                         selectedTopicName={formData.topic}
                         onSelectTopic={handleSelectTopic}
                         allowCreate={true}
-                        placeholder="Select or create a topic..."
-                        label="Topic (Optional)"
+                        placeholder={t('userQuestions.topicPlaceholder')}
+                        label={t('userQuestions.topicLabel')}
                         required={false}
                     />
                 </View>
 
                 {/* Additional Info */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>Additional Info (Optional)</Text>
+                    <Text style={form.label}>{t('userQuestions.additionalInfoLabel')}</Text>
                     <TextInput
                         style={[form.input, form.textArea]}
                         value={formData.additionalInfo}
                         onChangeText={(text) => updateField('additionalInfo', text)}
-                        placeholder="Any hints or additional context..."
+                        placeholder={t('userQuestions.additionalInfoPlaceholder')}
                         placeholderTextColor={theme.colors.text.disabled}
                         multiline
                         numberOfLines={2}
@@ -727,12 +729,12 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             {/* Question Text */}
             <View style={form.section}>
                 <View style={form.formGroup}>
-                    <Text style={form.label}>Instructions / Question</Text>
+                    <Text style={form.label}>{t('audioQuestion.questionLabel')}</Text>
                     <TextInput
                         style={[form.input, form.textArea]}
                         value={formData.question}
                         onChangeText={(text) => updateField('question', text)}
-                        placeholder="e.g., Repeat the rhythm pattern you hear"
+                        placeholder={t('audioQuestion.questionPlaceholder')}
                         placeholderTextColor={theme.colors.text.disabled}
                         multiline
                         numberOfLines={3}
@@ -746,12 +748,12 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
                 {/* Answer/Description */}
                 <View style={form.formGroup}>
-                    <Text style={form.label}>Answer / Description</Text>
+                    <Text style={form.label}>{t('userQuestions.answerLabel')}</Text>
                     <TextInput
                         style={[form.input, form.textArea]}
                         value={formData.answer}
                         onChangeText={(text) => updateField('answer', text)}
-                        placeholder="e.g., 4/4 time, 120 BPM clapping pattern"
+                        placeholder={t('userQuestions.answerPlaceholder')}
                         placeholderTextColor={theme.colors.text.disabled}
                         multiline
                         numberOfLines={2}
@@ -781,7 +783,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                         onPress={onCancel}
                         disabled={isSubmitting}
                     >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -799,7 +801,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                         <>
                             <MaterialCommunityIcons name="check" size={20} color={theme.colors.text.inverse} />
                             <Text style={form.submitButtonText}>
-                                {isEditing ? 'Update Question' : 'Create Audio Question'}
+                                {isEditing ? t('userQuestions.update') : t('audioQuestion.create')}
                             </Text>
                         </>
                     )}
