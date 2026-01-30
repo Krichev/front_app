@@ -3,8 +3,12 @@ import {
   useBeginQuizSessionMutation,
   useSubmitRoundAnswerMutation,
   useCompleteQuizSessionMutation,
+  usePauseQuizSessionMutation,
+  useResumeQuizSessionMutation,
+  useAbandonQuizSessionMutation,
   useGetQuizSessionQuery,
   useGetQuizRoundsQuery,
+  PauseQuizSessionRequest,
 } from '../../../entities/QuizState/model/slice/quizApi';
 import { useSubmitRecordingMutation } from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 
@@ -27,11 +31,26 @@ export function useWWWGameController(sessionId: string) {
   const [beginQuizSession, { isLoading: isBeginningSession }] = useBeginQuizSessionMutation();
   const [submitRoundAnswer, { isLoading: isSubmittingAnswer }] = useSubmitRoundAnswerMutation();
   const [completeQuizSession, { isLoading: isCompletingSession }] = useCompleteQuizSessionMutation();
+  const [pauseQuizSession, { isLoading: isPausingSession }] = usePauseQuizSessionMutation();
+  const [resumeQuizSession, { isLoading: isResumingSession }] = useResumeQuizSessionMutation();
+  const [abandonQuizSession, { isLoading: isAbandoningSession }] = useAbandonQuizSessionMutation();
   const [submitRecording, { isLoading: isSubmittingAudio }] = useSubmitRecordingMutation();
 
   const startSession = useCallback(async () => {
     return beginQuizSession(sessionId).unwrap();
   }, [beginQuizSession, sessionId]);
+
+  const pauseSession = useCallback(async (pauseData: PauseQuizSessionRequest) => {
+    return pauseQuizSession({ sessionId, pauseData }).unwrap();
+  }, [pauseQuizSession, sessionId]);
+
+  const resumeGame = useCallback(async () => {
+    return resumeQuizSession(sessionId).unwrap();
+  }, [resumeQuizSession, sessionId]);
+
+  const abandonGame = useCallback(async () => {
+    return abandonQuizSession(sessionId).unwrap();
+  }, [abandonQuizSession, sessionId]);
 
   const submitAnswer = useCallback(async (roundId: number, payload: AnswerPayload) => {
     const result = await submitRoundAnswer({
@@ -76,8 +95,14 @@ export function useWWWGameController(sessionId: string) {
     isSubmittingAnswer,
     isSubmittingAudio,
     isCompletingSession,
+    isPausingSession,
+    isResumingSession,
+    isAbandoningSession,
     // Actions
     startSession,
+    pauseSession,
+    resumeGame,
+    abandonGame,
     submitAnswer,
     submitAudioAnswer,
     completeGame,

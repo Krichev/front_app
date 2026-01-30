@@ -83,7 +83,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         type: 'SOUND_MATCH',
         label: 'Match Sound',
         description: 'Make sounds as close as possible to the reference.',
-        icon: 'waveform',
+        icon: 'equalizer',
         requiresReferenceAudio: true,
         usesPitchScoring: true,
         usesRhythmScoring: false,
@@ -145,8 +145,8 @@ export const getScoringWeights = (type: AudioChallengeType): { pitch: number; rh
 // OTHER TYPES
 // ============================================================================
 
-import { ProcessedFileInfo } from '../services/speech/FileService';
-import { QuestionVisibility } from '../entities/QuizState/model/types/question.types';
+import {ProcessedFileInfo} from '../services/speech/FileService';
+import {QuestionVisibility} from '../entities/QuizState/model/types/question.types';
 
 export interface CreateAudioQuestionForm {
     question: string;

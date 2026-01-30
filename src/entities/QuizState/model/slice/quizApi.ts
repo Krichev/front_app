@@ -204,6 +204,12 @@ export interface QuizSession {
     completedAt?: string;
     totalDurationSeconds?: number;
     createdAt: string;
+    // Pause metadata
+    pausedAt?: string;
+    pausedAtRound?: number;
+    remainingTimeSeconds?: number;
+    pausedAnswer?: string;
+    pausedNotes?: string;
 }
 
 export interface StartQuizSessionRequest {
@@ -240,6 +246,13 @@ export interface QuizRound {
 export interface SubmitRoundAnswerRequest {
     teamAnswer: string;
     playerWhoAnswered: string;
+    discussionNotes?: string;
+}
+
+export interface PauseQuizSessionRequest {
+    pausedAtRound: number;
+    remainingTimeSeconds: number;
+    currentAnswer?: string;
     discussionNotes?: string;
 }
 
@@ -622,6 +635,43 @@ export const quizApi = createApi({
             ],
         }),
 
+        pauseQuizSession: builder.mutation<QuizSession, {
+            sessionId: string;
+            pauseData: PauseQuizSessionRequest;
+        }>({
+            query: ({sessionId, pauseData}) => ({
+                url: `/quiz/sessions/${sessionId}/pause`,
+                method: 'PUT',
+                body: pauseData,
+            }),
+            invalidatesTags: (result, error, {sessionId}) => [
+                {type: 'QuizSession', id: sessionId},
+                {type: 'QuizSession', id: 'USER_LIST'},
+            ],
+        }),
+
+        resumeQuizSession: builder.mutation<QuizSession, string>({
+            query: (sessionId) => ({
+                url: `/quiz/sessions/${sessionId}/resume`,
+                method: 'PUT',
+            }),
+            invalidatesTags: (result, error, sessionId) => [
+                {type: 'QuizSession', id: sessionId},
+                {type: 'QuizSession', id: 'USER_LIST'},
+            ],
+        }),
+
+        abandonQuizSession: builder.mutation<void, string>({
+            query: (sessionId) => ({
+                url: `/quiz/sessions/${sessionId}/abandon`,
+                method: 'POST',
+            }),
+            invalidatesTags: (result, error, sessionId) => [
+                {type: 'QuizSession', id: sessionId},
+                {type: 'QuizSession', id: 'USER_LIST'},
+            ],
+        }),
+
         getQuizSession: builder.query<QuizSession, string>({
             query: (sessionId) => `/quiz/sessions/${sessionId}`,
             providesTags: (result, error, sessionId) => [
@@ -704,6 +754,9 @@ export const {
     useBeginQuizSessionMutation,
     useSubmitRoundAnswerMutation,
     useCompleteQuizSessionMutation,
+    usePauseQuizSessionMutation,
+    useResumeQuizSessionMutation,
+    useAbandonQuizSessionMutation,
     useGetQuizSessionQuery,
     useGetUserQuizSessionsQuery,
     useGetQuizRoundsQuery,

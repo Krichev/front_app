@@ -120,6 +120,23 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
         selectedPlayer: '',
       };
 
+    case 'PAUSE_GAME':
+      return {
+        ...state,
+        previousPhase: state.phase,
+        phase: 'paused',
+        isTimerRunning: false,
+      };
+
+    case 'RESUME_GAME':
+      const nextPhase = state.previousPhase || 'discussion';
+      return {
+        ...state,
+        phase: nextPhase,
+        previousPhase: undefined,
+        isTimerRunning: nextPhase === 'discussion',
+      };
+
     default:
       return state;
   }
@@ -147,6 +164,8 @@ export function useWWWGameState() {
     setNotes: useCallback((notes: string) => dispatch({ type: 'SET_NOTES', notes }), []),
     setPlayer: useCallback((player: string) => dispatch({ type: 'SET_PLAYER', player }), []),
     setRound: useCallback((roundIndex: number) => dispatch({ type: 'SET_ROUND', roundIndex }), []),
+    pauseGame: useCallback(() => dispatch({ type: 'PAUSE_GAME' }), []),
+    resumeGame: useCallback(() => dispatch({ type: 'RESUME_GAME' }), []),
   };
 
   return { state, actions, dispatch };

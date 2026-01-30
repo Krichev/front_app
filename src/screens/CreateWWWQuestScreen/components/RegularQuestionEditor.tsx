@@ -20,11 +20,7 @@ import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
-import {
-    extractYouTubeVideoId,
-    getYouTubeThumbnail,
-    detectVideoPlatform,
-} from '../../../utils/youtubeUtils';
+import {detectVideoPlatform, extractYouTubeVideoId, getYouTubeThumbnail,} from '../../../utils/youtubeUtils';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -742,7 +738,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                         ) : (
                                             <>
-                                                <SafeIcon name="folder-video" size={24} color={theme.colors.primary.main} />
+                                                <SafeIcon name="file-video-outline" size={24} color={theme.colors.primary.main} />
                                                 <Text style={styles.pickVideoButtonText}>{t('createQuest.questionEditor.selectVideoDevice')}</Text>
                                             </>
                                         )}

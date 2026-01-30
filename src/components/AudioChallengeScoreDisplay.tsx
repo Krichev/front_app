@@ -1,12 +1,7 @@
 import React from 'react';
-import {
-    View,
-    Text,
-    StyleSheet,
-    ActivityIndicator
-} from 'react-native';
+import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { AudioChallengeSubmission } from '../entities/ChallengeState/model/types';
+import {AudioChallengeSubmission} from '../entities/ChallengeState/model/types';
 
 interface AudioChallengeScoreDisplayProps {
     submission: AudioChallengeSubmission;
@@ -157,7 +152,7 @@ const AudioChallengeScoreDisplay: React.FC<AudioChallengeScoreDisplayProps> = ({
                 <View style={styles.detailsContainer}>
                     {renderScoreBar('Pitch Accuracy', submission.pitchScore, 'music-note')}
                     {renderScoreBar('Rhythm Timing', submission.rhythmScore, 'metronome')}
-                    {renderScoreBar('Voice Quality', submission.voiceScore, 'waveform')}
+                    {renderScoreBar('Voice Quality', submission.voiceScore, 'equalizer')}
                 </View>
             )}
         </View>

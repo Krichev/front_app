@@ -1,9 +1,9 @@
 // src/screens/components/EnhancedScoringResults.tsx
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { EnhancedRhythmScoringResult, SoundComparisonDetail } from '../../types/rhythmChallenge.types';
-import { SoundQualityBadge } from './SoundQualityBadge';
+import {EnhancedRhythmScoringResult, SoundComparisonDetail} from '../../types/rhythmChallenge.types';
+import {SoundQualityBadge} from './SoundQualityBadge';
 
 interface EnhancedScoringResultsProps {
     result: EnhancedRhythmScoringResult;
@@ -78,7 +78,7 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
                         
                         {/* Sound Score */}
                         <View style={styles.breakdownItem}>
-                            <MaterialCommunityIcons name="waveform" size={28} color="#9C27B0" />
+                            <MaterialCommunityIcons name="equalizer" size={28} color="#9C27B0" />
                             <Text style={styles.breakdownValue}>
                                 {result.soundSimilarityScore !== undefined 
                                     ? Math.round(result.soundSimilarityScore) 

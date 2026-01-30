@@ -4,7 +4,7 @@ import {QuizQuestion, QuizRound} from '../../../entities/QuizState/model/slice/q
 export type { QuizQuestion, QuizRound };
 
 // Define explicit game phases and transitions
-export type GamePhase = 'waiting' | 'reading' | 'media_playback' | 'discussion' | 'answer' | 'feedback' | 'completed';
+export type GamePhase = 'waiting' | 'reading' | 'media_playback' | 'discussion' | 'answer' | 'feedback' | 'completed' | 'paused';
 
 // Game events that trigger state transitions
 export type GameEvent =
@@ -25,11 +25,14 @@ export type GameEvent =
   | { type: 'SET_ANSWER'; answer: string }
   | { type: 'SET_NOTES'; notes: string }
   | { type: 'SET_PLAYER'; player: string }
-  | { type: 'SET_ROUND'; roundIndex: number };
+  | { type: 'SET_ROUND'; roundIndex: number }
+  | { type: 'PAUSE_GAME' }
+  | { type: 'RESUME_GAME' };
 
 // Immutable game state
 export interface GameState {
   phase: GamePhase;
+  previousPhase?: GamePhase;
   currentRound: number;
   teamAnswer: string;
   discussionNotes: string;

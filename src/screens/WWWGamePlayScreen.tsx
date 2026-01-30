@@ -1,6 +1,6 @@
 // src/screens/WWWGamePlayScreen.tsx - Orchestration Layer
-import React, { useEffect, useCallback, useRef } from 'react';
-import { SafeAreaView, Alert } from 'react-native';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { SafeAreaView, Alert, BackHandler } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import { useReadingTime } from '../features/WWWGame/hooks/useReadingTime';
 import { useCountdownTimer } from '../shared/hooks/useCountdownTimer';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { ExitGameModal } from '../features/WWWGame/ui/components/ExitGameModal';
 
 import {
   WaitingPhase,
@@ -54,9 +55,59 @@ const WWWGamePlayScreen: React.FC = () => {
   });
   const { start: timerStart, reset: timerReset, pause: timerPause } = timer;
 
+  // Exit Modal State
+  const [showExitModal, setShowExitModal] = useState(false);
+
   // Current round data
   const currentRound = controller.rounds[state.currentRound];
   const isLastRound = state.currentRound >= controller.rounds.length - 1;
+
+  // Handle hardware back button
+  useEffect(() => {
+    const onBackPress = () => {
+      // Only intercept if game is in progress or paused and not completed
+      if (state.phase !== 'completed' && (controller.session?.status === 'IN_PROGRESS' || controller.session?.status === 'PAUSED')) {
+        setShowExitModal(true);
+        return true;
+      }
+      return false;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+    return () => {
+      BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    };
+  }, [state.phase, controller.session?.status]);
+
+  const handleResumeGame = useCallback(() => {
+    setShowExitModal(false);
+  }, []);
+
+  const handlePauseAndExit = useCallback(async () => {
+    try {
+      if (!controller.session) return;
+      
+      await controller.pauseSession({
+        pausedAtRound: state.currentRound + 1, // 1-based index for backend
+        remainingTimeSeconds: timer.timeLeft,
+        currentAnswer: state.teamAnswer,
+        discussionNotes: state.discussionNotes
+      });
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pause game');
+    }
+  }, [controller, state, timer.timeLeft, navigation]);
+
+  const handleAbandonGame = useCallback(async () => {
+    try {
+      await controller.abandonGame();
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to abandon game');
+    }
+  }, [controller, navigation]);
 
   const handleGameCompletion = useCallback(async () => {
     try {
@@ -107,9 +158,29 @@ const WWWGamePlayScreen: React.FC = () => {
           // All rounds completed, show results?
           handleGameCompletion();
         }
+      } else if (controller.session.status === 'PAUSED' && state.phase === 'waiting' && !state.gameStartTime) {
+        // Restore paused state
+        const pausedRound = (controller.session.pausedAtRound || 1) - 1; // Convert back to 0-based
+        const validRound = Math.max(0, pausedRound);
+        const remainingTime = controller.session.remainingTimeSeconds || configuredRoundTime;
+
+        actions.setRound(validRound);
+        if (controller.session.pausedAnswer) actions.setAnswer(controller.session.pausedAnswer);
+        if (controller.session.pausedNotes) actions.setNotes(controller.session.pausedNotes);
+
+        // Resume session via API and start game loop
+        controller.resumeGame().then(() => {
+           actions.startSession(remainingTime); // Marks session start locally
+           // Jump straight to discussion or appropriate phase if we knew it
+           // For simplicity, we restart discussion with remaining time
+           // Note: This might replay media if we had phase restoration, but here we assume discussion
+           actions.startDiscussion(remainingTime);
+           timerReset(remainingTime);
+           timerStart();
+        });
       }
     }
-  }, [controller.session, controller.rounds, state.phase, state.gameStartTime, actions, handleGameCompletion, configuredRoundTime]);
+  }, [controller.session, controller.rounds, state.phase, state.gameStartTime, actions, handleGameCompletion, configuredRoundTime, timerReset, timerStart]);
 
   // Orchestration: Determine sub-phase when starting round
   useEffect(() => {
@@ -147,12 +218,15 @@ const WWWGamePlayScreen: React.FC = () => {
         actions.timeUp();
       } else {
         requestAnimationFrame(() => {
-          timerReset(configuredRoundTime);
-          timerStart();
+          // If we just resumed (timer running), don't reset
+          if (!timer.isRunning) {
+             timerReset(configuredRoundTime);
+             timerStart();
+          }
         });
       }
     }
-  }, [state.phase, state.currentRound, currentRound, configuredRoundTime, actions, timerReset, timerStart]);
+  }, [state.phase, state.currentRound, currentRound, configuredRoundTime, actions, timerReset, timerStart, timer.isRunning]);
 
   // Pause timer when leaving discussion phase
   useEffect(() => {
@@ -331,6 +405,14 @@ const WWWGamePlayScreen: React.FC = () => {
   return (
     <SafeAreaView style={screen.container}>
       {renderPhase()}
+      
+      <ExitGameModal
+        visible={showExitModal}
+        onResume={handleResumeGame}
+        onPauseAndExit={handlePauseAndExit}
+        onAbandon={handleAbandonGame}
+        isPausing={controller.isPausingSession}
+      />
     </SafeAreaView>
   );
 };

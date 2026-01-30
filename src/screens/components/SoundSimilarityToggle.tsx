@@ -1,6 +1,6 @@
 // src/screens/components/SoundSimilarityToggle.tsx
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
+import {StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface SoundSimilarityToggleProps {
@@ -36,7 +36,7 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
             >
                 <View style={styles.iconContainer}>
                     <MaterialCommunityIcons
-                        name={enabled ? 'waveform' : 'waveform'}
+                        name={enabled ? 'equalizer' : 'equalizer'}
                         size={24}
                         color={enabled ? '#4CAF50' : '#666'}
                     />
@@ -84,7 +84,7 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
                     <View style={styles.weightDivider} />
                     
                     <View style={styles.weightItem}>
-                        <MaterialCommunityIcons name="waveform" size={20} color="#9C27B0" />
+                        <MaterialCommunityIcons name="equalizer" size={20} color="#9C27B0" />
                         <Text style={styles.weightLabel}>Sound</Text>
                         <Text style={styles.weightValue}>{Math.round(soundWeight * 100)}%</Text>
                     </View>
