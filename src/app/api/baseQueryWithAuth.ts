@@ -5,6 +5,7 @@ import {RootState} from '../providers/StoreProvider/store';
 import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice';
 import {Alert} from 'react-native';
 import KeychainService from "../../services/auth/KeychainService.ts";
+import { getLanguageHeader } from '../../shared/config/i18n/apiHeaders';
 
 const networkConfig = {
     retryAttempts: 3,
@@ -28,6 +29,13 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                 if (token) {
                     headers.set('Authorization', `Bearer ${token}`);
                 }
+                
+                // Add Accept-Language header
+                const langHeader = getLanguageHeader();
+                if (langHeader['Accept-Language']) {
+                    headers.set('Accept-Language', langHeader['Accept-Language']);
+                }
+
                 return headers;
             },
         });

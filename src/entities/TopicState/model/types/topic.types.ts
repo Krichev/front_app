@@ -17,8 +17,10 @@ export enum ValidationStatus {
 export interface Topic {
     id: number;
     name: string;
+    originalName?: string;
     slug: string;
     description?: string;
+    originalDescription?: string;
     parentId?: number;
     parentName?: string;
     path: string;           // e.g., "/1/5/23/"
