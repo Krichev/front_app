@@ -21,7 +21,6 @@ import {SelectableTopic} from '../../../entities/TopicState';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
 import {
-    isValidYouTubeUrl,
     extractYouTubeVideoId,
     getYouTubeThumbnail,
     detectVideoPlatform,
@@ -42,6 +41,15 @@ interface RegularQuestionEditorProps {
 // ============================================================================
 // COMPONENT
 // ============================================================================
+
+/**
+ * Get safe icon name with fallback
+ */
+const SafeIcon: React.FC<{name: string; size: number; color?: string; style?: any}> = ({name, size, color, style}) => {
+    // Fallback to a safe default if name is falsy
+    const safeName = name || 'help-circle';
+    return <MaterialCommunityIcons name={safeName} size={size} color={color} style={style} />;
+};
 
 const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                                    visible,
@@ -166,7 +174,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
         }
-    }, []);
+    }, [t]);
 
     /**
      * Handle video picking from library
@@ -194,7 +202,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
         }
-    }, []);
+    }, [t]);
 
     /**
      * Handle audio picking from library
@@ -221,7 +229,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             setIsSelectingMedia(false);
             setMediaSelectionType(null);
         }
-    }, []);
+    }, [t]);
 
     /**
      * Handle media selection based on type
@@ -243,7 +251,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             console.error('Error in handleSelectMedia:', error);
             Alert.alert(t('createQuest.questionEditor.errorTitle'), t('createQuest.questionEditor.errorMedia'));
         }
-    }, [handleImagePick, handleVideoPick, handleAudioPick]);
+    }, [handleImagePick, handleVideoPick, handleAudioPick, t]);
 
     useEffect(() => {
         if (visible && preSelectedMediaType) {
@@ -442,7 +450,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 {/* Video/Audio Placeholder */}
                 {(currentQuestionType === 'VIDEO' || currentQuestionType === 'AUDIO') && selectedMedia && (
                     <View style={styles.mediaPlaceholder}>
-                        <MaterialCommunityIcons
+                        <SafeIcon
                             name={getMediaIconName(currentQuestionType)}
                             size={48}
                             color={theme.colors.primary.main}
@@ -463,7 +471,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
                 {/* Media Status Badge */}
                 <View style={styles.mediaStatusBadge}>
-                    <MaterialCommunityIcons
+                    <SafeIcon
                         name="file-upload"
                         size={16}
                         color={theme.colors.primary.main}
@@ -478,7 +486,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     style={styles.removeMediaButton}
                     onPress={handleRemoveMedia}
                 >
-                    <MaterialCommunityIcons name="delete" size={20} color={theme.colors.error.main}/>
+                    <SafeIcon name="delete" size={20} color={theme.colors.error.main}/>
                     <Text style={styles.removeMediaText}>{t('createQuest.questionEditor.removeMedia')}</Text>
                 </TouchableOpacity>
             </View>
@@ -496,7 +504,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                 {/* Header */}
                 <View style={modal.header}>
                     <TouchableOpacity onPress={handleClose} disabled={isSubmitting}>
-                        <MaterialCommunityIcons name="close" size={24} color={isSubmitting ? theme.colors.text.disabled : theme.colors.primary.main}/>
+                        <SafeIcon name="close" size={24} color={isSubmitting ? theme.colors.text.disabled : theme.colors.primary.main}/>
                     </TouchableOpacity>
                     <Text style={modal.headerTitle}>{t('createQuest.questionEditor.title')}</Text>
                     <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting}>
@@ -521,7 +529,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 {isSelectingMedia && mediaSelectionType === 'image' ? (
                                     <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
-                                    <MaterialCommunityIcons name="image" size={24} color={theme.colors.primary.main} />
+                                    <SafeIcon name="image" size={24} color={theme.colors.primary.main} />
                                 )}
                                 <Text style={styles.mediaButtonText}>{t('questions.image')}</Text>
                             </TouchableOpacity>
@@ -545,7 +553,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 {isSelectingMedia && mediaSelectionType === 'video' ? (
                                     <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
-                                    <MaterialCommunityIcons name="video" size={24} color={theme.colors.primary.main} />
+                                    <SafeIcon name="video" size={24} color={theme.colors.primary.main} />
                                 )}
                                 <Text style={styles.mediaButtonText}>{t('questions.video')}</Text>
                             </TouchableOpacity>
@@ -557,7 +565,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                 {isSelectingMedia && mediaSelectionType === 'audio' ? (
                                     <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                 ) : (
-                                    <MaterialCommunityIcons name="music" size={24} color={theme.colors.primary.main} />
+                                    <SafeIcon name="music" size={24} color={theme.colors.primary.main} />
                                 )}
                                 <Text style={styles.mediaButtonText}>{t('questions.audioType')}</Text>
                             </TouchableOpacity>
@@ -586,7 +594,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             }
                                         }}
                                     >
-                                        <MaterialCommunityIcons 
+                                        <SafeIcon 
                                             name="upload" 
                                             size={18} 
                                             color={mediaInputMode === 'upload' ? '#fff' : theme.colors.primary.main} 
@@ -609,7 +617,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             setSelectedMedia(undefined);
                                         }}
                                     >
-                                        <MaterialCommunityIcons 
+                                        <SafeIcon 
                                             name="link" 
                                             size={18} 
                                             color={mediaInputMode === 'link' ? '#fff' : theme.colors.primary.main} 
@@ -640,7 +648,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             />
                                             {externalVideoUrl.trim().length > 0 && (
                                                 <View style={styles.urlValidationIcon}>
-                                                    <MaterialCommunityIcons
+                                                    <SafeIcon
                                                         name={detectedPlatform ? 'check-circle' : 'alert-circle'}
                                                         size={20}
                                                         color={detectedPlatform ? '#4CAF50' : '#F44336'}
@@ -652,7 +660,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                         {/* Platform Detection Badge */}
                                         {detectedPlatform && (
                                             <View style={styles.platformBadge}>
-                                                <MaterialCommunityIcons
+                                                <SafeIcon
                                                     name={detectedPlatform === 'youtube' ? 'youtube' : detectedPlatform === 'vimeo' ? 'vimeo' : 'video'}
                                                     size={16}
                                                     color={detectedPlatform === 'youtube' ? '#FF0000' : theme.colors.primary.main}
@@ -672,7 +680,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                     resizeMode="cover"
                                                 />
                                                 <View style={styles.playIconOverlay}>
-                                                    <MaterialCommunityIcons name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
+                                                    <SafeIcon name="play-circle" size={48} color="rgba(255,255,255,0.9)" />
                                                 </View>
                                             </View>
                                         )}
@@ -716,7 +724,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                                     setVideoEndTime('');
                                                 }}
                                             >
-                                                <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.error.main} />
+                                                <SafeIcon name="close-circle" size={18} color={theme.colors.error.main} />
                                                 <Text style={styles.clearLinkText}>{t('createQuest.questionEditor.clearLink')}</Text>
                                             </TouchableOpacity>
                                         )}
@@ -734,7 +742,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                                             <ActivityIndicator size="small" color={theme.colors.primary.main} />
                                         ) : (
                                             <>
-                                                <MaterialCommunityIcons name="folder-video" size={24} color={theme.colors.primary.main} />
+                                                <SafeIcon name="folder-video" size={24} color={theme.colors.primary.main} />
                                                 <Text style={styles.pickVideoButtonText}>{t('createQuest.questionEditor.selectVideoDevice')}</Text>
                                             </>
                                         )}

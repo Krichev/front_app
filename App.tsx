@@ -1,4 +1,4 @@
-// App.tsx - USING CUSTOM HOOK
+// App.tsx
 import 'react-native-gesture-handler';
 import React from 'react';
 import {Provider} from 'react-redux';
