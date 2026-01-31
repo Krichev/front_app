@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react';
-import {Text, TextInputProps, TouchableOpacity, View} from 'react-native';
+import {StyleSheet, Text, TextInputProps, TouchableOpacity, View, TextStyle} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {useI18n} from '../../../app/providers/I18nProvider';
-import {createStyles, useStyles} from '../theme';
+import {createStyles} from '../theme';
 import {AppLanguage} from '../../../entities/SettingsState/model/types/settings.types';
 import {LocalizedString} from '../../types/localized';
 import {Input} from '../Input/Input';
@@ -20,22 +20,68 @@ interface LocalizedInputProps extends Omit<TextInputProps, 'value' | 'onChangeTe
   disabled?: boolean;
 }
 
+const themeStyles = createStyles(theme => ({
+  container: {
+    width: '100%',
+  },
+  label: {
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    marginBottom: theme.spacing.sm,
+  },
+  tab: {
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.layout.borderRadius.lg,
+    borderWidth: theme.layout.borderWidth.thin,
+    borderColor: theme.colors.border.main,
+    marginRight: theme.spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: theme.colors.primary.main,
+    borderColor: theme.colors.primary.main,
+  },
+  tabText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.primary,
+  },
+  activeTabText: {
+    color: theme.colors.text.inverse,
+  },
+  indicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.warning.main,
+    marginLeft: theme.spacing.xs,
+  },
+}));
+
 const LocalizedInput: React.FC<LocalizedInputProps> = ({
   value,
   onChangeLocalized,
   label,
   placeholder,
   multiline,
+  numberOfLines,
   required,
   requireBoth,
   error,
   disabled,
+  style,
   ...rest
 }) => {
   const { t } = useTranslation();
   const { currentLanguage: appLanguage } = useI18n();
   const [activeLang, setActiveLang] = useState<AppLanguage>(appLanguage);
-  const { styles } = useStyles(themeStyles);
+  const styles = themeStyles;
 
   useEffect(() => {
     setActiveLang(appLanguage);
@@ -75,6 +121,8 @@ const LocalizedInput: React.FC<LocalizedInputProps> = ({
     ? t('common:localizedInput.emptyLanguageHint', { fallback: t(`common:localizedInput.${fallbackLang === 'en' ? 'english' : 'russian'}`) })
     : undefined;
 
+  const flattenedStyle = StyleSheet.flatten(style) as TextStyle;
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -88,56 +136,15 @@ const LocalizedInput: React.FC<LocalizedInputProps> = ({
         multiline={multiline}
         numberOfLines={multiline ? numberOfLines : 1}
         disabled={disabled}
-        error={error}
-        hint={hint}
+        error={!!error}
+        errorText={error}
+        helperText={hint}
+        style={flattenedStyle}
         {...rest}
       />
     </View>
   );
 };
-
-const themeStyles = createStyles(theme => ({
-  container: {
-    width: '100%',
-  },
-  label: {
-    fontSize: 16,
-    color: theme.colors.text,
-    marginBottom: 8,
-  },
-  tabsContainer: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  tab: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginRight: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  activeTab: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  tabText: {
-    fontSize: 14,
-    color: theme.colors.text,
-  },
-  activeTabText: {
-    color: theme.colors.onPrimary,
-  },
-  indicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.colors.accent,
-    marginLeft: 6,
-  },
-}));
 
 export { LocalizedInput };
 export type { LocalizedInputProps };
