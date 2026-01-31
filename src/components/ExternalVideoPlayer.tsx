@@ -57,7 +57,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                     style={styles.video}
                     resizeMode={resizeMode}
                     paused={!autoPlay && !shouldPlay}
-                    controls={true}
+                    controls={showControls}
                     onProgress={(data) => {
                         if (endTime && data.currentTime >= endTime) {
                             // Can't easily pause from here without ref, but can trigger callback

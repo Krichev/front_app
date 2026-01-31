@@ -12,6 +12,7 @@ interface YouTubePlayerProps {
     onReady?: () => void;
     onStateChange?: (state: string) => void;
     onSegmentEnd?: () => void;
+    onPlayingChange?: (isPlaying: boolean) => void;
     style?: ViewStyle;
     height?: number;
 }
@@ -25,6 +26,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     onReady,
     onStateChange,
     onSegmentEnd,
+    onPlayingChange,
     style,
     height = 200,
 }) => {
@@ -51,6 +53,10 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         console.error('🎬 [YouTube] Failed to load:', videoId, error);
         setHasError(true);
     }, [videoId]);
+
+    useEffect(() => {
+        onPlayingChange?.(playing);
+    }, [playing, onPlayingChange]);
 
     // Monitor playback time to stop at endTime
     useEffect(() => {
@@ -104,35 +110,52 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                     </TouchableOpacity>
                 </View>
             ) : (
-                <YoutubePlayer
-                    key={replayKey}
-                    ref={playerRef}
-                    height={height}
-                    play={playing}
-                    videoId={videoId}
-                    onChangeState={handleStateChange}
-                    onReady={handleReady}
-                                    onError={handleError}
-                                    webViewProps={{
-                                        allowsInlineMediaPlayback: true,
-                                        mediaPlaybackRequiresUserAction: false,
-                                        javaScriptEnabled: true,
-                                        domStorageEnabled: true,
-                                        mixedContentMode: 'compatibility',
-                                        scrollEnabled: false,
-                                        bounces: false,
-                                        overScrollMode: 'never',
-                                        onError: () => setHasError(true),
-                                    }}
-                                    webViewStyle={{ overflow: 'hidden' }}
-                                    initialPlayerParams={{
-                                        start: startTime,
-                                        end: endTime,
-                                        rel: false,
-                                        modestbranding: true,
-                                        controls: showControls ? 1 : 0,
-                                    }}
-                                />            )}
+                <>
+                    <YoutubePlayer
+                        key={replayKey}
+                        ref={playerRef}
+                        height={height}
+                        play={playing}
+                        videoId={videoId}
+                        onChangeState={handleStateChange}
+                        onReady={handleReady}
+                        onError={handleError}
+                        webViewStyle={{ overflow: 'hidden' }}
+                        webViewProps={{
+                            allowsInlineMediaPlayback: true,
+                            mediaPlaybackRequiresUserAction: !autoPlay,
+                            javaScriptEnabled: true,
+                            domStorageEnabled: true,
+                            mixedContentMode: 'compatibility',
+                            scrollEnabled: false,
+                            bounces: false,
+                            overScrollMode: 'never',
+                            nestedScrollEnabled: false,
+                            onError: () => setHasError(true),
+                        }}
+                        initialPlayerParams={{
+                            start: startTime,
+                            end: endTime,
+                            rel: false,
+                            modestbranding: true,
+                            controls: showControls,
+                            preventFullScreen: !showControls,
+                        }}
+                    />
+                    {/* Custom play/pause overlay when YouTube controls are hidden */}
+                    {!showControls && !playing && isReady && !hasError && (
+                        <TouchableOpacity
+                            style={styles.customPlayOverlay}
+                            onPress={() => setPlaying(true)}
+                            activeOpacity={0.8}
+                        >
+                            <View style={styles.customPlayButton}>
+                                <MaterialCommunityIcons name="play" size={48} color="#fff" />
+                            </View>
+                        </TouchableOpacity>
+                    )}
+                </>
+            )}
         </View>
     );
 };
@@ -176,6 +199,22 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
+    },
+    customPlayOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        zIndex: 10,
+    },
+    customPlayButton: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingLeft: 4,
     },
 });
 
