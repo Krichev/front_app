@@ -5,8 +5,11 @@ import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import AuthenticatedVideo from '../../../../components/AuthenticatedVideo';
 import AuthenticatedAudio from '../../../../components/AuthenticatedAudio';
+import ExternalVideoPlayer from '../../../../components/ExternalVideoPlayer';
 import { MediaType } from '../../../../services/wwwGame/questionService';
+import { MediaSourceType } from '../../../../entities/QuizState/model/types/question.types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { extractYouTubeVideoId } from '../../../../utils/youtubeUtils';
 
 interface MediaPlaybackPhaseProps {
   question: QuizQuestion;
@@ -38,10 +41,18 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
     if (mediaType && ['VIDEO', 'AUDIO'].includes(mediaType)) {
       return mediaType as MediaType;
     }
+    // Fallback to questionType for external media where questionMediaType may be null
+    const qType = q.questionType?.toUpperCase();
+    if (qType && ['VIDEO', 'AUDIO'].includes(qType)) {
+      return qType as MediaType;
+    }
     return null;
   };
 
   const mediaType = getMediaType(question);
+  const isExternalMedia = question.mediaSourceType 
+    && question.mediaSourceType !== MediaSourceType.UPLOADED
+    && question.mediaSourceType !== 'UPLOADED';
 
   return (
     <View style={styles.mediaPlaybackContainer}>
@@ -51,14 +62,28 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
 
       <View style={styles.mediaContainer}>
         {mediaType === 'VIDEO' ? (
-          <AuthenticatedVideo
-            key={replayKey}
-            questionId={Number(question.id)}
-            shouldPlay={true}
-            useNativeControls={true}
-            onEnd={handleEnd}
-            style={styles.mediaContainer}
-          />
+          isExternalMedia ? (
+            <ExternalVideoPlayer
+              key={replayKey}
+              mediaSourceType={question.mediaSourceType as MediaSourceType}
+              videoId={question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '')}
+              videoUrl={question.externalMediaUrl}
+              startTime={question.questionVideoStartTime || 0}
+              endTime={question.questionVideoEndTime}
+              autoPlay={true}
+              onSegmentEnd={handleEnd}
+              style={{ height: 250 }}
+            />
+          ) : (
+            <AuthenticatedVideo
+              key={replayKey}
+              questionId={Number(question.id)}
+              shouldPlay={true}
+              useNativeControls={true}
+              onEnd={handleEnd}
+              style={styles.mediaContainer}
+            />
+          )
         ) : (
           <AuthenticatedAudio
             key={replayKey}

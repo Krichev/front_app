@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Modal } from 'react-native';
-import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../../../shared/ui/theme';
 
 interface ExitGameModalProps {
@@ -18,8 +17,7 @@ export const ExitGameModal: React.FC<ExitGameModalProps> = ({
   onAbandon,
   isPausing
 }) => {
-  const { theme } = useAppStyles();
-  const styles = themeStyles(theme);
+  const styles = themeStyles;
 
   return (
     <Modal

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
-import {createStyles, useStyles} from '../shared/ui/theme';
+import {createStyles} from '../shared/ui/theme';
 
 interface Props {
     title: string;
@@ -10,7 +10,7 @@ interface Props {
 }
 
 const CustomButton: React.FC<Props> = ({ title, onPress }) => {
-    const styles = useStyles(themeStyles);
+    const styles = themeStyles;
     
     return (
         <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.8}>

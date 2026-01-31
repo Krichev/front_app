@@ -5,9 +5,12 @@ import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import VoiceRecorder from '../../../../components/VoiceRecorder';
 import QuestionMediaViewer from '../../../../screens/CreateWWWQuestScreen/components/QuestionMediaViewer';
+import ExternalVideoPlayer from '../../../../components/ExternalVideoPlayer';
 import { MediaType } from '../../../../services/wwwGame/questionService';
+import { MediaSourceType } from '../../../../entities/QuizState/model/types/question.types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AudioChallengeContainer } from '../../../../screens/components/audio/AudioChallengeContainer';
+import { extractYouTubeVideoId } from '../../../../utils/youtubeUtils';
 
 interface DiscussionPhaseProps {
   question: QuizQuestion;
@@ -47,6 +50,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
     if (mediaType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mediaType)) {
       return mediaType as MediaType;
     }
+    // Fallback to questionType for external media where questionMediaType may be null
     const qType = q.questionType?.toUpperCase();
     if (qType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(qType)) {
       return qType as MediaType;
@@ -55,7 +59,12 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
   };
 
   const mediaType = getMediaType(question);
-  const showMedia = !!mediaType && !isAudioChallenge && !!question.questionMediaId;
+  const hasUploadedMedia = !!question.questionMediaId;
+  const hasExternalMedia = !!question.mediaSourceType 
+      && question.mediaSourceType !== MediaSourceType.UPLOADED
+      && question.mediaSourceType !== 'UPLOADED'
+      && (!!question.externalMediaUrl || !!question.externalMediaId);
+  const showMedia = !!mediaType && !isAudioChallenge && (hasUploadedMedia || hasExternalMedia);
 
   return (
     <View style={styles.container}>
@@ -98,12 +107,24 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                    mediaType === 'VIDEO' ? 'Watch the video' : 'View the image'}
                 </Text>
               </View>
-              <QuestionMediaViewer
-                questionId={Number(question.id)}
-                mediaType={mediaType as MediaType}
-                height={mediaType === 'AUDIO' ? 80 : 200}
-                enableFullscreen={mediaType !== 'AUDIO'}
-              />
+              {hasExternalMedia && mediaType === 'VIDEO' ? (
+                <ExternalVideoPlayer
+                  mediaSourceType={question.mediaSourceType as MediaSourceType}
+                  videoId={question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '')}
+                  videoUrl={question.externalMediaUrl}
+                  startTime={question.questionVideoStartTime || 0}
+                  endTime={question.questionVideoEndTime}
+                  autoPlay={false}
+                  style={{ height: 200 }}
+                />
+              ) : (
+                <QuestionMediaViewer
+                  questionId={Number(question.id)}
+                  mediaType={mediaType as MediaType}
+                  height={mediaType === 'AUDIO' ? 80 : 200}
+                  enableFullscreen={mediaType !== 'AUDIO'}
+                />
+              )}
             </View>
           )}
           <Text style={styles.text}>{question.question}</Text>

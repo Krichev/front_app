@@ -1,6 +1,7 @@
 import React, {useCallback, useRef, useState, useEffect} from 'react';
-import {View, ViewStyle, StyleSheet} from 'react-native';
+import {View, ViewStyle, StyleSheet, Text, TouchableOpacity} from 'react-native';
 import YoutubePlayer, {YoutubeIframeRef} from 'react-native-youtube-iframe';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface YouTubePlayerProps {
     videoId: string;
@@ -28,6 +29,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const playerRef = useRef<YoutubeIframeRef>(null);
     const [playing, setPlaying] = useState(autoPlay);
     const [isReady, setIsReady] = useState(false);
+    const [hasError, setHasError] = useState(false);
+    const [replayKey, setReplayKey] = useState(0);
 
     const handleStateChange = useCallback((state: string) => {
         if (state === 'ended') {
@@ -41,6 +44,11 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         setIsReady(true);
         if (onReady) onReady();
     }, [onReady]);
+
+    const handleError = useCallback((error: any) => {
+        console.error('🎬 [YouTube] Failed to load:', videoId, error);
+        setHasError(true);
+    }, [videoId]);
 
     // Monitor playback time to stop at endTime
     useEffect(() => {
@@ -68,22 +76,57 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         }
     }, [isReady, startTime]);
 
+    const handleRetry = () => {
+        setHasError(false);
+        setReplayKey(prev => prev + 1);
+    };
+
     return (
         <View style={[styles.container, style]}>
-            <YoutubePlayer
-                ref={playerRef}
-                height={height}
-                play={playing}
-                videoId={videoId}
-                onChangeState={handleStateChange}
-                onReady={handleReady}
-                initialPlayerParams={{
-                    start: startTime,
-                    end: endTime, // YouTube API supports 'end' parameter but manual check is safer for precise control
-                    rel: false, // Don't show related videos
-                    modestbranding: true,
-                }}
-            />
+            {hasError ? (
+                <View style={[styles.errorContainer, { height }]}>
+                    <MaterialCommunityIcons name="youtube" size={48} color="#FF0000" />
+                    <Text style={styles.errorText}>YouTube video unavailable</Text>
+                    <Text style={styles.errorSubtext}>Video ID: {videoId}</Text>
+                    {startTime > 0 && (
+                        <Text style={styles.errorSubtext}>
+                            Segment: {startTime}s - {endTime || 'end'}
+                        </Text>
+                    )}
+                    <TouchableOpacity 
+                        style={styles.retryButton}
+                        onPress={handleRetry}
+                    >
+                        <MaterialCommunityIcons name="refresh" size={16} color="#fff" />
+                        <Text style={styles.retryText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <YoutubePlayer
+                    key={replayKey}
+                    ref={playerRef}
+                    height={height}
+                    play={playing}
+                    videoId={videoId}
+                    onChangeState={handleStateChange}
+                    onReady={handleReady}
+                    onError={handleError}
+                    webViewProps={{
+                        allowsInlineMediaPlayback: true,
+                        mediaPlaybackRequiresUserAction: false,
+                        javaScriptEnabled: true,
+                        domStorageEnabled: true,
+                        mixedContentMode: 'compatibility',
+                        onError: () => setHasError(true),
+                    }}
+                    initialPlayerParams={{
+                        start: startTime,
+                        end: endTime,
+                        rel: false,
+                        modestbranding: true,
+                    }}
+                />
+            )}
         </View>
     );
 };
@@ -94,6 +137,39 @@ const styles = StyleSheet.create({
         backgroundColor: '#000',
         borderRadius: 8,
         overflow: 'hidden',
+    },
+    errorContainer: {
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#1a1a1a',
+        padding: 20,
+    },
+    errorText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginTop: 12,
+    },
+    errorSubtext: {
+        color: '#aaa',
+        fontSize: 12,
+        marginTop: 4,
+    },
+    retryButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#444',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginTop: 16,
+        gap: 8,
+    },
+    retryText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
     },
 });
 

@@ -190,7 +190,21 @@ const WWWGamePlayScreen: React.FC = () => {
       
       // Check for media
       const mediaType = q.questionMediaType || q.questionType;
-      const hasMedia = ['VIDEO', 'AUDIO'].includes(mediaType as string) && !!q.questionMediaId;
+      const hasUploadedMedia = ['VIDEO', 'AUDIO'].includes(mediaType as string) && !!q.questionMediaId;
+      const hasExternalMedia = ['VIDEO', 'AUDIO'].includes(q.questionType as string) 
+          && !!q.mediaSourceType 
+          && q.mediaSourceType !== 'UPLOADED'
+          && (!!q.externalMediaUrl || !!q.externalMediaId);
+      const hasMedia = hasUploadedMedia || hasExternalMedia;
+
+      console.log('🎮 [Orchestration] Question media detection:', { 
+        questionId: q.id,
+        questionType: q.questionType, 
+        mediaType, 
+        hasUploadedMedia, 
+        hasExternalMedia, 
+        mediaSourceType: q.mediaSourceType 
+      });
 
       if (isAudioChallenge) {
          actions.startDiscussion(configuredRoundTime);

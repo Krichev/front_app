@@ -33,6 +33,7 @@ export const QuestionPhase: React.FC<QuestionPhaseProps> = ({
     if (mediaType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mediaType)) {
       return mediaType as MediaType;
     }
+    // Fallback to questionType for external media where questionMediaType may be null
     const qType = q.questionType?.toUpperCase();
     if (qType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(qType)) {
       return qType as MediaType;
@@ -41,7 +42,8 @@ export const QuestionPhase: React.FC<QuestionPhaseProps> = ({
   };
 
   const mediaType = getMediaType(question);
-  const showMedia = !!mediaType && !isAudioChallenge && !!question.questionMediaId;
+  const hasExternalMedia = !!question.externalMediaUrl || !!question.externalMediaId;
+  const showMedia = !!mediaType && !isAudioChallenge && (!!question.questionMediaId || hasExternalMedia);
 
   return (
     <View style={styles.container}>
