@@ -412,7 +412,11 @@ export const quizApi = createApi({
                     };
                 }
             },
-            invalidatesTags: [{ type: 'QuizQuestion', id: 'USER_LIST' }, 'Topics'],
+            invalidatesTags: [
+                { type: 'QuizQuestion', id: 'USER_LIST' },
+                { type: 'QuizQuestion', id: 'LIST' },
+                'Topics'
+            ],
         }),
 
         /**

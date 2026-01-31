@@ -100,8 +100,6 @@ export const useQuestionsManager = () => {
         size: 100,
         sortBy: 'createdAt',
         sortDirection: 'DESC',
-    }, {
-        skip: questionSource !== 'user',
     });
 
     const userQuestions = userQuestionsResponse?.content ?? [];
@@ -243,9 +241,8 @@ export const useQuestionsManager = () => {
                 difficulty: data.difficulty,
                 topic: data.topic,
                 additionalInfo: data.additionalInfo,
-                questionLocalized: data.questionLocalized,
-                answerLocalized: data.answerLocalized,
-                additionalInfoLocalized: data.additionalInfoLocalized,
+                // NOTE: questionLocalized/answerLocalized/additionalInfoLocalized intentionally 
+                // NOT sent — backend DTO does not support localized fields yet.
                 visibility: QuestionVisibility.PRIVATE,
                 questionType: data.questionType,
                 // External Media Fields
@@ -278,11 +275,14 @@ export const useQuestionsManager = () => {
                 mediaId: result.questionMediaId,
             });
 
-            Alert.alert('Success', 'Question created successfully!');
+            Alert.alert('Success', 'Question created! Switched to "My Questions" to show it.');
 
-            if (questionSource === 'user') {
-                await refetchUserQuestions();
-            }
+            // Always refresh both question sources after creation
+            await refetchUserQuestions();
+            await loadAppQuestions();
+
+            // Auto-switch to "user" tab to show the newly created question
+            setQuestionSource('user');
 
             return result;
         } catch (error) {

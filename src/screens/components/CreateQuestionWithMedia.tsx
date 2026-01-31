@@ -386,13 +386,12 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 await QuestionService.updateUserQuestion(existingQuestion.id, {
                     question: getLocalizedValue(questionText, currentLanguage),
                     answer: getLocalizedValue(answer, currentLanguage),
-                    questionLocalized: questionText,
-                    answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
                     additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
-                    additionalInfoLocalized: additionalInfo,
                     visibility,
+                    // NOTE: questionLocalized/answerLocalized/additionalInfoLocalized intentionally 
+                    // NOT sent — backend DTO does not support localized fields yet.
                 });
 
                 Alert.alert(t('userQuestions.successTitle'), t('userQuestions.updateSuccess'));
@@ -401,14 +400,13 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 const questionData: any = {
                     question: getLocalizedValue(questionText, currentLanguage),
                     answer: getLocalizedValue(answer, currentLanguage),
-                    questionLocalized: questionText,
-                    answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
                     additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
-                    additionalInfoLocalized: additionalInfo,
                     visibility,
                     questionType,
+                    // NOTE: questionLocalized/answerLocalized/additionalInfoLocalized intentionally 
+                    // NOT sent — backend DTO does not support localized fields yet.
                 };
 
                 // Add media info if available for IMAGE/VIDEO
