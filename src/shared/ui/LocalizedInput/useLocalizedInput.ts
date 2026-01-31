@@ -13,10 +13,7 @@ export const useLocalizedInput = (initialValue: LocalizedString = EMPTY_LOCALIZE
   
   const getCurrentValue = () => value[currentLanguage] || value.en || value.ru;
   
-  const isValid = (requireBoth: boolean = false) => {
-    if (requireBoth) {
-      return !!value.en.trim() && !!value.ru.trim();
-    }
+  const isValid = () => {
     return hasAtLeastOneLanguage(value);
   };
   

@@ -19,16 +19,8 @@ const en = {
         noResults: 'No results found',
         close: 'Close',
         localizedInput: {
-            english: 'EN',
-            russian: 'RU',
             fillAtLeastOne: 'Please fill in at least one language',
             fillBothLanguages: 'Please fill in both languages',
-            emptyLanguageHint: 'Empty - will use {{fallback}} version',
-            switchToRussianKeyboard: 'Switch your keyboard to Russian (🇷🇺) for Cyrillic input',
-            switchToEnglishKeyboard: 'Switch your keyboard to English (🇺🇸)',
-            mismatchLatinOnRu: 'This looks like English text.',
-            mismatchCyrillicOnEn: 'This looks like Russian text.',
-            tapToSwitch: 'Tap to switch tab',
         },
     },
     createQuest: {
