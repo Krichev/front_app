@@ -78,6 +78,19 @@ export const useQuestCreator = () => {
         selectedQuestions: BaseQuestionForQuest[]
     ): Promise<{ success: boolean; sessionId?: string; challengeId?: string }> => {
         try {
+            const titleValue = getLocalizedValue(title, currentLanguage);
+            const descriptionValue = getLocalizedValue(description, currentLanguage);
+
+            if (!titleValue.trim()) {
+                Alert.alert('Validation Error', 'Title is required');
+                return { success: false };
+            }
+
+            if (!descriptionValue.trim()) {
+                Alert.alert('Validation Error', 'Description is required');
+                return { success: false };
+            }
+
             console.log('Creating quest with config:', quizConfig);
 
             // Step 1: Map UI config to backend format

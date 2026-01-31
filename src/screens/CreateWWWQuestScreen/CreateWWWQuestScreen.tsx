@@ -30,6 +30,7 @@ import QuestionTypeSelectorModal from './components/QuestionTypeSelectorModal';
 import {QuestionCategory} from './types/question.types';
 import {APIDifficulty} from '../../services/wwwGame/questionService';
 import {QuestionList} from "./index.ts";
+import { isLocalizedStringEmpty } from '../../shared/types/localized';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -83,6 +84,22 @@ const CreateWWWQuestScreen = () => {
     };
 
     const handleCreateQuest = async () => {
+        if (isLocalizedStringEmpty(questCreator.title)) {
+            Alert.alert(
+                t('createQuest.alerts.validationError'),
+                t('createQuest.alerts.titleRequired')
+            );
+            return;
+        }
+
+        if (isLocalizedStringEmpty(questCreator.description)) {
+            Alert.alert(
+                t('createQuest.alerts.validationError'),
+                t('createQuest.alerts.descriptionRequired')
+            );
+            return;
+        }
+
         const selectedQuestions = questionsManager.getSelectedQuestionsArray();
 
         if (selectedQuestions.length === 0) {

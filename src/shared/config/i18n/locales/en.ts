@@ -218,6 +218,8 @@ const en = {
             validationError: 'Please fill in all required fields',
             minQuestions: 'Please select at least {{min}} questions',
             loginRequired: 'Please log in to create a quest',
+            titleRequired: 'Please enter a quest title',
+            descriptionRequired: 'Please enter a quest description',
         },
     },
     settings: {
