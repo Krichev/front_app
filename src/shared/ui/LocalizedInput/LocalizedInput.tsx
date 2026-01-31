@@ -20,6 +20,9 @@ interface LocalizedInputProps extends Omit<TextInputProps, 'value' | 'onChangeTe
   disabled?: boolean;
 }
 
+const LATIN_REGEX = /[a-zA-Z]/;
+const CYRILLIC_REGEX = /[а-яА-ЯёЁ]/;
+
 const themeStyles = createStyles(theme => ({
   container: {
     width: '100%',
@@ -62,6 +65,19 @@ const themeStyles = createStyles(theme => ({
     backgroundColor: theme.colors.warning.main,
     marginLeft: theme.spacing.xs,
   },
+  mismatchWarning: {
+    marginTop: theme.spacing.xs,
+    paddingVertical: 2,
+  },
+  mismatchWarningText: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.warning.main,
+  },
+  mismatchAction: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.primary.main,
+    textDecorationLine: 'underline',
+  },
 }));
 
 const LocalizedInput: React.FC<LocalizedInputProps> = ({
@@ -81,14 +97,50 @@ const LocalizedInput: React.FC<LocalizedInputProps> = ({
   const { t } = useTranslation();
   const { currentLanguage: appLanguage } = useI18n();
   const [activeLang, setActiveLang] = useState<AppLanguage>(appLanguage);
+  const [mismatchWarning, setMismatchWarning] = useState<string | undefined>();
   const styles = themeStyles;
 
   useEffect(() => {
     setActiveLang(appLanguage);
   }, [appLanguage]);
 
+  useEffect(() => {
+    setMismatchWarning(undefined);
+  }, [activeLang]);
+
   const handleTextChange = (text: string) => {
     onChangeLocalized({ ...value, [activeLang]: text });
+
+    // Detect language mismatch after 2+ chars
+    if (text.length >= 2) {
+      const hasLatin = LATIN_REGEX.test(text);
+      const hasCyrillic = CYRILLIC_REGEX.test(text);
+
+      if (activeLang === 'ru' && hasLatin && !hasCyrillic) {
+        setMismatchWarning(t('common:localizedInput.mismatchLatinOnRu'));
+      } else if (activeLang === 'en' && hasCyrillic && !hasLatin) {
+        setMismatchWarning(t('common:localizedInput.mismatchCyrillicOnEn'));
+      } else {
+        setMismatchWarning(undefined);
+      }
+    } else {
+      setMismatchWarning(undefined);
+    }
+  };
+
+  const handleAutoSwitchLang = () => {
+    const targetLang = activeLang === 'ru' ? 'en' : 'ru';
+    const currentText = value[activeLang] || '';
+
+    // Move text to the correct language slot
+    onChangeLocalized({
+      ...value,
+      [activeLang]: '', // Clear current slot
+      [targetLang]: (value[targetLang] || '') + currentText, // Append to target slot
+    });
+
+    setActiveLang(targetLang);
+    setMismatchWarning(undefined);
   };
 
   const languages: AppLanguage[] = ['en', 'ru'];
@@ -117,9 +169,16 @@ const LocalizedInput: React.FC<LocalizedInputProps> = ({
 
   const currentPlaceholder = placeholder ? placeholder[activeLang] : '';
   const fallbackLang = activeLang === 'en' ? 'ru' : 'en';
-  const hint = !value[activeLang] && value[fallbackLang] 
+  
+  const keyboardHint = activeLang === 'ru' 
+    ? t('common:localizedInput.switchToRussianKeyboard')
+    : undefined;
+
+  const fallbackHint = !value[activeLang] && value[fallbackLang] 
     ? t('common:localizedInput.emptyLanguageHint', { fallback: t(`common:localizedInput.${fallbackLang === 'en' ? 'english' : 'russian'}`) })
     : undefined;
+
+  const helperText = keyboardHint || fallbackHint;
 
   const flattenedStyle = StyleSheet.flatten(style) as TextStyle;
 
@@ -138,10 +197,17 @@ const LocalizedInput: React.FC<LocalizedInputProps> = ({
         disabled={disabled}
         error={!!error}
         errorText={error}
-        helperText={hint}
+        helperText={helperText}
         style={flattenedStyle}
         {...rest}
       />
+      {mismatchWarning && !disabled && (
+        <TouchableOpacity onPress={handleAutoSwitchLang} style={styles.mismatchWarning}>
+          <Text style={styles.mismatchWarningText}>
+            {mismatchWarning} <Text style={styles.mismatchAction}>{t('common:localizedInput.tapToSwitch')}</Text>
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
