@@ -67,6 +67,10 @@ export interface QuestionFormData {
     externalMediaUrl?: string;
     questionVideoStartTime?: number;
     questionVideoEndTime?: number;
+    answerMediaUrl?: string;
+    answerVideoStartTime?: number;
+    answerVideoEndTime?: number;
+    answerTextVerification?: string;
 }
 
 // ============================================================================
@@ -228,6 +232,8 @@ export const useQuestionsManager = () => {
                 mediaFileUri: data.mediaFile?.uri?.substring(0, 50),
                 mediaFileName: data.mediaFile?.name,
                 mediaFileType: data.mediaFile?.type,
+                hasExternalUrl: !!data.externalMediaUrl,
+                mediaSourceType: data.mediaSourceType,
             });
 
             // Build request for backend
@@ -242,6 +248,15 @@ export const useQuestionsManager = () => {
                 additionalInfoLocalized: data.additionalInfoLocalized,
                 visibility: QuestionVisibility.PRIVATE,
                 questionType: data.questionType,
+                // External Media Fields
+                mediaSourceType: data.mediaSourceType as any, // Cast if necessary or ensure types match
+                externalMediaUrl: data.externalMediaUrl,
+                questionVideoStartTime: data.questionVideoStartTime,
+                questionVideoEndTime: data.questionVideoEndTime,
+                answerMediaUrl: data.answerMediaUrl,
+                answerVideoStartTime: data.answerVideoStartTime,
+                answerVideoEndTime: data.answerVideoEndTime,
+                answerTextVerification: data.answerTextVerification,
             };
 
             console.log('🚀 [useQuestionsManager] Calling createQuestion mutation');

@@ -350,6 +350,15 @@ export const quizApi = createApi({
                     }
 
                     // Log the request
+                    console.log('📦 [createQuestionWithMedia] FormData contents:', {
+                        hasQuestionData: true,
+                        questionType: questionData.questionType,
+                        hasMediaFile: !!mediaFile,
+                        mediaFileUri: mediaFile?.uri?.substring(0, 50),
+                        hasExternalUrl: !!questionData.externalMediaUrl,
+                        mediaSourceType: questionData.mediaSourceType,
+                    });
+                    
                     console.log('🚀 [createQuestionWithMedia] Sending request:', {
                         url: 'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
                         hasToken: !!token,
