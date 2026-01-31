@@ -283,9 +283,10 @@ const WWWGamePlayScreen: React.FC = () => {
     if (!currentRound) { return; }
 
     try {
+      const answerToSubmit = state.teamAnswer.trim() || '';
       // roundId is string in QuizRound entity
       await controller.submitAnswer(Number(currentRound.id), {
-        teamAnswer: state.teamAnswer,
+        teamAnswer: answerToSubmit,
         playerWhoAnswered: state.selectedPlayer || 'Team',
         discussionNotes: state.discussionNotes,
       });

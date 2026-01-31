@@ -8,6 +8,7 @@ interface YouTubePlayerProps {
     startTime?: number;
     endTime?: number;
     autoPlay?: boolean;
+    showControls?: boolean;
     onReady?: () => void;
     onStateChange?: (state: string) => void;
     onSegmentEnd?: () => void;
@@ -20,6 +21,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     startTime = 0,
     endTime,
     autoPlay = false,
+    showControls = true,
     onReady,
     onStateChange,
     onSegmentEnd,
@@ -110,23 +112,27 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                     videoId={videoId}
                     onChangeState={handleStateChange}
                     onReady={handleReady}
-                    onError={handleError}
-                    webViewProps={{
-                        allowsInlineMediaPlayback: true,
-                        mediaPlaybackRequiresUserAction: false,
-                        javaScriptEnabled: true,
-                        domStorageEnabled: true,
-                        mixedContentMode: 'compatibility',
-                        onError: () => setHasError(true),
-                    }}
-                    initialPlayerParams={{
-                        start: startTime,
-                        end: endTime,
-                        rel: false,
-                        modestbranding: true,
-                    }}
-                />
-            )}
+                                    onError={handleError}
+                                    webViewProps={{
+                                        allowsInlineMediaPlayback: true,
+                                        mediaPlaybackRequiresUserAction: false,
+                                        javaScriptEnabled: true,
+                                        domStorageEnabled: true,
+                                        mixedContentMode: 'compatibility',
+                                        scrollEnabled: false,
+                                        bounces: false,
+                                        overScrollMode: 'never',
+                                        onError: () => setHasError(true),
+                                    }}
+                                    webViewStyle={{ overflow: 'hidden' }}
+                                    initialPlayerParams={{
+                                        start: startTime,
+                                        end: endTime,
+                                        rel: false,
+                                        modestbranding: true,
+                                        controls: showControls ? 1 : 0,
+                                    }}
+                                />            )}
         </View>
     );
 };

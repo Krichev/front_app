@@ -119,6 +119,7 @@ export const phaseStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background.tertiary,
       borderRadius: theme.layout.borderRadius.lg,
       overflow: 'hidden',
+      width: '100%',
     },
     mediaHeader: {
       flexDirection: 'row',

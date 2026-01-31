@@ -108,15 +108,17 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                 </Text>
               </View>
               {hasExternalMedia && mediaType === 'VIDEO' ? (
-                <ExternalVideoPlayer
-                  mediaSourceType={question.mediaSourceType as MediaSourceType}
-                  videoId={question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '')}
-                  videoUrl={question.externalMediaUrl}
-                  startTime={question.questionVideoStartTime || 0}
-                  endTime={question.questionVideoEndTime}
-                  autoPlay={false}
-                  style={{ height: 200 }}
-                />
+                <View style={{ width: '100%', aspectRatio: 16/9, overflow: 'hidden', borderRadius: 8 }}>
+                  <ExternalVideoPlayer
+                    mediaSourceType={question.mediaSourceType as MediaSourceType}
+                    videoId={question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '')}
+                    videoUrl={question.externalMediaUrl}
+                    startTime={question.questionVideoStartTime || 0}
+                    endTime={question.questionVideoEndTime}
+                    autoPlay={false}
+                    showControls={true}
+                  />
+                </View>
               ) : (
                 <QuestionMediaViewer
                   questionId={Number(question.id)}

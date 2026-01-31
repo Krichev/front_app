@@ -29,7 +29,9 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
 
   const handleEnd = useCallback(() => {
     setPlaybackEnded(true);
-  }, []);
+    // Auto-transition to discussion phase after video ends
+    onPlaybackComplete();
+  }, [onPlaybackComplete]);
 
   const handleReplay = useCallback(() => {
     setPlaybackEnded(false);
@@ -60,7 +62,7 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
         {mediaType === 'VIDEO' ? 'Watch the Video' : 'Listen to the Audio'}
       </Text>
 
-      <View style={styles.mediaContainer}>
+      <View style={[styles.mediaContainer, mediaType === 'VIDEO' && { aspectRatio: 16/9 }]}>
         {mediaType === 'VIDEO' ? (
           isExternalMedia ? (
             <ExternalVideoPlayer
@@ -71,8 +73,7 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
               startTime={question.questionVideoStartTime || 0}
               endTime={question.questionVideoEndTime}
               autoPlay={true}
-              onSegmentEnd={handleEnd}
-              style={{ height: 250 }}
+              showControls={false}
             />
           ) : (
             <AuthenticatedVideo

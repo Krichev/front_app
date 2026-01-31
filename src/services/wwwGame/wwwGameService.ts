@@ -46,6 +46,10 @@ export class WWWGameService {
      */
     static validateAnswer(teamAnswer: string, correctAnswer: string): boolean {
         if (!teamAnswer || !correctAnswer) return false;
+        
+        const trimmedTeam = teamAnswer.trim();
+        const trimmedCorrect = correctAnswer.trim();
+        if (!trimmedTeam || !trimmedCorrect) return false;
 
         // Normalize strings for comparison (trim whitespace, remove punctuation, lowercase)
         const normalizeForComparison = (text: string): string => {

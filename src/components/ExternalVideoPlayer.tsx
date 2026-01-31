@@ -12,6 +12,7 @@ interface ExternalVideoPlayerProps {
     startTime?: number;
     endTime?: number;
     autoPlay?: boolean;
+    showControls?: boolean;
     style?: ViewStyle;
     onSegmentEnd?: () => void;
     // Props for AuthenticatedVideo/Video
@@ -26,6 +27,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
     startTime = 0,
     endTime,
     autoPlay = false,
+    showControls = true,
     style,
     onSegmentEnd,
     resizeMode = 'contain',
@@ -39,6 +41,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                 startTime={startTime}
                 endTime={endTime}
                 autoPlay={autoPlay || shouldPlay}
+                showControls={showControls}
                 onSegmentEnd={onSegmentEnd}
                 style={style}
             />
