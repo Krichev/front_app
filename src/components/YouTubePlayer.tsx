@@ -9,6 +9,7 @@ interface YouTubePlayerProps {
     endTime?: number;
     autoPlay?: boolean;
     showControls?: boolean;
+    hideTitle?: boolean;
     onReady?: () => void;
     onStateChange?: (state: string) => void;
     onSegmentEnd?: () => void;
@@ -23,6 +24,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     endTime,
     autoPlay = false,
     showControls = true,
+    hideTitle = false,
     onReady,
     onStateChange,
     onSegmentEnd,
@@ -101,7 +103,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                             Segment: {startTime}s - {endTime || 'end'}
                         </Text>
                     )}
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.retryButton}
                         onPress={handleRetry}
                     >
@@ -142,6 +144,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                             preventFullScreen: !showControls,
                         }}
                     />
+                    {/* Top overlay: hides YouTube title bar (title, share, playlist buttons) */}
+                    {hideTitle && (
+                        <View style={styles.titleBlockerTop} pointerEvents="none" />
+                    )}
+                    {/* Bottom overlay: hides YouTube watermark when controls are off */}
+                    {hideTitle && !showControls && (
+                        <View style={styles.titleBlockerBottom} pointerEvents="none" />
+                    )}
                     {/* Custom play/pause overlay when YouTube controls are hidden */}
                     {!showControls && !playing && isReady && !hasError && (
                         <TouchableOpacity
@@ -215,6 +225,24 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingLeft: 4,
+    },
+    titleBlockerTop: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 48,
+        backgroundColor: '#000',
+        zIndex: 5,
+    },
+    titleBlockerBottom: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 42,
+        backgroundColor: '#000',
+        zIndex: 5,
     },
 });
 

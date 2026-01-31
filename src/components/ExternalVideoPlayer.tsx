@@ -13,6 +13,7 @@ interface ExternalVideoPlayerProps {
     endTime?: number;
     autoPlay?: boolean;
     showControls?: boolean;
+    hideTitle?: boolean;
     style?: ViewStyle;
     onSegmentEnd?: () => void;
     // Props for AuthenticatedVideo/Video
@@ -28,6 +29,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
     endTime,
     autoPlay = false,
     showControls = true,
+    hideTitle = false,
     style,
     onSegmentEnd,
     resizeMode = 'contain',
@@ -42,6 +44,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                 endTime={endTime}
                 autoPlay={autoPlay || shouldPlay}
                 showControls={showControls}
+                hideTitle={hideTitle}
                 onSegmentEnd={onSegmentEnd}
                 style={style}
             />
@@ -60,16 +63,12 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                     controls={showControls}
                     onProgress={(data) => {
                         if (endTime && data.currentTime >= endTime) {
-                            // Can't easily pause from here without ref, but can trigger callback
                             if (onSegmentEnd) onSegmentEnd();
                         }
                     }}
-                    // Basic start time handling (seek on load would be needed for true start time)
                     onLoad={(data) => {
                         if (startTime > 0) {
-                            // Need ref to seek. 
-                            // For simplicity in this iteration, we might assume full playback or 
-                            // require a ref-based implementation if precise start is critical for direct files.
+                            // Need ref to seek — future enhancement
                         }
                     }}
                 />
@@ -85,8 +84,6 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                 style={style}
                 resizeMode={resizeMode}
                 shouldPlay={autoPlay || shouldPlay}
-                // AuthenticatedVideo doesn't support segment timing out of the box yet
-                // We'd need to enhance it or accept that uploaded videos play fully for now
             />
         );
     }

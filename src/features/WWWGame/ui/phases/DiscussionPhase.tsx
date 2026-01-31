@@ -117,6 +117,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                     endTime={question.questionVideoEndTime}
                     autoPlay={false}
                     showControls={true}
+                    hideTitle={true}
                   />
                 </View>
               ) : (

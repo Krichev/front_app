@@ -67,13 +67,15 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
           isExternalMedia ? (
             <ExternalVideoPlayer
               key={replayKey}
-              mediaSourceType={question.mediaSourceType as MediaSourceType}
-              videoId={question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '')}
-              videoUrl={question.externalMediaUrl}
-              startTime={question.questionVideoStartTime || 0}
+              mediaSourceType={mediaSourceType}
+              videoId={question.externalMediaId}
+              videoUrl={question.externalMediaUrl || question.questionMediaUrl}
+              startTime={question.questionVideoStartTime}
               endTime={question.questionVideoEndTime}
+              onSegmentEnd={handleEnd}
               autoPlay={true}
               showControls={false}
+              hideTitle={true}
             />
           ) : (
             <AuthenticatedVideo
