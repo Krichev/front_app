@@ -70,6 +70,8 @@ const VideoQuestionDisplay: React.FC<VideoQuestionDisplayProps> = ({
                 shouldPlay={isPlaying}
                 autoPlay={false} // Managed by isPlaying
                 onSegmentEnd={handleSegmentEnd}
+                showControls={false}
+                hideTitle={true}
                 style={styles.videoPlayer}
             />
 

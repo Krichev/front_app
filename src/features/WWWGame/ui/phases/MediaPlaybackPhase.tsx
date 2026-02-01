@@ -83,6 +83,8 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
               endTime={question.questionVideoEndTime}
               onSegmentEnd={handleEnd}
               autoPlay={true}
+              showControls={false}
+              hideTitle={true}
             />
           ) : (
             <AuthenticatedVideo

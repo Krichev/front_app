@@ -38,6 +38,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const [hasError, setHasError] = useState(false);
     const [replayKey, setReplayKey] = useState(0);
 
+    // Calculate crop values if hideTitle is true
+    // Crop ~18% from top to hide title bar, ~12% from bottom to hide watermark
+    const topCropRatio = hideTitle ? 0.18 : 0;
+    const bottomCropRatio = hideTitle ? 0.12 : 0;
+    const totalExtraHeight = height * (topCropRatio + bottomCropRatio);
+    const enlargedHeight = height + totalExtraHeight;
+    const topOffset = -(height * topCropRatio);
+
     const handleStateChange = useCallback((state: string) => {
         if (state === 'ended') {
             setPlaying(false);
@@ -55,6 +63,10 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         console.error('🎬 [YouTube] Failed to load:', videoId, error);
         setHasError(true);
     }, [videoId]);
+
+    const togglePlayPause = useCallback(() => {
+        setPlaying(prev => !prev);
+    }, []);
 
     useEffect(() => {
         onPlayingChange?.(playing);
@@ -92,7 +104,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     };
 
     return (
-        <View style={[styles.container, style]}>
+        <View style={[styles.outerContainer, style, { height }]}>
             {hasError ? (
                 <View style={[styles.errorContainer, { height }]}>
                     <MaterialCommunityIcons name="youtube" size={48} color="#FF0000" />
@@ -113,55 +125,55 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 </View>
             ) : (
                 <>
-                    <YoutubePlayer
-                        key={replayKey}
-                        ref={playerRef}
-                        height={height}
-                        play={playing}
-                        videoId={videoId}
-                        onChangeState={handleStateChange}
-                        onReady={handleReady}
-                        onError={handleError}
-                        webViewStyle={{ overflow: 'hidden' }}
-                        webViewProps={{
-                            allowsInlineMediaPlayback: true,
-                            mediaPlaybackRequiresUserAction: !autoPlay,
-                            javaScriptEnabled: true,
-                            domStorageEnabled: true,
-                            mixedContentMode: 'compatibility',
-                            scrollEnabled: false,
-                            bounces: false,
-                            overScrollMode: 'never',
-                            nestedScrollEnabled: false,
-                            onError: () => setHasError(true),
-                        }}
-                        initialPlayerParams={{
-                            start: startTime,
-                            end: endTime,
-                            rel: false,
-                            modestbranding: true,
-                            controls: showControls,
-                            preventFullScreen: !showControls,
-                        }}
-                    />
-                    {/* Top overlay: hides YouTube title bar (title, share, playlist buttons) */}
-                    {hideTitle && (
-                        <View style={styles.titleBlockerTop} pointerEvents="none" />
-                    )}
-                    {/* Bottom overlay: hides YouTube watermark when controls are off */}
-                    {hideTitle && !showControls && (
-                        <View style={styles.titleBlockerBottom} pointerEvents="none" />
-                    )}
+                    <View style={{ height: enlargedHeight, marginTop: topOffset }}>
+                        <YoutubePlayer
+                            key={replayKey}
+                            ref={playerRef}
+                            height={enlargedHeight}
+                            play={playing}
+                            videoId={videoId}
+                            onChangeState={handleStateChange}
+                            onReady={handleReady}
+                            onError={handleError}
+                            webViewStyle={{ overflow: 'hidden' }}
+                            webViewProps={{
+                                allowsInlineMediaPlayback: true,
+                                mediaPlaybackRequiresUserAction: !autoPlay,
+                                javaScriptEnabled: true,
+                                domStorageEnabled: true,
+                                mixedContentMode: 'compatibility',
+                                scrollEnabled: false,
+                                bounces: false,
+                                overScrollMode: 'never',
+                                nestedScrollEnabled: false,
+                                onError: () => setHasError(true),
+                            }}
+                            initialPlayerParams={{
+                                start: startTime,
+                                end: endTime,
+                                rel: false,
+                                controls: hideTitle ? false : showControls,
+                                preventFullScreen: hideTitle || !showControls,
+                            }}
+                        />
+                    </View>
+
                     {/* Custom play/pause overlay when YouTube controls are hidden */}
-                    {!showControls && !playing && isReady && !hasError && (
+                    {(!showControls || hideTitle) && isReady && !hasError && (
                         <TouchableOpacity
-                            style={styles.customPlayOverlay}
-                            onPress={() => setPlaying(true)}
-                            activeOpacity={0.8}
+                            style={styles.playPauseOverlay}
+                            onPress={togglePlayPause}
+                            activeOpacity={1}
                         >
-                            <View style={styles.customPlayButton}>
-                                <MaterialCommunityIcons name="play" size={48} color="#fff" />
-                            </View>
+                            {!playing && (
+                                <View style={styles.customPlayButton}>
+                                    <MaterialCommunityIcons name="play" size={48} color="#fff" />
+                                </View>
+                            )}
+                            {playing && (
+                                // Invisible touch area when playing to allow pause
+                                <View style={StyleSheet.absoluteFill} />
+                            )}
                         </TouchableOpacity>
                     )}
                 </>
@@ -171,7 +183,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 };
 
 const styles = StyleSheet.create({
-    container: {
+    outerContainer: {
         width: '100%',
         backgroundColor: '#000',
         borderRadius: 8,
@@ -210,11 +222,10 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    customPlayOverlay: {
+    playPauseOverlay: {
         ...StyleSheet.absoluteFillObject,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.3)',
         zIndex: 10,
     },
     customPlayButton: {
@@ -225,24 +236,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingLeft: 4,
-    },
-    titleBlockerTop: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 48,
-        backgroundColor: '#000',
-        zIndex: 5,
-    },
-    titleBlockerBottom: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: 42,
-        backgroundColor: '#000',
-        zIndex: 5,
     },
 });
 
