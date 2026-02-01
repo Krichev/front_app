@@ -122,8 +122,8 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                         videoUrl={question.externalMediaUrl}
                                         startTime={question.questionVideoStartTime || 0}
                                         endTime={question.questionVideoEndTime}
+                                        onlyPlayButton={true}
                                         autoPlay={false}
-
                                         showControls={false}
                                         hideTitle={true}
                                     />

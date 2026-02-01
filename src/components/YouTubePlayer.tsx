@@ -1,5 +1,15 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
+import {
+    LayoutChangeEvent,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+    ActivityIndicator,
+    Animated,
+    Image,
+} from 'react-native';
 import YoutubePlayer, {YoutubeIframeRef} from 'react-native-youtube-iframe';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -10,7 +20,7 @@ interface YouTubePlayerProps {
     autoPlay?: boolean;
     showControls?: boolean;
     hideTitle?: boolean;
-    onlyPlayButton?: boolean; // ✅ NEW
+    onlyPlayButton?: boolean;
     onReady?: () => void;
     onStateChange?: (state: string) => void;
     onSegmentEnd?: () => void;
@@ -25,7 +35,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          autoPlay = false,
                                                          showControls = false,
                                                          hideTitle = true,
-                                                         onlyPlayButton = false, // ✅ NEW
+                                                         onlyPlayButton = false,
                                                          onReady,
                                                          onStateChange,
                                                          onSegmentEnd,
@@ -33,11 +43,15 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          style,
                                                      }) => {
     const playerRef = useRef<YoutubeIframeRef>(null);
-    const [playing, setPlaying] = useState(autoPlay);
+    const [playing, setPlaying] = useState(false); // Start false to prevent flash
     const [isReady, setIsReady] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [replayKey, setReplayKey] = useState(0);
     const [playerHeight, setPlayerHeight] = useState<number>(0);
+
+    // Loading overlay state
+    const overlayOpacity = useRef(new Animated.Value(1)).current;
+    const [showOverlay, setShowOverlay] = useState(true);
 
     const handleLayout = (e: LayoutChangeEvent) => {
         const { height } = e.nativeEvent.layout;
@@ -59,13 +73,32 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     const handleReady = useCallback(() => {
         setIsReady(true);
+        if (autoPlay) {
+            // Small delay to ensure iframe is fully rendered before starting playback
+            setTimeout(() => setPlaying(true), 150);
+        }
         onReady?.();
-    }, [onReady]);
+    }, [onReady, autoPlay]);
 
     const handleError = useCallback((error: any) => {
         console.error('🎬 [YouTube] Failed to load:', videoId, error);
         setHasError(true);
     }, [videoId]);
+
+    // Fade out overlay when ready
+    useEffect(() => {
+        if (isReady && showOverlay) {
+            Animated.timing(overlayOpacity, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }).start(({ finished }) => {
+                if (finished) {
+                    setShowOverlay(false);
+                }
+            });
+        }
+    }, [isReady, showOverlay, overlayOpacity]);
 
     // Normal toggle (when onlyPlayButton = false)
     const togglePlayPause = useCallback(() => {
@@ -107,6 +140,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     const handleRetry = () => {
         setHasError(false);
+        setIsReady(false);
+        setShowOverlay(true);
+        overlayOpacity.setValue(1);
         setReplayKey(prev => prev + 1);
     };
 
@@ -151,12 +187,26 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     start: startTime,
                                     end: endTime,
                                     rel: false,
-                                    controls: showControls, // ✅ force hide if onlyPlayButton
+                                    controls: showControls,
                                     iv_load_policy: 3,
                                 }}
                             />
                         )}
                     </View>
+
+                    {/* Loading overlay — hides YouTube iframe initialization flash */}
+                    {showOverlay && !hasError && (
+                        <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
+                            <Image
+                                source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
+                                style={StyleSheet.absoluteFill}
+                                resizeMode="cover"
+                            />
+                            <View style={styles.loadingOverlayDimmed}>
+                                <ActivityIndicator size="large" color="#fff" />
+                            </View>
+                        </Animated.View>
+                    )}
 
                     {/* Custom play overlay */}
                     {!showControls && isReady && !hasError && (
@@ -238,6 +288,20 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         paddingLeft: 4,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 20,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    loadingOverlayDimmed: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 });
 
