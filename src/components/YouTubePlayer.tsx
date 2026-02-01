@@ -1,5 +1,5 @@
-import React, {useCallback, useRef, useState, useEffect} from 'react';
-import {View, ViewStyle, StyleSheet, Text, TouchableOpacity} from 'react-native';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
 import YoutubePlayer, {YoutubeIframeRef} from 'react-native-youtube-iframe';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -15,48 +15,49 @@ interface YouTubePlayerProps {
     onSegmentEnd?: () => void;
     onPlayingChange?: (isPlaying: boolean) => void;
     style?: ViewStyle;
-    height?: number;
 }
 
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
-    videoId,
-    startTime = 0,
-    endTime,
-    autoPlay = false,
-    showControls = true,
-    hideTitle = false,
-    onReady,
-    onStateChange,
-    onSegmentEnd,
-    onPlayingChange,
-    style,
-    height = 200,
-}) => {
+                                                         videoId,
+                                                         startTime = 0,
+                                                         endTime,
+                                                         autoPlay = false,
+                                                         showControls = false,
+                                                         hideTitle = true,
+                                                         onReady,
+                                                         onStateChange,
+                                                         onSegmentEnd,
+                                                         onPlayingChange,
+                                                         style,
+                                                     }) => {
     const playerRef = useRef<YoutubeIframeRef>(null);
     const [playing, setPlaying] = useState(autoPlay);
     const [isReady, setIsReady] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [replayKey, setReplayKey] = useState(0);
+    const [playerHeight, setPlayerHeight] = useState<number>(0);
 
-    // Calculate crop values if hideTitle is true
-    // Crop ~18% from top to hide title bar, ~12% from bottom to hide watermark
-    const topCropRatio = hideTitle ? 0.18 : 0;
-    const bottomCropRatio = hideTitle ? 0.12 : 0;
-    const totalExtraHeight = height * (topCropRatio + bottomCropRatio);
-    const enlargedHeight = height + totalExtraHeight;
-    const topOffset = -(height * topCropRatio);
-
-    const handleStateChange = useCallback((state: string) => {
-        if (state === 'ended') {
-            setPlaying(false);
-            if (onSegmentEnd) onSegmentEnd();
+    const handleLayout = (e: LayoutChangeEvent) => {
+        const { height } = e.nativeEvent.layout;
+        if (height && height !== playerHeight) {
+            setPlayerHeight(height);
         }
-        if (onStateChange) onStateChange(state);
-    }, [onSegmentEnd, onStateChange]);
+    };
+
+    const handleStateChange = useCallback(
+        (state: string) => {
+            if (state === 'ended') {
+                setPlaying(false);
+                onSegmentEnd?.();
+            }
+            onStateChange?.(state);
+        },
+        [onSegmentEnd, onStateChange]
+    );
 
     const handleReady = useCallback(() => {
         setIsReady(true);
-        if (onReady) onReady();
+        onReady?.();
     }, [onReady]);
 
     const handleError = useCallback((error: any) => {
@@ -72,7 +73,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         onPlayingChange?.(playing);
     }, [playing, onPlayingChange]);
 
-    // Monitor playback time to stop at endTime
+    // Stop at endTime
     useEffect(() => {
         if (!playing || !endTime || !isReady) return;
 
@@ -81,11 +82,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 const currentTime = await playerRef.current?.getCurrentTime();
                 if (currentTime && currentTime >= endTime) {
                     setPlaying(false);
-                    if (onSegmentEnd) onSegmentEnd();
+                    onSegmentEnd?.();
                 }
-            } catch (e) {
-                // Ignore errors
-            }
+            } catch {}
         }, 500);
 
         return () => clearInterval(interval);
@@ -104,62 +103,58 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     };
 
     return (
-        <View style={[styles.outerContainer, style, { height }]}>
+        <View style={[styles.outerContainer, style]}>
             {hasError ? (
-                <View style={[styles.errorContainer, { height }]}>
+                <View style={styles.errorContainer}>
                     <MaterialCommunityIcons name="youtube" size={48} color="#FF0000" />
                     <Text style={styles.errorText}>YouTube video unavailable</Text>
-                    <Text style={styles.errorSubtext}>Video ID: {videoId}</Text>
-                    {startTime > 0 && (
-                        <Text style={styles.errorSubtext}>
-                            Segment: {startTime}s - {endTime || 'end'}
-                        </Text>
-                    )}
-                    <TouchableOpacity
-                        style={styles.retryButton}
-                        onPress={handleRetry}
-                    >
+                    <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
                         <MaterialCommunityIcons name="refresh" size={16} color="#fff" />
                         <Text style={styles.retryText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
                 <>
-                    <View style={{ height: enlargedHeight, marginTop: topOffset }}>
-                        <YoutubePlayer
-                            key={replayKey}
-                            ref={playerRef}
-                            height={enlargedHeight}
-                            play={playing}
-                            videoId={videoId}
-                            onChangeState={handleStateChange}
-                            onReady={handleReady}
-                            onError={handleError}
-                            webViewStyle={{ overflow: 'hidden' }}
-                            webViewProps={{
-                                allowsInlineMediaPlayback: true,
-                                mediaPlaybackRequiresUserAction: !autoPlay,
-                                javaScriptEnabled: true,
-                                domStorageEnabled: true,
-                                mixedContentMode: 'compatibility',
-                                scrollEnabled: false,
-                                bounces: false,
-                                overScrollMode: 'never',
-                                nestedScrollEnabled: false,
-                                onError: () => setHasError(true),
-                            }}
-                            initialPlayerParams={{
-                                start: startTime,
-                                end: endTime,
-                                rel: false,
-                                controls: hideTitle ? false : showControls,
-                                preventFullScreen: hideTitle || !showControls,
-                            }}
-                        />
+                    {/* 16:9 container */}
+                    <View style={styles.videoWrapper} onLayout={handleLayout}>
+                        {playerHeight > 0 && (
+                            <YoutubePlayer
+                                key={replayKey}
+                                ref={playerRef}
+                                videoId={videoId}
+                                play={playing}
+                                onChangeState={handleStateChange}
+                                onReady={handleReady}
+                                onError={handleError}
+                                height={playerHeight} // ✅ IMPORTANT
+                                style={StyleSheet.absoluteFill}
+                                webViewStyle={{ backgroundColor: 'transparent' }}
+                                webViewProps={{
+                                    allowsInlineMediaPlayback: true,
+                                    mediaPlaybackRequiresUserAction: !autoPlay,
+                                    javaScriptEnabled: true,
+                                    domStorageEnabled: true,
+                                    scrollEnabled: false,
+                                    bounces: false,
+                                    overScrollMode: 'never',
+                                    nestedScrollEnabled: false,
+                                }}
+                                initialPlayerParams={{
+                                    start: startTime,
+                                    end: endTime,
+                                    rel: false,
+                                    modestbranding: true,
+                                    controls: showControls ? 1 : 0,
+                                    fs: 0,
+                                    iv_load_policy: 3,
+                                    cc_load_policy: 0,
+                                }}
+                            />
+                        )}
                     </View>
 
-                    {/* Custom play/pause overlay when YouTube controls are hidden */}
-                    {(!showControls || hideTitle) && isReady && !hasError && (
+                    {/* Custom play overlay */}
+                    {!showControls && isReady && !hasError && (
                         <TouchableOpacity
                             style={styles.playPauseOverlay}
                             onPress={togglePlayPause}
@@ -169,10 +164,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                 <View style={styles.customPlayButton}>
                                     <MaterialCommunityIcons name="play" size={48} color="#fff" />
                                 </View>
-                            )}
-                            {playing && (
-                                // Invisible touch area when playing to allow pause
-                                <View style={StyleSheet.absoluteFill} />
                             )}
                         </TouchableOpacity>
                     )}
@@ -189,8 +180,14 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         overflow: 'hidden',
     },
+    videoWrapper: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        backgroundColor: '#000',
+    },
     errorContainer: {
         width: '100%',
+        aspectRatio: 16 / 9,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#1a1a1a',
@@ -201,11 +198,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         marginTop: 12,
-    },
-    errorSubtext: {
-        color: '#aaa',
-        fontSize: 12,
-        marginTop: 4,
     },
     retryButton: {
         flexDirection: 'row',

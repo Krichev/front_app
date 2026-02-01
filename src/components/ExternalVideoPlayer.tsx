@@ -1,5 +1,5 @@
 import React from 'react';
-import {View, StyleSheet, ViewStyle} from 'react-native';
+import {StyleSheet, View, ViewStyle} from 'react-native';
 import {MediaSourceType} from '../entities/QuizState/model/types/question.types';
 import YouTubePlayer from './YouTubePlayer';
 import AuthenticatedVideo from './AuthenticatedVideo';
@@ -22,32 +22,33 @@ interface ExternalVideoPlayerProps {
 }
 
 const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
-    mediaSourceType,
-    videoUrl,
-    videoId,
-    startTime = 0,
-    endTime,
-    autoPlay = false,
-    showControls = true,
-    hideTitle = false,
-    style,
-    onSegmentEnd,
-    resizeMode = 'contain',
-    shouldPlay = false,
-}) => {
+                                                                     mediaSourceType,
+                                                                     videoUrl,
+                                                                     videoId,
+                                                                     startTime = 0,
+                                                                     endTime,
+                                                                     autoPlay = false,
+                                                                     showControls = true,
+                                                                     hideTitle = false,
+                                                                     style,
+                                                                     onSegmentEnd,
+                                                                     resizeMode = 'contain',
+                                                                     shouldPlay = false,
+                                                                 }) => {
     // 1. YouTube
     if (mediaSourceType === MediaSourceType.YOUTUBE && videoId) {
         return (
-            <YouTubePlayer
-                videoId={videoId}
-                startTime={startTime}
-                endTime={endTime}
-                autoPlay={autoPlay || shouldPlay}
-                showControls={showControls}
-                hideTitle={hideTitle}
-                onSegmentEnd={onSegmentEnd}
-                style={style}
-            />
+            <View style={[styles.container, style]}>
+                <YouTubePlayer
+                    videoId={videoId}
+                    startTime={startTime}
+                    endTime={endTime}
+                    autoPlay={autoPlay || shouldPlay}
+                    showControls={false} // ✅ FORCE HIDE YOUTUBE CONTROLS
+                    hideTitle={true}     // ✅ FORCE HIDE TITLE / UI
+                    onSegmentEnd={onSegmentEnd}
+                />
+            </View>
         );
     }
 
@@ -56,19 +57,14 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
         return (
             <View style={[styles.container, style]}>
                 <Video
-                    source={{uri: videoUrl}}
+                    source={{ uri: videoUrl }}
                     style={styles.video}
                     resizeMode={resizeMode}
                     paused={!autoPlay && !shouldPlay}
                     controls={showControls}
                     onProgress={(data) => {
                         if (endTime && data.currentTime >= endTime) {
-                            if (onSegmentEnd) onSegmentEnd();
-                        }
-                    }}
-                    onLoad={(data) => {
-                        if (startTime > 0) {
-                            // Need ref to seek — future enhancement
+                            onSegmentEnd?.();
                         }
                     }}
                 />
@@ -94,7 +90,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        height: 200,
+        aspectRatio: 16 / 9, // ✅ keeps correct video ratio, no black bars
         backgroundColor: '#000',
         borderRadius: 8,
         overflow: 'hidden',
