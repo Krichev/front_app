@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
-import AuthenticatedVideo from '../../../../components/AuthenticatedVideo';
 import AuthenticatedAudio from '../../../../components/AuthenticatedAudio';
 import ExternalVideoPlayer from '../../../../components/ExternalVideoPlayer';
+import QuestionMediaViewer from '../../../../screens/CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { MediaType } from '../../../../services/wwwGame/questionService';
 import { MediaSourceType } from '../../../../entities/QuizState/model/types/question.types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -24,17 +24,14 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
 }) => {
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
-  const [playbackEnded, setPlaybackEnded] = useState(false);
   const [replayKey, setReplayKey] = useState(0);
 
   const handleEnd = useCallback(() => {
-    setPlaybackEnded(true);
-    // Auto-transition to discussion phase after video ends
-    onPlaybackComplete();
-  }, [onPlaybackComplete]);
+    // Media finished naturally — no auto-transition since autoPlay is false
+    // User will click "Continue to Discussion" manually
+  }, []);
 
   const handleReplay = useCallback(() => {
-    setPlaybackEnded(false);
     setReplayKey(prev => prev + 1);
   }, []);
 
@@ -53,14 +50,13 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
 
   const mediaType = getMediaType(question);
   
-  // Determine media source type
-  const mediaSourceType = question.mediaSourceType || MediaSourceType.UPLOADED;
-
-  // Check if this is external media (YouTube, Vimeo, etc.)
-  const isExternalMedia = question.mediaSourceType 
-    && question.mediaSourceType !== MediaSourceType.UPLOADED;
+  const hasUploadedMedia = !!question.questionMediaId;
+  const hasExternalMedia = !!question.mediaSourceType 
+      && question.mediaSourceType !== MediaSourceType.UPLOADED
+      && (!!question.externalMediaUrl || !!question.externalMediaId);
 
   // For YouTube, extract video ID
+  const mediaSourceType = question.mediaSourceType || MediaSourceType.UPLOADED;
   const videoId = mediaSourceType === MediaSourceType.YOUTUBE
     ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
     : undefined;
@@ -71,29 +67,47 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
         {mediaType === 'VIDEO' ? 'Watch the Video' : 'Listen to the Audio'}
       </Text>
 
-      <View style={[styles.mediaContainer, mediaType === 'VIDEO' && { aspectRatio: 16/9 }]}>
+      <View style={styles.mediaContainer}>
+        {/* Media header with icon and label — same as DiscussionPhase */}
+        <View style={styles.mediaHeader}>
+          <MaterialCommunityIcons
+            name={mediaType === 'AUDIO' ? 'music' : 'video'}
+            size={16}
+            color={theme.colors.text.secondary}
+          />
+          <Text style={{ 
+            ...theme.typography.body.small, 
+            color: theme.colors.text.secondary, 
+            fontWeight: theme.typography.fontWeight.medium 
+          }}>
+            {mediaType === 'AUDIO' ? 'Listen to the audio' : 'Watch the video'}
+          </Text>
+        </View>
+
+        {/* Media player — DiscussionPhase pattern */}
         {mediaType === 'VIDEO' ? (
-          isExternalMedia ? (
-            <ExternalVideoPlayer
-              key={replayKey}
-              mediaSourceType={mediaSourceType}
-              videoId={videoId}
-              videoUrl={question.externalMediaUrl || question.questionMediaUrl}
-              startTime={question.questionVideoStartTime}
-              endTime={question.questionVideoEndTime}
-              onSegmentEnd={handleEnd}
-              autoPlay={true}
-              showControls={false}
-              hideTitle={true}
-            />
+          hasExternalMedia ? (
+            <View style={{ width: '100%', aspectRatio: 16/9, overflow: 'hidden', borderRadius: 8 }}>
+              <ExternalVideoPlayer
+                key={replayKey}
+                mediaSourceType={mediaSourceType}
+                videoId={videoId}
+                videoUrl={question.externalMediaUrl || question.questionMediaUrl}
+                startTime={question.questionVideoStartTime}
+                endTime={question.questionVideoEndTime}
+                onSegmentEnd={handleEnd}
+                autoPlay={false}
+                showControls={false}
+                hideTitle={true}
+              />
+            </View>
           ) : (
-            <AuthenticatedVideo
+            <QuestionMediaViewer
               key={replayKey}
               questionId={Number(question.id)}
-              shouldPlay={true}
-              useNativeControls={true}
-              onEnd={handleEnd}
-              style={styles.mediaContainer}
+              mediaType={mediaType as MediaType}
+              height={200}
+              enableFullscreen={true}
             />
           )
         ) : (
@@ -105,33 +119,30 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
         )}
       </View>
 
-      {playbackEnded && (
-        <View>
-          <TouchableOpacity
-            style={styles.replayButton}
-            onPress={handleReplay}
-          >
-            <MaterialCommunityIcons name="replay" size={24} color={theme.colors.text.secondary} />
-            <Text style={styles.skipButtonText}>Replay</Text>
-          </TouchableOpacity>
+      {/* Action buttons — always visible since no auto-play */}
+      <View style={{ marginTop: theme.spacing.lg }}>
+        <TouchableOpacity
+          style={styles.replayButton}
+          onPress={handleReplay}
+        >
+          <MaterialCommunityIcons name="replay" size={24} color={theme.colors.text.secondary} />
+          <Text style={styles.skipButtonText}>Replay</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={onPlaybackComplete}
-          >
-            <Text style={styles.continueButtonText}>Continue to Discussion</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        <TouchableOpacity
+          style={styles.continueButton}
+          onPress={onPlaybackComplete}
+        >
+          <Text style={styles.continueButtonText}>Continue to Discussion</Text>
+        </TouchableOpacity>
 
-      {!playbackEnded && (
         <TouchableOpacity
           style={styles.skipButton}
           onPress={onSkip}
         >
           <Text style={styles.skipButtonText}>Skip Media</Text>
         </TouchableOpacity>
-      )}
+      </View>
     </View>
   );
 };
