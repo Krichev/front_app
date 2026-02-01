@@ -10,6 +10,7 @@ interface YouTubePlayerProps {
     autoPlay?: boolean;
     showControls?: boolean;
     hideTitle?: boolean;
+    onlyPlayButton?: boolean; // ✅ NEW
     onReady?: () => void;
     onStateChange?: (state: string) => void;
     onSegmentEnd?: () => void;
@@ -24,6 +25,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          autoPlay = false,
                                                          showControls = false,
                                                          hideTitle = true,
+                                                         onlyPlayButton = false, // ✅ NEW
                                                          onReady,
                                                          onStateChange,
                                                          onSegmentEnd,
@@ -65,9 +67,15 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         setHasError(true);
     }, [videoId]);
 
+    // Normal toggle (when onlyPlayButton = false)
     const togglePlayPause = useCallback(() => {
         setPlaying(prev => !prev);
     }, []);
+
+    // Only start playing (when onlyPlayButton = true)
+    const startPlaying = useCallback(() => {
+        if (!playing) setPlaying(true);
+    }, [playing]);
 
     useEffect(() => {
         onPlayingChange?.(playing);
@@ -126,7 +134,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                 onChangeState={handleStateChange}
                                 onReady={handleReady}
                                 onError={handleError}
-                                height={playerHeight} // ✅ IMPORTANT
+                                height={playerHeight}
                                 style={StyleSheet.absoluteFill}
                                 webViewStyle={{ backgroundColor: 'transparent' }}
                                 webViewProps={{
@@ -143,11 +151,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     start: startTime,
                                     end: endTime,
                                     rel: false,
-                                    modestbranding: true,
-                                    controls: showControls ? 1 : 0,
-                                    fs: 0,
+                                    controls: showControls, // ✅ force hide if onlyPlayButton
                                     iv_load_policy: 3,
-                                    cc_load_policy: 0,
                                 }}
                             />
                         )}
@@ -155,17 +160,22 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
                     {/* Custom play overlay */}
                     {!showControls && isReady && !hasError && (
-                        <TouchableOpacity
-                            style={styles.playPauseOverlay}
-                            onPress={togglePlayPause}
-                            activeOpacity={1}
-                        >
-                            {!playing && (
-                                <View style={styles.customPlayButton}>
-                                    <MaterialCommunityIcons name="play" size={48} color="#fff" />
-                                </View>
+                        <>
+                            {/* When onlyPlayButton = true → show ONLY when not playing */}
+                            {(!onlyPlayButton || !playing) && (
+                                <TouchableOpacity
+                                    style={styles.playPauseOverlay}
+                                    onPress={onlyPlayButton ? startPlaying : togglePlayPause}
+                                    activeOpacity={1}
+                                >
+                                    {!playing && (
+                                        <View style={styles.customPlayButton}>
+                                            <MaterialCommunityIcons name="play" size={48} color="#fff" />
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
                             )}
-                        </TouchableOpacity>
+                        </>
                     )}
                 </>
             )}

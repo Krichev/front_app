@@ -123,7 +123,8 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                         startTime={question.questionVideoStartTime || 0}
                                         endTime={question.questionVideoEndTime}
                                         autoPlay={false}
-                                        showControls={true}
+
+                                        showControls={false}
                                         hideTitle={true}
                                     />
                                 </View>

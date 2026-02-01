@@ -14,6 +14,7 @@ interface ExternalVideoPlayerProps {
     autoPlay?: boolean;
     showControls?: boolean;
     hideTitle?: boolean;
+    onlyPlayButton?: boolean;
     style?: ViewStyle;
     onSegmentEnd?: () => void;
     // Props for AuthenticatedVideo/Video
@@ -30,6 +31,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                                                                      autoPlay = false,
                                                                      showControls = true,
                                                                      hideTitle = false,
+                                                                     onlyPlayButton = false,
                                                                      style,
                                                                      onSegmentEnd,
                                                                      resizeMode = 'contain',
@@ -43,6 +45,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                     videoId={videoId}
                     startTime={startTime}
                     endTime={endTime}
+                    onlyPlayButton={onlyPlayButton}
                     autoPlay={autoPlay || shouldPlay}
                     showControls={showControls}
                     hideTitle={hideTitle} 
