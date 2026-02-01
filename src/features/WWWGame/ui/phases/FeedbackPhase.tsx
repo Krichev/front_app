@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
@@ -20,6 +21,7 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
   onNextRound,
   onComplete,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
 
@@ -58,28 +60,40 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
         </View>
       </View>
 
-      {roundData['aiAccepted'] && (
-        <View style={{ backgroundColor: theme.colors.success.background, padding: theme.spacing.md, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg, flexDirection: 'row', alignItems: 'center' }}>
-          <MaterialCommunityIcons name="robot" size={24} color={theme.colors.success.main} style={{ marginRight: theme.spacing.md }} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ ...theme.typography.body.small, color: theme.colors.success.dark, fontWeight: theme.typography.fontWeight.bold }}>
-              ✅ Accepted as equivalent (AI)
-            </Text>
-            {roundData['aiConfidence'] && (
-              <Text style={{ ...theme.typography.caption, color: theme.colors.success.main }}>
-                Confidence: {Math.round(roundData['aiConfidence'] * 100)}%
-              </Text>
-            )}
-          </View>
-        </View>
-      )}
-
       {roundData['aiFeedback'] && (
         <View style={{ backgroundColor: theme.colors.info.background, padding: theme.spacing.lg, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg }}>
           <Text style={{ ...theme.typography.body.small, color: theme.colors.info.dark, fontWeight: theme.typography.fontWeight.bold, marginBottom: theme.spacing.sm }}>
             AI Host Feedback:
           </Text>
           <Text style={{ color: theme.colors.text.primary }}>{roundData['aiFeedback']}</Text>
+        </View>
+      )}
+
+      {roundData.aiAccepted && (
+        <View style={{
+            backgroundColor: '#E3F2FD',
+            padding: theme.spacing.md,
+            borderRadius: theme.layout.borderRadius.md,
+            marginBottom: theme.spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+        }}>
+            <Text style={{ fontSize: 18, marginRight: theme.spacing.sm }}>🤖</Text>
+            <View style={{ flex: 1 }}>
+                <Text style={{
+                    ...theme.typography.body.small,
+                    color: '#1565C0',
+                    fontWeight: theme.typography.fontWeight.bold,
+                    marginBottom: 2,
+                }}>
+                    {t('game.aiAcceptedBadge')}
+                </Text>
+                {roundData.aiExplanation && (
+                    <Text style={{ ...theme.typography.body.small, color: '#1976D2' }}>
+                        {roundData.aiExplanation}
+                    </Text>
+                )}
+            </View>
         </View>
       )}
 

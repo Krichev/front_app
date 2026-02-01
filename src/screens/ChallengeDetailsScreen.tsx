@@ -43,6 +43,7 @@ type RootStackParamList = {
         roundTime?: number;
         roundCount?: number;
         enableAIHost?: boolean;
+        enableAiAnswerValidation?: boolean;
         challengeId?: string;
         sessionId?: string;
     };
@@ -60,6 +61,7 @@ interface ParsedQuizConfig {
     teamName?: string;
     teamMembers?: string[];
     enableAIHost?: boolean;
+    enableAiAnswerValidation?: boolean;
     teamBased?: boolean;
     audioChallengeType?: string; // For AUDIO: 'RHYTHM_CREATION' | 'RHYTHM_REPEAT' | 'SOUND_MATCH' | 'SINGING'
 }
@@ -453,6 +455,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: config.roundTime || 30,
                 totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
                 questionSource: 'app',
             }).unwrap();
 
@@ -465,6 +468,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTime: config.roundTime || 30,
                 roundCount: config.roundCount || 5,
                 enableAIHost: config.enableAIHost !== false,
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
             });
         } catch (error) {
             console.error('Failed to create WWW quiz session:', error);
@@ -477,6 +481,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTime: config.roundTime || 30,
                 roundCount: config.roundCount || 5,
                 enableAIHost: config.enableAIHost !== false,
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
                 challengeId: challengeId,
             });
         }
@@ -496,6 +501,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: blitzRoundTime,
                 totalRounds: config.roundCount || 10,
                 enableAiHost: blitzAIHost,
+                enableAiAnswerValidation: false, // Blitz is fast-paced, no AI validation
                 questionSource: 'app',
             }).unwrap();
 
@@ -508,6 +514,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTime: blitzRoundTime,
                 roundCount: config.roundCount || 10,
                 enableAIHost: blitzAIHost,
+                enableAiAnswerValidation: false,
             });
         } catch (error) {
             console.error('Failed to create Blitz session:', error);
@@ -526,6 +533,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: config.roundTime || 20,
                 totalRounds: config.roundCount || 10,
                 enableAiHost: false, // Usually no AI host for standard trivia
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
                 questionSource: 'app',
             }).unwrap();
 
@@ -539,6 +547,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTime: config.roundTime || 20,
                 roundCount: config.roundCount || 10,
                 enableAIHost: false,
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
             });
         } catch (error) {
             console.error('Failed to create Trivia session:', error);
@@ -560,6 +569,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTimeSeconds: config.roundTime || 30,
                 totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
                 questionSource: 'user', // Important: source is user/custom
                 customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
             }).unwrap();
@@ -573,6 +583,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 roundTime: config.roundTime || 30,
                 roundCount: config.roundCount || 5,
                 enableAIHost: config.enableAIHost !== false,
+                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
             });
         } catch (error) {
             console.error('Failed to create Custom Quiz session:', error);

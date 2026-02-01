@@ -135,6 +135,7 @@ export const useQuestCreator = () => {
                 totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length > 0 ? selectedQuestions.length : quizConfig.roundCount),
                 roundTimeSeconds: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
+                enableAiAnswerValidation: quizConfig.enableAiAnswerValidation,
                 questionSource: questionSource as 'app' | 'user',
                 customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
             };

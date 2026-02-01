@@ -84,6 +84,9 @@ export const settingsApi = createApi({
                         if (request.notificationsEnabled !== undefined) {
                             draft.notificationsEnabled = request.notificationsEnabled;
                         }
+                        if (request.enableAiAnswerValidation !== undefined) {
+                            draft.enableAiAnswerValidation = request.enableAiAnswerValidation;
+                        }
                     })
                 );
                 

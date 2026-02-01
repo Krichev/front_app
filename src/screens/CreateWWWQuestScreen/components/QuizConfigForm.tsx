@@ -197,6 +197,32 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                 </View>
             </View>
 
+            {/* AI Answer Validation Toggle */}
+            <View style={styles.section}>
+                <View style={styles.toggleRow}>
+                    <View style={styles.toggleInfo}>
+                        <Text style={styles.label}>{t('createQuest.quizConfig.enableAiAnswerValidation')}</Text>
+                        <Text style={styles.helperText}>
+                            {t('createQuest.quizConfig.aiAnswerValidationDesc')}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={[
+                            styles.toggle,
+                            config?.enableAiAnswerValidation && styles.toggleActive
+                        ]}
+                        onPress={() => updateConfig({ enableAiAnswerValidation: !config?.enableAiAnswerValidation })}
+                    >
+                        <View
+                            style={[
+                                styles.toggleThumb,
+                                config?.enableAiAnswerValidation && styles.toggleThumbActive
+                            ]}
+                        />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
             {/* Team Based Toggle */}
             <View style={styles.section}>
                 <View style={styles.toggleRow}>
@@ -335,6 +361,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                 <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryTime', { value: config?.roundTime || 60 })}</Text>
                 <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryQuestions', { count: selectedQuestionsCount })}</Text>
                 <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryAIHost', { value: config?.enableAIHost ? t('createQuest.quizConfig.yes') : t('createQuest.quizConfig.no') })}</Text>
+                <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryAiValidation', { value: config?.enableAiAnswerValidation ? t('createQuest.quizConfig.yes') : t('createQuest.quizConfig.no') })}</Text>
                 <Text style={styles.summaryText}>• {t('createQuest.quizConfig.summaryTeamBased', { value: config?.teamBased ? t('createQuest.quizConfig.yes') : t('createQuest.quizConfig.no') })}</Text>
             </View>
         </View>
