@@ -44,8 +44,8 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                     startTime={startTime}
                     endTime={endTime}
                     autoPlay={autoPlay || shouldPlay}
-                    showControls={false} // ✅ FORCE HIDE YOUTUBE CONTROLS
-                    hideTitle={true}     // ✅ FORCE HIDE TITLE / UI
+                    showControls={showControls}
+                    hideTitle={hideTitle} 
                     onSegmentEnd={onSegmentEnd}
                 />
             </View>
