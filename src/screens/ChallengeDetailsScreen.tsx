@@ -27,6 +27,8 @@ import {FormatterService} from '../services/verification/ui/Services';
 import {navigateToTab} from '../utils/navigation.ts';
 import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 import {AudioChallengeType} from '../entities/ChallengeState/model/types';
+import { useGetWagersByChallengeQuery } from '../entities/WagerState/model/slice/wagerApi';
+import { WagerInvitationCard } from '../features/Wager/ui/WagerInvitationCard';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -114,6 +116,13 @@ const ChallengeDetailsScreen: React.FC = () => {
     const { data: customQuestions } = useGetQuestionsForChallengeQuery(
         { challengeId: challengeId! },
         { skip: !challengeId || isCancelled } // Skip if cancelled
+    );
+
+    // Fetch Wagers
+    const { data: wagers } = useGetWagersByChallengeQuery(Number(challengeId), { skip: !challengeId });
+    const pendingWagerInvitation = wagers?.find(w => 
+        w.status === 'PROPOSED' && 
+        w.participants.some(p => p.userId === Number(user?.id) && p.status === 'INVITED')
     );
 
     useEffect(() => {
@@ -681,6 +690,11 @@ const ChallengeDetailsScreen: React.FC = () => {
                         <Text style={styles.debugText}>Has joined: {hasUserJoined ? 'Yes' : 'No'}</Text>
                         <Text style={styles.debugText}>Participants: {JSON.stringify(challenge.participants)}</Text>
                     </View>
+
+                    {/* Wager Invitation */}
+                    {pendingWagerInvitation && (
+                        <WagerInvitationCard wager={pendingWagerInvitation} />
+                    )}
 
                     {/* Challenge Info */}
                     <View style={styles.section}>

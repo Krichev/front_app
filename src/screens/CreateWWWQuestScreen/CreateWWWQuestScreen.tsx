@@ -31,6 +31,10 @@ import {QuestionCategory} from './types/question.types';
 import {APIDifficulty} from '../../services/wwwGame/questionService';
 import {QuestionList} from "./index.ts";
 import { isLocalizedStringEmpty } from '../../shared/types/localized';
+import { Modal } from '../../shared/ui/Modal/Modal';
+import { WagerSetupBottomSheet } from '../../features/Wager/ui/WagerSetupBottomSheet';
+import { CreateWagerRequest } from '../../entities/WagerState/model/types';
+import { useCreateWagerMutation } from '../../entities/WagerState/model/slice/wagerApi';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -40,9 +44,12 @@ const CreateWWWQuestScreen = () => {
     const { user } = useSelector((state: RootState) => state.auth);
     const questCreator = useQuestCreator();
     const questionsManager = useQuestionsManager();
+    const [createWager] = useCreateWagerMutation();
 
     const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
     const [showTypeSelector, setShowTypeSelector] = useState(false);
+    const [showWagerModal, setShowWagerModal] = useState(false);
+    const [wagerData, setWagerData] = useState<Partial<CreateWagerRequest> | null>(null);
     const [preSelectedMediaType, setPreSelectedMediaType] = useState<'image' | 'video' | null>(null);
 
     // Local state for features not yet in hook
@@ -122,6 +129,20 @@ const CreateWWWQuestScreen = () => {
             );
 
             if (result.success && result.sessionId) {
+                // Handle Wager creation if data exists
+                if (wagerData) {
+                    try {
+                        await createWager({
+                            ...wagerData as CreateWagerRequest,
+                            challengeId: parseInt(result.challengeId!),
+                            quizSessionId: parseInt(result.sessionId),
+                        }).unwrap();
+                    } catch (wagerError) {
+                        console.error('Wager creation failed:', wagerError);
+                        // We don't block quest creation if wager fails, but maybe alert user
+                    }
+                }
+
                 Alert.alert(
                     t('createQuest.alerts.createSuccess'),
                     t('createQuest.alerts.createSuccess'),
@@ -251,6 +272,23 @@ const CreateWWWQuestScreen = () => {
                     onToggleCollapse={() => setIsPreviewCollapsed(!isPreviewCollapsed)}
                 />
 
+                {/* Wager Setup Section */}
+                <View style={styles.wagerSection}>
+                    <TouchableOpacity 
+                        style={[styles.wagerButton, wagerData && styles.wagerButtonActive]} 
+                        onPress={() => setShowWagerModal(true)}
+                    >
+                        <MaterialCommunityIcons 
+                            name={wagerData ? "hand-coin" : "hand-coin-outline"} 
+                            size={24} 
+                            color={wagerData ? "#fff" : "#4CAF50"} 
+                        />
+                        <Text style={[styles.wagerButtonText, wagerData && styles.wagerButtonTextActive]}>
+                            {wagerData ? "Wager Set Up ✅" : "Add a Wager (Optional)"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
                 <View style={styles.spacer} />
             </ScrollView>
 
@@ -300,6 +338,21 @@ const CreateWWWQuestScreen = () => {
                 onClose={() => setShowTypeSelector(false)}
                 onSelect={handleTypeSelect}
             />
+
+            {/* Wager Setup Modal */}
+            <Modal
+                isOpen={showWagerModal}
+                onClose={() => setShowWagerModal(false)}
+                title="Wager Settings"
+            >
+                <WagerSetupBottomSheet 
+                    initialData={wagerData || undefined}
+                    onSave={(data) => {
+                        setWagerData(data);
+                        setShowWagerModal(false);
+                    }} 
+                />
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -325,6 +378,33 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '700',
         color: '#333',
+    },
+    wagerSection: {
+        paddingHorizontal: 16,
+        marginTop: 16,
+    },
+    wagerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#4CAF50',
+        borderStyle: 'dashed',
+        gap: 10,
+    },
+    wagerButtonActive: {
+        backgroundColor: '#4CAF50',
+        borderStyle: 'solid',
+    },
+    wagerButtonText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#4CAF50',
+    },
+    wagerButtonTextActive: {
+        color: '#fff',
     },
     footer: {
         padding: 16,

@@ -41,6 +41,8 @@ import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
 import { useGetRelationshipsQuery } from '../entities/UserState/model/slice/relationshipApi';
 import { RelationshipStatus } from '../entities/QuizState/model/types/question.types';
 import RhythmChallengeScreen from '../screens/RhythmChallengeScreen';
+import { PenaltyDashboardScreen } from '../screens/PenaltyDashboardScreen';
+import { PenaltyProofScreen } from '../screens/PenaltyProofScreen';
 
 // Navigation types
 export type RootStackParamList = {
@@ -57,6 +59,8 @@ export type RootStackParamList = {
     EditProfile: {userId: string};
     Contacts: undefined;
     AddContact: {selectedUserId?: string};
+    PenaltyDashboard: undefined;
+    PenaltyProof: {penaltyId: number};
     WWWGamePlay:
         | (GameSettings & { sessionId?: string; challengeId?: string })
         | { sessionId: string|undefined; challengeId?: string|undefined };
@@ -279,6 +283,8 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen name="UserProfile" component={UserProfileScreen} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} />
                         <Stack.Screen name="AddContact" component={AddContactScreen} />
+                        <Stack.Screen name="PenaltyDashboard" component={PenaltyDashboardScreen} />
+                        <Stack.Screen name="PenaltyProof" component={PenaltyProofScreen} />
                         <Stack.Screen name="WWWGamePlay" component={WWWGamePlayScreen} />
                         <Stack.Screen
                             name="WWWGameResults"

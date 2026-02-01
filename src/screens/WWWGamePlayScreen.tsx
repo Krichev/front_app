@@ -12,15 +12,10 @@ import { useCountdownTimer } from '../shared/hooks/useCountdownTimer';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { ExitGameModal } from '../features/WWWGame/ui/components/ExitGameModal';
-
-import {
-  WaitingPhase,
-  DiscussionPhase,
-  AnswerPhase,
-  FeedbackPhase,
-  ReadingPhase,
-  MediaPlaybackPhase,
-} from '../features/WWWGame/ui/phases';
+import { WagerResultsOverlay } from '../features/Wager/ui/WagerResultsOverlay';
+import { useGetWagersByChallengeQuery } from '../entities/WagerState/model/slice/wagerApi';
+import { useWager } from '../features/Wager/hooks/useWager';
+import { Wager, WagerOutcome } from '../entities/WagerState/model/types';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -32,6 +27,13 @@ const WWWGamePlayScreen: React.FC = () => {
   
   const { sessionId, challengeId } = route.params;
   const gameSettings = route.params as any; // Legacy params support
+
+  // Wager State
+  const { data: wagers } = useGetWagersByChallengeQuery(Number(challengeId), { skip: !challengeId });
+  const { settleWager } = useWager();
+  const [activeWager, setActiveWager] = useState<Wager | null>(null);
+  const [wagerOutcome, setWagerOutcome] = useState<WagerOutcome | null>(null);
+  const [showWagerOverlay, setShowWagerResults] = useState(false);
 
   // Guard clause for missing sessionId
   useEffect(() => {
@@ -109,33 +111,51 @@ const WWWGamePlayScreen: React.FC = () => {
     }
   }, [controller, navigation]);
 
+  const navigateToResults = useCallback(() => {
+    if (!controller.session) { return; }
+
+    // Prepare results data
+    const roundsData = controller.rounds.map(round => ({
+      question: round.question.question,
+      correctAnswer: round.question.answer,
+      teamAnswer: round.teamAnswer || '',
+      isCorrect: round.isCorrect,
+      playerWhoAnswered: round.playerWhoAnswered || '',
+      discussionNotes: round.discussionNotes || '',
+    }));
+
+    navigation.navigate('WWWGameResults', {
+      teamName: controller.session.teamName,
+      score: controller.session.correctAnswers,
+      totalRounds: controller.session.totalRounds,
+      roundsData: roundsData,
+      challengeId: challengeId,
+    });
+  }, [controller, navigation, challengeId]);
+
   const handleGameCompletion = useCallback(async () => {
     try {
       await controller.completeGame();
 
-      if (!controller.session) { return; }
+      // Check for active wagers to settle
+      const wagerToSettle = wagers?.find(w => w.status === 'ACTIVE');
+      if (wagerToSettle) {
+        try {
+          const outcome = await settleWager(wagerToSettle.id);
+          setActiveWager(wagerToSettle);
+          setWagerOutcome(outcome);
+          setShowWagerResults(true);
+          return; // Don't navigate yet, show overlay
+        } catch (wagerError) {
+          console.error('Failed to settle wager:', wagerError);
+        }
+      }
 
-      // Prepare results data
-      const roundsData = controller.rounds.map(round => ({
-        question: round.question.question,
-        correctAnswer: round.question.answer,
-        teamAnswer: round.teamAnswer || '',
-        isCorrect: round.isCorrect,
-        playerWhoAnswered: round.playerWhoAnswered || '',
-        discussionNotes: round.discussionNotes || '',
-      }));
-
-      navigation.navigate('WWWGameResults', {
-        teamName: controller.session.teamName,
-        score: controller.session.correctAnswers,
-        totalRounds: controller.session.totalRounds,
-        roundsData: roundsData,
-        challengeId: challengeId,
-      });
+      navigateToResults();
     } catch (error) {
       Alert.alert('Error', 'Failed to complete game');
     }
-  }, [controller, navigation, challengeId]);
+  }, [controller, wagers, settleWager, navigateToResults]);
 
   // Auto-start discussion timer when entering discussion phase
   const prevPhaseRef = useRef<string>(state.phase);
@@ -428,6 +448,17 @@ const WWWGamePlayScreen: React.FC = () => {
         onAbandon={handleAbandonGame}
         isPausing={controller.isPausingSession}
       />
+
+      {showWagerOverlay && activeWager && wagerOutcome && (
+        <WagerResultsOverlay 
+          wager={activeWager}
+          outcome={wagerOutcome}
+          onClose={() => {
+            setShowWagerResults(false);
+            navigateToResults();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };

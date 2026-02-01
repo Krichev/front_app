@@ -21,7 +21,8 @@ export enum CurrencyType {
     GBP = 'GBP',
     CAD = 'CAD',
     AUD = 'AUD',
-    POINTS = 'POINTS'
+    POINTS = 'POINTS',
+    SCREEN_TIME = 'SCREEN_TIME'
 }
 
 /**

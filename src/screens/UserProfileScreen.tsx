@@ -29,6 +29,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {ApiChallenge} from '../entities/ChallengeState/model/types';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
+import { ScreenTimeBudgetWidget } from '../features/ScreenTime/ui/ScreenTimeBudgetWidget';
 
 type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
@@ -351,6 +352,9 @@ const UserProfileScreen: React.FC = () => {
                                             ) : null
                                         )}                </View>
 
+                {/* Screen Time Section (Self Only) */}
+                {isCurrentUser && <ScreenTimeBudgetWidget />}
+
                 {/* Mutual Connections Section */}
                 {!isCurrentUser && mutualConnections && mutualConnections.length > 0 && (
                     <View style={styles.mutualSection}>
@@ -379,6 +383,17 @@ const UserProfileScreen: React.FC = () => {
                         {renderStatsItem('plus-circle', t('profile.created'), userStats?.created)}
                         {renderStatsItem('check-circle', t('profile.winRate'), userStats?.success)}
                     </View>
+                    
+                    {isCurrentUser && (
+                        <TouchableOpacity 
+                            style={[styles.penaltyButton, { marginTop: theme.spacing.lg }]}
+                            onPress={() => navigation.navigate('PenaltyDashboard')}
+                        >
+                            <MaterialCommunityIcons name="alert-octagon" size={24} color={theme.colors.error.main} />
+                            <Text style={[styles.penaltyButtonText, { color: theme.colors.text.primary }]}>My Penalties</Text>
+                            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.colors.text.secondary} />
+                        </TouchableOpacity>
+                    )}
                 </View>
 
                 {/* Challenges Section */}
@@ -671,6 +686,18 @@ const themeStyles = createStyles(theme => ({
         ...theme.typography.caption,
         color: theme.colors.text.secondary,
         marginTop: theme.spacing.xs,
+    },
+    penaltyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+    },
+    penaltyButtonText: {
+        flex: 1,
+        marginLeft: theme.spacing.md,
+        fontWeight: 'bold',
     },
     challengesSection: {
         backgroundColor: theme.colors.background.primary,
