@@ -52,9 +52,18 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
   };
 
   const mediaType = getMediaType(question);
+  
+  // Determine media source type
+  const mediaSourceType = question.mediaSourceType || MediaSourceType.UPLOADED;
+
+  // Check if this is external media (YouTube, Vimeo, etc.)
   const isExternalMedia = question.mediaSourceType 
-    && question.mediaSourceType !== MediaSourceType.UPLOADED
-    && question.mediaSourceType !== 'UPLOADED';
+    && question.mediaSourceType !== MediaSourceType.UPLOADED;
+
+  // For YouTube, extract video ID
+  const videoId = mediaSourceType === MediaSourceType.YOUTUBE
+    ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
+    : undefined;
 
   return (
     <View style={styles.mediaPlaybackContainer}>
@@ -68,14 +77,12 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
             <ExternalVideoPlayer
               key={replayKey}
               mediaSourceType={mediaSourceType}
-              videoId={question.externalMediaId}
+              videoId={videoId}
               videoUrl={question.externalMediaUrl || question.questionMediaUrl}
               startTime={question.questionVideoStartTime}
               endTime={question.questionVideoEndTime}
               onSegmentEnd={handleEnd}
               autoPlay={true}
-              showControls={false}
-              hideTitle={true}
             />
           ) : (
             <AuthenticatedVideo

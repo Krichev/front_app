@@ -62,9 +62,12 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
   const hasUploadedMedia = !!question.questionMediaId;
   const hasExternalMedia = !!question.mediaSourceType 
       && question.mediaSourceType !== MediaSourceType.UPLOADED
-      && question.mediaSourceType !== 'UPLOADED'
       && (!!question.externalMediaUrl || !!question.externalMediaId);
   const showMedia = !!mediaType && !isAudioChallenge && (hasUploadedMedia || hasExternalMedia);
+
+  const videoId = (hasExternalMedia && mediaType === 'VIDEO')
+      ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
+      : undefined;
 
   return (
     <View style={styles.container}>
@@ -111,13 +114,11 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                 <View style={{ width: '100%', aspectRatio: 16/9, overflow: 'hidden', borderRadius: 8 }}>
                   <ExternalVideoPlayer
                     mediaSourceType={question.mediaSourceType as MediaSourceType}
-                    videoId={question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '')}
+                    videoId={videoId}
                     videoUrl={question.externalMediaUrl}
                     startTime={question.questionVideoStartTime || 0}
                     endTime={question.questionVideoEndTime}
                     autoPlay={false}
-                    showControls={true}
-                    hideTitle={true}
                   />
                 </View>
               ) : (

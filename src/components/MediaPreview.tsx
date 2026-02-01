@@ -48,6 +48,11 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
     mediaUrl,
     thumbnailUrl,
     mediaType,
+    // External Media Props
+    mediaSourceType,
+    videoStartTime,
+    videoEndTime,
+    // Display options
     style,
     height = 200,
     width,
