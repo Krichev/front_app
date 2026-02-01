@@ -95,7 +95,7 @@ export interface ApiChallenge {
     description?: string;
     type: string;
     visibility: string;
-    status: string;
+    status: ChallengeStatus;
     created_at: string;
     updated_at: string;
     creator_id: string;
@@ -133,7 +133,7 @@ export interface CreateChallengeRequest {
     descriptionLocalized?: LocalizedString;
     type: string;
     visibility: string;
-    status: string;
+    status: ChallengeStatus;
     reward?: string;
     penalty?: string;
     verificationMethod?: string;
@@ -355,7 +355,7 @@ export type ChallengeVisibility = 'PUBLIC' | 'PRIVATE' | 'GROUP_ONLY';
 /**
  * Challenge status options
  */
-export type ChallengeStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'ACTIVE' | 'DRAFT';
+export type ChallengeStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'ACTIVE' | 'DRAFT' | 'PENDING';
 
 /**
  * Challenge type options

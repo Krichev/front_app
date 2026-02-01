@@ -102,7 +102,7 @@ const QuizResultsScreen: React.FC = () => {
         try {
             await updateChallenge({
                 id: challengeId, // Changed from challengeId to id
-                status: 'completed'
+                status: 'COMPLETED'
             }).unwrap();
 
             Alert.alert(
