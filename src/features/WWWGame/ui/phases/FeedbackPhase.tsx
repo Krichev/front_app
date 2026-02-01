@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface FeedbackPhaseProps {
   roundData: QuizRound;
@@ -56,6 +57,22 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
           </Text>
         </View>
       </View>
+
+      {roundData['aiAccepted'] && (
+        <View style={{ backgroundColor: theme.colors.success.background, padding: theme.spacing.md, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg, flexDirection: 'row', alignItems: 'center' }}>
+          <MaterialCommunityIcons name="robot" size={24} color={theme.colors.success.main} style={{ marginRight: theme.spacing.md }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...theme.typography.body.small, color: theme.colors.success.dark, fontWeight: theme.typography.fontWeight.bold }}>
+              ✅ Accepted as equivalent (AI)
+            </Text>
+            {roundData['aiConfidence'] && (
+              <Text style={{ ...theme.typography.caption, color: theme.colors.success.main }}>
+                Confidence: {Math.round(roundData['aiConfidence'] * 100)}%
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
 
       {roundData['aiFeedback'] && (
         <View style={{ backgroundColor: theme.colors.info.background, padding: theme.spacing.lg, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg }}>

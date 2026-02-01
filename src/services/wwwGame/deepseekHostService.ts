@@ -138,6 +138,67 @@ export class DeepSeekHostService {
     }
 
     /**
+     * Validate if a user's answer is semantically equivalent to the correct answer
+     * Uses DeepSeek AI to check for synonyms, paraphrases, and equivalent meanings
+     */
+    static async validateAnswerWithAi(
+        userAnswer: string,
+        correctAnswer: string,
+        language: string = 'en'
+    ): Promise<{
+        equivalent: boolean;
+        confidence: number;
+        explanation: string;
+        aiUsed: boolean;
+    }> {
+        if (!userAnswer || !correctAnswer) {
+            return { equivalent: false, confidence: 0, explanation: '', aiUsed: false };
+        }
+
+        try {
+            const messages = [
+                {
+                    role: "system",
+                    content: `You are an answer validation assistant for a quiz game. Compare the user's answer with the correct answer. Determine if they are semantically equivalent (synonyms, same meaning, different wording, abbreviations, translations between languages). Respond ONLY with JSON: {"equivalent": true/false, "confidence": 0.0-1.0, "explanation": "brief reason"}`
+                },
+                {
+                    role: "user",
+                    content: `Correct answer: "${correctAnswer}"
+User's answer: "${userAnswer}"
+Language context: ${language}
+
+Are these answers semantically equivalent?`
+                }
+            ];
+
+            try {
+                // Call the DeepSeek API
+                const responseContent = await this.callDeepSeekAPI(messages, {
+                    temperature: 0.1,
+                    max_tokens: 100,
+                    response_format: { type: "json_object" }
+                });
+
+                // Parse the JSON response
+                const parsedResponse = JSON.parse(responseContent);
+                
+                return {
+                    equivalent: !!parsedResponse.equivalent,
+                    confidence: typeof parsedResponse.confidence === 'number' ? parsedResponse.confidence : 0,
+                    explanation: parsedResponse.explanation || '',
+                    aiUsed: true
+                };
+            } catch (apiError) {
+                console.error('DeepSeek API error for answer validation:', apiError);
+                return { equivalent: false, confidence: 0, explanation: '', aiUsed: false };
+            }
+        } catch (error) {
+            console.error('Error in AI answer validation:', error);
+            return { equivalent: false, confidence: 0, explanation: '', aiUsed: false };
+        }
+    }
+
+    /**
      * Analyze team discussion using DeepSeek
      * @param discussionText The transcription of the team's discussion
      * @param correctAnswer The correct answer to the question

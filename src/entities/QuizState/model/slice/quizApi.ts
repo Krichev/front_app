@@ -180,6 +180,7 @@ export interface QuizConfig {
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
+    enableAiAnswerValidation: boolean;
     teamBased: boolean;
 }
 
@@ -198,6 +199,7 @@ export interface QuizSession {
     correctAnswers: number;
     scorePercentage: number;
     enableAiHost: boolean;
+    enableAiAnswerValidation: boolean;
     questionSource: string;
     status: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED' | 'CANCELLED';
     startedAt?: string;
@@ -220,6 +222,7 @@ export interface StartQuizSessionRequest {
     roundTimeSeconds: number;
     totalRounds: number;
     enableAiHost: boolean;
+    enableAiAnswerValidation?: boolean;
     questionSource: 'app' | 'user';
     customQuestionIds?: number[];
 }
@@ -237,10 +240,13 @@ export interface QuizRound {
     answerSubmittedAt?: string;
     discussionDurationSeconds?: number;
     totalRoundDurationSeconds?: number;
-    // MISSING FIELDS:
     hintUsed?: boolean;
     voiceRecordingUsed?: boolean;
     aiFeedback?: string;
+    aiValidationUsed?: boolean;
+    aiAccepted?: boolean;
+    aiConfidence?: number;
+    aiExplanation?: string;
 }
 
 export interface SubmitRoundAnswerRequest {

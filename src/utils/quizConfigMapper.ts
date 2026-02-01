@@ -27,6 +27,7 @@ export const mapQuizConfigToBackend = (uiConfig: QuizConfig): QuizChallengeConfi
         defaultRoundTimeSeconds: uiConfig.roundTime,
         defaultTotalRounds: uiConfig.roundCount,
         enableAiHost: uiConfig.enableAIHost,
+        enableAiAnswerValidation: uiConfig.enableAiAnswerValidation,
 
         // Default values
         questionSource: 'MIXED',
@@ -70,6 +71,7 @@ export const mapQuizConfigFromBackend = (backendConfig: QuizChallengeConfig): Qu
         roundTime: backendConfig.defaultRoundTimeSeconds || 60,
         roundCount: backendConfig.defaultTotalRounds || 10,
         enableAIHost: backendConfig.enableAiHost ?? true,
+        enableAiAnswerValidation: backendConfig.enableAiAnswerValidation ?? false,
         teamBased: backendConfig.teamBased ?? false
     };
 
@@ -100,6 +102,7 @@ export const createDefaultQuizChallengeConfig = (
         roundTime,
         roundCount,
         enableAIHost: enableAI,
+        enableAiAnswerValidation: false,
         teamBased: false
     });
 };

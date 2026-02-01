@@ -27,6 +27,7 @@ export interface GameSettings {
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
+    enableAiAnswerValidation?: boolean;
     // Add these new properties:
     questionSource?: 'app' | 'user';
     userQuestions?: QuizQuestion[] | UserQuestion[];
@@ -35,8 +36,83 @@ export interface GameSettings {
 
 export type GamePhase = 'question' | 'discussion' | 'answer' | 'feedback';
 
+import {DeepSeekHostService} from './deepseekHostService';
 
 export class WWWGameService {
+    /**
+     * Enhanced answer validation with optional AI semantic matching
+     */
+    static async validateAnswerEnhanced(
+        teamAnswer: string,
+        correctAnswer: string,
+        enableAiValidation: boolean = false,
+        language: string = 'en'
+    ): Promise<{
+        isCorrect: boolean;
+        exactMatch: boolean;
+        aiAccepted: boolean;
+        aiConfidence: number;
+        aiExplanation: string;
+    }> {
+        // 1. Run existing local validation first
+        const isLocallyCorrect = this.validateAnswer(teamAnswer, correctAnswer);
+
+        // 2. If local says correct → return immediately
+        if (isLocallyCorrect) {
+            return {
+                isCorrect: true,
+                exactMatch: true,
+                aiAccepted: false,
+                aiConfidence: 0,
+                aiExplanation: ''
+            };
+        }
+
+        // 3. If enableAiValidation → call DeepSeekHostService.validateAnswerWithAi()
+        if (enableAiValidation) {
+            try {
+                // Check answer length to prevent abuse/errors
+                if (teamAnswer.length > 500) {
+                    return {
+                        isCorrect: false,
+                        exactMatch: false,
+                        aiAccepted: false,
+                        aiConfidence: 0,
+                        aiExplanation: ''
+                    };
+                }
+
+                const aiResult = await DeepSeekHostService.validateAnswerWithAi(
+                    teamAnswer,
+                    correctAnswer,
+                    language
+                );
+
+                if (aiResult.equivalent && aiResult.confidence >= 0.7) {
+                    return {
+                        isCorrect: true,
+                        exactMatch: false,
+                        aiAccepted: true,
+                        aiConfidence: aiResult.confidence,
+                        aiExplanation: aiResult.explanation
+                    };
+                }
+            } catch (error) {
+                console.error('Error in enhanced validation:', error);
+                // Fallthrough to return false
+            }
+        }
+
+        // 4. Fallback to local result (which was false)
+        return {
+            isCorrect: false,
+            exactMatch: false,
+            aiAccepted: false,
+            aiConfidence: 0,
+            aiExplanation: ''
+        };
+    }
+
     /**
      * Initialize a new game with the given settings
      */

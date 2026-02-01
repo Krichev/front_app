@@ -49,10 +49,10 @@ const SettingsScreen: React.FC = () => {
         await changeLanguage(language);
     }, [changeLanguage, currentLanguage]);
 
-    // Handle notifications toggle
-    const handleNotificationsToggle = useCallback(async (enabled: boolean) => {
+    // Handle AI validation toggle
+    const handleAiValidationToggle = useCallback(async (enabled: boolean) => {
         try {
-            await updateSettings({ notificationsEnabled: enabled }).unwrap();
+            await updateSettings({ enableAiAnswerValidation: enabled }).unwrap();
         } catch (error) {
             Alert.alert(t('common.error'), t('settings.updateError'));
         }
@@ -195,6 +195,42 @@ const SettingsScreen: React.FC = () => {
                             }}
                             thumbColor={
                                 settings?.notificationsEnabled 
+                                    ? theme.colors.primary.main 
+                                    : theme.colors.neutral.gray[100]
+                            }
+                            disabled={isUpdating}
+                        />
+                    </View>
+                </View>
+
+                {/* Quiz Settings Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>{t('settings.quizSettings')}</Text>
+                    
+                    {/* AI Answer Validation */}
+                    <View style={styles.settingItem}>
+                        <View style={styles.settingInfo}>
+                            <MaterialCommunityIcons 
+                                name="robot-outline" 
+                                size={24} 
+                                color={theme.colors.primary.main} 
+                            />
+                            <View style={styles.settingText}>
+                                <Text style={styles.settingLabel}>{t('settings.aiAnswerValidation')}</Text>
+                                <Text style={styles.settingDescription}>
+                                    {t('settings.aiAnswerValidationDescription')}
+                                </Text>
+                            </View>
+                        </View>
+                        <Switch
+                            value={settings?.enableAiAnswerValidation ?? false}
+                            onValueChange={handleAiValidationToggle}
+                            trackColor={{ 
+                                false: theme.colors.neutral.gray[300], 
+                                true: theme.colors.primary.light 
+                            }}
+                            thumbColor={
+                                settings?.enableAiAnswerValidation 
                                     ? theme.colors.primary.main 
                                     : theme.colors.neutral.gray[100]
                             }

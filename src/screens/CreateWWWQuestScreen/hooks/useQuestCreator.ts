@@ -20,6 +20,7 @@ export interface QuizConfig {
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
+    enableAiAnswerValidation: boolean;
     teamBased: boolean;
 }
 
@@ -52,6 +53,7 @@ export const useQuestCreator = () => {
         roundTime: 60,
         roundCount: 10,
         enableAIHost: true,
+        enableAiAnswerValidation: false,
         teamBased: false,
     });
 

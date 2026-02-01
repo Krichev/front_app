@@ -9,6 +9,9 @@ export interface UserAppSettings {
     language: AppLanguage;
     theme: AppTheme;
     notificationsEnabled: boolean;
+    enableSoundEffects?: boolean;
+    enableVibration?: boolean;
+    enableAiAnswerValidation?: boolean;
     createdAt: string;
     updatedAt: string;
 }
@@ -17,6 +20,9 @@ export interface UpdateAppSettingsRequest {
     language?: AppLanguage;
     theme?: AppTheme;
     notificationsEnabled?: boolean;
+    enableSoundEffects?: boolean;
+    enableVibration?: boolean;
+    enableAiAnswerValidation?: boolean;
 }
 
 export interface LanguageOption {
