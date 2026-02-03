@@ -16,6 +16,7 @@ import {audioChallengeApi} from '../../../entities/AudioChallengeState/model/sli
 import {relationshipApi} from '../../../entities/UserState/model/slice/relationshipApi';
 import {rhythmApi} from '../../../entities/RhythmChallengeState/model/slice/rhythmApi';
 import {settingsApi} from '../../../entities/SettingsState/model/slice/settingsApi';
+import {wagerApi} from '../../../entities/WagerState/model/slice/wagerApi';
 
 export const store = configureStore({
     reducer: {
@@ -35,6 +36,7 @@ export const store = configureStore({
         [relationshipApi.reducerPath]: relationshipApi.reducer,
         [rhythmApi.reducerPath]: rhythmApi.reducer,
         [settingsApi.reducerPath]: settingsApi.reducer,
+        [wagerApi.reducerPath]: wagerApi.reducer,
     },
 
     middleware: (getDefaultMiddleware) =>
@@ -51,6 +53,7 @@ export const store = configureStore({
             relationshipApi.middleware,
             rhythmApi.middleware,
             settingsApi.middleware,
+            wagerApi.middleware,
         ),
 
     devTools: process.env.NODE_ENV !== 'production', // Enable Redux DevTools in development
