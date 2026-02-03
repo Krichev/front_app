@@ -343,7 +343,7 @@ const CreateWWWQuestScreen = () => {
             <Modal
                 isOpen={showWagerModal}
                 onClose={() => setShowWagerModal(false)}
-                title="Wager Settings"
+                title={t('createQuest.wager.title')}
             >
                 <WagerSetupBottomSheet 
                     initialData={wagerData || undefined}

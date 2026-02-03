@@ -224,6 +224,13 @@ const en = {
             titleRequired: 'Please enter a quest title',
             descriptionRequired: 'Please enter a quest description',
         },
+
+        // Wager setup
+        wager: {
+          title: "Wager Settings",
+          addButton: "Add a Wager (Optional)",
+          configuredButton: "Wager Set Up ✅"
+        },
     },
     settings: {
         title: 'Settings',

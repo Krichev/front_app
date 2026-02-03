@@ -214,6 +214,12 @@ const ru = {
             titleRequired: 'Пожалуйста, введите название квеста',
             descriptionRequired: 'Пожалуйста, введите описание квеста',
         },
+
+        wager: {
+          title: "Настройки ставки",
+          addButton: "Добавить ставку (опционально)",
+          configuredButton: "Ставка настроена ✅"
+        },
     },
     settings: {
         title: 'Настройки',
