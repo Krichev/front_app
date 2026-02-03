@@ -132,8 +132,8 @@ export class WWWGameService {
             return text
                 .toLowerCase()
                 .trim()
-                // Remove punctuation, but keep Cyrillic and Latin characters
-                .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()""''«»]/g, "")
+                // Use Unicode properties with 'u' flag to keep letters and digits from any language
+                .replace(/[^\p{L}\p{N}\s]/gu, "")
                 .replace(/\s{2,}/g, " ");
         };
 
@@ -145,10 +145,15 @@ export class WWWGameService {
             return true;
         }
 
-        // Check for case where the team answer contains the correct answer or vice versa
-        if (normalizedTeamAnswer.includes(normalizedCorrectAnswer) ||
-            normalizedCorrectAnswer.includes(normalizedTeamAnswer)) {
-            return true;
+        // Only use contains check if user answer is substantial (at least 50% of correct answer length)
+        // This prevents short generic words from matching everything
+        const minLengthForContains = Math.max(3, Math.floor(normalizedCorrectAnswer.length * 0.5));
+        
+        if (normalizedTeamAnswer.length >= minLengthForContains) {
+            if (normalizedTeamAnswer.includes(normalizedCorrectAnswer) ||
+                normalizedCorrectAnswer.includes(normalizedTeamAnswer)) {
+                return true;
+            }
         }
 
         // For short answers (1-2 words), use approximate matching
@@ -322,9 +327,18 @@ export class WWWGameService {
         // Handle null/undefined inputs
         if (!userAnswer || !correctAnswer) return false;
 
-        // Convert to lowercase and trim
-        const normalizedUserAnswer = userAnswer.toLowerCase().trim();
-        const normalizedCorrectAnswer = correctAnswer.toLowerCase().trim();
+        // Normalize strings for comparison (trim whitespace, remove punctuation, lowercase)
+        const normalizeForComparison = (text: string): string => {
+            return text
+                .toLowerCase()
+                .trim()
+                // Use Unicode properties with 'u' flag to keep letters and digits from any language
+                .replace(/[^\p{L}\p{N}\s]/gu, "")
+                .replace(/\s{2,}/g, " ");
+        };
+
+        const normalizedUserAnswer = normalizeForComparison(userAnswer);
+        const normalizedCorrectAnswer = normalizeForComparison(correctAnswer);
 
         // Handle empty strings after normalization
         if (!normalizedUserAnswer || !normalizedCorrectAnswer) return false;
@@ -333,9 +347,14 @@ export class WWWGameService {
         if (normalizedUserAnswer === normalizedCorrectAnswer) return true;
 
         // Check if the answer contains the correct answer (for partial matches)
-        if (normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
-            normalizedCorrectAnswer.includes(normalizedUserAnswer)) {
-            return true;
+        // Only use contains check if user answer is substantial (at least 50% of correct answer length)
+        const minLengthForContains = Math.max(3, Math.floor(normalizedCorrectAnswer.length * 0.5));
+        
+        if (normalizedUserAnswer.length >= minLengthForContains) {
+            if (normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
+                normalizedCorrectAnswer.includes(normalizedUserAnswer)) {
+                return true;
+            }
         }
 
         // Calculate similarity ratio using Levenshtein distance
