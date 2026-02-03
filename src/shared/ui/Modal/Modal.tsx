@@ -3,7 +3,7 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Animated, BackHandler, Easing, GestureResponderEvent, Text, TouchableOpacity, View} from 'react-native';
 import {styles} from './Modal.style.js';
 import {useTheme} from '../theme';
-import {Portal} from '../Portal/Portal.js';
+import {PortalCustom} from "../Portal/Portal.tsx";
 
 const ANIMATION_DELAY = 300;
 
@@ -93,7 +93,7 @@ export const Modal: React.FC<ModalProps> = ({
     }
 
     return (
-        <Portal>
+        <PortalCustom>
             <Animated.View
                 style={[
                     styles.overlay,
@@ -139,6 +139,6 @@ export const Modal: React.FC<ModalProps> = ({
                     </Animated.View>
                 </TouchableOpacity>
             </Animated.View>
-        </Portal>
+        </PortalCustom>
     );
 };

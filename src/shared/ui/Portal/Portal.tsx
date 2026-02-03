@@ -5,7 +5,7 @@ interface CustomPortalProps {
     children: ReactNode;
 }
 
-export const Portal = (props: CustomPortalProps) => {
+export const PortalCustom = (props: CustomPortalProps) => {
     const { children } = props;
 
     return (
