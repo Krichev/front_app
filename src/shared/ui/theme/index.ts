@@ -110,7 +110,8 @@ export {
 
 } from './ThemeProvider';
 
-
+// Export Paper theme utilities
+export { createPaperTheme, createDarkPaperTheme } from './paperTheme';
 
 // Export shared styles
 

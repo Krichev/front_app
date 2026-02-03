@@ -3,6 +3,9 @@ import React, {createContext, useCallback, useContext, useMemo} from 'react';
 import type {Theme, ThemeConfig, ThemeProviderProps, UseThemeResult} from './types';
 import {ThemeMode} from './types'; // Import ThemeMode as a value, not a type
 import {theme as defaultTheme} from './index';
+import { PaperProvider } from 'react-native-paper';
+import type { MD3Theme } from 'react-native-paper';
+import { createPaperTheme } from './paperTheme';
 
 /**
  * Theme Context for providing theme throughout the app
@@ -12,6 +15,7 @@ interface ThemeContextValue extends UseThemeResult {
     updateConfig: (config: Partial<ThemeConfig>) => void;
     mode: ThemeMode;
     setMode: (mode: ThemeMode) => void;
+    paperTheme: MD3Theme;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -97,6 +101,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     }, [updateConfig]);
 
     /**
+     * Create synchronized Paper theme
+     */
+    const paperTheme = useMemo<MD3Theme>(() => {
+        return createPaperTheme(currentTheme, currentMode);
+    }, [currentTheme, currentMode]);
+
+    /**
      * Memoized theme context value
      */
     const contextValue = useMemo<ThemeContextValue>(() => ({
@@ -112,17 +123,21 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
         updateConfig,
         mode: currentMode,
         setMode,
+        paperTheme,
     }), [
         currentTheme,
         setTheme,
         updateConfig,
         currentMode,
         setMode,
+        paperTheme,
     ]);
 
     return (
         <ThemeContext.Provider value={contextValue}>
-            {children}
+            <PaperProvider theme={paperTheme}>
+                {children}
+            </PaperProvider>
         </ThemeContext.Provider>
     );
 };
@@ -138,6 +153,14 @@ export const useTheme = (): ThemeContextValue => {
     }
 
     return context;
+};
+
+/**
+ * Hook to access Paper theme directly
+ */
+export const usePaperTheme = (): MD3Theme => {
+    const { paperTheme } = useTheme();
+    return paperTheme;
 };
 
 /**
