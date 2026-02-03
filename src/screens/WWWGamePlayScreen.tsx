@@ -8,6 +8,14 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useWWWGameState } from '../features/WWWGame/hooks/useWWWGameState';
 import { useWWWGameController } from '../features/WWWGame/hooks/useWWWGameController';
 import { useReadingTime } from '../features/WWWGame/hooks/useReadingTime';
+import {
+  WaitingPhase,
+  ReadingPhase,
+  MediaPlaybackPhase,
+  DiscussionPhase,
+  AnswerPhase,
+  FeedbackPhase,
+} from '../features/WWWGame/ui/phases';
 import { useCountdownTimer } from '../shared/hooks/useCountdownTimer';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
 import { RootStackParamList } from '../navigation/AppNavigator';
