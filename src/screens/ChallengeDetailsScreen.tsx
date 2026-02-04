@@ -57,6 +57,8 @@ type ChallengeDetailsNavigationProp = NativeStackNavigationProp<RootStackParamLi
 
 interface ParsedQuizConfig {
     gameType?: string;           // 'WWW' | 'BLITZ' | 'TRIVIA' | 'CUSTOM' | 'AUDIO'
+    gameMode?: string;           // 'STANDARD' | 'BRAIN_RING' | 'BLITZ'
+    answerTimeSeconds?: number;
     difficulty?: string;         // 'EASY' | 'MEDIUM' | 'HARD'
     roundCount?: number;
     roundTime?: number;
@@ -456,11 +458,15 @@ const ChallengeDetailsScreen: React.FC = () => {
     const handleWWWQuiz = async (config: ParsedQuizConfig) => {
         // Create a session for tracking
         try {
+            const gameMode = config.gameMode || 'STANDARD';
+            
             const session = await startQuizSession({
                 challengeId: challengeId!,
                 teamName: config.teamName || 'Team',
                 teamMembers: config.teamMembers || [],
                 difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
+                gameMode: gameMode as any,
+                answerTimeSeconds: config.answerTimeSeconds || 20,
                 roundTimeSeconds: config.roundTime || 30,
                 totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
@@ -468,17 +474,24 @@ const ChallengeDetailsScreen: React.FC = () => {
                 questionSource: 'app',
             }).unwrap();
 
-            navigation.navigate('WWWGamePlay', {
-                sessionId: session.id,
-                challengeId: challengeId,
-                teamName: config.teamName || 'Team',
-                teamMembers: config.teamMembers || [],
-                difficulty: config.difficulty || 'MEDIUM',
-                roundTime: config.roundTime || 30,
-                roundCount: config.roundCount || 5,
-                enableAIHost: config.enableAIHost !== false,
-                enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
-            });
+            if (gameMode === 'BRAIN_RING') {
+                navigation.navigate('BrainRingGamePlay' as any, {
+                    sessionId: session.id,
+                    userId: user?.id
+                });
+            } else {
+                navigation.navigate('WWWGamePlay', {
+                    sessionId: session.id,
+                    challengeId: challengeId,
+                    teamName: config.teamName || 'Team',
+                    teamMembers: config.teamMembers || [],
+                    difficulty: config.difficulty || 'MEDIUM',
+                    roundTime: config.roundTime || 30,
+                    roundCount: config.roundCount || 5,
+                    enableAIHost: config.enableAIHost !== false,
+                    enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
+                });
+            }
         } catch (error) {
             console.error('Failed to create WWW quiz session:', error);
             // Fallback to legacy navigation without session if session creation fails

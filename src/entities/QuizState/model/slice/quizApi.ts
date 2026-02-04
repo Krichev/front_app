@@ -157,7 +157,7 @@ export interface UpdateQuestionVisibilityRequest {
     originalQuizId?: number;  // Required if visibility is QUIZ_ONLY
 }
 
-export interface UserRelationship {
+export type UserRelationship = {
     id: string;
     userId: string;
     username: string;
@@ -172,11 +172,51 @@ export interface CreateRelationshipRequest {
     relatedUsername: string;
 }
 
+export type GameMode = 'STANDARD' | 'BRAIN_RING' | 'BLITZ';
+export type BrainRingRoundStatus = 'WAITING_FOR_BUZZ' | 'PLAYER_ANSWERING' | 'CORRECT_ANSWER' | 'ALL_LOCKED_OUT';
+
+export interface BuzzRequest {
+    userId: number;
+    timestamp: string; // ISO timestamp
+}
+
+export interface BuzzResponse {
+    success: boolean;
+    isFirstBuzzer: boolean;
+    answerDeadline?: string;
+    message: string;
+}
+
+export interface BrainRingAnswerRequest {
+    userId: number;
+    answer: string;
+}
+
+export interface BrainRingAnswerResponse {
+    isCorrect: boolean;
+    playerLockedOut: boolean;
+    roundComplete: boolean;
+    correctAnswer?: string;
+    nextBuzzerAllowed: boolean;
+    winnerUserId?: number;
+}
+
+export interface BrainRingState {
+    currentBuzzerUserId?: number;
+    currentBuzzerName?: string;
+    lockedOutPlayers: number[];
+    answerDeadline?: string;
+    roundStatus: BrainRingRoundStatus;
+    winnerUserId?: number;
+}
+
 export interface QuizConfig {
     gameType: 'WWW';
     teamName: string;
     teamMembers: string[];
     difficulty: APIDifficulty;
+    gameMode: GameMode;
+    answerTimeSeconds: number;
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
@@ -193,6 +233,8 @@ export interface QuizSession {
     teamName: string;
     teamMembers: string[];
     difficulty: APIDifficulty;
+    gameMode: GameMode;
+    answerTimeSeconds: number;
     roundTimeSeconds: number;
     totalRounds: number;
     completedRounds: number;
@@ -219,6 +261,8 @@ export interface StartQuizSessionRequest {
     teamName: string;
     teamMembers: string[];
     difficulty: APIDifficulty;
+    gameMode?: GameMode;
+    answerTimeSeconds?: number;
     roundTimeSeconds: number;
     totalRounds: number;
     enableAiHost: boolean;
@@ -739,6 +783,53 @@ export const quizApi = createApi({
                 {type: 'QuizSession', id: sessionId}
             ],
         }),
+
+        // ========================================================================
+        // BRAIN RING ENDPOINTS
+        // ========================================================================
+
+        buzz: builder.mutation<BuzzResponse, {
+            sessionId: string;
+            roundId: string;
+            request: BuzzRequest;
+        }>({
+            query: ({sessionId, roundId, request}) => ({
+                url: `/quiz/sessions/${sessionId}/rounds/${roundId}/buzz`,
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: (result, error, {sessionId, roundId}) => [
+                {type: 'QuizRound', id: `BRAIN_RING_STATE_${roundId}`}
+            ],
+        }),
+
+        submitBrainRingAnswer: builder.mutation<BrainRingAnswerResponse, {
+            sessionId: string;
+            roundId: string;
+            request: BrainRingAnswerRequest;
+        }>({
+            query: ({sessionId, roundId, request}) => ({
+                url: `/quiz/sessions/${sessionId}/rounds/${roundId}/brain-ring-answer`,
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: (result, error, {sessionId, roundId}) => [
+                {type: 'QuizSession', id: sessionId},
+                {type: 'QuizRound', id: `SESSION_${sessionId}`},
+                {type: 'QuizRound', id: roundId},
+                {type: 'QuizRound', id: `BRAIN_RING_STATE_${roundId}`}
+            ],
+        }),
+
+        getBrainRingState: builder.query<BrainRingState, {
+            sessionId: string;
+            roundId: string;
+        }>({
+            query: ({sessionId, roundId}) => `/quiz/sessions/${sessionId}/rounds/${roundId}/brain-ring-state`,
+            providesTags: (result, error, {sessionId, roundId}) => [
+                {type: 'QuizRound', id: `BRAIN_RING_STATE_${roundId}`}
+            ],
+        }),
     }),
 });
 
@@ -782,6 +873,11 @@ export const {
     useGetAvailableTopicsQuery,
     useGetCurrentRoundQuery,
     useUpdateQuizSessionConfigMutation,
+
+    // Brain Ring hooks
+    useBuzzMutation,
+    useSubmitBrainRingAnswerMutation,
+    useGetBrainRingStateQuery,
 
     // ❌ REMOVED: useCreateUserQuestionWithMediaMutation (was duplicate)
 } = quizApi;

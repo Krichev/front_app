@@ -20,6 +20,7 @@ import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen/CreateWWWQuest
 import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
 import LocationVerificationScreen from '../screens/LocationVerificationScreen';
 import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
+import BrainRingGamePlayScreen from '../screens/BrainRingGamePlayScreen';
 import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
@@ -95,6 +96,10 @@ export type RootStackParamList = {
     RhythmChallenge: {
         questionId: number;
         onComplete?: (passed: boolean, score: number) => void;
+    };
+    BrainRingGamePlay: {
+        sessionId: string;
+        userId: string;
     };
 };
 
@@ -286,6 +291,7 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen name="PenaltyDashboard" component={PenaltyDashboardScreen} />
                         <Stack.Screen name="PenaltyProof" component={PenaltyProofScreen} />
                         <Stack.Screen name="WWWGamePlay" component={WWWGamePlayScreen} />
+                        <Stack.Screen name="BrainRingGamePlay" component={BrainRingGamePlayScreen} />
                         <Stack.Screen
                             name="WWWGameResults"
                             component={WWWGameResultsScreen}

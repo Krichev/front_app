@@ -66,6 +66,54 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                 </View>
             </View>
 
+            {/* Game Mode */}
+            <View style={styles.section}>
+                <Text style={styles.label}>Game Mode *</Text>
+                <View style={styles.difficultyContainer}>
+                    {['STANDARD', 'BRAIN_RING', 'BLITZ'].map((mode) => (
+                        <TouchableOpacity
+                            key={mode}
+                            style={[
+                                styles.difficultyButton,
+                                config?.gameMode === mode && styles.difficultyButtonActive
+                            ]}
+                            onPress={() => updateConfig({ gameMode: mode as any })}
+                        >
+                            <Text
+                                style={[
+                                    styles.difficultyText,
+                                    config?.gameMode === mode && styles.difficultyTextActive
+                                ]}
+                            >
+                                {mode.replace('_', ' ')}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </View>
+
+            {/* Answer Time (Brain Ring only) */}
+            {config?.gameMode === 'BRAIN_RING' && (
+                <View style={styles.section}>
+                    <Text style={styles.label}>Answer Time (seconds) *</Text>
+                    <View style={styles.timeContainer}>
+                        <TouchableOpacity
+                            onPress={() => updateConfig({ answerTimeSeconds: Math.max(10, (config?.answerTimeSeconds || 20) - 5) })}
+                            style={styles.timeButton}
+                        >
+                            <Text style={styles.timeButtonText}>-</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.timeValue}>{config?.answerTimeSeconds || 20}s</Text>
+                        <TouchableOpacity
+                            onPress={() => updateConfig({ answerTimeSeconds: Math.min(60, (config?.answerTimeSeconds || 20) + 5) })}
+                            style={styles.timeButton}
+                        >
+                            <Text style={styles.timeButtonText}>+</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
+
             {/* Team Name */}
             <View style={styles.section}>
                 <Text style={styles.label}>{t('createQuest.quizConfig.teamNameRequired')}</Text>

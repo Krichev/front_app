@@ -5,7 +5,7 @@ import {
     useCreateQuizChallengeMutation,
     CreateQuizChallengeRequest,
 } from '../../../entities/ChallengeState/model/slice/challengeApi';
-import {useStartQuizSessionMutation} from '../../../entities/QuizState/model/slice/quizApi';
+import {useStartQuizSessionMutation, GameMode} from '../../../entities/QuizState/model/slice/quizApi';
 import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
 import {BaseQuestionForQuest, extractQuestionIds} from "../types/question.types.ts";
 import {mapQuizConfigToBackend} from "../../../utils/quizConfigMapper.ts";
@@ -17,6 +17,8 @@ export interface QuizConfig {
     teamName: string;
     teamMembers: string[];
     difficulty: APIDifficulty;
+    gameMode: GameMode;
+    answerTimeSeconds: number;
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
@@ -50,6 +52,8 @@ export const useQuestCreator = () => {
         teamName: '',
         teamMembers: [],
         difficulty: 'MEDIUM',
+        gameMode: 'STANDARD',
+        answerTimeSeconds: 20,
         roundTime: 60,
         roundCount: 10,
         enableAIHost: true,
@@ -132,6 +136,8 @@ export const useQuestCreator = () => {
                 teamName: quizConfig.teamName || 'My Team',
                 teamMembers: quizConfig.teamMembers.length > 0 ? quizConfig.teamMembers : ['Player 1'],
                 difficulty: quizConfig.difficulty,
+                gameMode: quizConfig.gameMode,
+                answerTimeSeconds: quizConfig.answerTimeSeconds,
                 totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length > 0 ? selectedQuestions.length : quizConfig.roundCount),
                 roundTimeSeconds: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
