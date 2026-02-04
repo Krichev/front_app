@@ -15,6 +15,7 @@ import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.t
 import KeychainService from "../services/auth/KeychainService.ts";
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
+import {ScreenTimeCountdown} from '../features/ScreenTime/ui/ScreenTimeCountdown';
 
 // Correct navigation type for a screen inside bottom tabs
 type HomeScreenNavigationProp = CompositeNavigationProp<
@@ -108,12 +109,17 @@ const HomeScreen: React.FC = () => {
         <SafeAreaView style={screen.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.greeting}>
-                    {t('home.greeting')}, {user?.username || 'User'}! 👋
-                </Text>
-                <TouchableOpacity onPress={handleLogout}>
-                    <MaterialCommunityIcons name="logout" size={24} color={theme.colors.text.primary}/>
-                </TouchableOpacity>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.greeting}>
+                        {t('home.greeting')}, {user?.username || 'User'}! 👋
+                    </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <ScreenTimeCountdown compact onPress={() => navigation.navigate('UserProfile', { userId: user?.id })} />
+                    <TouchableOpacity onPress={handleLogout} style={{ marginLeft: 16 }}>
+                        <MaterialCommunityIcons name="logout" size={24} color={theme.colors.text.primary}/>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <FlatList

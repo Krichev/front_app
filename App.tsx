@@ -1,10 +1,13 @@
 // App.tsx
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, {useCallback} from 'react';
 import {Provider} from 'react-redux';
 import {store} from './src/app/providers/StoreProvider/store.ts';
-import AppNavigation from './src/navigation/AppNavigator.tsx';
+import AppNavigation, {navigationRef} from './src/navigation/AppNavigator.tsx';
 import {WWWGameProvider} from './src/app/providers/WWWGameProvider.tsx';
+import {ScreenTimeProvider} from './src/app/providers/ScreenTimeProvider.tsx';
+import {AppLockOverlay} from './src/features/ScreenTime/ui/AppLockOverlay.tsx';
+import {LowTimeWarningBanner} from './src/features/ScreenTime/ui/LowTimeWarningBanner.tsx';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {StyleSheet} from 'react-native';
 import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
@@ -17,11 +20,33 @@ import { I18nProvider, useI18n } from './src/app/providers/I18nProvider';
 const AppContent: React.FC = () => {
     const { currentLanguage } = useI18n();
 
+    const handleViewPenalties = useCallback(() => {
+        // Navigate to penalties - the overlay might block interaction unless we handle this carefully.
+        // But since we are passing this callback, the overlay calls it on press.
+        // We rely on the overlay staying visible but maybe allowing the navigation transition underneath
+        // OR the overlay might momentarily hide or we might need to unlock?
+        // Actually the requirement is "Lock should be dismissible ONLY if time is restored".
+        // But we want to allow user to view penalties to UNLOCK the time.
+        // So we navigate to PenaltyDashboard.
+        navigationRef.current?.navigate('PenaltyDashboard');
+    }, []);
+
+    const handleOpenSettings = useCallback(() => {
+        navigationRef.current?.navigate('Main', { screen: 'Settings' });
+    }, []);
+
     return (
         <AuthInitializer>
-            <WWWGameProvider>
-                <AppNavigation key={currentLanguage} />
-            </WWWGameProvider>
+            <ScreenTimeProvider>
+                <WWWGameProvider>
+                    <AppNavigation key={currentLanguage} />
+                    <AppLockOverlay 
+                        onViewPenalties={handleViewPenalties}
+                        onOpenSettings={handleOpenSettings}
+                    />
+                    <LowTimeWarningBanner />
+                </WWWGameProvider>
+            </ScreenTimeProvider>
         </AuthInitializer>
     );
 };

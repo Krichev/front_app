@@ -1,15 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../../shared/ui/theme';
-import { useGetScreenTimeBudgetQuery } from '../../../entities/WagerState/model/slice/wagerApi';
 import Svg, { Circle } from 'react-native-svg';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useScreenTime, useFormattedScreenTime } from '../../../shared/hooks/useScreenTime';
 
 export const ScreenTimeBudgetWidget: React.FC = () => {
     const { theme } = useTheme();
-    const { data: budget, isLoading } = useGetScreenTimeBudgetQuery();
+    const { budget, isTracking, isLocked } = useScreenTime();
+    const { formatted, urgencyLevel, minutes: availableMinutes } = useFormattedScreenTime();
 
-    if (isLoading) {
+    if (!budget) {
         return (
             <View style={[styles.container, styles.center, { backgroundColor: theme.colors.background.primary }]}>
                 <ActivityIndicator color={theme.colors.primary.main} />
@@ -17,19 +18,22 @@ export const ScreenTimeBudgetWidget: React.FC = () => {
         );
     }
 
-    if (!budget) return null;
-
     const size = 100;
     const strokeWidth = 8;
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
-    const percentage = (budget.availableMinutes / budget.dailyBudgetMinutes) * 100;
+    
+    // Calculate percentage based on available vs daily (capped at 100)
+    // Note: availableMinutes from hook is based on seconds, so we convert back to check percentage
+    const currentAvailableMinutes = parseInt(formatted.split(':')[0]) * 60 + parseInt(formatted.split(':')[1]);
+    const percentage = Math.min(100, Math.max(0, (currentAvailableMinutes / budget.dailyBudgetMinutes) * 100));
+    
     const strokeDashoffset = circumference - (circumference * percentage) / 100;
 
     const getProgressColor = () => {
-        if (percentage > 60) return theme.colors.success.main;
-        if (percentage > 30) return theme.colors.warning.main;
-        return theme.colors.error.main;
+        if (urgencyLevel === 'critical') return theme.colors.error.main;
+        if (urgencyLevel === 'warning') return theme.colors.warning.main;
+        return theme.colors.success.main;
     };
 
     return (
@@ -37,6 +41,12 @@ export const ScreenTimeBudgetWidget: React.FC = () => {
             <View style={styles.header}>
                 <MaterialCommunityIcons name="clock-outline" size={20} color={theme.colors.text.secondary} />
                 <Text style={[styles.title, { color: theme.colors.text.primary }]}>Screen Time Budget</Text>
+                {isTracking && (
+                    <View style={styles.liveIndicator}>
+                        <View style={[styles.dot, { backgroundColor: theme.colors.success.main }]} />
+                        <Text style={[styles.liveText, { color: theme.colors.success.main }]}>LIVE</Text>
+                    </View>
+                )}
             </View>
 
             <View style={styles.content}>
@@ -65,9 +75,11 @@ export const ScreenTimeBudgetWidget: React.FC = () => {
                     </Svg>
                     <View style={styles.chartTextContainer}>
                         <Text style={[styles.availableText, { color: theme.colors.text.primary }]}>
-                            {budget.availableMinutes}
+                            {formatted}
                         </Text>
-                        <Text style={[styles.minLabel, { color: theme.colors.text.secondary }]}>min</Text>
+                        <Text style={[styles.minLabel, { color: theme.colors.text.secondary }]}>
+                            {isLocked ? 'LOCKED' : 'remaining'}
+                        </Text>
                     </View>
                 </View>
 
@@ -159,5 +171,24 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         height: 140,
+    },
+    liveIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 'auto',
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginRight: 4,
+    },
+    liveText: {
+        fontSize: 10,
+        fontWeight: 'bold',
     }
 });

@@ -134,6 +134,20 @@ export interface ScreenTimeBudget {
     updatedAt: string;
 }
 
+export interface SyncTimeRequest {
+    usedMinutes: number;
+    clientTimestamp: string;
+}
+
+export interface ScreenTimeStatus {
+    isLocked: boolean;
+    availableMinutes: number;
+    lockedMinutes: number;
+    lockExpiresAt?: string;
+    dailyBudgetMinutes: number;
+    lastResetDate: string;
+}
+
 export interface SubmitProofRequest {
     description?: string;
     file?: any; // Handled via FormData

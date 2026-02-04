@@ -7,6 +7,8 @@ import {
     Penalty, 
     PenaltySummary, 
     ScreenTimeBudget,
+    SyncTimeRequest,
+    ScreenTimeStatus,
     SubmitProofRequest,
     VerifyPenaltyRequest,
     AppealPenaltyRequest,
@@ -210,6 +212,29 @@ export const wagerApi = createApi({
             query: () => '/api/screen-time/budget',
             providesTags: ['ScreenTime'],
         }),
+
+        syncScreenTime: builder.mutation<ScreenTimeBudget, SyncTimeRequest>({
+            query: (request) => ({
+                url: '/api/screen-time/budget/sync',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        deductScreenTime: builder.mutation<ScreenTimeBudget, { minutes: number }>({
+            query: (request) => ({
+                url: '/api/screen-time/budget/deduct',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        getScreenTimeStatus: builder.query<ScreenTimeStatus, void>({
+            query: () => '/api/screen-time/budget/status',
+            providesTags: ['ScreenTime'],
+        }),
     }),
 });
 
@@ -233,4 +258,7 @@ export const {
     useAppealPenaltyMutation,
     useWaivePenaltyMutation,
     useGetScreenTimeBudgetQuery,
+    useSyncScreenTimeMutation,
+    useDeductScreenTimeMutation,
+    useGetScreenTimeStatusQuery,
 } = wagerApi;
