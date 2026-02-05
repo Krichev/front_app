@@ -5,6 +5,7 @@ import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {updateUser} from '../../../AuthState/model/slice/authSlice'; // ADDED: Import updateUser
 import TokenRefreshService from '../../../../services/auth/TokenRefreshService'; // ADDED: Import TokenRefreshService
 import { UserSearchResult } from '../../../QuizState/model/types/question.types';
+import { Gender } from '../../../InvitationState/model/types'; // ADDED: Import Gender
 
 export interface UserProfile {
     id: string;
@@ -16,6 +17,7 @@ export interface UserProfile {
     statsCompleted?: number;
     statsCreated?: number;
     statsSuccess?: number;
+    gender?: Gender; // ADDED: gender field
 }
 
 export interface UpdateUserProfileRequest {
@@ -34,6 +36,7 @@ export interface UserStatsResponse {
     completed: number;
     success: number;
 }
+
 
 export interface LoginRequest {
     username: string;
@@ -189,6 +192,18 @@ export const userApi = createApi({
             },
         }),
 
+        updateGender: builder.mutation<void, { gender: Gender }>({
+            query: (body) => ({
+                url: '/users/me/gender',
+                method: 'PUT',
+                body,
+            }),
+            invalidatesTags: (result, error, arg) => [
+                { type: 'UserProfile' }, // Invalidate UserProfile to refetch updated gender
+                { type: 'User' }
+            ],
+        }),
+
         login: builder.mutation<AuthResponse, LoginRequest>({
             query: (credentials) => ({
                 url: '/auth/login',
@@ -215,6 +230,7 @@ export const {
     useSearchUsersQuery,
     useGetUserProfilesQuery,
     useUpdateUsernameMutation,
+    useUpdateGenderMutation,
     useLoginMutation,
     useRegisterMutation,
 } = userApi;

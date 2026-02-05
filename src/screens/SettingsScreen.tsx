@@ -23,8 +23,15 @@ import {
     useUpdateAppSettingsMutation,
     clearCachedSettings,
 } from '../entities/SettingsState/model/slice/settingsApi';
+import { 
+    useGetUserProfileQuery, 
+    useUpdateGenderMutation 
+} from '../entities/UserState/model/slice/userApi';
 import { AppLanguage, AVAILABLE_LANGUAGES } from '../entities/SettingsState/model/types/settings.types';
 import KeychainService from '../services/auth/KeychainService';
+import { InvitationPreferencesSection } from '../features/Invitation/ui/InvitationPreferencesSection';
+import { Gender } from '../entities/InvitationState/model/types';
+import { Picker } from '@react-native-picker/picker';
 
 const SettingsScreen: React.FC = () => {
     const { t } = useTranslation();
@@ -32,16 +39,20 @@ const SettingsScreen: React.FC = () => {
     const { screen, theme } = useAppStyles();
     const styles = themeStyles;
     
-    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
     const { currentLanguage, changeLanguage, isChangingLanguage } = useI18n();
     
     // Fetch settings from API
     const { data: settings, isLoading } = useGetAppSettingsQuery(undefined, {
         skip: !isAuthenticated,
     });
+
+    const { data: userProfile } = useGetUserProfileQuery(user?.id || '', {
+        skip: !user?.id
+    });
     
-    // Update settings mutation
     const [updateSettings, { isLoading: isUpdating }] = useUpdateAppSettingsMutation();
+    const [updateGender, { isLoading: isUpdatingGender }] = useUpdateGenderMutation();
 
     // Handle language selection
     const handleLanguageChange = useCallback(async (language: AppLanguage) => {
@@ -57,6 +68,22 @@ const SettingsScreen: React.FC = () => {
             Alert.alert(t('common.error'), t('settings.updateError'));
         }
     }, [updateSettings, t]);
+
+    const handleGenderChange = async (gender: Gender) => {
+        try {
+            await updateGender({ gender }).unwrap();
+        } catch (error) {
+            Alert.alert(t('common.error'), 'Failed to update gender');
+        }
+    };
+
+    const handleNotificationsToggle = useCallback(async (enabled: boolean) => {
+        try {
+            await updateSettings({ notificationsEnabled: enabled }).unwrap();
+        } catch (error) {
+            console.error('Failed to update notifications settings:', error);
+        }
+    }, [updateSettings]);
 
     // Handle logout
     const handleLogout = useCallback(() => {
@@ -108,6 +135,42 @@ const SettingsScreen: React.FC = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
                     
+                    {/* Gender Setting */}
+                    <View style={styles.settingItem}>
+                        <View style={styles.settingInfo}>
+                            <MaterialCommunityIcons 
+                                name="account-outline" 
+                                size={24} 
+                                color={theme.colors.primary.main} 
+                            />
+                            <View style={styles.settingText}>
+                                <Text style={styles.settingLabel}>Gender</Text>
+                                <Text style={styles.settingDescription}>
+                                    For gender-specific invitations
+                                </Text>
+                            </View>
+                        </View>
+                        <View style={{ width: 150 }}>
+                            <Picker
+                                selectedValue={userProfile?.gender || 'PREFER_NOT_TO_SAY'}
+                                onValueChange={handleGenderChange}
+                                enabled={!isUpdatingGender}
+                            >
+                                <Picker.Item label="Male" value="MALE" />
+                                <Picker.Item label="Female" value="FEMALE" />
+                                <Picker.Item label="Other" value="OTHER" />
+                                <Picker.Item label="Prefer Not to Say" value="PREFER_NOT_TO_SAY" />
+                            </Picker>
+                        </View>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    {/* Invitation Preferences */}
+                    <InvitationPreferencesSection />
+
+                    <View style={styles.divider} />
+
                     {/* Language Setting Header */}
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>

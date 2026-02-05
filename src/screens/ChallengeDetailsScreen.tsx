@@ -29,6 +29,10 @@ import {QuestAudioPlayer} from '../components/QuestAudioPlayer';
 import {AudioChallengeType} from '../entities/ChallengeState/model/types';
 import { useGetWagersByChallengeQuery } from '../entities/WagerState/model/slice/wagerApi';
 import { WagerInvitationCard } from '../features/Wager/ui/WagerInvitationCard';
+import { InviteUserModal } from '../features/Invitation/ui/InviteUserModal';
+import { useCreateInvitationMutation } from '../entities/InvitationState/model/slice/invitationApi';
+import { CreateQuestInvitationRequest } from '../entities/InvitationState/model/types';
+import { useTheme } from '../shared/ui/theme';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -73,6 +77,7 @@ interface ParsedQuizConfig {
 const ChallengeDetailsScreen: React.FC = () => {
     const route = useRoute<ChallengeDetailsRouteProp>();
     const navigation = useNavigation<ChallengeDetailsNavigationProp>();
+    const { theme } = useTheme();
 
     // Add error handling for missing params
     const challengeId = route.params?.challengeId;
@@ -97,6 +102,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     // State for verification upload
     const [proofSubmitted, setProofSubmitted] = useState(false);
     const [isStartingQuiz, setIsStartingQuiz] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
 
     // RTK Query hooks - skip query if no challengeId
     const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId!, {
@@ -110,6 +116,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     const [submitCompletion, {isLoading: isSubmitting}] = useSubmitChallengeCompletionMutation();
     const [startQuizSession] = useStartQuizSessionMutation();
     const [deleteQuest, {isLoading: isDeleting}] = useDeleteQuestMutation();
+    const [createInvitation, {isLoading: isInviting}] = useCreateInvitationMutation();
 
     // Add cancelled state check
     const isCancelled = challenge?.status === 'CANCELLED';
@@ -635,6 +642,16 @@ const ChallengeDetailsScreen: React.FC = () => {
         }
     };
 
+    const handleInvitationSubmit = async (request: CreateQuestInvitationRequest) => {
+        try {
+            await createInvitation(request).unwrap();
+            setShowInviteModal(false);
+            Alert.alert('Success', 'Invitation sent successfully!');
+        } catch (error: any) {
+            Alert.alert('Error', error?.data?.message || 'Failed to send invitation.');
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView>
@@ -791,6 +808,16 @@ const ChallengeDetailsScreen: React.FC = () => {
 
                     {/* Action Buttons - Only show if not a quiz type or if quiz doesn't have game config */}
                     <View style={styles.actionSection}>
+                        {challenge.userIsCreator && (
+                            <TouchableOpacity
+                                style={[styles.button, styles.secondaryButton, { marginBottom: 12 }]}
+                                onPress={() => setShowInviteModal(true)}
+                            >
+                                <MaterialCommunityIcons name="email-plus" size={24} color="white"/>
+                                <Text style={styles.buttonText}>Invite Players</Text>
+                            </TouchableOpacity>
+                        )}
+
                         {challenge.type === 'QUIZ' ? (
                             // Quiz-specific button
                             <TouchableOpacity
@@ -861,6 +888,15 @@ const ChallengeDetailsScreen: React.FC = () => {
                     </View>
                 </View>
             </ScrollView>
+
+            <InviteUserModal 
+                visible={showInviteModal}
+                questId={Number(challengeId)}
+                questTitle={challenge.title}
+                onClose={() => setShowInviteModal(false)}
+                onSuccess={handleInvitationSubmit}
+                isLoading={isInviting}
+            />
         </SafeAreaView>
     );
 };
