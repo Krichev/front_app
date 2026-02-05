@@ -1,6 +1,22 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, TouchableOpacity, Animated, Platform } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { StyleSheet, Text, TouchableOpacity, Animated, Platform, Vibration } from 'react-native';
+import ReactNativeHapticFeedback, { HapticFeedbackTypes } from 'react-native-haptic-feedback';
+
+// Configure haptic options
+const hapticOptions = {
+    enableVibrateFallback: true, // Falls back to Vibration API if haptics unavailable
+    ignoreAndroidSystemSettings: false,
+};
+
+// Helper function with fallback
+const triggerHaptic = (type: HapticFeedbackTypes = HapticFeedbackTypes.impactHeavy) => {
+    try {
+        ReactNativeHapticFeedback.trigger(type, hapticOptions);
+    } catch (error) {
+        // Fallback to basic vibration
+        Vibration.vibrate(Platform.OS === 'ios' ? 10 : 50);
+    }
+};
 
 interface BuzzButtonProps {
     onPress: () => void;
@@ -36,7 +52,7 @@ export const BuzzButton: React.FC<BuzzButtonProps> = ({ onPress, disabled, isAct
     const handlePress = () => {
         if (!disabled) {
             if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                triggerHaptic(HapticFeedbackTypes.impactHeavy);
             }
             onPress();
         }

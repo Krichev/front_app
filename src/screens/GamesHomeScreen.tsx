@@ -26,6 +26,14 @@ const GamesHomeScreen: React.FC = () => {
             onPress: () => navigation.navigate('CreateWWWQuest'),
         },
         {
+            id: 'vibration-quiz',
+            title: 'Feel the Beat',
+            description: 'Guess the song from its rhythm vibrations!',
+            icon: 'vibrate',
+            color: '#9C27B0',
+            onPress: () => navigation.navigate('VibrationQuiz'),
+        },
+        {
             id: 'rhythm',
             title: 'Rhythm Game',
             description: 'Test your timing with this fun rhythm-based challenge.',

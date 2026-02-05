@@ -629,6 +629,26 @@ const ru = {
         amount: 'Сумма',
         currency: 'Валюта',
     },
+    vibrationQuiz: {
+        title: 'Почувствуй ритм',
+        subtitle: 'Угадай песню по вибрации',
+        feelTheRhythm: 'Почувствуй ритм',
+        guessTheSong: 'Какая это песня?',
+        replay: 'Повторить',
+        replaysLeft: 'Осталось повторов: {{count}}',
+        noReplaysLeft: 'Повторов не осталось',
+        correct: 'Правильно!',
+        incorrect: 'Не совсем...',
+        theAnswerWas: 'Это была песня',
+        nextQuestion: 'Следующий вопрос',
+        finalScore: 'Итоговый счёт',
+        playAgain: 'Играть снова',
+        difficulty: {
+            easy: 'Легко',
+            medium: 'Средне',
+            hard: 'Сложно',
+        },
+    },
 };
 
 export default ru;

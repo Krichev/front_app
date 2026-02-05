@@ -658,6 +658,26 @@ const en = {
         amount: 'Amount',
         currency: 'Currency',
     },
+    vibrationQuiz: {
+        title: 'Feel the Beat',
+        subtitle: 'Guess the song from vibrations',
+        feelTheRhythm: 'Feel the Rhythm',
+        guessTheSong: 'What song is this?',
+        replay: 'Replay',
+        replaysLeft: '{{count}} replays left',
+        noReplaysLeft: 'No replays left',
+        correct: 'Correct!',
+        incorrect: 'Not quite...',
+        theAnswerWas: 'The song was',
+        nextQuestion: 'Next Question',
+        finalScore: 'Final Score',
+        playAgain: 'Play Again',
+        difficulty: {
+            easy: 'Easy',
+            medium: 'Medium',
+            hard: 'Hard',
+        },
+    },
 };
 
 export default en;

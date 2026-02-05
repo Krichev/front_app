@@ -44,6 +44,8 @@ import { RelationshipStatus } from '../entities/QuizState/model/types/question.t
 import RhythmChallengeScreen from '../screens/RhythmChallengeScreen';
 import { PenaltyDashboardScreen } from '../screens/PenaltyDashboardScreen';
 import { PenaltyProofScreen } from '../screens/PenaltyProofScreen';
+import VibrationQuizScreen from '../screens/VibrationQuizScreen';
+import { VibrationDifficulty } from '../features/VibrationQuiz';
 
 // Navigation types
 export type RootStackParamList = {
@@ -96,6 +98,10 @@ export type RootStackParamList = {
     RhythmChallenge: {
         questionId: number;
         onComplete?: (passed: boolean, score: number) => void;
+    };
+    VibrationQuiz: {
+        difficulty?: VibrationDifficulty;
+        questionCount?: number;
     };
     BrainRingGamePlay: {
         sessionId: string;
@@ -323,6 +329,14 @@ const AppNavigator: React.FC = () => {
                             options={{
                                 headerShown: false,
                                 animation: 'slide_from_right',
+                            }}
+                        />
+                        <Stack.Screen 
+                            name="VibrationQuiz" 
+                            component={VibrationQuizScreen}
+                            options={{
+                                headerShown: false,
+                                animation: 'fade',
                             }}
                         />
                     </>
