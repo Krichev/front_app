@@ -19,6 +19,7 @@ import {settingsApi} from '../../../entities/SettingsState/model/slice/settingsA
 import {wagerApi} from '../../../entities/WagerState/model/slice/wagerApi';
 import {parentalApi} from '../../../entities/ParentalState/model/slice/parentalApi';
 import {invitationApi} from '../../../entities/InvitationState/model/slice/invitationApi';
+import {competitiveApi} from '../../../entities/CompetitiveMatch/model/slice/competitiveApi';
 
 export const store = configureStore({
     reducer: {
@@ -41,6 +42,7 @@ export const store = configureStore({
         [wagerApi.reducerPath]: wagerApi.reducer,
         [parentalApi.reducerPath]: parentalApi.reducer,
         [invitationApi.reducerPath]: invitationApi.reducer,
+        [competitiveApi.reducerPath]: competitiveApi.reducer,
     },
 
     middleware: (getDefaultMiddleware) =>
@@ -60,6 +62,7 @@ export const store = configureStore({
             wagerApi.middleware,
             parentalApi.middleware,
             invitationApi.middleware,
+            competitiveApi.middleware,
         ),
 
 

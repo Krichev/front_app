@@ -46,6 +46,12 @@ import { PenaltyDashboardScreen } from '../screens/PenaltyDashboardScreen';
 import { PenaltyProofScreen } from '../screens/PenaltyProofScreen';
 import VibrationQuizScreen from '../screens/VibrationQuizScreen';
 import { VibrationDifficulty } from '../features/VibrationQuiz';
+import { MatchmakingScreen } from '../screens/competitive/MatchmakingScreen';
+import { MatchLobbyScreen } from '../screens/competitive/MatchLobbyScreen';
+import { LiveMatchScreen } from '../screens/competitive/LiveMatchScreen';
+import { MatchResultScreen } from '../screens/competitive/MatchResultScreen';
+import { CompetitiveHistoryScreen } from '../screens/competitive/CompetitiveHistoryScreen';
+import { AudioChallengeType } from '../types/audioChallenge.types';
 
 // Navigation types
 export type RootStackParamList = {
@@ -107,6 +113,11 @@ export type RootStackParamList = {
         sessionId: string;
         userId: string;
     };
+    Matchmaking: { challengeType: AudioChallengeType; rounds: number };
+    MatchLobby: { matchId: number };
+    LiveMatch: { matchId: number };
+    MatchResult: { matchId: number };
+    CompetitiveHistory: undefined;
 };
 
 export type MainTabParamList = {
@@ -339,6 +350,11 @@ const AppNavigator: React.FC = () => {
                                 animation: 'fade',
                             }}
                         />
+                        <Stack.Screen name="Matchmaking" component={MatchmakingScreen} />
+                        <Stack.Screen name="MatchLobby" component={MatchLobbyScreen} />
+                        <Stack.Screen name="LiveMatch" component={LiveMatchScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="MatchResult" component={MatchResultScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="CompetitiveHistory" component={CompetitiveHistoryScreen} />
                     </>
                 )}
             </Stack.Navigator>
