@@ -1,6 +1,6 @@
 // src/navigation/AppNavigator.tsx - COMPLETE FIXED VERSION
 import React from 'react';
-import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
+import {NavigationContainer, NavigationContainerRef, LinkingOptions} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import { View, Text } from 'react-native';
@@ -29,6 +29,11 @@ import {ContactsScreen} from '../screens/ContactsScreen';
 import {AddContactScreen} from '../screens/AddContactScreen';
 import UserQuestionsScreen from '../screens/UserQuestionsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import JoinRoomScreen from '../screens/JoinRoomScreen';
+import ControllerLobbyScreen from '../screens/ControllerLobbyScreen';
+import ControllerGameScreen from '../screens/ControllerGameScreen';
+import MultiplayerGameOverScreen from '../screens/MultiplayerGameOverScreen';
+import QRScannerScreen from '../screens/QRScannerScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -118,6 +123,11 @@ export type RootStackParamList = {
     LiveMatch: { matchId: number };
     MatchResult: { matchId: number };
     CompetitiveHistory: undefined;
+    JoinRoom: undefined;
+    ControllerLobby: { roomCode: string };
+    ControllerGame: { roomCode: string };
+    MultiplayerGameOver: { roomCode: string };
+    QRScanner: undefined;
 };
 
 export type MainTabParamList = {
@@ -250,7 +260,7 @@ function MainTabs() {
     );
 }
 
-const AppNavigator: React.FC = () => {
+const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> = ({ linking }) => {
     const { t } = useTranslation();
     const {isAuthenticated, isInitialized} = useSelector(
         (state: RootState) => state.auth,
@@ -262,7 +272,7 @@ const AppNavigator: React.FC = () => {
     }
 
     return (
-        <NavigationContainer ref={navigationRef}>
+        <NavigationContainer ref={navigationRef} linking={linking}>
             <AuthNavigationHandler />
             <Stack.Navigator
                 screenOptions={{
@@ -355,6 +365,11 @@ const AppNavigator: React.FC = () => {
                         <Stack.Screen name="LiveMatch" component={LiveMatchScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="MatchResult" component={MatchResultScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="CompetitiveHistory" component={CompetitiveHistoryScreen} />
+                        <Stack.Screen name="JoinRoom" component={JoinRoomScreen} />
+                        <Stack.Screen name="ControllerLobby" component={ControllerLobbyScreen} />
+                        <Stack.Screen name="ControllerGame" component={ControllerGameScreen} />
+                        <Stack.Screen name="MultiplayerGameOver" component={MultiplayerGameOverScreen} />
+                        <Stack.Screen name="QRScanner" component={QRScannerScreen} />
                     </>
                 )}
             </Stack.Navigator>

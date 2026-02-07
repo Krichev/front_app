@@ -148,9 +148,17 @@ const HomeScreen: React.FC = () => {
 
                                 <TouchableOpacity
                                     style={styles.quickActionCard}
+                                    onPress={() => navigation.navigate('JoinRoom')}
+                                >
+                                    <MaterialCommunityIcons name="account-group" size={32} color={theme.colors.info.main}/>
+                                    <Text style={styles.quickActionText}>MULTIPLAYER</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.quickActionCard}
                                     onPress={() => navigation.navigate('Search')}
                                 >
-                                    <MaterialCommunityIcons name="magnify" size={32} color={theme.colors.info.main}/>
+                                    <MaterialCommunityIcons name="magnify" size={32} color={theme.colors.secondary.main}/>
                                     <Text style={styles.quickActionText}>{t('home.findChallenges')}</Text>
                                 </TouchableOpacity>
 

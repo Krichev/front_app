@@ -14,6 +14,15 @@ import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
 import {ThemeProvider} from './src/shared/ui/theme/ThemeProvider';
 import { I18nProvider, useI18n } from './src/app/providers/I18nProvider';
 
+const linking = {
+    prefixes: ['challengerapp://', 'https://play.yourapp.com'],
+    config: {
+        screens: {
+            ControllerLobby: 'join/:roomCode',
+        },
+    },
+};
+
 /**
  * Inner app content with KeychainService initialization
  */
@@ -39,7 +48,7 @@ const AppContent: React.FC = () => {
         <AuthInitializer>
             <ScreenTimeProvider>
                 <WWWGameProvider>
-                    <AppNavigation key={currentLanguage} />
+                    <AppNavigation key={currentLanguage} linking={linking} />
                     <AppLockOverlay 
                         onViewPenalties={handleViewPenalties}
                         onOpenSettings={handleOpenSettings}

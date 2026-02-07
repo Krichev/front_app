@@ -510,6 +510,14 @@ export const quizApi = createApi({
         }),
 
         /**
+         * Get a single quiz question by ID
+         */
+        getQuizQuestionById: builder.query<QuizQuestion, number>({
+            query: (id) => `/quiz-questions/${id}`,
+            providesTags: (result, error, id) => [{ type: 'QuizQuestion', id }],
+        }),
+
+        /**
          * Delete a user question
          */
         deleteUserQuestion: builder.mutation<{ message: string }, number>({
@@ -842,6 +850,7 @@ export const {
     useCreateUserQuestionMutation,
     useCreateQuestionWithMediaMutation, // ✅ NEW unified endpoint
     useGetUserQuestionsQuery,
+    useGetQuizQuestionByIdQuery, // ✅ NEW
     useDeleteUserQuestionMutation,
     useSearchQuestionsQuery,
 
