@@ -34,6 +34,7 @@ import ControllerLobbyScreen from '../screens/ControllerLobbyScreen';
 import ControllerGameScreen from '../screens/ControllerGameScreen';
 import MultiplayerGameOverScreen from '../screens/MultiplayerGameOverScreen';
 import QRScannerScreen from '../screens/QRScannerScreen';
+import CameraScreen from '../screens/CameraScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -128,6 +129,11 @@ export type RootStackParamList = {
     ControllerGame: { roomCode: string };
     MultiplayerGameOver: { roomCode: string };
     QRScanner: undefined;
+    CameraScreen: {
+        mode: 'photo' | 'video';
+        maxDuration?: number;
+        onCapture?: (media: any) => void;
+    };
 };
 
 export type MainTabParamList = {
@@ -370,6 +376,7 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                         <Stack.Screen name="ControllerGame" component={ControllerGameScreen} />
                         <Stack.Screen name="MultiplayerGameOver" component={MultiplayerGameOverScreen} />
                         <Stack.Screen name="QRScanner" component={QRScannerScreen} />
+                        <Stack.Screen name="CameraScreen" component={CameraScreen} />
                     </>
                 )}
             </Stack.Navigator>

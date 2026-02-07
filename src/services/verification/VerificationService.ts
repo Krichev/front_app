@@ -98,6 +98,22 @@ export class VerificationService {
     }
 
     /**
+     * Take a photo using the new CameraScreen (Vision Camera)
+     * @param navigation - Navigation object to navigate to CameraScreen
+     * @returns {Promise<string|null>} The URI of the photo or null if canceled
+     */
+    static async takePhotoWithVisionCamera(navigation: any): Promise<string | null> {
+        return new Promise((resolve) => {
+            navigation.navigate('CameraScreen', {
+                mode: 'photo',
+                onCapture: (media: any) => {
+                    resolve(media.uri);
+                }
+            });
+        });
+    }
+
+    /**
      * Get the current location
      * @returns {Promise<LocationData|null>} Location data or null if failed
      */

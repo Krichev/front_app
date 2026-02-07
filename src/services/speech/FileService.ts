@@ -113,6 +113,30 @@ export class FileService {
     }
 
     /**
+     * Convert CapturedMedia to ProcessedFileInfo
+     */
+    static fromCapturedMedia(media: any): ProcessedFileInfo {
+        const extension = media.name.split('.').pop() || (media.type.startsWith('image/') ? 'jpg' : 'mp4');
+        const isImage = media.type.startsWith('image/');
+        const isVideo = media.type.startsWith('video/');
+
+        return {
+            name: media.name,
+            size: media.size || 0,
+            type: media.type,
+            uri: media.uri,
+            createdAt: new Date().toISOString(),
+            modifiedAt: new Date().toISOString(),
+            width: media.width,
+            height: media.height,
+            sizeFormatted: this.formatFileSize(media.size || 0),
+            isImage,
+            isVideo,
+            extension,
+        };
+    }
+
+    /**
      * Process file information into standardized format
      */
     static processFileInfo(fileInfo: FileInfo): ProcessedFileInfo {
@@ -249,9 +273,38 @@ export class FileService {
     }
 
     /**
+     * Take a photo using Vision Camera
+     */
+    static async takePhotoWithVisionCamera(navigation: any): Promise<ProcessedFileInfo | null> {
+        return new Promise((resolve) => {
+            navigation.navigate('CameraScreen', {
+                mode: 'photo',
+                onCapture: (media: any) => {
+                    resolve(this.fromCapturedMedia(media));
+                }
+            });
+        });
+    }
+
+    /**
+     * Record a video using Vision Camera
+     */
+    static async recordVideoWithVisionCamera(navigation: any, maxDuration?: number): Promise<ProcessedFileInfo | null> {
+        return new Promise((resolve) => {
+            navigation.navigate('CameraScreen', {
+                mode: 'video',
+                maxDuration: maxDuration || 300,
+                onCapture: (media: any) => {
+                    resolve(this.fromCapturedMedia(media));
+                }
+            });
+        });
+    }
+
+    /**
      * Pick image from camera or gallery
      */
-    static async pickImage(options: FilePickerOptions = {}): Promise<ProcessedFileInfo | null> {
+    static async pickImage(options: FilePickerOptions = {}, navigation?: any): Promise<ProcessedFileInfo | null> {
         const {
             mediaType = 'photo',
             allowsEditing = true,
@@ -269,6 +322,12 @@ export class FileService {
                     {
                         text: 'Camera',
                         onPress: async () => {
+                            if (navigation) {
+                                const result = await this.takePhotoWithVisionCamera(navigation);
+                                resolve(result);
+                                return;
+                            }
+
                             const hasPermission = await this.requestCameraPermission();
                             if (!hasPermission) {
                                 Alert.alert('Permission Denied', 'Camera permission is required');
@@ -329,7 +388,7 @@ export class FileService {
     /**
      * Pick video from camera or gallery
      */
-    static async pickVideo(options: FilePickerOptions = {}): Promise<ProcessedFileInfo | null> {
+    static async pickVideo(options: FilePickerOptions = {}, navigation?: any): Promise<ProcessedFileInfo | null> {
         const {
             quality = 0.8 as PhotoQuality,
             includeBase64 = false,
@@ -343,6 +402,12 @@ export class FileService {
                     {
                         text: 'Record Video',
                         onPress: async () => {
+                            if (navigation) {
+                                const result = await this.recordVideoWithVisionCamera(navigation);
+                                resolve(result);
+                                return;
+                            }
+
                             // Request BOTH camera and audio permissions for video recording
                             const hasCameraPermission = await this.requestCameraPermission();
                             const hasMicPermission = await this.requestMicrophonePermission();

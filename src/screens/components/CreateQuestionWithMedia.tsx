@@ -184,7 +184,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 quality: 0.8,
                 maxWidth: 1920,
                 maxHeight: 1080,
-            });
+            }, navigation);
 
             if (!result) {
                 console.log('Media selection cancelled');
@@ -223,7 +223,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 mediaType: 'video',
                 allowsEditing: false,
                 quality: 0.8,
-            });
+            }, navigation);
 
             if (!result) {
                 console.log('Video selection cancelled');

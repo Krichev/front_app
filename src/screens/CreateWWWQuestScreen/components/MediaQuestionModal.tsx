@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {QuestionType} from "../../../services/wwwGame/questionService";
@@ -51,6 +52,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const {modal, form, theme} = useAppStyles();
     const styles = themeStyles;
     const { currentLanguage } = useI18n();
+    const navigation = useNavigation();
 
     // Form state
     const [question, setQuestion] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
@@ -121,7 +123,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
         try {
             setIsSelectingMedia(true);
             setMediaSelectionType('image');
-            const result = await FileService.pickImage();
+            const result = await FileService.pickImage({}, navigation);
             if (result) {
                 // Validate file
                 const validation = FileService.validateFile(result);
@@ -149,7 +151,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             console.log('🎥 Video start');
             setIsSelectingMedia(true);
             setMediaSelectionType('video');
-            const result = await FileService.pickVideo();
+            const result = await FileService.pickVideo({}, navigation);
             if (result) {
                 // Validate file
                 const validation = FileService.validateFile(result);

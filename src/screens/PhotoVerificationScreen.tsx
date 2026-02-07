@@ -68,7 +68,7 @@ const PhotoVerificationScreen: React.FC = () => {
     // Take a photo using the camera
     const takePhoto = async () => {
         try {
-            const result = await VerificationService.takePhoto();
+            const result = await VerificationService.takePhotoWithVisionCamera(navigation);
             if (result) {
                 setPhotoUri(result);
                 setVerificationResult(null); // Reset verification result when taking a new photo

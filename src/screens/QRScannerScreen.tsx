@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, SafeAreaView } from 'react-native';
-import QRCodeScanner from 'react-native-qrcode-scanner';
-import { RNCamera } from 'react-native-camera';
+// import QRCodeScanner from 'react-native-qrcode-scanner';
+// import { RNCamera } from 'react-native-camera';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -40,7 +40,7 @@ const QRScannerScreen: React.FC = () => {
                 </TouchableOpacity>
             </View>
 
-            <QRCodeScanner
+            {/* <QRCodeScanner
                 onRead={onSuccess}
                 flashMode={flashlight ? RNCamera.Constants.FlashMode.torch : RNCamera.Constants.FlashMode.off}
                 topContent={
@@ -52,7 +52,10 @@ const QRScannerScreen: React.FC = () => {
                 cameraStyle={styles.camera}
                 showMarker={true}
                 markerStyle={styles.marker}
-            />
+            /> */}
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ color: '#fff' }}>QR Scanner coming soon with Vision Camera</Text>
+            </View>
         </SafeAreaView>
     );
 };

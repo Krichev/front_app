@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
+import { useNavigation } from '@react-navigation/native';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {QuestionType} from "../../../services/wwwGame/questionService";
@@ -60,6 +61,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const {t} = useTranslation();
     const {modal, form, theme} = useAppStyles();
     const styles = themeStyles;
+    const navigation = useNavigation();
 
     const { currentLanguage } = useI18n();
 
@@ -157,7 +159,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         try {
             setIsSelectingMedia(true);
             setMediaSelectionType('image');
-            const result = await FileService.pickImage();
+            const result = await FileService.pickImage({}, navigation);
             if (result) {
                 // Validate file
                 const validation = FileService.validateFile(result);
@@ -185,7 +187,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             console.log('🎥 Video start');
             setIsSelectingMedia(true);
             setMediaSelectionType('video');
-            const result = await FileService.pickVideo();
+            const result = await FileService.pickVideo({}, navigation);
             if (result) {
                 // Validate file
                 const validation = FileService.validateFile(result);
