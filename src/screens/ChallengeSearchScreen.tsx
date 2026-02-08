@@ -4,6 +4,7 @@ import {ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpaci
 import {useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
 import {ChallengeCard} from '../components/ChallengeCard/ChallengeCard';
 import {ApiChallenge} from '../entities/ChallengeState/model/types/challenge.types';
+import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
 
 interface ChallengeSearchScreenProps {
     navigation: any;
@@ -23,10 +24,18 @@ export const ChallengeSearchScreen: React.FC<ChallengeSearchScreenProps> = ({ na
         return () => clearTimeout(timer);
     }, [searchQuery]);
 
-    const { data: challenges, isLoading, error, refetch } = useSearchChallengesQuery(
+    const { 
+        data: challenges, 
+        isLoading, 
+        error, 
+        refetch: refetchRaw,
+        isUninitialized
+    } = useSearchChallengesQuery(
         { q: debouncedQuery || 'fitness', page: 0, size: 50 },
         { skip: !debouncedQuery && activeFilter === 'all' }
     );
+
+    const refetch = useSafeRefetch(refetchRaw, isUninitialized);
 
     const filterChallenges = (challenges: ApiChallenge[] | undefined) => {
         if (!challenges) return [];

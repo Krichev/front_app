@@ -24,6 +24,7 @@ import {
     RelationshipType,
     UserRelationship,
 } from '../entities/QuizState/model/types/question.types';
+import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
 
 const CATEGORIES = [
     { id: 'ALL', label: 'All', icon: 'people' },
@@ -44,7 +45,8 @@ export const ContactsScreen: React.FC = () => {
         data: relationshipPage,
         isLoading: isLoadingContacts,
         isFetching: isFetchingContacts,
-        refetch: refetchContacts,
+        refetch: refetchContactsRaw,
+        isUninitialized: isContactsUninitialized,
     } = useGetRelationshipsQuery({
         type: activeCategory !== 'ALL' && activeCategory !== 'FAVORITES' ? activeCategory as RelationshipType : undefined,
         status: RelationshipStatus.ACCEPTED,
@@ -52,17 +54,22 @@ export const ContactsScreen: React.FC = () => {
         size: 100,
     });
 
+    const refetchContacts = useSafeRefetch(refetchContactsRaw, isContactsUninitialized);
+
     // Pending Requests Query
     const {
         data: pendingRequestsPage,
         isLoading: isLoadingPending,
         isFetching: isFetchingPending,
-        refetch: refetchPending,
+        refetch: refetchPendingRaw,
+        isUninitialized: isPendingUninitialized,
     } = useGetRelationshipsQuery({
         status: RelationshipStatus.PENDING,
         sort: 'date_desc',
         size: 100,
     });
+
+    const refetchPending = useSafeRefetch(refetchPendingRaw, isPendingUninitialized);
 
     const [toggleFavorite, { isLoading: isTogglingFavorite }] = useToggleFavoriteMutation();
     const [removeRelationship, { isLoading: isRemoving }] = useRemoveRelationshipMutation();

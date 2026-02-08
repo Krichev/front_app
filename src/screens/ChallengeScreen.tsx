@@ -19,6 +19,7 @@ import ChallengeFilters from './components/ChallengeFilters';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
+import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -49,13 +50,21 @@ const ChallengesScreen: React.FC = () => {
     const [showCreated, setShowCreated] = useState<boolean>(false);
 
     // RTK Query call to fetch challenges
-    const {data: challenges, error, isLoading, refetch} = useGetChallengesQuery({
+    const {
+        data: challenges, 
+        error, 
+        isLoading, 
+        refetch: refetchRaw,
+        isUninitialized
+    } = useGetChallengesQuery({
         page: 0,
         limit: 50,
         type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType,
         participant_id: showParticipating ? user?.id : undefined,
         creator_id: showCreated ? user?.id : undefined,
     });
+
+    const refetch = useSafeRefetch(refetchRaw, isUninitialized);
 
     const filteredChallenges = useMemo(() => {
         if (!challenges) return [];

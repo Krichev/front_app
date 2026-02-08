@@ -65,6 +65,7 @@ const UserProfileScreen: React.FC = () => {
         isLoading: loadingUser,
         error: userError,
         refetch: refetchUser,
+        isUninitialized: isUserUninitialized,
     } = useGetUserProfileQuery(userId!, {
         skip: !userId,
     });
@@ -72,6 +73,7 @@ const UserProfileScreen: React.FC = () => {
     const {
         data: userStats,
         refetch: refetchStats,
+        isUninitialized: isStatsUninitialized,
     } = useGetUserStatsQuery(userId!, {
         skip: !userId,
     });
@@ -80,6 +82,7 @@ const UserProfileScreen: React.FC = () => {
         data: createdChallenges,
         isLoading: loadingCreated,
         refetch: refetchCreated,
+        isUninitialized: isCreatedUninitialized,
     } = useGetChallengesQuery({
         creator_id: userId!,
         excludeCancelled: !showCancelled,
@@ -89,6 +92,7 @@ const UserProfileScreen: React.FC = () => {
         data: joinedChallenges,
         isLoading: loadingJoined,
         refetch: refetchJoined,
+        isUninitialized: isJoinedUninitialized,
     } = useGetChallengesQuery({
         participant_id: userId!,
         excludeCancelled: !showCancelled,
@@ -112,13 +116,21 @@ const UserProfileScreen: React.FC = () => {
     }, [joinedChallenges, showCancelled]);
 
     // Relationship status
-    const { data: relationshipData, refetch: refetchRelationship } = useGetRelationshipsQuery(
+    const { 
+        data: relationshipData, 
+        refetch: refetchRelationship,
+        isUninitialized: isRelationshipUninitialized
+    } = useGetRelationshipsQuery(
         { relatedUserId: userId, status: undefined },
         { skip: isCurrentUser || !userId }
     );
     const relationship = relationshipData?.content?.[0];
 
-    const { data: mutualConnections, refetch: refetchMutual } = useGetMutualConnectionsQuery(
+    const { 
+        data: mutualConnections, 
+        refetch: refetchMutual,
+        isUninitialized: isMutualUninitialized
+    } = useGetMutualConnectionsQuery(
         userId!,
         { skip: isCurrentUser || !userId }
     );
@@ -129,16 +141,18 @@ const UserProfileScreen: React.FC = () => {
     const onRefresh = async () => {
         setRefreshing(true);
         try {
-            const promises: Promise<any>[] = [
-                refetchUser(),
-                refetchStats(),
-                refetchCreated(),
-                refetchJoined(),
-            ];
+            const promises: Promise<any>[] = [];
+            
+            if (!isUserUninitialized) promises.push(refetchUser());
+            if (!isStatsUninitialized) promises.push(refetchStats());
+            if (!isCreatedUninitialized) promises.push(refetchCreated());
+            if (!isJoinedUninitialized) promises.push(refetchJoined());
+            
             if (!isCurrentUser && userId) {
-                promises.push(refetchRelationship());
-                promises.push(refetchMutual());
+                if (!isRelationshipUninitialized) promises.push(refetchRelationship());
+                if (!isMutualUninitialized) promises.push(refetchMutual());
             }
+            
             await Promise.all(promises);
         } catch (error) {
             console.error('Error refreshing profile:', error);

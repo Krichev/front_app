@@ -18,6 +18,7 @@ import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {FormatterService} from '../services/verification/ui/Services';
+import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
 // Import the RTK Query hooks
 import {Group, useGetUserGroupsQuery, useJoinGroupMutation} from '../entities/GroupState/model/slice/groupApi';
 
@@ -39,7 +40,14 @@ const GroupsScreen: React.FC = () => {
     const [filterRole, setFilterRole] = useState<'ALL' | 'ADMIN' | 'MEMBER' | 'MODERATOR'>('ALL');
 
     // RTK Query hooks
-    const { data: groups, isLoading, error, refetch } = useGetUserGroupsQuery();
+    const { 
+        data: groups, 
+        isLoading, 
+        error, 
+        refetch: refetchRaw,
+        isUninitialized
+    } = useGetUserGroupsQuery();
+    const refetch = useSafeRefetch(refetchRaw, isUninitialized);
     const [joinGroup, { isLoading: isJoining }] = useJoinGroupMutation();
 
     // Filter groups based on search term and filters

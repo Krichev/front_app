@@ -41,7 +41,8 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         data: budget, 
         refetch: refreshBudget,
         isLoading: isBudgetLoading,
-        isError: isBudgetError
+        isError: isBudgetError,
+        isUninitialized: isBudgetUninitialized
     } = useGetScreenTimeBudgetQuery(undefined, { skip: !isAuthenticated });
     
     const { data: lockConfig } = useGetMyLockConfigQuery(undefined, { skip: !isAuthenticated });
@@ -137,7 +138,9 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             console.log('[ScreenTime] Emergency bypass used via native overlay', data);
             try {
                 await useEmergencyBypass().unwrap();
-                refreshBudget();
+                if (!isBudgetUninitialized) {
+                    refreshBudget();
+                }
             } catch (e) {
                 console.error('[ScreenTime] Failed to sync emergency bypass', e);
             }
@@ -304,7 +307,9 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
                 // Coming to foreground
                 console.log('[ScreenTime] App active');
                 setIsTracking(true);
-                refreshBudget();
+                if (!isBudgetUninitialized) {
+                    refreshBudget();
+                }
             }
             appStateRef.current = nextAppState;
         };

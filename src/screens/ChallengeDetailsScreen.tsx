@@ -105,9 +105,22 @@ const ChallengeDetailsScreen: React.FC = () => {
     const [showInviteModal, setShowInviteModal] = useState(false);
 
     // RTK Query hooks - skip query if no challengeId
-    const {data: challenge, isLoading, error, refetch} = useGetChallengeByIdQuery(challengeId!, {
+    const {
+        data: challenge, 
+        isLoading, 
+        error, 
+        refetch,
+        isUninitialized
+    } = useGetChallengeByIdQuery(challengeId!, {
         skip: !challengeId, // Skip the query if challengeId is undefined
     });
+
+    const safeRefetch = () => {
+        if (!isUninitialized) {
+            return refetch();
+        }
+        return Promise.resolve();
+    };
     const { data: audioConfig } = useGetChallengeAudioConfigQuery(
         challengeId || '',
         { skip: !challengeId }
@@ -210,7 +223,7 @@ const ChallengeDetailsScreen: React.FC = () => {
             await joinChallenge({challengeId: challengeId}).unwrap();
             Alert.alert('Success', 'You have joined this challenge!');
             // Force refetch to get updated challenge data
-            await refetch();
+            await safeRefetch();
         } catch (error) {
             Alert.alert('Error', 'Failed to join challenge. Please try again.');
             console.error('Join challenge error:', error);
@@ -242,7 +255,7 @@ const ChallengeDetailsScreen: React.FC = () => {
             }).unwrap();
             setProofSubmitted(true);
             Alert.alert('Success', 'Your completion has been submitted for verification!');
-            refetch();
+            safeRefetch();
         } catch (error) {
             Alert.alert('Error', 'Failed to submit completion. Please try again.');
             console.error('Submit completion error:', error);
@@ -390,7 +403,7 @@ const ChallengeDetailsScreen: React.FC = () => {
                 <View style={styles.errorContainer}>
                     <MaterialCommunityIcons name="alert-circle" size={64} color="#FF3B30"/>
                     <Text style={styles.errorText}>Failed to load challenge</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => safeRefetch()}>
                         <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
