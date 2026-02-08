@@ -74,6 +74,11 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
     // Initialize from budget
     useEffect(() => {
+        if (!isAuthenticated) {
+            // Don't process budget when not authenticated
+            return;
+        }
+
         if (isBudgetError) {
             setIsLocked(false);
             if (Platform.OS === 'android') DeviceLockService.deactivateLock();
@@ -123,7 +128,21 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
              };
              loadLocalBudget();
         }
-    }, [budget, isBudgetError, isBudgetLoading, lockConfig, authUser]);
+    }, [budget, isBudgetError, isBudgetLoading, lockConfig, authUser, isAuthenticated]);
+
+    // Reset state when user logs out or is not authenticated
+    useEffect(() => {
+        if (!isAuthenticated) {
+            setIsLocked(false);
+            setAvailableSeconds(0);
+            setIsTracking(false);
+            setStatus(null);
+            accumulatedSecondsRef.current = 0;
+            // Clear stored data to prevent stale lock state on next login
+            screenTimeStorage.clearAll();
+            console.log('[ScreenTime] Reset state - user not authenticated');
+        }
+    }, [isAuthenticated]);
 
     // Native Event Listeners
     useEffect(() => {

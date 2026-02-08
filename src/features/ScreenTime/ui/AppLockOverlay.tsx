@@ -49,6 +49,11 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     const screenTimeContext = useScreenTime();
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     
+    // Early return if not authenticated - user hasn't logged in yet
+    if (!isAuthenticated) {
+        return null;
+    }
+
     // Parental control hooks
     const { data: parents } = useGetLinkedParentsQuery(undefined, { skip: !isAuthenticated });
     const [requestExtension, { isLoading: isRequesting }] = useRequestTimeExtensionMutation();

@@ -82,4 +82,17 @@ export const screenTimeStorage = {
             console.error('Failed to clear pending syncs', e);
         }
     },
+
+    clearAll: async (): Promise<void> => {
+        try {
+            await AsyncStorage.multiRemove([
+                KEYS.ACCUMULATED_SECONDS,
+                KEYS.LAST_KNOWN_BUDGET,
+                KEYS.PENDING_SYNCS,
+            ]);
+            console.log('[ScreenTimeStorage] Cleared all stored data');
+        } catch (error) {
+            console.error('[ScreenTimeStorage] Error clearing data:', error);
+        }
+    },
 };
