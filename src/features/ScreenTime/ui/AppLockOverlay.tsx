@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -7,7 +7,6 @@ import {
     Animated,
     BackHandler,
     StatusBar,
-    Platform,
     TouchableOpacity,
     AccessibilityInfo,
     Linking,
@@ -39,7 +38,7 @@ interface AppLockOverlayProps {
 export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     isLocked: isLockedProp,
     dailyResetTime,
-    minutesUntilReset,
+    minutesUntilReset: _minutesUntilReset,
     pendingPenalties: propPenalties,
     onViewPenalties,
     onOpenSettings,
@@ -49,19 +48,14 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     const screenTimeContext = useScreenTime();
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     
-    // Early return if not authenticated - user hasn't logged in yet
-    if (!isAuthenticated) {
-        return null;
-    }
+    // Use prop override or context value
+    const isLocked = isLockedProp ?? screenTimeContext.isLocked;
+    const resetTime = dailyResetTime ?? screenTimeContext.status?.lastResetDate;
 
     // Parental control hooks
     const { data: parents } = useGetLinkedParentsQuery(undefined, { skip: !isAuthenticated });
     const [requestExtension, { isLoading: isRequesting }] = useRequestTimeExtensionMutation();
     const [showRequestModal, setShowRequestModal] = React.useState(false);
-    
-    // Use prop override or context value
-    const isLocked = isLockedProp ?? screenTimeContext.isLocked;
-    const resetTime = dailyResetTime ?? screenTimeContext.status?.lastResetDate;
 
     const [isUnlocking, setIsUnlocking] = React.useState(false);
     const prevIsLocked = useRef(isLocked);
@@ -69,14 +63,8 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     // Fetch penalties if not provided and locked
     const { data: penaltyData } = useGetMyPenaltiesQuery(
         { status: 'PENDING', size: 5 }, 
-        { skip: (!isLocked || !!propPenalties) || !isAuthenticated }
+        { skip: !isAuthenticated || (!isLocked || !!propPenalties) }
     );
-
-    const pendingPenalties = propPenalties || (penaltyData?.content?.map(p => ({
-        id: p.id,
-        description: p.description,
-        minutesLocked: p.screenTimeMinutes || 30 // Default or from penalty
-    })) || []);
     
     // Animation values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -125,7 +113,7 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
                 }),
             ]).start();
         }
-    }, [isLocked, isUnlocking]);
+    }, [isLocked, isUnlocking, fadeAnim, scaleAnim]);
 
     
     // CRITICAL: Block hardware back button on Android
@@ -164,6 +152,17 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
             );
         }
     }, [isLocked]);
+
+    // Early return if not authenticated - user hasn't logged in yet
+    if (!isAuthenticated) {
+        return null;
+    }
+
+    const pendingPenalties = propPenalties || (penaltyData?.content?.map(p => ({
+        id: p.id,
+        description: p.description,
+        minutesLocked: p.screenTimeMinutes || 30 // Default or from penalty
+    })) || []);
     
     if (!isLocked && !isUnlocking) {
         return null;
