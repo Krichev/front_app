@@ -235,6 +235,77 @@ export const wagerApi = createApi({
             query: () => '/screen-time/budget/status',
             providesTags: ['ScreenTime'],
         }),
+
+        // ========================================================================
+        // UNLOCK REQUEST ENDPOINTS
+        // ========================================================================
+        createUnlockRequest: builder.mutation<any, any>({
+            query: (request) => ({
+                url: '/unlock-requests',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        getMyPendingUnlockRequests: builder.query<any[], void>({
+            query: () => '/unlock-requests/my/pending',
+            providesTags: ['ScreenTime'],
+        }),
+
+        getUnlockRequestsToApprove: builder.query<any[], void>({
+            query: () => '/unlock-requests/to-approve',
+            providesTags: ['ScreenTime'],
+        }),
+
+        approveUnlockRequest: builder.mutation<any, { id: number; request: any }>({
+            query: ({ id, request }) => ({
+                url: `/unlock-requests/${id}/approve`,
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        denyUnlockRequest: builder.mutation<any, { id: number; request: any }>({
+            query: ({ id, request }) => ({
+                url: `/unlock-requests/${id}/deny`,
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        useEmergencyBypass: builder.mutation<any, void>({
+            query: () => ({
+                url: '/unlock-requests/emergency-bypass',
+                method: 'POST',
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        payPenaltyToUnlock: builder.mutation<any, { penaltyId: number; paymentType: string }>({
+            query: ({ penaltyId, paymentType }) => ({
+                url: '/unlock-requests/pay-penalty',
+                method: 'POST',
+                params: { penaltyId, paymentType },
+            }),
+            invalidatesTags: ['ScreenTime', 'Penalty'],
+        }),
+
+        getMyLockConfig: builder.query<any, void>({
+            query: () => '/unlock-requests/config',
+            providesTags: ['ScreenTime'],
+        }),
+
+        updateMyLockConfig: builder.mutation<any, any>({
+            query: (config) => ({
+                url: '/unlock-requests/config',
+                method: 'PUT',
+                body: config,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
     }),
 });
 
@@ -261,4 +332,13 @@ export const {
     useSyncScreenTimeMutation,
     useDeductScreenTimeMutation,
     useGetScreenTimeStatusQuery,
+    useCreateUnlockRequestMutation,
+    useGetMyPendingUnlockRequestsQuery,
+    useGetUnlockRequestsToApproveQuery,
+    useApproveUnlockRequestMutation,
+    useDenyUnlockRequestMutation,
+    useUseEmergencyBypassMutation,
+    usePayPenaltyToUnlockMutation,
+    useGetMyLockConfigQuery,
+    useUpdateMyLockConfigMutation,
 } = wagerApi;

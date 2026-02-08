@@ -1,14 +1,17 @@
 import React, { createContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { 
     useGetScreenTimeBudgetQuery, 
-    useSyncScreenTimeMutation 
+    useSyncScreenTimeMutation,
+    useGetMyLockConfigQuery,
+    useUseEmergencyBypassMutation
 } from '../../entities/WagerState/model/slice/wagerApi';
 import { ScreenTimeBudget, ScreenTimeStatus, SyncTimeRequest } from '../../entities/WagerState/model/types';
 import { screenTimeStorage } from '../../features/ScreenTime/utils/screenTimeStorage';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../app/providers/StoreProvider/store';
+import { DeviceLockService, LockConfig } from '../../services/deviceLock/DeviceLockService';
 
 interface ScreenTimeContextValue {
     // State
@@ -32,7 +35,7 @@ interface ScreenTimeContextValue {
 export const ScreenTimeContext = createContext<ScreenTimeContextValue | null>(null);
 
 export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) => {
-    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated, user: authUser } = useSelector((state: RootState) => state.auth);
     // RTK Query hooks
     const { 
         data: budget, 
@@ -40,6 +43,9 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         isLoading: isBudgetLoading,
         isError: isBudgetError
     } = useGetScreenTimeBudgetQuery(undefined, { skip: !isAuthenticated });
+    
+    const { data: lockConfig } = useGetMyLockConfigQuery(undefined, { skip: !isAuthenticated });
+    const [useEmergencyBypass] = useUseEmergencyBypassMutation();
     const [syncTime] = useSyncScreenTimeMutation();
     
     // Local state
@@ -47,6 +53,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     const [isTracking, setIsTracking] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
     const [status, setStatus] = useState<ScreenTimeStatus | null>(null);
+    const [dismissAttempts, setDismissAttempts] = useState(0);
     
     // Refs for mutable tracking
     const accumulatedSecondsRef = useRef(0);
@@ -66,32 +73,35 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
     // Initialize from budget
     useEffect(() => {
-        // If API error (e.g. 404), ensure unlocked
         if (isBudgetError) {
             setIsLocked(false);
+            if (Platform.OS === 'android') DeviceLockService.deactivateLock();
             return;
         }
 
-        // If loading, wait (don't toggle lock state yet)
         if (isBudgetLoading) return;
 
         if (budget) {
-            // If we have a budget, update available seconds based on it
-            // Note: In a real app we might want to subtract accumulatedSecondsRef.current if we haven't synced yet,
-            // but usually a fresh budget fetch means we are up to date or close to it.
-            // For smoother UX, we might want to trust the server budget but substract any *unsynced* accumulation.
-            // For now, let's reset accumulated if we get a fresh budget (assuming sync happened).
-            // Actually, if we just synced, accumulated should be 0.
-            
-            // Let's assume budget.availableMinutes is the truth from server.
-            setAvailableSeconds(prev => {
-                // Only update if significantly different or if we want to force sync
-                // But generally we trust the server.
-                return budget.availableMinutes * 60;
-            });
+            setAvailableSeconds(budget.availableMinutes * 60);
             
             const shouldLock = budget.availableMinutes <= 0 || budget.lockedMinutes > 0;
+            const wasLocked = isLocked;
             setIsLocked(shouldLock);
+            
+            if (shouldLock && !wasLocked && Platform.OS === 'android' && lockConfig) {
+                const config: LockConfig = {
+                    lockType: lockConfig.escalationEnabled ? 'both' : 'overlay',
+                    resetTime: new Date(budget.lastResetDate).toISOString(), // Simplified
+                    lockReason: budget.availableMinutes <= 0 ? 'screen_time_expired' : 'penalty',
+                    allowEmergencyBypass: lockConfig.allowEmergencyBypass,
+                    maxEmergencyBypasses: lockConfig.maxEmergencyBypassesPerMonth,
+                    accountType: authUser?.childAccount ? 'child' : 'adult',
+                    escalateAfterDismissAttempts: lockConfig.escalationAfterAttempts
+                };
+                DeviceLockService.activateLock(config);
+            } else if (!shouldLock && wasLocked && Platform.OS === 'android') {
+                DeviceLockService.deactivateLock();
+            }
             
             setStatus({
                 isLocked: shouldLock,
@@ -103,7 +113,6 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
             screenTimeStorage.saveLastKnownBudget(budget);
         } else {
-            // Try to load from local storage if offline
              const loadLocalBudget = async () => {
                 const localBudget = await screenTimeStorage.getLastKnownBudget();
                 if (localBudget && !budget) {
@@ -113,7 +122,40 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
              };
              loadLocalBudget();
         }
-    }, [budget, isBudgetError, isBudgetLoading]);
+    }, [budget, isBudgetError, isBudgetLoading, lockConfig, authUser]);
+
+    // Native Event Listeners
+    useEffect(() => {
+        if (Platform.OS !== 'android') return;
+
+        const unlockSub = DeviceLockService.onUnlockRequested(() => {
+            console.log('[ScreenTime] Unlock requested via native overlay');
+            // Logic to navigate to unlock request screen or show modal
+        });
+
+        const bypassSub = DeviceLockService.onEmergencyBypassUsed(async (data) => {
+            console.log('[ScreenTime] Emergency bypass used via native overlay', data);
+            try {
+                await useEmergencyBypass().unwrap();
+                refreshBudget();
+            } catch (e) {
+                console.error('[ScreenTime] Failed to sync emergency bypass', e);
+            }
+        });
+
+        const attemptSub = DeviceLockService.onLockDismissAttempt(({ attemptCount }) => {
+            setDismissAttempts(attemptCount);
+            if (lockConfig?.escalationEnabled && attemptCount >= (lockConfig.escalationAfterAttempts || 3)) {
+                DeviceLockService.escalateToHardLock();
+            }
+        });
+
+        return () => {
+            unlockSub.remove();
+            bypassSub.remove();
+            attemptSub.remove();
+        };
+    }, [lockConfig, refreshBudget, useEmergencyBypass]);
 
     // Format time helper
     const getFormattedTime = (seconds: number) => {
