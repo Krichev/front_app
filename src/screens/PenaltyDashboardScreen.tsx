@@ -16,6 +16,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { useSelector } from 'react-redux';
+import { RootState } from '../app/providers/StoreProvider/store';
 
 type PenaltyTab = 'PENDING' | 'ACTIVE' | 'COMPLETED';
 
@@ -23,6 +25,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
     const { theme } = useTheme();
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const [activeTab, setActiveTab] = useState<PenaltyTab>('PENDING');
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
     const getStatusForTab = (tab: PenaltyTab): PenaltyStatus | undefined => {
         if (tab === 'PENDING') return 'PENDING';
@@ -34,7 +37,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
     const { data, isLoading, refetch } = useGetMyPenaltiesQuery({ 
         status: getStatusForTab(activeTab),
         size: 50 
-    });
+    }, { skip: !isAuthenticated });
 
     const penalties = data?.content || [];
 

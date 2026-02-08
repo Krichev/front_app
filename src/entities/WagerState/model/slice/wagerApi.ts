@@ -94,30 +94,30 @@ export const wagerApi = createApi({
         // ========================================================================
         getMyPenalties: builder.query<{ content: Penalty[]; totalPages: number }, { status?: PenaltyStatus; page?: number; size?: number }>({
             query: ({ status, page = 0, size = 20 }) => ({
-                url: '/api/penalties/my',
+                url: '/penalties/my',
                 params: { status, page, size },
             }),
             providesTags: ['Penalty'],
         }),
 
         getPenaltySummary: builder.query<PenaltySummary, void>({
-            query: () => '/api/penalties/my/summary',
+            query: () => '/penalties/my/summary',
             providesTags: ['Penalty'],
         }),
 
         getPenaltiesToReview: builder.query<Penalty[], void>({
-            query: () => '/api/penalties/to-review',
+            query: () => '/penalties/to-review',
             providesTags: ['Penalty'],
         }),
 
         getPenalty: builder.query<Penalty, number>({
-            query: (id) => `/api/penalties/${id}`,
+            query: (id) => `/penalties/${id}`,
             providesTags: (result, error, id) => [{ type: 'Penalty', id }],
         }),
 
         startPenalty: builder.mutation<Penalty, number>({
             query: (id) => ({
-                url: `/api/penalties/${id}/start`,
+                url: `/penalties/${id}/start`,
                 method: 'POST',
             }),
             invalidatesTags: (result, error, id) => [{ type: 'Penalty', id }],
@@ -181,7 +181,7 @@ export const wagerApi = createApi({
 
         verifyPenalty: builder.mutation<Penalty, { id: number; request: VerifyPenaltyRequest }>({
             query: ({ id, request }) => ({
-                url: `/api/penalties/${id}/verify`,
+                url: `/penalties/${id}/verify`,
                 method: 'POST',
                 body: request,
             }),
@@ -190,7 +190,7 @@ export const wagerApi = createApi({
 
         appealPenalty: builder.mutation<Penalty, { id: number; request: AppealPenaltyRequest }>({
             query: ({ id, request }) => ({
-                url: `/api/penalties/${id}/appeal`,
+                url: `/penalties/${id}/appeal`,
                 method: 'POST',
                 body: request,
             }),
@@ -199,7 +199,7 @@ export const wagerApi = createApi({
 
         waivePenalty: builder.mutation<Penalty, number>({
             query: (id) => ({
-                url: `/api/penalties/${id}/waive`,
+                url: `/penalties/${id}/waive`,
                 method: 'POST',
             }),
             invalidatesTags: (result, error, id) => [{ type: 'Penalty', id }],
@@ -209,13 +209,13 @@ export const wagerApi = createApi({
         // SCREEN TIME ENDPOINTS
         // ========================================================================
         getScreenTimeBudget: builder.query<ScreenTimeBudget, void>({
-            query: () => '/api/screen-time/budget',
+            query: () => '/screen-time/budget',
             providesTags: ['ScreenTime'],
         }),
 
         syncScreenTime: builder.mutation<ScreenTimeBudget, SyncTimeRequest>({
             query: (request) => ({
-                url: '/api/screen-time/budget/sync',
+                url: '/screen-time/budget/sync',
                 method: 'POST',
                 body: request,
             }),
@@ -224,7 +224,7 @@ export const wagerApi = createApi({
 
         deductScreenTime: builder.mutation<ScreenTimeBudget, { minutes: number }>({
             query: (request) => ({
-                url: '/api/screen-time/budget/deduct',
+                url: '/screen-time/budget/deduct',
                 method: 'POST',
                 body: request,
             }),
@@ -232,7 +232,7 @@ export const wagerApi = createApi({
         }),
 
         getScreenTimeStatus: builder.query<ScreenTimeStatus, void>({
-            query: () => '/api/screen-time/budget/status',
+            query: () => '/screen-time/budget/status',
             providesTags: ['ScreenTime'],
         }),
     }),

@@ -23,6 +23,8 @@ import { UnlockTransition } from './UnlockTransition';
 import { TimeExtensionRequestModal } from './TimeExtensionRequestModal';
 import { useGetLinkedParentsQuery, useRequestTimeExtensionMutation } from '../../../entities/ParentalState/model/slice/parentalApi';
 import { Alert } from 'react-native';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../app/providers/StoreProvider/store';
 
 interface AppLockOverlayProps {
     isLocked?: boolean;
@@ -45,9 +47,10 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
 }) => {
     const { theme } = useTheme();
     const screenTimeContext = useScreenTime();
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     
     // Parental control hooks
-    const { data: parents } = useGetLinkedParentsQuery();
+    const { data: parents } = useGetLinkedParentsQuery(undefined, { skip: !isAuthenticated });
     const [requestExtension, { isLoading: isRequesting }] = useRequestTimeExtensionMutation();
     const [showRequestModal, setShowRequestModal] = React.useState(false);
     
@@ -61,7 +64,7 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     // Fetch penalties if not provided and locked
     const { data: penaltyData } = useGetMyPenaltiesQuery(
         { status: 'PENDING', size: 5 }, 
-        { skip: !isLocked || !!propPenalties }
+        { skip: (!isLocked || !!propPenalties) || !isAuthenticated }
     );
 
     const pendingPenalties = propPenalties || (penaltyData?.content?.map(p => ({

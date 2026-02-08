@@ -17,6 +17,8 @@ import { Input } from '../shared/ui/Input/Input';
 import { Button } from '../shared/ui/Button/Button';
 import { launchImageLibrary } from 'react-native-image-picker';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useSelector } from 'react-redux';
+import { RootState } from '../app/providers/StoreProvider/store';
 
 type PenaltyProofRouteProp = RouteProp<RootStackParamList, 'PenaltyProof'>;
 
@@ -25,8 +27,9 @@ export const PenaltyProofScreen: React.FC = () => {
     const route = useRoute<PenaltyProofRouteProp>();
     const navigation = useNavigation();
     const { penaltyId } = route.params;
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-    const { data: penalty, isLoading } = useGetPenaltyQuery(penaltyId);
+    const { data: penalty, isLoading } = useGetPenaltyQuery(penaltyId, { skip: !isAuthenticated });
     const [submitProof, { isLoading: isSubmitting }] = useSubmitPenaltyProofMutation();
 
     const [description, setDescription] = useState('');

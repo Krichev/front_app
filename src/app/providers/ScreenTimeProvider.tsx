@@ -7,6 +7,8 @@ import {
 } from '../../entities/WagerState/model/slice/wagerApi';
 import { ScreenTimeBudget, ScreenTimeStatus, SyncTimeRequest } from '../../entities/WagerState/model/types';
 import { screenTimeStorage } from '../../features/ScreenTime/utils/screenTimeStorage';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../app/providers/StoreProvider/store';
 
 interface ScreenTimeContextValue {
     // State
@@ -30,8 +32,14 @@ interface ScreenTimeContextValue {
 export const ScreenTimeContext = createContext<ScreenTimeContextValue | null>(null);
 
 export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) => {
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     // RTK Query hooks
-    const { data: budget, refetch: refreshBudget } = useGetScreenTimeBudgetQuery();
+    const { 
+        data: budget, 
+        refetch: refreshBudget,
+        isLoading: isBudgetLoading,
+        isError: isBudgetError
+    } = useGetScreenTimeBudgetQuery(undefined, { skip: !isAuthenticated });
     const [syncTime] = useSyncScreenTimeMutation();
     
     // Local state
@@ -58,6 +66,15 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
     // Initialize from budget
     useEffect(() => {
+        // If API error (e.g. 404), ensure unlocked
+        if (isBudgetError) {
+            setIsLocked(false);
+            return;
+        }
+
+        // If loading, wait (don't toggle lock state yet)
+        if (isBudgetLoading) return;
+
         if (budget) {
             // If we have a budget, update available seconds based on it
             // Note: In a real app we might want to subtract accumulatedSecondsRef.current if we haven't synced yet,
@@ -72,10 +89,12 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
                 // But generally we trust the server.
                 return budget.availableMinutes * 60;
             });
-            setIsLocked(budget.availableMinutes <= 0 || budget.lockedMinutes > 0);
+            
+            const shouldLock = budget.availableMinutes <= 0 || budget.lockedMinutes > 0;
+            setIsLocked(shouldLock);
             
             setStatus({
-                isLocked: budget.availableMinutes <= 0 || budget.lockedMinutes > 0,
+                isLocked: shouldLock,
                 availableMinutes: budget.availableMinutes,
                 lockedMinutes: budget.lockedMinutes,
                 dailyBudgetMinutes: budget.dailyBudgetMinutes,
@@ -94,7 +113,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
              };
              loadLocalBudget();
         }
-    }, [budget]);
+    }, [budget, isBudgetError, isBudgetLoading]);
 
     // Format time helper
     const getFormattedTime = (seconds: number) => {
@@ -116,6 +135,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
     // Sync logic
     const syncNow = useCallback(async () => {
+        if (!isAuthenticated) return;
         const secondsToSync = accumulatedSecondsRef.current;
         if (secondsToSync < 60) return; // Only sync if we have at least 1 minute (or maybe less? Requirements say "Track time... max 60 per sync"?)
         // Requirement: "Sync accumulated usage with backend every 1-5 minutes".
@@ -143,7 +163,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
              accumulatedSecondsRef.current -= (minutesToSync * 60);
              await screenTimeStorage.saveAccumulatedSeconds(accumulatedSecondsRef.current);
         }
-    }, [syncTime]);
+    }, [syncTime, isAuthenticated]);
 
     // Process pending syncs (e.g. on reconnect)
     const processPendingSyncs = async () => {

@@ -15,6 +15,9 @@ interface ExternalVideoPlayerProps {
     showControls?: boolean;
     hideTitle?: boolean;
     onlyPlayButton?: boolean;
+    enableFullscreen?: boolean;
+    initialFullscreen?: boolean;
+    onFullscreenChange?: (isFullscreen: boolean) => void;
     style?: ViewStyle;
     onSegmentEnd?: () => void;
     // Props for AuthenticatedVideo/Video
@@ -32,6 +35,9 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                                                                      showControls = true,
                                                                      hideTitle = false,
                                                                      onlyPlayButton = false,
+                                                                     enableFullscreen = false,
+                                                                     initialFullscreen = false,
+                                                                     onFullscreenChange,
                                                                      style,
                                                                      onSegmentEnd,
                                                                      resizeMode = 'contain',
@@ -50,6 +56,9 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                     showControls={showControls}
                     hideTitle={hideTitle} 
                     onSegmentEnd={onSegmentEnd}
+                    enableFullscreen={enableFullscreen}
+                    initialFullscreen={initialFullscreen}
+                    onFullscreenChange={onFullscreenChange}
                 />
             </View>
         );

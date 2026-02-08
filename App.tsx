@@ -13,6 +13,7 @@ import {StyleSheet} from 'react-native';
 import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
 import {ThemeProvider} from './src/shared/ui/theme/ThemeProvider';
 import { I18nProvider, useI18n } from './src/app/providers/I18nProvider';
+import { navigateToTabWithRef } from './src/utils/navigation';
 
 const linking = {
     prefixes: ['challengerapp://', 'https://play.yourapp.com'],
@@ -37,11 +38,13 @@ const AppContent: React.FC = () => {
         // Actually the requirement is "Lock should be dismissible ONLY if time is restored".
         // But we want to allow user to view penalties to UNLOCK the time.
         // So we navigate to PenaltyDashboard.
-        navigationRef.current?.navigate('PenaltyDashboard');
+        if (navigationRef.current?.isReady()) {
+            navigationRef.current?.navigate('PenaltyDashboard');
+        }
     }, []);
 
     const handleOpenSettings = useCallback(() => {
-        navigationRef.current?.navigate('Main', { screen: 'Settings' });
+        navigateToTabWithRef('Settings');
     }, []);
 
     return (

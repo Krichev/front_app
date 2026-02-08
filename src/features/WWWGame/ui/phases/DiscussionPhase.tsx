@@ -126,6 +126,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                         autoPlay={false}
                                         showControls={false}
                                         hideTitle={true}
+                                        enableFullscreen={true}
                                     />
                                 </View>
                             ) : (

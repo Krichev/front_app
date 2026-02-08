@@ -85,6 +85,8 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
                       autoPlay={true}
                       showControls={false}
                       hideTitle={true}
+                      enableFullscreen={true}
+                      initialFullscreen={true}
                   />
               ) : (
                   <AuthenticatedVideo
