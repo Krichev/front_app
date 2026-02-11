@@ -19,7 +19,7 @@ const ControllerGameScreen: React.FC = () => {
     
     const { gameState, players, connectionStatus, submitAnswer, sendBuzz } = useMultiplayerRoomService(roomCode);
     const user = useSelector((state: RootState) => state.auth.user);
-    const me = players.find(p => p.userId === user?.id);
+    const me = players.find(p => p.userId.toString() === user?.id);
 
     const { data: question } = useGetQuizQuestionByIdQuery(gameState?.currentQuestionId || 0, {
         skip: !gameState?.currentQuestionId

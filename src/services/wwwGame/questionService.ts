@@ -14,7 +14,15 @@ export type UIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type QuestionSource = 'app' | 'user';
 // export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
-export type QuestionType = 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO';
+
+export const QuestionType = {
+    TEXT: 'TEXT',
+    IMAGE: 'IMAGE',
+    VIDEO: 'VIDEO',
+    AUDIO: 'AUDIO'
+} as const;
+
+export type QuestionType = typeof QuestionType[keyof typeof QuestionType];
 
 // export enum QuestionType {
 //     WHAT_WHERE_WHEN = 'WHAT_WHERE_WHEN',
@@ -34,10 +42,13 @@ export interface UserQuestion {
     id: number;
     question: string;
     answer: string;
+    questionLocalized?: import('../../shared/types/localized').LocalizedString;
+    answerLocalized?: import('../../shared/types/localized').LocalizedString;
     difficulty: APIDifficulty;
     visibility: QuestionVisibility;
     topic?: string;
     additionalInfo?: string;
+    additionalInfoLocalized?: import('../../shared/types/localized').LocalizedString;
     createdAt: string;
 }
 
@@ -49,6 +60,13 @@ export class QuestionService {
     private static cache: Map<string, any> = new Map();
     private static isRefreshing = false;
     private static refreshPromise: Promise<boolean> | null = null;
+
+    /**
+     * Initialize the QuestionService
+     */
+    static initialize(): void {
+        console.log('WWW Game Question Service initialized');
+    }
 
     /**
      * Get authorization header with JWT token
@@ -345,7 +363,7 @@ export class QuestionService {
     /**
      * Create a new user question
      */
-    static async createUserQuestion(question: Omit<UserQuestion, 'id'>): Promise<UserQuestion> {
+    static async createUserQuestion(question: Omit<UserQuestion, 'id' | 'createdAt'>): Promise<UserQuestion> {
         try {
             // Uses QuizQuestionController (/api/quiz-questions)
             const url = `${this.baseUrl}/quiz-questions/questions`;

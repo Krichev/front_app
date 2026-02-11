@@ -115,7 +115,7 @@ const HomeScreen: React.FC = () => {
                     </Text>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <ScreenTimeCountdown compact onPress={() => navigation.navigate('UserProfile', { userId: user?.id })} />
+                    <ScreenTimeCountdown compact onPress={() => navigation.navigate('UserProfile', { userId: user?.id || '' })} />
                     <TouchableOpacity onPress={handleLogout} style={{ marginLeft: 16 }}>
                         <MaterialCommunityIcons name="logout" size={24} color={theme.colors.text.primary}/>
                     </TouchableOpacity>
@@ -178,7 +178,7 @@ const HomeScreen: React.FC = () => {
                                 <View style={styles.sectionHeader}>
                                     <Text style={styles.sectionTitle}>{t('home.wwwQuizChallenges')}</Text>
                                     <TouchableOpacity
-                                        onPress={() => navigation.navigate('Challenges', {initialFilter: 'WWW_QUIZ'})}
+                                        onPress={() => navigation.navigate('Main', { screen: 'Challenges', params: { initialFilter: 'WWW_QUIZ' } })}
                                     >
                                         <Text style={styles.seeAllText}>{t('home.seeAll')}</Text>
                                     </TouchableOpacity>

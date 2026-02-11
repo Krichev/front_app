@@ -49,6 +49,7 @@ export const colors: Colors = {
         light: '#34D399',
         dark: '#059669',
         background: '#ECFDF5',
+        contrast: '#FFFFFF',
     },
 
     error: {
@@ -56,6 +57,7 @@ export const colors: Colors = {
         light: '#F87171',
         dark: '#DC2626',
         background: '#FEE2E2',
+        contrast: '#FFFFFF',
     },
 
     warning: {
@@ -63,6 +65,7 @@ export const colors: Colors = {
         light: '#FCD34D',
         dark: '#D97706',
         background: '#FEF3C7',
+        contrast: '#FFFFFF',
     },
 
     info: {
@@ -70,35 +73,75 @@ export const colors: Colors = {
         light: '#60A5FA',
         dark: '#2563EB',
         background: '#EFF6FF',
+        contrast: '#FFFFFF',
     },
 
-    // Background colors
-    background: {
-        primary: '#FFFFFF',
-        secondary: '#F9FAFB',
-        tertiary: '#F3F4F6',
-        dark: '#1a1a1a',
-    },
+        // Background colors
 
-    // Overlay colors
-    overlay: {
-        light: 'rgba(0, 0, 0, 0.3)',
-        medium: 'rgba(0, 0, 0, 0.5)',
-        dark: 'rgba(0, 0, 0, 0.7)',
-    },
+        background: {
 
-    // Text colors
-    text: {
-        primary: '#111827',
-        secondary: '#6B7280',
-        disabled: '#9CA3AF',
-        inverse: '#FFFFFF',
-    },
+            primary: '#FFFFFF',
 
-    // Border colors
-    border: {
-        light: '#E5E7EB',
-        main: '#D1D5DB',
-        dark: '#9CA3AF',
-    },
-};
+            secondary: '#F9FAFB',
+
+            tertiary: '#F3F4F6',
+
+            dark: '#1a1a1a',
+
+            paper: '#FFFFFF',
+
+            default: '#FFFFFF',
+
+        },
+
+    
+
+        // Overlay colors
+
+        overlay: {
+
+            light: 'rgba(0, 0, 0, 0.3)',
+
+            medium: 'rgba(0, 0, 0, 0.5)',
+
+            dark: 'rgba(0, 0, 0, 0.7)',
+
+        },
+
+    
+
+        // Text colors
+
+        text: {
+
+            primary: '#111827',
+
+            secondary: '#6B7280',
+
+            disabled: '#9CA3AF',
+
+            inverse: '#FFFFFF',
+
+        },
+
+    
+
+        // Border colors
+
+        border: {
+
+            light: '#E5E7EB',
+
+            main: '#D1D5DB',
+
+            dark: '#9CA3AF',
+
+        },
+
+    
+
+        divider: '#E5E7EB',
+
+    };
+
+    

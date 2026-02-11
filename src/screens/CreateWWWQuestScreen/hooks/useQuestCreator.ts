@@ -24,6 +24,11 @@ export interface QuizConfig {
     enableAIHost: boolean;
     enableAiAnswerValidation: boolean;
     teamBased: boolean;
+    allowOpenEnrollment?: boolean;
+    maxParticipants?: number;
+    shuffleQuestions?: boolean;
+    maxAttempts?: number;
+    requireResultConsent?: boolean;
 }
 
 export interface SelectedQuestion {

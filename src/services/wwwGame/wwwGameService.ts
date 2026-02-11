@@ -116,6 +116,16 @@ export class WWWGameService {
     /**
      * Initialize a new game with the given settings
      */
+    static initializeGame(settings: GameSettings): {
+        gameQuestions: Array<{ question: string, answer: string }>,
+        roundsData: RoundData[]
+    } {
+        // Default implementation for initialization
+        return {
+            gameQuestions: [],
+            roundsData: []
+        };
+    }
 
     /**
      * Validate team answer against correct answer with improved Russian language support

@@ -100,7 +100,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({navigation}) => {
                 username: username.trim(),
                 email: email.trim().toLowerCase(),
                 password,
-            }).unwrap() as SignupApiResponse;
+            }).unwrap() as unknown as SignupApiResponse;
 
             console.log('Signup API Response:', JSON.stringify(result, null, 2));
 

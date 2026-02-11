@@ -8,6 +8,8 @@ import {
 } from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {AudioQuestionFormData} from '../AudioQuestionForm';
+import {getLocalizedValue, isLocalizedStringEmpty, createLocalizedString} from '../../../shared/types/localized';
+import { useI18n } from '../../../app/providers/I18nProvider';
 
 // ============================================================================
 // TYPES
@@ -37,14 +39,11 @@ export interface UseAudioQuestionSubmitReturn {
 // HOOK
 // ============================================================================
 
-/**
- * Custom hook for handling audio question form submission.
- * Handles form data conversion, file upload, and error management.
- */
 export const useAudioQuestionSubmit = (
     options: UseAudioQuestionSubmitOptions = {}
 ): UseAudioQuestionSubmitReturn => {
     const {onSuccess, onError} = options;
+    const {currentLanguage} = useI18n();
 
     const [createAudioQuestion, {isLoading, reset}] = useCreateAudioQuestionMutation();
     const [error, setError] = useState<Error | null>(null);
@@ -54,8 +53,12 @@ export const useAudioQuestionSubmit = (
             try {
                 setError(null);
 
+                const questionText = getLocalizedValue(formData.question, currentLanguage);
+                const answerText = getLocalizedValue(formData.answer, currentLanguage);
+                const additionalInfoText = getLocalizedValue(formData.additionalInfo, currentLanguage);
+
                 // Validate required fields
-                if (!formData.question.trim()) {
+                if (!questionText.trim()) {
                     throw new Error('Question is required');
                 }
 
@@ -65,13 +68,13 @@ export const useAudioQuestionSubmit = (
 
                 // Build the request object
                 const request: CreateAudioQuestionRequest = {
-                    question: formData.question.trim(),
-                    answer: formData.answer?.trim() || undefined,
+                    question: questionText.trim(),
+                    answer: answerText?.trim() || undefined,
                     audioChallengeType: formData.audioChallengeType,
                     topic: formData.topic?.trim() || undefined,
                     difficulty: formData.difficulty,
-                    visibility: formData.visibility,
-                    additionalInfo: formData.additionalInfo?.trim() || undefined,
+                    visibility: formData.visibility as any,
+                    additionalInfo: additionalInfoText?.trim() || undefined,
                     audioSegmentStart: formData.audioSegmentStart,
                     audioSegmentEnd: formData.audioSegmentEnd ?? undefined,
                     minimumScorePercentage: formData.minimumScorePercentage,
@@ -148,7 +151,7 @@ export const validateAudioQuestionForm = (
     const errors: Record<string, string> = {};
 
     // Required fields
-    if (!formData.question?.trim()) {
+    if (isLocalizedStringEmpty(formData.question)) {
         errors.question = 'Question is required';
     }
 
@@ -206,26 +209,26 @@ export const getDefaultsForChallengeType = (
         case AudioChallengeType.RHYTHM_CREATION:
             return {
                 ...base,
-                question: 'Create your own rhythm pattern by tapping or clapping',
+                question: createLocalizedString('Create your own rhythm pattern by tapping or clapping', 'en'),
                 rhythmBpm: 120,
                 rhythmTimeSignature: '4/4',
             };
         case AudioChallengeType.RHYTHM_REPEAT:
             return {
                 ...base,
-                question: 'Listen to the rhythm pattern and repeat it',
+                question: createLocalizedString('Listen to the rhythm pattern and repeat it', 'en'),
                 rhythmBpm: 120,
                 rhythmTimeSignature: '4/4',
             };
         case AudioChallengeType.SOUND_MATCH:
             return {
                 ...base,
-                question: 'Make sounds as close as possible to what you hear',
+                question: createLocalizedString('Make sounds as close as possible to what you hear', 'en'),
             };
         case AudioChallengeType.SINGING:
             return {
                 ...base,
-                question: 'Sing along with the track',
+                question: createLocalizedString('Sing along with the track', 'en'),
                 minimumScorePercentage: 50, // Karaoke is harder, lower threshold
             };
         default:

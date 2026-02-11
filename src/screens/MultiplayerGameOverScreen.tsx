@@ -18,8 +18,8 @@ const MultiplayerGameOverScreen: React.FC = () => {
 
     const { players } = useMultiplayerRoomService(roomCode);
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-    const myRank = sortedPlayers.findIndex(p => p.userId === user?.id) + 1;
-    const me = players.find(p => p.userId === user?.id);
+    const myRank = sortedPlayers.findIndex(p => p.userId.toString() === user?.id) + 1;
+    const me = players.find(p => p.userId.toString() === user?.id);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -38,7 +38,7 @@ const MultiplayerGameOverScreen: React.FC = () => {
                         data={sortedPlayers}
                         keyExtractor={(item) => item.userId.toString()}
                         renderItem={({ item, index }) => (
-                            <View style={[styles.playerItem, item.userId === user?.id && styles.myPlayerItem]}>
+                            <View style={[styles.playerItem, item.userId.toString() === user?.id && styles.myPlayerItem]}>
                                 <Text style={styles.playerRank}>{index + 1}</Text>
                                 <Text style={styles.playerName}>{item.username}</Text>
                                 <Text style={styles.playerScore}>{item.score}</Text>

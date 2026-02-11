@@ -43,6 +43,7 @@ import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import { LocalizedInput } from '../../shared/ui/LocalizedInput';
 import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
+import { useI18n } from '../../app/providers/I18nProvider';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -273,6 +274,9 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                 sizeFormatted: FileService.formatFileSize(audioFile.size || 0),
                 isImage: false,
                 isVideo: false,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                extension: FileService.getExtension(audioFile.name || 'mp3'),
             };
 
             setSelectedMedia(processedAudio);
@@ -595,8 +599,8 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
                                             // Reset audio config when switching away from AUDIO
                                             if (value !== 'AUDIO') {
                                                 setAudioConfig(DEFAULT_AUDIO_CONFIG);
-                                                // Also clear any selected media if switching to/from AUDIO
-                                                if (questionType === 'AUDIO' || value === 'AUDIO') {
+                                                // Also clear any selected media if switching from AUDIO
+                                                if (questionType === 'AUDIO') {
                                                     setSelectedMedia(null);
                                                     setUploadedMediaInfo(null);
                                                 }

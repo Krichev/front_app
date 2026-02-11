@@ -81,16 +81,16 @@ export const FriendsFamilyScreen: React.FC = () => {
         }
     };
 
-    const handleAcceptRequest = async (relationshipId: number) => {
+    const handleAcceptRequest = async (relationshipId: string) => {
         try {
-            await acceptRelationship(relationshipId).unwrap();
+            await acceptRelationship(parseInt(relationshipId)).unwrap();
             Alert.alert('Success', 'Connection accepted!');
         } catch (error: any) {
             Alert.alert('Error', error.data?.message || 'Failed to accept request');
         }
     };
 
-    const handleRejectRequest = async (relationshipId: number) => {
+    const handleRejectRequest = async (relationshipId: string) => {
         Alert.alert(
             'Reject Request',
             'Are you sure you want to reject this request?',
@@ -101,7 +101,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await rejectRelationship(relationshipId).unwrap();
+                            await rejectRelationship(parseInt(relationshipId)).unwrap();
                             Alert.alert('Success', 'Request rejected');
                         } catch (error: any) {
                             Alert.alert('Error', error.data?.message || 'Failed to reject request');
@@ -112,7 +112,7 @@ export const FriendsFamilyScreen: React.FC = () => {
         );
     };
 
-    const handleRemoveConnection = async (relationshipId: number, username: string) => {
+    const handleRemoveConnection = async (relationshipId: string, username: string) => {
         Alert.alert(
             'Remove Connection',
             `Remove ${username} from your connections?`,
@@ -123,7 +123,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await removeRelationship(relationshipId).unwrap();
+                            await removeRelationship(parseInt(relationshipId)).unwrap();
                             Alert.alert('Success', 'Connection removed');
                         } catch (error: any) {
                             Alert.alert('Error', error.data?.message || 'Failed to remove connection');

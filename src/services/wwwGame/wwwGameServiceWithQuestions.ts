@@ -1,6 +1,6 @@
 // src/services/game/wwwGameServiceWithQuestions.ts
 import {GameSettings, RoundData, WWWGameService} from './wwwGameService';
-import {QuestionData, QuestionService} from './questionService';
+import {UserQuestion, QuestionService} from './questionService';
 import {DeepSeekHostService} from './deepseekHostService.ts';
 
 /**
@@ -19,7 +19,7 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
         try {
             // Fetch questions based on difficulty
             const questions = await QuestionService.getQuestionsByDifficulty(
-                settings.difficulty as 'Easy' | 'Medium' | 'Hard',
+                settings.difficulty as 'EASY' | 'MEDIUM' | 'HARD',
                 settings.roundCount
             );
 
@@ -111,7 +111,7 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
      * Generate AI host introduction for a question
      */
     static async generateQuestionIntroduction(
-        questionData: QuestionData,
+        questionData: UserQuestion,
         roundNumber: number,
         totalRounds: number
     ): Promise<string> {
@@ -119,7 +119,7 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
             // Use GPT-4 to generate an engaging introduction
             return DeepSeekHostService.generateQuestionIntroduction(
                 questionData.question,
-                questionData.difficulty || 'Medium',
+                (questionData.difficulty as 'EASY' | 'MEDIUM' | 'HARD') || 'MEDIUM',
                 roundNumber,
                 totalRounds
             );
@@ -226,13 +226,13 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
             const questions = await QuestionService.searchQuestions(
                 theme,
                 settings.roundCount,
-                settings.difficulty as 'Easy' | 'Medium' | 'Hard'
+                settings.difficulty as 'EASY' | 'MEDIUM' | 'HARD'
             );
 
             // If we don't have enough themed questions, supplement with random ones
             if (questions.length < settings.roundCount) {
                 const additionalQuestions = await QuestionService.getQuestionsByDifficulty(
-                    settings.difficulty as 'Easy' | 'Medium' | 'Hard',
+                    settings.difficulty as 'EASY' | 'MEDIUM' | 'HARD',
                     settings.roundCount - questions.length
                 );
 
@@ -270,7 +270,7 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
 if (typeof DeepSeekHostService.generateQuestionIntroduction !== 'function') {
     DeepSeekHostService.generateQuestionIntroduction = async function(
         question: string,
-        difficulty: 'Easy' | 'Medium' | 'Hard',
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD',
         roundNumber: number,
         totalRounds: number
     ): Promise<string> {

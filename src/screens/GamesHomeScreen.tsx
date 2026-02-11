@@ -31,7 +31,7 @@ const GamesHomeScreen: React.FC = () => {
             description: 'Guess the song from its rhythm vibrations!',
             icon: 'vibrate',
             color: '#9C27B0',
-            onPress: () => navigation.navigate('VibrationQuiz'),
+            onPress: () => navigation.navigate('VibrationQuiz', {}),
         },
         {
             id: 'rhythm',

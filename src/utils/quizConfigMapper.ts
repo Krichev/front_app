@@ -37,7 +37,9 @@ export const mapQuizConfigToBackend = (uiConfig: QuizConfig): QuizChallengeConfi
         gameType: uiConfig.gameType,
         teamName: uiConfig.teamName || '',  // OK to be empty for challenge creation
         teamMembers: uiConfig.teamMembers || [],  // OK to be empty for challenge creation
-        teamBased: uiConfig.teamBased ?? false
+        teamBased: uiConfig.teamBased ?? false,
+        gameMode: uiConfig.gameMode || 'STANDARD',
+        answerTimeSeconds: uiConfig.answerTimeSeconds || 20
     };
 
     console.log('Mapping UI config to backend:');
@@ -67,12 +69,14 @@ export const mapQuizConfigFromBackend = (backendConfig: QuizChallengeConfig): Qu
         gameType: (backendConfig.gameType || 'WWW') as 'WWW',
         teamName: backendConfig.teamName || 'My Team',
         teamMembers: backendConfig.teamMembers || ['Player 1'],
-        difficulty: difficultyMap[backendConfig.defaultDifficulty] || 'MEDIUM',
+        difficulty: (difficultyMap[backendConfig.defaultDifficulty as 'EASY' | 'MEDIUM' | 'HARD'] || 'MEDIUM') as any,
         roundTime: backendConfig.defaultRoundTimeSeconds || 60,
         roundCount: backendConfig.defaultTotalRounds || 10,
         enableAIHost: backendConfig.enableAiHost ?? true,
         enableAiAnswerValidation: backendConfig.enableAiAnswerValidation ?? false,
-        teamBased: backendConfig.teamBased ?? false
+        teamBased: backendConfig.teamBased ?? false,
+        gameMode: 'STANDARD',
+        answerTimeSeconds: 20
     };
 
     console.log('Mapping backend config to UI:');
@@ -103,7 +107,9 @@ export const createDefaultQuizChallengeConfig = (
         roundCount,
         enableAIHost: enableAI,
         enableAiAnswerValidation: false,
-        teamBased: false
+        teamBased: false,
+        gameMode: 'STANDARD',
+        answerTimeSeconds: 20
     });
 };
 

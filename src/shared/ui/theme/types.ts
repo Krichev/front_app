@@ -32,6 +32,11 @@ export interface ColorScheme {
     light: string;
     dark: string;
     contrast: string;
+    contrastText?: string;
+    paper?: string;
+    default?: string;
+    divider?: string;
+    background?: string;
 }
 
 export interface GrayScale {
@@ -52,6 +57,7 @@ export interface SemanticColor {
     light: string;
     dark: string;
     background: string;
+    contrast: string;
 }
 
 export interface Colors {
@@ -79,6 +85,8 @@ export interface Colors {
         secondary: string;
         tertiary: string;
         dark: string;
+        paper: string;
+        default: string;
     };
 
     // Overlay colors
@@ -102,6 +110,8 @@ export interface Colors {
         main: string;
         dark: string;
     };
+
+    divider: string;
 }
 
 /**

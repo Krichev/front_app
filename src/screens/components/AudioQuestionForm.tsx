@@ -16,7 +16,8 @@ import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../shared/ui/theme';
 import {useTranslation} from 'react-i18next';
 import { LocalizedInput } from '../../shared/ui/LocalizedInput';
-import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty } from '../../shared/types/localized';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
+import { useI18n } from '../../app/providers/I18nProvider';
 
 // ============================================================================
 // TYPES
@@ -216,6 +217,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 isImage: false,
                 isVideo: false,
                 extension: FileService.getExtension(file.name || ''),
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                sizeFormatted: FileService.formatFileSize(file.size || 0),
             };
 
             // Validate file
@@ -249,6 +253,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             isImage: false,
             isVideo: false,
             extension: 'wav',
+            createdAt: new Date().toISOString(),
+            modifiedAt: new Date().toISOString(),
+            sizeFormatted: '0 B',
         };
         updateField('referenceAudioFile', processedFile);
         setErrors(prev => ({...prev, referenceAudioFile: undefined}));

@@ -7,7 +7,5 @@ export * from './Loader';
 export * from './LocalizedInput';
 export * from './Modal';
 export * from './Portal';
-export * from './ThemeSwitcher';
 export * from './TopicSelector';
 export * from './ValidationStatusBadge';
-export * from './VoiceRecorderV2';

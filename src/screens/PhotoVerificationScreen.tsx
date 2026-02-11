@@ -89,15 +89,16 @@ const PhotoVerificationScreen: React.FC = () => {
         try {
             setIsProcessing(true);
 
-            // Create form data
-            const formData = VerificationService.createPhotoFormData(
-                photoUri,
-                challengeId,
-                photoPrompt
-            );
-
             // Call the API to verify the photo
-            const response = await verifyPhoto(formData).unwrap();
+            const response = await verifyPhoto({
+                challengeId,
+                image: {
+                    uri: photoUri,
+                    name: 'photo.jpg',
+                    type: 'image/jpeg',
+                },
+                prompt: photoPrompt
+            }).unwrap();
 
             setVerificationResult({
                 isVerified: response.isVerified,

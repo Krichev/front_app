@@ -41,16 +41,16 @@ export const convertToAPIDifficulty = (difficulty: UIDifficulty): APIDifficulty 
     const mapping: Record<UIDifficulty, APIDifficulty> = {
         'EASY': 'EASY',
         'MEDIUM': 'MEDIUM',
-        'HarHARDd': 'HARD'
+        'HARD': 'HARD'
     };
     return mapping[difficulty];
 };
 
 export const convertToUIDifficulty = (difficulty: APIDifficulty): UIDifficulty => {
     const mapping: Record<APIDifficulty, UIDifficulty> = {
-        'EASY': 'Easy',
-        'MEDIUM': 'Medium',
-        'HARD': 'Hard'
+        'EASY': 'EASY',
+        'MEDIUM': 'MEDIUM',
+        'HARD': 'HARD'
     };
     return mapping[difficulty];
 };

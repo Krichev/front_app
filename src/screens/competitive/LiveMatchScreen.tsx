@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useGetMatchQuery, useStartMatchMutation, useStartRoundMutation, useSubmitPerformanceMutation } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import { useTheme } from '../../shared/ui/theme';
-import { Button } from '../../shared/ui/Button/Button';
+import { Button, ButtonVariant } from '../../shared/ui/Button/Button';
 import { CompetitiveMatchStatus } from '../../entities/CompetitiveMatch/model/types';
 // Assuming AudioRecorder component exists or using basic logic
 // For now, placeholder for recorder
@@ -100,7 +100,7 @@ export const LiveMatchScreen = () => {
                         {!isRecording ? (
                             <Button onPress={handleStartRound}>Start Recording</Button>
                         ) : (
-                            <Button onPress={handleStopAndSubmit} variant="primary">Stop & Submit</Button>
+                            <Button onPress={handleStopAndSubmit} variant={ButtonVariant.PRIMARY}>Stop & Submit</Button>
                         )}
                         
                         {/* Opponent status indicator */}

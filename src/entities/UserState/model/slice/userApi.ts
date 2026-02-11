@@ -12,6 +12,7 @@ export interface UserProfile {
     username: string;
     email: string;
     bio?: string;
+    bioLocalized?: import('../../../../shared/types/localized').LocalizedString;
     avatar?: string;
     createdAt: string;
     statsCompleted?: number;

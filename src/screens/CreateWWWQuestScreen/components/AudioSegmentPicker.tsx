@@ -51,7 +51,7 @@ export const AudioSegmentPicker: React.FC<AudioSegmentPickerProps> = ({
           uri: result.fileCopyUri || result.uri,
           name: result.name || 'audio.mp3',
           type: result.type || 'audio/mpeg',
-          size: result.size,
+          size: result.size || undefined,
         };
 
         setAudioFile(file);

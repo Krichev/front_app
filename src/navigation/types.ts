@@ -1,1 +1,2 @@
-export { AppNavigator } from './AppNavigator.tsx';
+import AppNavigator from './AppNavigator.tsx';
+export { AppNavigator };

@@ -37,7 +37,7 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
 }) => {
   const isKaraokeChallenge = question.questionType === QuestionType.AUDIO && !!question.audioChallengeType;
   const isRegularAudio = question.questionType === QuestionType.AUDIO && !question.audioChallengeType;
-  const hasMedia = [QuestionType.IMAGE, QuestionType.VIDEO, QuestionType.AUDIO].includes(question.questionType);
+  const hasMedia = ([QuestionType.IMAGE, QuestionType.VIDEO, QuestionType.AUDIO] as QuestionType[]).includes(question.questionType);
 
   // Helper to render type badge
   const renderTypeBadge = () => {

@@ -138,7 +138,7 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
     Home: undefined;
-    Challenges: undefined;
+    Challenges: { initialFilter?: string };
     Search: undefined;
     Contacts: undefined;
     Groups: undefined;

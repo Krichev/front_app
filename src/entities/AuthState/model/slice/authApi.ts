@@ -13,6 +13,7 @@ export interface User {
     bio?: string;
     createdAt: string;
     updatedAt: string;
+    childAccount?: boolean;
 }
 
 export interface LoginRequest {

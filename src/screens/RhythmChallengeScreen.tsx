@@ -100,7 +100,7 @@ export const RhythmChallengeScreen: React.FC = () => {
     
     // Get audio URL
     const audioUrl = React.useMemo(() => {
-        if (!question?.mediaUrl) return null;
+        if (!question?.questionMediaId) return null;
         return MediaUrlService.getInstance().getMediaByIdUrl(question.questionMediaId);
     }, [question]);
     

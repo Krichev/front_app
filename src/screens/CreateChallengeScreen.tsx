@@ -14,6 +14,8 @@ import {
     View,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import {useSelector} from 'react-redux';
+import {RootState} from '../app/providers/StoreProvider/store';
 import {CreateChallengeRequest, useCreateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
 import {Picker} from '@react-native-picker/picker';
 import {ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationType} from '../app/types';
@@ -54,6 +56,7 @@ interface LocationDetailsState {
 
 const CreateChallengeScreen: React.FC = () => {
     const navigation = useNavigation();
+    const {user} = useSelector((state: RootState) => state.auth);
     const [createChallenge, { isLoading }] = useCreateChallengeMutation();
     const {screen, theme} = useAppStyles();
     const styles = themeStyles;
@@ -208,7 +211,8 @@ const CreateChallengeScreen: React.FC = () => {
                 frequency: formData.frequency,
                 startDate: formData.startDate?.toISOString(),
                 endDate: formData.endDate?.toISOString(),
-                tags: formData.tags.length > 0 ? formData.tags : undefined
+                tags: formData.tags.length > 0 ? formData.tags : undefined,
+                userId: user?.id || ''
             };
 
             await createChallenge(requestData).unwrap();

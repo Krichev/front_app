@@ -3,8 +3,10 @@
 import React, {useState} from 'react';
 import {Alert, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
+import {useSelector} from 'react-redux';
 import {useCreateChallengeMutation} from '../../entities/ChallengeState/model/slice/challengeApi';
 import {CurrencyType, PaymentType} from '../../entities/ChallengeState/model/types/challenge.types';
+import {RootState} from '../../app/providers/StoreProvider/store';
 
 interface CreateChallengeFormProps {
     navigation: any;
@@ -12,6 +14,7 @@ interface CreateChallengeFormProps {
 
 export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ navigation }) => {
     const [createChallenge, { isLoading }] = useCreateChallengeMutation();
+    const {user} = useSelector((state: RootState) => state.auth);
 
     // Basic fields
     const [title, setTitle] = useState('');
@@ -44,7 +47,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
             description: description.trim(),
             type,
             visibility,
-            status: 'ACTIVE',
+            status: 'ACTIVE' as any,
             frequency,
             paymentType,
             hasEntryFee,
@@ -57,6 +60,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
             invitedUserIds: visibility === 'PRIVATE' && invitedUserIds
                 ? invitedUserIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
                 : undefined,
+            userId: user?.id || '',
         };
 
         try {

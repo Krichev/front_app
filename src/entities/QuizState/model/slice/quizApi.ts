@@ -2,7 +2,7 @@
 import {BaseQueryArg, createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
-import {CreateQuizQuestionRequest, QuestionVisibility, MediaSourceType} from "../types/question.types";
+import {CreateQuizQuestionRequest, QuestionVisibility, MediaSourceType, UserRelationship, RelationshipStatus, RelationshipType} from "../types/question.types";
 import {RootStateForApi} from '../../../../app/providers/StoreProvider/storeTypes';
 import {Platform} from 'react-native';
 
@@ -157,21 +157,6 @@ export interface UpdateQuestionVisibilityRequest {
     originalQuizId?: number;  // Required if visibility is QUIZ_ONLY
 }
 
-export type UserRelationship = {
-    id: string;
-    userId: string;
-    username: string;
-    relatedUserId: string;
-    relatedUsername: string;
-    status: 'PENDING' | 'ACCEPTED' | 'BLOCKED';
-    createdAt: string;
-    updatedAt: string;
-}
-
-export interface CreateRelationshipRequest {
-    relatedUsername: string;
-}
-
 export type GameMode = 'STANDARD' | 'BRAIN_RING' | 'BLITZ';
 export type BrainRingRoundStatus = 'WAITING_FOR_BUZZ' | 'PLAYER_ANSWERING' | 'CORRECT_ANSWER' | 'ALL_LOCKED_OUT';
 
@@ -243,7 +228,7 @@ export interface QuizSession {
     enableAiHost: boolean;
     enableAiAnswerValidation: boolean;
     questionSource: string;
-    status: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED' | 'CANCELLED';
+    status: 'CREATED' | 'IN_PROGRESS' | 'PAUSED' | 'COMPLETED' | 'ABANDONED' | 'CANCELLED';
     startedAt?: string;
     completedAt?: string;
     totalDurationSeconds?: number;
@@ -601,11 +586,11 @@ export const quizApi = createApi({
         // RELATIONSHIP ENDPOINTS
         // ========================================================================
 
-        createRelationship: builder.mutation<UserRelationship, string>({
-            query: (username) => ({
+        createRelationship: builder.mutation<UserRelationship, { relatedUserId: number, relationshipType: RelationshipType }>({
+            query: (body) => ({
                 url: '../relationships',
                 method: 'POST',
-                body: { username },
+                body,
             }),
             invalidatesTags: [{type: 'UserRelationship', id: 'LIST'}],
         }),

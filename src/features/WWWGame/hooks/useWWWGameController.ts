@@ -52,7 +52,7 @@ export function useWWWGameController(sessionId: string) {
     return abandonQuizSession(sessionId).unwrap();
   }, [abandonQuizSession, sessionId]);
 
-  const submitAnswer = useCallback(async (roundId: number, payload: AnswerPayload) => {
+  const submitAnswer = useCallback(async (roundId: string, payload: AnswerPayload) => {
     const result = await submitRoundAnswer({
       sessionId,
       roundId,
@@ -63,7 +63,7 @@ export function useWWWGameController(sessionId: string) {
   }, [submitRoundAnswer, sessionId, refetchRounds]);
 
   const submitAudioAnswer = useCallback(async (
-    roundId: number, 
+    roundId: string, 
     questionId: number,
     audioFile: { uri: string; name: string; type: string },
     payload: Omit<AnswerPayload, 'teamAnswer'>

@@ -9,6 +9,7 @@ export interface User {
     bio?: string;
     avatar?: string;
     createdAt?: string;
+    childAccount?: boolean;
 }
 
 export interface AuthState {

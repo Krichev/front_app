@@ -12,7 +12,8 @@ export enum PaymentType {
     FREE = 'FREE',
     ENTRY_FEE = 'ENTRY_FEE',
     PRIZE = 'PRIZE',
-    BOTH = 'BOTH'
+    BOTH = 'BOTH',
+    PRIZE_POOL = 'PRIZE_POOL'
 }
 
 export enum CurrencyType {
@@ -45,6 +46,12 @@ export interface WWWQuizConfig {
     enableAIHost: boolean;
     /** Whether the quiz is team-based (optional) */
     teamBased?: boolean;
+    /** Participation settings */
+    allowOpenEnrollment?: boolean;
+    maxParticipants?: number;
+    shuffleQuestions?: boolean;
+    maxAttempts?: number;
+    requireResultConsent?: boolean;
 }
 
 /**
@@ -100,7 +107,9 @@ export interface ApiChallenge {
     created_at: string;
     updated_at: string;
     creator_id: string;
+    creatorUsername?: string;
     participants: string[] | string | null;
+    participantCount?: number;
     reward?: string;
     penalty?: string;
     verificationMethod?: string;
@@ -117,6 +126,7 @@ export interface ApiChallenge {
     entryFeeCurrency?: CurrencyType;
     hasPrize?: boolean;
     prizeAmount?: number;
+    prizePool?: number;
     prizeCurrency?: CurrencyType;
 
     // Access control properties
@@ -252,12 +262,15 @@ export interface QuizChallengeConfig {
     defaultRoundTimeSeconds: number;
     defaultTotalRounds: number;
     enableAiHost: boolean;
+    enableAiAnswerValidation?: boolean;
     questionSource: string;
     allowCustomQuestions: boolean;
     gameType: string;
     teamName: string;
     teamMembers: string[];
     teamBased?: boolean;
+    gameMode?: string;
+    answerTimeSeconds?: number;
     
     // NEW: Participation settings
     maxParticipants?: number;           // null = unlimited

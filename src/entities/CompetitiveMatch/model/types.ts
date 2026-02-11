@@ -78,6 +78,7 @@ export interface CompetitiveMatch {
   expiresAt?: string;
   startedAt?: string;
   completedAt?: string;
+  createdAt: string;
 }
 
 export interface CompetitiveMatchDetail extends CompetitiveMatch {

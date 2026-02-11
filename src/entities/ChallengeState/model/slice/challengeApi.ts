@@ -1,7 +1,7 @@
 // src/entities/ChallengeState/model/slice/challengeApi.ts
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
-import {CreateQuizQuestionRequest, QuizQuestion} from '../../../QuizState/model/slice/quizApi';
+import {CreateQuestionRequest, QuizQuestion} from '../../../QuizState/model/slice/quizApi';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
 // Import types from centralized types file
 import type {
@@ -22,6 +22,7 @@ import type {
     UploadAudioResponse,
     ChallengeAudioResponse,
     UpdateChallengeAudioConfigRequest,
+    QuizChallengeConfig,
 } from '../types';
 
 
@@ -238,7 +239,7 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
 
         saveQuizQuestionsForChallenge: builder.mutation<QuizQuestion[], {
             challengeId: string;
-            questions: CreateQuizQuestionRequest[];
+            questions: CreateQuestionRequest[];
         }>({
             query: ({challengeId, questions}) => ({
                 url: `/challenges/${challengeId}/questions`,
@@ -454,7 +455,10 @@ export type {
     LocationVerificationRequest,
     ChallengeAccessUser,
     CreateQuizChallengeRequest,
-    // ===== ADD THESE TWO NEW EXPORTS =====
+    QuizChallengeConfig,
+};
+
+export {
     PaymentType,
     CurrencyType,
 };

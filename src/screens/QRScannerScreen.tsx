@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, SafeAreaView, Alert } from 'react-native';
 // import QRCodeScanner from 'react-native-qrcode-scanner';
 // import { RNCamera } from 'react-native-camera';
 import { useNavigation } from '@react-navigation/native';
@@ -20,7 +20,7 @@ const QRScannerScreen: React.FC = () => {
             navigation.navigate('ControllerLobby', { roomCode });
         } else {
             // Invalid QR code
-            alert('Invalid QR Code. Please scan a room join code.');
+            Alert.alert('Error', 'Invalid QR Code. Please scan a room join code.');
         }
     };
 

@@ -29,6 +29,7 @@ import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import { LocalizedInput } from '../shared/ui/LocalizedInput';
 import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../shared/types/localized';
+import { useI18n } from '../app/providers/I18nProvider';
 
 type RootStackParamList = {
     UserQuestions: undefined;

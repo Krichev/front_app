@@ -94,6 +94,8 @@ export const createDarkPaperTheme = (customTheme: Theme): MD3Theme => {
                 secondary: customTheme.colors.neutral.gray[800],
                 tertiary: customTheme.colors.neutral.gray[700],
                 dark: customTheme.colors.neutral.black,
+                paper: customTheme.colors.neutral.gray[900],
+                default: customTheme.colors.background.dark,
             },
             text: {
                 primary: customTheme.colors.neutral.white,

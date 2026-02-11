@@ -1,4 +1,5 @@
 import { CurrencyType } from '../../ChallengeState/model/types';
+export { CurrencyType };
 
 export type StakeType = 'POINTS' | 'SCREEN_TIME' | 'MONEY' | 'SOCIAL_QUEST';
 export type WagerType = 'HEAD_TO_HEAD' | 'GROUP_POT' | 'SIDE_BET';

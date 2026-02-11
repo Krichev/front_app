@@ -20,6 +20,7 @@ interface ExternalVideoPlayerProps {
     onFullscreenChange?: (isFullscreen: boolean) => void;
     style?: ViewStyle;
     onSegmentEnd?: () => void;
+    height?: number;
     // Props for AuthenticatedVideo/Video
     resizeMode?: 'contain' | 'cover' | 'stretch';
     shouldPlay?: boolean;
@@ -40,13 +41,17 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                                                                      onFullscreenChange,
                                                                      style,
                                                                      onSegmentEnd,
+                                                                     height,
                                                                      resizeMode = 'contain',
                                                                      shouldPlay = false,
                                                                  }) => {
+    // Combine style with height if provided
+    const combinedStyle = [style, height ? { height, aspectRatio: undefined } : {}];
+
     // 1. YouTube
     if (mediaSourceType === MediaSourceType.YOUTUBE && videoId) {
         return (
-            <View style={[styles.container, style]}>
+            <View style={[styles.container, combinedStyle]}>
                 <YouTubePlayer
                     videoId={videoId}
                     startTime={startTime}
@@ -67,7 +72,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
     // 2. Direct External URL (mp4, etc.)
     if (mediaSourceType === MediaSourceType.EXTERNAL_URL && videoUrl) {
         return (
-            <View style={[styles.container, style]}>
+            <View style={[styles.container, combinedStyle]}>
                 <Video
                     source={{ uri: videoUrl }}
                     style={styles.video}
@@ -89,7 +94,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
         return (
             <AuthenticatedVideo
                 uri={videoUrl}
-                style={style}
+                style={combinedStyle as any}
                 resizeMode={resizeMode}
                 shouldPlay={autoPlay || shouldPlay}
             />

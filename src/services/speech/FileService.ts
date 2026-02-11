@@ -925,6 +925,20 @@ export class FileService {
     }
 
     /**
+     * Get file extension (public wrapper)
+     */
+    static getExtension(filename: string): string {
+        return this.getFileExtension(filename);
+    }
+
+    /**
+     * Save transcription (placeholder)
+     */
+    static async saveTranscription(data: any): Promise<void> {
+        console.log('Saving transcription:', data);
+    }
+
+    /**
      * Get recording duration
      */
     static getRecordingDuration(): number {

@@ -313,7 +313,7 @@ const WWWGamePlayScreen: React.FC = () => {
     try {
       const answerToSubmit = state.teamAnswer.trim() || '';
       // roundId is string in QuizRound entity
-      await controller.submitAnswer(Number(currentRound.id), {
+      await controller.submitAnswer(currentRound.id, {
         teamAnswer: answerToSubmit,
         playerWhoAnswered: state.selectedPlayer || 'Team',
         discussionNotes: state.discussionNotes,
@@ -329,8 +329,8 @@ const WWWGamePlayScreen: React.FC = () => {
 
     try {
       await controller.submitAudioAnswer(
-        Number(currentRound.id), // Ensure number if API expects number, or keep string if it expects string
-        Number(currentRound.question.id),
+        currentRound.id,
+        currentRound.question.id,
         audioFile,
         {
           playerWhoAnswered: state.selectedPlayer || 'Team',

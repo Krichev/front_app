@@ -284,7 +284,7 @@ Did the team mention the correct answer or something very close to it? Extract t
     static async generateHint(
         question: string,
         correctAnswer: string,
-        difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUMMEDIUM',
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM',
         previousHints: string[] = []
     ): Promise<string> {
         if (!question || !correctAnswer) {
@@ -296,13 +296,13 @@ Did the team mention the correct answer or something very close to it? Extract t
             let hintInstructions = '';
 
             switch (difficulty) {
-                case 'Easy':
+                case 'EASY':
                     hintInstructions = `Provide a fairly obvious hint that gives clear direction without directly revealing the answer. The player should be able to easily identify the answer with this hint.`;
                     break;
-                case 'Medium':
+                case 'MEDIUM':
                     hintInstructions = `Provide a moderately helpful hint that points in the right direction without making the answer too obvious. The player should need to think a bit to identify the answer.`;
                     break;
-                case 'Hard':
+                case 'HARD':
                     hintInstructions = `Provide a subtle hint that requires significant thought to connect to the answer. The hint should be challenging but fair.`;
                     break;
             }
@@ -460,18 +460,18 @@ Did the team mention the correct answer or something very close to it? Extract t
     static async classifyQuestionDifficulty(
         question: string,
         answer: string
-    ): Promise<'Easy' | 'Medium' | 'Hard'> {
+    ): Promise<'EASY' | 'MEDIUM' | 'HARD'> {
         try {
             const messages = [
                 {
                     role: "system",
                     content: `You are an expert at classifying trivia questions by difficulty. 
-          Classify the following question as either Easy, Medium, or Hard based on:
-          - Easy: Common knowledge, simple facts, popular culture, straightforward answers
-          - Medium: Requires some specific knowledge or reasoning
-          - Hard: Requires specialized knowledge, complex reasoning, or obscure facts
+          Classify the following question as either EASY, MEDIUM, or HARD based on:
+          - EASY: Common knowledge, simple facts, popular culture, straightforward answers
+          - MEDIUM: Requires some specific knowledge or reasoning
+          - HARD: Requires specialized knowledge, complex reasoning, or obscure facts
           
-          Reply with only one word: Easy, Medium, or Hard.`
+          Reply with only one word: EASY, MEDIUM, or HARD.`
                 },
                 {
                     role: "user",
@@ -489,23 +489,23 @@ Did the team mention the correct answer or something very close to it? Extract t
                     max_tokens: 10
                 });
 
-                if (result?.toLowerCase().includes('easy')) {
-                    return 'Easy';
-                } else if (result?.toLowerCase().includes('medium')) {
-                    return 'Medium';
-                } else if (result?.toLowerCase().includes('hard')) {
-                    return 'Hard';
+                if (result?.toUpperCase().includes('EASY')) {
+                    return 'EASY';
+                } else if (result?.toUpperCase().includes('MEDIUM')) {
+                    return 'MEDIUM';
+                } else if (result?.toUpperCase().includes('HARD')) {
+                    return 'HARD';
                 } else {
-                    return 'Medium'; // Default to Medium if classification fails
+                    return 'MEDIUM'; // Default to MEDIUM if classification fails
                 }
             } catch (apiError) {
                 // Simple fallback
                 if (answer.length <= 15) {
-                    return 'Easy';
+                    return 'EASY';
                 } else if (answer.length >= 30) {
-                    return 'Hard';
+                    return 'HARD';
                 } else {
-                    return 'Medium';
+                    return 'MEDIUM';
                 }
             }
         } catch (error) {
@@ -513,11 +513,11 @@ Did the team mention the correct answer or something very close to it? Extract t
 
             // Simple fallback based on answer length if DeepSeek classification fails
             if (answer.length <= 15) {
-                return 'Easy';
+                return 'EASY';
             } else if (answer.length >= 30) {
-                return 'Hard';
+                return 'HARD';
             } else {
-                return 'Medium';
+                return 'MEDIUM';
             }
         }
     }
@@ -527,7 +527,7 @@ Did the team mention the correct answer or something very close to it? Extract t
      */
     static async generateQuestionIntroduction(
         question: string,
-        difficulty: 'Easy' | 'Medium' | 'Hard',
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD',
         roundNumber: number,
         totalRounds: number
     ): Promise<string> {
@@ -733,23 +733,23 @@ Did the team mention the correct answer or something very close to it? Extract t
      */
     private static localGenerateHint(
         correctAnswer: string,
-        difficulty: 'Easy' | 'Medium' | 'Hard'
+        difficulty: 'EASY' | 'MEDIUM' | 'HARD'
     ): string {
         // Basic hints that reveal more based on difficulty
         const words = correctAnswer.split(' ');
         const totalChars = correctAnswer.length;
 
         switch (difficulty) {
-            case 'Easy':
+            case 'EASY':
                 // For easy, give first letters and word count
                 const firstLetters = words.map(word => word[0]).join('');
                 return `The answer begins with "${firstLetters}" and has ${words.length} word${words.length !== 1 ? 's' : ''}.`;
 
-            case 'Medium':
+            case 'MEDIUM':
                 // For medium, give character count and word count
                 return `The answer has ${totalChars} characters in ${words.length} word${words.length !== 1 ? 's' : ''}.`;
 
-            case 'Hard':
+            case 'HARD':
                 // For hard, just give basic structure
                 if (words.length > 1) {
                     return `The answer is a ${words.length}-word term.`;

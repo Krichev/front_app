@@ -147,8 +147,8 @@ export const phaseStyles = (theme: Theme) =>
             borderRadius: theme.layout.borderRadius.md,
         },
         transcriptionLabel: {
-            fontWeight: theme.typography.fontWeight.bold,
             ...theme.typography.body.small,
+            fontWeight: theme.typography.fontWeight.bold,
             color: theme.colors.text.secondary,
             marginBottom: 4,
         },

@@ -115,7 +115,7 @@ const AuthenticatedImage: React.FC<AuthenticatedImageProps> = ({
         <View style={[styles.container, containerStyle]}>
             {!hasError ? (
                 <FastImage
-                    style={[styles.image, style]}
+                    style={[styles.image, style] as any}
                     source={source}
                     resizeMode={resizeMode}
                     onLoadStart={handleLoadStart}

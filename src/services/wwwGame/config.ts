@@ -49,7 +49,7 @@ export const DEFAULT_CONFIG: WWWGameConfig = {
         useExternalSource: true,
         cacheResults: true,
         maxCachedQuestions: 100,
-        defaultDifficulty: 'Medium'
+        defaultDifficulty: 'MEDIUM'
     },
     game: {
         defaultRoundTime: 60,
