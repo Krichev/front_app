@@ -1,0 +1,417 @@
+name: Android CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  NODE_VERSION: '18'
+  JAVA_VERSION: '17'
+
+jobs:
+  # ====================
+  # LINT & TYPE CHECK
+  # ====================
+  validate:
+    name: Validate Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test -- --coverage --watchAll=false
+        continue-on-error: true
+
+  # ====================
+  # BUILD DEBUG APK
+  # ====================
+  build-debug:
+    name: Build Debug APK
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref != 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create environment file
+        run: |
+          cat > .env << EOF
+          API_BASE_URL=${{ secrets.API_BASE_URL_DEV }}
+          ENVIRONMENT=development
+          EOF
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK
+        run: |
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/} | sed 's/\//-/g')
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          mv android/app/build/outputs/apk/debug/app-debug.apk 
+             android/app/build/outputs/apk/debug/challenger-${BRANCH_NAME}-${SHORT_SHA}-debug.apk
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  # ====================
+  # BUILD RELEASE APK
+  # ====================
+  build-release:
+    name: Build Release APK
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      apk_name: ${{ steps.rename.outputs.apk_name }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for version calculation
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create environment file
+        run: |
+          cat > .env << EOF
+          API_BASE_URL=${{ secrets.API_BASE_URL_PROD }}
+          ENVIRONMENT=production
+          EOF
+
+      - name: Calculate version
+        id: version
+        run: |
+          # Get version from package.json
+          VERSION=$(node -p "require('./package.json').version")
+          # Add build number (commit count)
+          BUILD_NUMBER=$(git rev-list --count HEAD)
+          FULL_VERSION="${VERSION}.${BUILD_NUMBER}"
+          echo "version=${FULL_VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${FULL_VERSION}"
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/challenger-release.keystore
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Build Release APK
+        working-directory: android
+        env:
+          KEYSTORE_FILE: challenger-release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.version.outputs.version }}
+        run: |
+          ./gradlew assembleRelease --no-daemon 
+            -PKEYSTORE_FILE=$KEYSTORE_FILE 
+            -PKEYSTORE_PASSWORD=$KEYSTORE_PASSWORD 
+            -PKEY_ALIAS=$KEY_ALIAS 
+            -PKEY_PASSWORD=$KEY_PASSWORD 
+            -PVERSION_NAME=$VERSION_NAME
+
+      - name: Rename APK
+        id: rename
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          APK_NAME="challenger-v${VERSION}.apk"
+          mv android/app/build/outputs/apk/release/app-release.apk 
+             android/app/build/outputs/apk/release/${APK_NAME}
+          echo "apk_name=${APK_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Cleanup Keystore
+        if: always()
+        run: rm -f android/app/challenger-release.keystore
+
+  # ====================
+  # CREATE GITHUB RELEASE
+  # ====================
+  release:
+    name: Create GitHub Release
+    needs: build-release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download Release APK
+        uses: actions/download-artifact@v4
+        with:
+          name: release-apk
+          path: ./release
+
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log ${LAST_TAG}..HEAD --oneline --no-merges | head -20)
+          else
+            COMMITS=$(git log --oneline --no-merges | head -20)
+          fi
+          
+          # Create release notes
+          cat > release_notes.md << EOF
+          ## Challenger App v${{ needs.build-release.outputs.version }}
+          
+          ### What's New
+          
+          ${COMMITS}
+          
+          ### Installation
+          
+          1. Download the APK file below
+          2. Enable "Install from unknown sources" in your Android settings
+          3. Open the downloaded APK to install
+          
+          ### Download
+          
+          📱 **[Download Latest APK](https://github.com/${{ github.repository }}/releases/latest/download/${{ needs.build-release.outputs.apk_name }})**
+          
+          ---
+          Built from commit: ${{ github.sha }}
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build-release.outputs.version }}
+          name: Challenger v${{ needs.build-release.outputs.version }}
+          body_path: release_notes.md
+          files: ./release/${{ needs.build-release.outputs.apk_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Download Page
+        run: |
+          # Create/update download page in gh-pages branch
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Create download page content
+          mkdir -p docs
+          cat > docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Challenger App - Download</title>
+              <style>
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 20px;
+                  }
+                  .container {
+                      background: white;
+                      border-radius: 20px;
+                      padding: 40px;
+                      max-width: 500px;
+                      width: 100%;
+                      text-align: center;
+                      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                  }
+                  .logo { font-size: 64px; margin-bottom: 20px; }
+                  h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+                  .version { color: #666; margin-bottom: 30px; font-size: 16px; }
+                  .download-btn {
+                      display: inline-block;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                      padding: 16px 40px;
+                      border-radius: 30px;
+                      text-decoration: none;
+                      font-size: 18px;
+                      font-weight: 600;
+                      transition: transform 0.2s, box-shadow 0.2s;
+                      margin-bottom: 20px;
+                  }
+                  .download-btn:hover {
+                      transform: translateY(-2px);
+                      box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+                  }
+                  .qr-code { margin: 30px 0; }
+                  .qr-code img { width: 180px; height: 180px; }
+                  .instructions {
+                      text-align: left;
+                      background: #f8f9fa;
+                      padding: 20px;
+                      border-radius: 12px;
+                      margin-top: 20px;
+                  }
+                  .instructions h3 { color: #333; margin-bottom: 10px; font-size: 16px; }
+                  .instructions ol { margin-left: 20px; color: #666; line-height: 1.8; }
+                  .footer { margin-top: 30px; color: #999; font-size: 12px; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="logo">🎯</div>
+                  <h1>Challenger App</h1>
+                  <p class="version">Version: VERSION_PLACEHOLDER</p>
+                  
+                  <a href="DOWNLOAD_URL_PLACEHOLDER" class="download-btn">
+                      📥 Download APK
+                  </a>
+                  
+                  <div class="qr-code">
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=DOWNLOAD_URL_PLACEHOLDER" alt="QR Code">
+                      <p style="color: #666; font-size: 14px; margin-top: 10px;">Scan to download</p>
+                  </div>
+                  
+                  <div class="instructions">
+                      <h3>📱 Installation Instructions</h3>
+                      <ol>
+                          <li>Download the APK file</li>
+                          <li>Open Settings → Security</li>
+                          <li>Enable "Install from unknown sources"</li>
+                          <li>Open the downloaded file to install</li>
+                      </ol>
+                  </div>
+                  
+                  <p class="footer">
+                      Built with ❤️ | 
+                      <a href="https://github.com/${{ github.repository }}/releases" style="color: #667eea;">View All Releases</a>
+                  </p>
+              </div>
+          </body>
+          </html>
+          EOF
+          
+          # Replace placeholders
+          VERSION="${{ needs.build-release.outputs.version }}"
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/latest/download/${{ needs.build-release.outputs.apk_name }}"
+          
+          sed -i "s|VERSION_PLACEHOLDER|${VERSION}|g" docs/index.html
+          sed -i "s|DOWNLOAD_URL_PLACEHOLDER|${DOWNLOAD_URL}|g" docs/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+
+  # ====================
+  # NOTIFY
+  # ====================
+  notify:
+    name: Send Notification
+    needs: [build-release, release]
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Notification Summary
+        run: |
+          if [ "${{ needs.release.result }}" == "success" ]; then
+            echo "✅ Release v${{ needs.build-release.outputs.version }} published successfully!"
+            echo ""
+            echo "📥 Download: https://github.com/${{ github.repository }}/releases/latest"
+            echo "🌐 Install Page: https://${{ github.repository_owner }}.github.io/$(echo ${{ github.repository }} | cut -d'/' -f2)/"
+          else
+            echo "❌ Release failed!"
+          fi
