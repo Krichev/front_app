@@ -46,7 +46,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     } = useGetScreenTimeBudgetQuery(undefined, { skip: !isAuthenticated });
     
     const { data: lockConfig } = useGetMyLockConfigQuery(undefined, { skip: !isAuthenticated });
-    const [useEmergencyBypass] = useUseEmergencyBypassMutation();
+    const [triggerEmergencyBypass] = useUseEmergencyBypassMutation();
     const [syncTime] = useSyncScreenTimeMutation();
     
     // Local state
@@ -54,7 +54,6 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     const [isTracking, setIsTracking] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
     const [status, setStatus] = useState<ScreenTimeStatus | null>(null);
-    const [dismissAttempts, setDismissAttempts] = useState(0);
     
     // Refs for mutable tracking
     const accumulatedSecondsRef = useRef(0);
@@ -128,7 +127,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
              };
              loadLocalBudget();
         }
-    }, [budget, isBudgetError, isBudgetLoading, lockConfig, authUser, isAuthenticated]);
+    }, [budget, isBudgetError, isBudgetLoading, lockConfig, authUser, isAuthenticated, isLocked, setIsLocked, setAvailableSeconds, setStatus]);
 
     // Reset state when user logs out or is not authenticated
     useEffect(() => {
@@ -142,7 +141,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             screenTimeStorage.clearAll();
             console.log('[ScreenTime] Reset state - user not authenticated');
         }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, setIsLocked, setAvailableSeconds, setIsTracking, setStatus]);
 
     // Native Event Listeners
     useEffect(() => {
@@ -156,7 +155,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         const bypassSub = DeviceLockService.onEmergencyBypassUsed(async (data) => {
             console.log('[ScreenTime] Emergency bypass used via native overlay', data);
             try {
-                await useEmergencyBypass().unwrap();
+                await triggerEmergencyBypass().unwrap();
                 if (!isBudgetUninitialized) {
                     refreshBudget();
                 }
@@ -166,7 +165,6 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         });
 
         const attemptSub = DeviceLockService.onLockDismissAttempt(({ attemptCount }) => {
-            setDismissAttempts(attemptCount);
             if (lockConfig?.escalationEnabled && attemptCount >= (lockConfig.escalationAfterAttempts || 3)) {
                 DeviceLockService.escalateToHardLock();
             }
@@ -177,7 +175,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             bypassSub.remove();
             attemptSub.remove();
         };
-    }, [lockConfig, refreshBudget, useEmergencyBypass]);
+    }, [lockConfig, refreshBudget, triggerEmergencyBypass, isBudgetUninitialized]);
 
     // Format time helper
     const getFormattedTime = (seconds: number) => {
@@ -230,7 +228,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     }, [syncTime, isAuthenticated]);
 
     // Process pending syncs (e.g. on reconnect)
-    const processPendingSyncs = async () => {
+    const processPendingSyncs = useCallback(async () => {
         const pending = await screenTimeStorage.getPendingSyncs();
         if (pending.length === 0) return;
 
@@ -260,7 +258,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         } else {
              await screenTimeStorage.clearPendingSyncs();
         }
-    };
+    }, [syncTime]);
 
     // Countdown logic
     useEffect(() => {
@@ -298,7 +296,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         return () => {
             if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
         };
-    }, [isTracking, isLocked, syncNow]);
+    }, [isTracking, isLocked, syncNow, setAvailableSeconds, setIsLocked]);
 
     // Sync interval
     useEffect(() => {
@@ -341,7 +339,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         }
 
         return () => subscription.remove();
-    }, [syncNow, refreshBudget]);
+    }, [syncNow, refreshBudget, isBudgetUninitialized]);
 
     // NetInfo handling
     useEffect(() => {
@@ -351,7 +349,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             }
         });
         return () => unsubscribe();
-    }, []);
+    }, [processPendingSyncs]);
 
     // Explicit start/pause actions
     const startTracking = () => setIsTracking(true);

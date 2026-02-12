@@ -48,7 +48,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         return () => {
             cleanup();
         };
-    }, []);
+    }, [initializeRecorder, cleanup]);
 
     useEffect(() => {
         if (recordingState.isRecording && !recordingState.isPaused) {
@@ -58,9 +58,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             stopPulseAnimation();
             stopDurationTimer();
         }
-    }, [recordingState.isRecording, recordingState.isPaused]);
+    }, [recordingState.isRecording, recordingState.isPaused, startPulseAnimation, startDurationTimer, stopPulseAnimation, stopDurationTimer]);
 
-    const initializeRecorder = async () => {
+    const initializeRecorder = useCallback(async () => {
         try {
             // Request permissions
             const permission = await requestAudioPermission();
@@ -94,7 +94,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                 [{ text: 'OK', onPress: onCancel }]
             );
         }
-    };
+    }, [onCancel, quality]);
 
     const requestAudioPermission = async (): Promise<boolean> => {
         if (Platform.OS === 'android') {
@@ -159,7 +159,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         }
     };
 
-    const stopRecording = async () => {
+    const stopRecording = useCallback(async () => {
         try {
             const audioFile = await AudioRecord.stop();
 
@@ -192,7 +192,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             console.error('Error stopping recording:', error);
             Alert.alert('Recording Error', 'Failed to save recording. Please try again.');
         }
-    };
+    }, [onRecordingComplete]);
 
     const deleteRecording = () => {
         Alert.alert(
@@ -215,7 +215,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         );
     };
 
-    const startPulseAnimation = () => {
+    const startPulseAnimation = useCallback(() => {
         const pulse = () => {
             Animated.sequence([
                 Animated.timing(pulseAnim, {
@@ -235,13 +235,13 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
             });
         };
         pulse();
-    };
+    }, [pulseAnim, recordingState.isRecording, recordingState.isPaused]);
 
-    const stopPulseAnimation = () => {
+    const stopPulseAnimation = useCallback(() => {
         pulseAnim.setValue(1);
-    };
+    }, [pulseAnim]);
 
-    const startDurationTimer = () => {
+    const startDurationTimer = useCallback(() => {
         durationInterval.current = setInterval(() => {
             setRecordingState(prev => {
                 const newDuration = prev.duration + 1;
@@ -258,21 +258,21 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
                 };
             });
         }, 1000);
-    };
+    }, [maxDuration, stopRecording]);
 
-    const stopDurationTimer = () => {
+    const stopDurationTimer = useCallback(() => {
         if (durationInterval.current) {
             clearInterval(durationInterval.current);
             durationInterval.current = null;
         }
-    };
+    }, []);
 
-    const cleanup = () => {
+    const cleanup = useCallback(() => {
         stopDurationTimer();
         if (recordingState.isRecording) {
             AudioRecord.stop().catch(console.error);
         }
-    };
+    }, [stopDurationTimer, recordingState.isRecording]);
 
     const formatDuration = (seconds: number): string => {
         const mins = Math.floor(seconds / 60);

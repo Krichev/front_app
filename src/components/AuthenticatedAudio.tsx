@@ -33,7 +33,7 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
     mediaId,
     uri,
     style,
-    showWaveform = false,
+    showWaveform: _showWaveform = false,
     onLoad,
     onEnd,
     onError,
@@ -45,7 +45,7 @@ const AuthenticatedAudio: React.FC<AuthenticatedAudioProps> = ({
     const [duration, setDuration] = useState(0);
     const [position, setPosition] = useState(0);
     const [hasError, setHasError] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string>('');
+    const [_errorMessage, setErrorMessage] = useState<string>('');
     const [isSeeking, setIsSeeking] = useState(false);
 
     const mediaService = MediaUrlService.getInstance();
