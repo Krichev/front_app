@@ -186,11 +186,11 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_NAME: ${{ steps.version.outputs.version }}
         run: |
-          ./gradlew assembleRelease --no-daemon 
-            -PKEYSTORE_FILE=$KEYSTORE_FILE 
-            -PKEYSTORE_PASSWORD=$KEYSTORE_PASSWORD 
-            -PKEY_ALIAS=$KEY_ALIAS 
-            -PKEY_PASSWORD=$KEY_PASSWORD 
+          ./gradlew assembleRelease --no-daemon \
+            -PKEYSTORE_FILE=$KEYSTORE_FILE \
+            -PKEYSTORE_PASSWORD=$KEYSTORE_PASSWORD \
+            -PKEY_ALIAS=$KEY_ALIAS \
+            -PKEY_PASSWORD=$KEY_PASSWORD \
             -PVERSION_NAME=$VERSION_NAME
 
       - name: Rename APK
