@@ -1,5 +1,5 @@
 // src/components/AudioRecorder.tsx
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Alert, Animated, PermissionsAndroid, Platform, Text, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AudioRecord from 'react-native-audio-record';
@@ -30,6 +30,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     const {theme} = useAppStyles();
     const styles = themeStyles;
     
+    // 1. State
     const [recordingState, setRecordingState] = useState<RecordingState>({
         isRecording: false,
         isPaused: false,
@@ -39,64 +40,23 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
     const [hasPermission, setHasPermission] = useState<boolean>(false);
     const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
+    // 2. Refs
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const durationInterval = useRef<NodeJS.Timeout | null>(null);
     const recordingStartTime = useRef<number>(0);
 
-    useEffect(() => {
-        initializeRecorder();
-        return () => {
-            cleanup();
-        };
-    }, [initializeRecorder, cleanup]);
+    // 3. Helper functions
+    const formatDuration = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
-    useEffect(() => {
-        if (recordingState.isRecording && !recordingState.isPaused) {
-            startPulseAnimation();
-            startDurationTimer();
-        } else {
-            stopPulseAnimation();
-            stopDurationTimer();
-        }
-    }, [recordingState.isRecording, recordingState.isPaused, startPulseAnimation, startDurationTimer, stopPulseAnimation, stopDurationTimer]);
+    const getMaxDurationFormatted = (): string => {
+        return formatDuration(maxDuration);
+    };
 
-    const initializeRecorder = useCallback(async () => {
-        try {
-            // Request permissions
-            const permission = await requestAudioPermission();
-            if (!permission) {
-                Alert.alert(
-                    'Permission Required',
-                    'Microphone permission is required to record audio.',
-                    [{ text: 'OK', onPress: onCancel }]
-                );
-                return;
-            }
-
-            setHasPermission(true);
-
-            // Configure audio recording options
-            const options = {
-                sampleRate: quality === 'high' ? 44100 : quality === 'medium' ? 22050 : 16000,
-                channels: 1,
-                bitsPerSample: 16,
-                audioSource: 6, // VOICE_RECOGNITION
-                wavFile: 'audio_recording.wav',
-            };
-
-            AudioRecord.init(options);
-            setIsInitialized(true);
-        } catch (error) {
-            console.error('Error initializing audio recorder:', error);
-            Alert.alert(
-                'Initialization Error',
-                'Failed to initialize audio recorder. Please try again.',
-                [{ text: 'OK', onPress: onCancel }]
-            );
-        }
-    }, [onCancel, quality]);
-
-    const requestAudioPermission = async (): Promise<boolean> => {
+    const requestAudioPermission = useCallback(async (): Promise<boolean> => {
         if (Platform.OS === 'android') {
             try {
                 const permission = PermissionsAndroid.PERMISSIONS.RECORD_AUDIO;
@@ -123,41 +83,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
         // iOS permissions are handled automatically by the library
         return true;
-    };
-
-    const startRecording = async () => {
-        if (!hasPermission || !isInitialized) {
-            await initializeRecorder();
-            return;
-        }
-
-        try {
-            AudioRecord.start();
-            recordingStartTime.current = Date.now();
-            setRecordingState(prev => ({
-                ...prev,
-                isRecording: true,
-                isPaused: false,
-                duration: 0,
-            }));
-        } catch (error) {
-            console.error('Error starting recording:', error);
-            Alert.alert('Recording Error', 'Failed to start recording. Please try again.');
-        }
-    };
-
-    const pauseRecording = () => {
-        try {
-            // Note: react-native-audio-record doesn't support pause/resume
-            // This is a placeholder for future implementation or alternative library
-            setRecordingState(prev => ({
-                ...prev,
-                isPaused: !prev.isPaused,
-            }));
-        } catch (error) {
-            console.error('Error pausing recording:', error);
-        }
-    };
+    }, []);
 
     const stopRecording = useCallback(async () => {
         try {
@@ -194,52 +120,12 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         }
     }, [onRecordingComplete]);
 
-    const deleteRecording = () => {
-        Alert.alert(
-            'Delete Recording',
-            'Are you sure you want to delete this recording?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () => {
-                        setRecordingState({
-                            isRecording: false,
-                            isPaused: false,
-                            duration: 0,
-                        });
-                    },
-                },
-            ]
-        );
-    };
-
-    const startPulseAnimation = useCallback(() => {
-        const pulse = () => {
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.2,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 800,
-                    useNativeDriver: true,
-                }),
-            ]).start(() => {
-                if (recordingState.isRecording && !recordingState.isPaused) {
-                    pulse();
-                }
-            });
-        };
-        pulse();
-    }, [pulseAnim, recordingState.isRecording, recordingState.isPaused]);
-
-    const stopPulseAnimation = useCallback(() => {
-        pulseAnim.setValue(1);
-    }, [pulseAnim]);
+    const stopDurationTimer = useCallback(() => {
+        if (durationInterval.current) {
+            clearInterval(durationInterval.current);
+            durationInterval.current = null;
+        }
+    }, []);
 
     const startDurationTimer = useCallback(() => {
         durationInterval.current = setInterval(() => {
@@ -260,28 +146,148 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
         }, 1000);
     }, [maxDuration, stopRecording]);
 
-    const stopDurationTimer = useCallback(() => {
-        if (durationInterval.current) {
-            clearInterval(durationInterval.current);
-            durationInterval.current = null;
+    const stopPulseAnimation = useCallback(() => {
+        pulseAnim.stopAnimation();
+        pulseAnim.setValue(1);
+    }, [pulseAnim]);
+
+    const startPulseAnimation = useCallback(() => {
+        pulseAnim.stopAnimation();
+        const pulse = () => {
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.2,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+            ]).start(({finished}) => {
+                if (finished && recordingState.isRecording && !recordingState.isPaused) {
+                    pulse();
+                }
+            });
+        };
+        pulse();
+    }, [pulseAnim, recordingState.isRecording, recordingState.isPaused]);
+
+    const initializeRecorder = useCallback(async () => {
+        try {
+            // Request permissions
+            const permission = await requestAudioPermission();
+            if (!permission) {
+                Alert.alert(
+                    'Permission Required',
+                    'Microphone permission is required to record audio.',
+                    [{ text: 'OK', onPress: onCancel }]
+                );
+                return;
+            }
+
+            setHasPermission(true);
+
+            // Configure audio recording options
+            const options = {
+                sampleRate: quality === 'high' ? 44100 : quality === 'medium' ? 22050 : 16000,
+                channels: 1,
+                bitsPerSample: 16,
+                audioSource: 6, // VOICE_RECOGNITION
+                wavFile: 'audio_recording.wav',
+            };
+
+            AudioRecord.init(options);
+            setIsInitialized(true);
+        } catch (error) {
+            console.error('Error initializing audio recorder:', error);
+            Alert.alert(
+                'Initialization Error',
+                'Failed to initialize audio recorder. Please try again.',
+                [{ text: 'OK', onPress: onCancel }]
+            );
         }
-    }, []);
+    }, [onCancel, quality, requestAudioPermission]);
 
     const cleanup = useCallback(() => {
         stopDurationTimer();
-        if (recordingState.isRecording) {
-            AudioRecord.stop().catch(console.error);
-        }
-    }, [stopDurationTimer, recordingState.isRecording]);
+        stopPulseAnimation();
+        AudioRecord.stop().catch(() => {}); // Ignore errors if not recording
+    }, [stopDurationTimer, stopPulseAnimation]);
 
-    const formatDuration = (seconds: number): string => {
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    // 4. useEffect hooks
+    useEffect(() => {
+        initializeRecorder();
+        return () => {
+            cleanup();
+        };
+    }, [initializeRecorder, cleanup]);
+
+    useEffect(() => {
+        if (recordingState.isRecording && !recordingState.isPaused) {
+            startPulseAnimation();
+            startDurationTimer();
+        } else {
+            stopPulseAnimation();
+            stopDurationTimer();
+        }
+    }, [recordingState.isRecording, recordingState.isPaused, startPulseAnimation, startDurationTimer, stopPulseAnimation, stopDurationTimer]);
+
+    // 5. Event handlers
+    const startRecording = async () => {
+        if (!hasPermission || !isInitialized) {
+            await initializeRecorder();
+            return;
+        }
+
+        try {
+            AudioRecord.start();
+            recordingStartTime.current = Date.now();
+            setRecordingState(prev => ({
+                ...prev,
+                isRecording: true,
+                isPaused: false,
+                duration: 0,
+            }));
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            Alert.alert('Recording Error', 'Failed to start recording. Please try again.');
+        }
     };
 
-    const getMaxDurationFormatted = (): string => {
-        return formatDuration(maxDuration);
+    const pauseRecording = () => {
+        try {
+            // Note: react-native-audio-record doesn't support pause/resume
+            // This is a placeholder for future implementation or alternative library
+            setRecordingState(prev => ({
+                ...prev,
+                isPaused: !prev.isPaused,
+            }));
+        } catch (error) {
+            console.error('Error pausing recording:', error);
+        }
+    };
+
+    const deleteRecording = () => {
+        Alert.alert(
+            'Delete Recording',
+            'Are you sure you want to delete this recording?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: () => {
+                        setRecordingState({
+                            isRecording: false,
+                            isPaused: false,
+                            duration: 0,
+                        });
+                    },
+                },
+            ]
+        );
     };
 
     return (
