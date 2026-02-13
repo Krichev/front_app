@@ -8,6 +8,22 @@ on:
     branches:
       - main
       - develop
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
+          - both
+      run_tests:
+        description: 'Run tests'
+        required: false
+        default: true
+        type: boolean
 
 env:
   NODE_VERSION: '18'
@@ -20,6 +36,7 @@ jobs:
   validate:
     name: Validate Code
     runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.run_tests == 'true'
     
     steps:
       - name: Checkout code
@@ -51,7 +68,10 @@ jobs:
     name: Build Debug APK
     needs: validate
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref != 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.build_type == 'debug' || inputs.build_type == 'both')) ||
+      (github.event_name == 'pull_request')
     
     steps:
       - name: Checkout code
@@ -116,7 +136,9 @@ jobs:
     name: Build Release APK
     needs: validate
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && (inputs.build_type == 'release' || inputs.build_type == 'both'))
     
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -214,7 +236,7 @@ jobs:
     name: Create GitHub Release
     needs: build-release
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && (inputs.build_type == 'release' || inputs.build_type == 'both'))
     
     permissions:
       contents: write
@@ -397,7 +419,7 @@ jobs:
     name: Send Notification
     needs: [build-release, release]
     runs-on: ubuntu-latest
-    if: always() && github.ref == 'refs/heads/main'
+    if: always() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && (inputs.build_type == 'release' || inputs.build_type == 'both')))
     
     steps:
       - name: Notification Summary
