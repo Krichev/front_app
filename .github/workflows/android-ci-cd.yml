@@ -166,7 +166,7 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/challenger-release.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -180,18 +180,13 @@ jobs:
       - name: Build Release APK
         working-directory: android
         env:
-          KEYSTORE_FILE: challenger-release.keystore
+          KEYSTORE_FILE: release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_NAME: ${{ steps.version.outputs.version }}
         run: |
-          ./gradlew assembleRelease --no-daemon \
-            -PKEYSTORE_FILE=$KEYSTORE_FILE \
-            -PKEYSTORE_PASSWORD=$KEYSTORE_PASSWORD \
-            -PKEY_ALIAS=$KEY_ALIAS \
-            -PKEY_PASSWORD=$KEY_PASSWORD \
-            -PVERSION_NAME=$VERSION_NAME
+          ./gradlew assembleRelease --no-daemon
 
       - name: Rename APK
         id: rename
@@ -210,7 +205,7 @@ jobs:
 
       - name: Cleanup Keystore
         if: always()
-        run: rm -f android/app/challenger-release.keystore
+        run: rm -f android/app/release.keystore
 
   # ====================
   # CREATE GITHUB RELEASE
