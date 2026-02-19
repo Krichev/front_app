@@ -4,6 +4,7 @@ import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {logout, setTokens} from './authSlice';
 import {Alert} from 'react-native';
 import KeychainService from "../../../../services/auth/KeychainService.ts";
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 export interface User {
     id: string;
@@ -50,7 +51,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
     extraOptions
 ) => {
     const baseQuery = fetchBaseQuery({
-        baseUrl: 'http://10.0.2.2:8082/api/auth',
+        baseUrl: NetworkConfigManager.getInstance().getAuthBaseUrl(),
         prepareHeaders: (headers, {getState}) => {
             const token = (getState() as RootState).auth.accessToken;
             if (token) {

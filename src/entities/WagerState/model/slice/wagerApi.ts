@@ -16,10 +16,11 @@ import {
 } from '../types';
 import { Platform } from 'react-native';
 import { RootStateForApi } from '../../../../app/providers/StoreProvider/storeTypes';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 export const wagerApi = createApi({
     reducerPath: 'wagerApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['Wager', 'Penalty', 'ScreenTime'],
     endpoints: (builder) => ({
         // ========================================================================
@@ -154,7 +155,7 @@ export const wagerApi = createApi({
                     }
 
                     const response = await fetch(
-                        `http://10.0.2.2:8082/api/penalties/${id}/submit-proof`,
+                        `${NetworkConfigManager.getInstance().getBaseUrl()}/penalties/${id}/submit-proof`,
                         {
                             method: 'POST',
                             headers: {

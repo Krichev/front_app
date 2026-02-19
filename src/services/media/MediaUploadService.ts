@@ -1,5 +1,6 @@
 // src/services/media/MediaUploadService.ts
 import {RootState, store} from '../../app/providers/StoreProvider/store';
+import NetworkConfigManager from '../../config/NetworkConfig';
 
 const __DEV__ = process.env.NODE_ENV !== 'production';
 
@@ -39,8 +40,6 @@ export interface MediaUploadResponse {
  * Service for handling media uploads with progress tracking and authentication
  */
 export class MediaUploadService {
-    private static readonly API_BASE_URL = 'http://10.0.2.2:8082';
-
     /**
      * Get authorization headers with JWT token from Redux store
      */
@@ -162,7 +161,7 @@ export class MediaUploadService {
                 });
 
                 // Open connection and set headers
-                xhr.open('POST', `${this.API_BASE_URL}/api/media/upload/quiz-media`);
+                xhr.open('POST', `${NetworkConfigManager.getInstance().getBaseUrl()}/media/upload/quiz-media`);
 
                 // Set authorization header
                 if (headers['Authorization']) {
@@ -266,7 +265,7 @@ export class MediaUploadService {
                     reject(new Error('Upload aborted'));
                 });
 
-                xhr.open('POST', `${this.API_BASE_URL}/api/media/upload/avatar`);
+                xhr.open('POST', `${NetworkConfigManager.getInstance().getBaseUrl()}/media/upload/avatar`);
 
                 if (headers['Authorization']) {
                     xhr.setRequestHeader('Authorization', headers['Authorization']);
@@ -293,7 +292,7 @@ export class MediaUploadService {
             const headers = this.getAuthHeaders();
 
             const response = await fetch(
-                `${this.API_BASE_URL}/api/media/url/${mediaId}`,
+                `${NetworkConfigManager.getInstance().getBaseUrl()}/media/url/${mediaId}`,
                 {
                     method: 'GET',
                     headers,
@@ -324,7 +323,7 @@ export class MediaUploadService {
             const headers = this.getAuthHeaders();
 
             const response = await fetch(
-                `${this.API_BASE_URL}/api/media/${mediaId}`,
+                `${NetworkConfigManager.getInstance().getBaseUrl()}/media/${mediaId}`,
                 {
                     method: 'DELETE',
                     headers,

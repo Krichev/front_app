@@ -1,6 +1,7 @@
 // src/entities/GroupState/model/slice/groupApi.ts - UPDATED
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 export interface Group {
     id: string;
@@ -17,7 +18,7 @@ export interface Group {
 
 export const groupApi = createApi({
     reducerPath: 'groupApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['Group'],
     endpoints: (builder) => ({
         getUserGroups: builder.query<Group[], void>({

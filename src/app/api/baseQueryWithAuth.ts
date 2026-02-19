@@ -6,6 +6,7 @@ import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice'
 import {Alert} from 'react-native';
 import KeychainService from "../../services/auth/KeychainService.ts";
 import { getLanguageHeader } from '../../shared/config/i18n/apiHeaders';
+import NetworkConfigManager from '../../config/NetworkConfig';
 
 const networkConfig = {
     retryAttempts: 3,
@@ -70,7 +71,7 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                 try {
                     // Create a separate base query for the auth endpoint
                     const authBaseQuery = fetchBaseQuery({
-                        baseUrl: 'http://10.0.2.2:8082/api/auth',
+                        baseUrl: NetworkConfigManager.getInstance().getAuthBaseUrl(),
                     });
 
                     // Attempt to get a new access token using the refresh token

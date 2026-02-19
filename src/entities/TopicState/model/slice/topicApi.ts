@@ -1,6 +1,7 @@
 // src/entities/TopicState/model/slice/topicApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createBaseQueryWithAuth } from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import {
     Topic,
     TopicTreeNode,
@@ -11,7 +12,7 @@ import {
 
 export const topicApi = createApi({
     reducerPath: 'topicApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['Topic', 'TopicTree'],
     endpoints: (builder) => ({
         /**

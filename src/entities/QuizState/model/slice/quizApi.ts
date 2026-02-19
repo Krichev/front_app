@@ -1,6 +1,7 @@
 // src/entities/QuizState/model/slice/quizApi.ts - FIXED VERSION
 import {BaseQueryArg, createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
 import {CreateQuizQuestionRequest, QuestionVisibility, MediaSourceType, UserRelationship, RelationshipStatus, RelationshipType} from "../types/question.types";
 import {RootStateForApi} from '../../../../app/providers/StoreProvider/storeTypes';
@@ -298,7 +299,7 @@ export interface PauseQuizSessionRequest {
 
 export const quizApi = createApi({
     reducerPath: 'quizApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions', 'Topics'],
     endpoints: (builder) => ({
 
@@ -395,14 +396,14 @@ export const quizApi = createApi({
                     });
                     
                     console.log('🚀 [createQuestionWithMedia] Sending request:', {
-                        url: 'http://10.0.2.2:8082/api/quiz/questions/with-media',
+                        url: `${NetworkConfigManager.getInstance().getBaseUrl()}/quiz/questions/with-media`,
                         hasToken: !!token,
                         hasMediaFile: !!mediaFile,
                         questionType: questionData.questionType,
                     });
 
                     const response = await fetch(
-                        'http://10.0.2.2:8082/api/quiz/questions/with-media',
+                        `${NetworkConfigManager.getInstance().getBaseUrl()}/quiz/questions/with-media`,
                         {
                             method: 'POST',
                             headers: {
@@ -413,8 +414,6 @@ export const quizApi = createApi({
                             body: formData,
                         }
                     );
-
-                    console.log('📬 [createQuestionWithMedia] Response status:', response.status);
 
                     if (!response.ok) {
                         const errorText = await response.text();

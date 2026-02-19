@@ -1,5 +1,6 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createBaseQueryWithAuth } from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 export interface ParentalLink {
     id: number;
@@ -75,7 +76,7 @@ export interface ParentalApproval {
 
 export const parentalApi = createApi({
     reducerPath: 'parentalApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['ParentalLink', 'ChildSettings', 'Approval', 'Extension'],
     endpoints: (builder) => ({
         // ========== LINK MANAGEMENT ==========

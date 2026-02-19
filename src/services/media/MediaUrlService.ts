@@ -1,6 +1,7 @@
 // src/services/media/MediaUrlService.ts
 import { Platform } from 'react-native';
 import { store } from '../../app/providers/StoreProvider/store';
+import NetworkConfigManager from '../../config/NetworkConfig';
 
 /**
  * Service to construct media proxy URLs
@@ -22,14 +23,7 @@ class MediaUrlService {
      * Get the base API URL based on platform
      */
     private getBaseUrl(): string {
-        if (__DEV__) {
-            if (Platform.OS === 'android') {
-                return 'http://10.0.2.2:8082/api';
-            }
-            return 'http://localhost:8082/api';
-        }
-        // Production URL
-        return 'https://your-production-api.com/api';
+        return NetworkConfigManager.getInstance().getBaseUrl();
     }
 
     /**

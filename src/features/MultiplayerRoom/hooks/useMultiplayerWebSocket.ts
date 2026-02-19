@@ -4,8 +4,9 @@ import SockJS from 'sockjs-client';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../app/providers/StoreProvider/store';
 import { GamePhase, GameState, RoomPlayer, PlayerRole } from '../types';
+import NetworkConfigManager from '../../../config/NetworkConfig';
 
-const WS_URL = 'http://10.0.2.2:8082/api/ws-game';
+const WS_URL = `${NetworkConfigManager.getInstance().getBaseUrl()}/ws-game`;
 
 export const useMultiplayerWebSocket = (roomCode?: string) => {
     const [isConnected, setIsConnected] = useState(false);

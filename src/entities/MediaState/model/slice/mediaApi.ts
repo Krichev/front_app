@@ -1,6 +1,7 @@
 // src/entities/MediaState/model/slice/mediaApi.ts
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 // ============================================================================
 // TYPES
@@ -40,7 +41,7 @@ export interface DeleteMediaResponse {
 
 export const mediaApi = createApi({
     reducerPath: 'mediaApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['Media'],
     endpoints: (builder) => ({
         /**

@@ -1,6 +1,7 @@
 // src/entities/CompetitiveMatch/model/slice/competitiveApi.ts
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import {
     CompetitiveMatch,
     CompetitiveMatchDetail,
@@ -16,7 +17,7 @@ import {Platform} from 'react-native';
 
 export const competitiveApi = createApi({
     reducerPath: 'competitiveApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api/competitive'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getCompetitiveBaseUrl()),
     tagTypes: ['CompetitiveMatch', 'Matchmaking', 'Invitations'],
     endpoints: (builder) => ({
         // =================================================================

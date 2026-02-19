@@ -2,6 +2,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { Platform } from 'react-native';
 import { createBaseQueryWithAuth } from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import { 
     RhythmPatternDTO, 
     RhythmScoringResult, 
@@ -12,11 +13,10 @@ import {
 import { AudioFileInfo } from '../../../../types/audioChallenge.types';
 
 // Karaoke service base URL
-const KARAOKE_BASE_URL = 'http://10.0.2.2:8081/api';
 
 export const rhythmApi = createApi({
     reducerPath: 'rhythmApi',
-    baseQuery: createBaseQueryWithAuth(KARAOKE_BASE_URL),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getKaraokeBaseUrl()),
     tagTypes: ['RhythmPattern', 'RhythmScore'],
     endpoints: (builder) => ({
         

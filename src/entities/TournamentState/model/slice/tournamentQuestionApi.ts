@@ -1,6 +1,7 @@
 // src/entities/TournamentState/model/slice/tournamentQuestionApi.ts - UPDATED
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 export type UIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
@@ -57,7 +58,7 @@ export const convertToUIDifficulty = (difficulty: APIDifficulty): UIDifficulty =
 
 export const tournamentQuestionApi = createApi({
     reducerPath: 'tournamentQuestionApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['TournamentQuestion', 'TournamentStats'],
     endpoints: (builder) => ({
         getQuestionsByDifficulty: builder.query<TournamentQuestionSummaryDTO[], {

@@ -2,6 +2,7 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {Platform} from 'react-native';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import {
     AudioChallengeType,
     AudioChallengeTypeInfo,
@@ -129,7 +130,7 @@ export interface AudioChallengeSubmission {
 
 export const audioChallengeApi = createApi({
     reducerPath: 'audioChallengeApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['AudioQuestion', 'AudioSubmission'],
     endpoints: (builder) => ({
         // =============================================================================

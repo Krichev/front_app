@@ -56,7 +56,7 @@ type HeadersInit_ = Record<string, string>;
 
 export class QuestionService {
     private static baseUrl = NetworkConfigManager.getInstance().getBaseUrl();
-    private static authBaseUrl = 'http://10.0.2.2:8082/api/auth'; // Your auth endpoint
+    private static authBaseUrl = NetworkConfigManager.getInstance().getAuthBaseUrl();
     private static cache: Map<string, any> = new Map();
     private static isRefreshing = false;
     private static refreshPromise: Promise<boolean> | null = null;

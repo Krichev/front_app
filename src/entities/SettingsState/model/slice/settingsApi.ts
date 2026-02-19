@@ -1,6 +1,7 @@
 // src/entities/SettingsState/model/slice/settingsApi.ts
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { createBaseQueryWithAuth } from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { 
     UserAppSettings, 
@@ -41,7 +42,7 @@ export const clearCachedSettings = async (): Promise<void> => {
 
 export const settingsApi = createApi({
     reducerPath: 'settingsApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['AppSettings'],
     endpoints: (builder) => ({
         

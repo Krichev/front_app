@@ -1,6 +1,7 @@
 // src/entities/UserState/model/slice/userApi.ts - COMPLETE FIX
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {updateUser} from '../../../AuthState/model/slice/authSlice'; // ADDED: Import updateUser
 import TokenRefreshService from '../../../../services/auth/TokenRefreshService'; // ADDED: Import TokenRefreshService
@@ -57,7 +58,7 @@ export interface AuthResponse {
 
 export const userApi = createApi({
     reducerPath: 'userApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
     tagTypes: ['User', 'UserProfile'],
     endpoints: (builder) => ({
         getUserProfile: builder.query<UserProfile, string>({
