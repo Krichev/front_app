@@ -19,7 +19,7 @@ import { RootStateForApi } from '../../../../app/providers/StoreProvider/storeTy
 
 export const wagerApi = createApi({
     reducerPath: 'wagerApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Wager', 'Penalty', 'ScreenTime'],
     endpoints: (builder) => ({
         // ========================================================================
@@ -154,7 +154,7 @@ export const wagerApi = createApi({
                     }
 
                     const response = await fetch(
-                        `http://10.0.2.2:8082/challenger/api/penalties/${id}/submit-proof`,
+                        `http://10.0.2.2:8082/api/penalties/${id}/submit-proof`,
                         {
                             method: 'POST',
                             headers: {

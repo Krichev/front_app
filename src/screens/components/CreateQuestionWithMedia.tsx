@@ -521,7 +521,7 @@ const CreateQuestionWithMedia: React.FC<CreateQuestionWithMediaProps> = ({
 
         // Make API call (you'll need to implement this or use the appropriate API endpoint)
         // For now, using a placeholder - replace with actual implementation
-        const response = await fetch('http://10.0.2.2:8082/challenger/api/questions/audio', {
+        const response = await fetch('http://10.0.2.2:8082/api/questions/audio', {
             method: 'POST',
             headers: {
                 'Content-Type': 'multipart/form-data',

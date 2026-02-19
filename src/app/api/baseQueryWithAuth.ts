@@ -70,7 +70,7 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                 try {
                     // Create a separate base query for the auth endpoint
                     const authBaseQuery = fetchBaseQuery({
-                        baseUrl: 'http://10.0.2.2:8082/challenger/api/auth',
+                        baseUrl: 'http://10.0.2.2:8082/api/auth',
                     });
 
                     // Attempt to get a new access token using the refresh token

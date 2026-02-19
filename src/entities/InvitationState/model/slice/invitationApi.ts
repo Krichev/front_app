@@ -14,7 +14,7 @@ import {
 
 export const invitationApi = createApi({
     reducerPath: 'invitationApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Invitation', 'InvitationPreferences', 'ReceivedInvitations', 'SentInvitations'],
     endpoints: (builder) => ({
         // Create invitation

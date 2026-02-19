@@ -41,7 +41,7 @@ export const clearCachedSettings = async (): Promise<void> => {
 
 export const settingsApi = createApi({
     reducerPath: 'settingsApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['AppSettings'],
     endpoints: (builder) => ({
         

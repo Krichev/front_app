@@ -11,7 +11,7 @@ import {
 
 export const topicApi = createApi({
     reducerPath: 'topicApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Topic', 'TopicTree'],
     endpoints: (builder) => ({
         /**

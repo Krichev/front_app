@@ -24,12 +24,12 @@ class MediaUrlService {
     private getBaseUrl(): string {
         if (__DEV__) {
             if (Platform.OS === 'android') {
-                return 'http://10.0.2.2:8082/challenger/api';
+                return 'http://10.0.2.2:8082/api';
             }
-            return 'http://localhost:8082/challenger/api';
+            return 'http://localhost:8082/api';
         }
         // Production URL
-        return 'https://your-production-api.com/challenger/api';
+        return 'https://your-production-api.com/api';
     }
 
     /**

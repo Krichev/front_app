@@ -39,7 +39,7 @@ export interface MediaUploadResponse {
  * Service for handling media uploads with progress tracking and authentication
  */
 export class MediaUploadService {
-    private static readonly API_BASE_URL = 'http://10.0.2.2:8082/challenger';
+    private static readonly API_BASE_URL = 'http://10.0.2.2:8082';
 
     /**
      * Get authorization headers with JWT token from Redux store

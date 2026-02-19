@@ -19,7 +19,7 @@ import { PaymentType, CurrencyType } from '../types';
 
 export const challengeApi = createApi({
     reducerPath: 'challengeApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Challenge', 'Verification', 'QuizQuestion', 'ChallengeAccess'],
     endpoints: (builder) => ({
         // Existing endpoints

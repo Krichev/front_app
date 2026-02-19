@@ -14,7 +14,7 @@ import {
 
 export const relationshipApi = createApi({
     reducerPath: 'relationshipApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Relationship', 'ContactGroup', 'PrivacySettings', 'Suggestion'],
     endpoints: (builder) => ({
         getRelationships: builder.query<{ content: UserRelationship[], totalElements: number }, { 

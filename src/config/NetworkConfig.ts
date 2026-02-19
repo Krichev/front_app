@@ -30,16 +30,16 @@ class NetworkConfigManager {
         if (isDevelopment) {
             if (Platform.OS === 'android') {
                 // Try 10.0.2.2 first (Android emulator), fallback to your machine's IP
-                baseUrl = 'http://10.0.2.2:8082/challenger/api';
-                // Alternative: 'http://192.168.1.XXX:8082/challenger/api' (replace XXX with your IP)
+                baseUrl = 'http://10.0.2.2:8082/api';
+                // Alternative: 'http://192.168.1.XXX:8082/api' (replace XXX with your IP)
             } else if (Platform.OS === 'ios') {
-                baseUrl = 'http://localhost:8082/challenger/api';
+                baseUrl = 'http://localhost:8082/api';
             } else {
-                baseUrl = 'http://localhost:8082/challenger/api';
+                baseUrl = 'http://localhost:8082/api';
             }
         } else {
             // Production - REPLACE WITH YOUR ACTUAL API URL
-            baseUrl = 'https://your-production-api.com/challenger/api';
+            baseUrl = 'https://your-production-api.com/api';
         }
 
         return {
@@ -63,16 +63,16 @@ class NetworkConfigManager {
 
         if (Platform.OS === 'android') {
             alternatives.push(
-                'http://10.0.2.2:8082/challenger/api',
-                'http://localhost:8082/challenger/api',
-                'http://127.0.0.1:8082/challenger/api',
-                'http://192.168.1.100:8082/challenger/api' // REPLACE WITH YOUR MACHINE'S IP
+                'http://10.0.2.2:8082/api',
+                'http://localhost:8082/api',
+                'http://127.0.0.1:8082/api',
+                'http://192.168.1.100:8082/api' // REPLACE WITH YOUR MACHINE'S IP
             );
         } else {
             alternatives.push(
-                'http://localhost:8082/challenger/api',
-                'http://127.0.0.1:8082/challenger/api',
-                'http://192.168.1.100:8082/challenger/api' // REPLACE WITH YOUR MACHINE'S IP
+                'http://localhost:8082/api',
+                'http://127.0.0.1:8082/api',
+                'http://192.168.1.100:8082/api' // REPLACE WITH YOUR MACHINE'S IP
             );
         }
 

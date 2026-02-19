@@ -17,7 +17,7 @@ export interface Group {
 
 export const groupApi = createApi({
     reducerPath: 'groupApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Group'],
     endpoints: (builder) => ({
         getUserGroups: builder.query<Group[], void>({

@@ -40,7 +40,7 @@ export interface DeleteMediaResponse {
 
 export const mediaApi = createApi({
     reducerPath: 'mediaApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['Media'],
     endpoints: (builder) => ({
         /**

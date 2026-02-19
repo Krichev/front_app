@@ -50,7 +50,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
     extraOptions
 ) => {
     const baseQuery = fetchBaseQuery({
-        baseUrl: 'http://10.0.2.2:8082/challenger/api/auth',
+        baseUrl: 'http://10.0.2.2:8082/api/auth',
         prepareHeaders: (headers, {getState}) => {
             const token = (getState() as RootState).auth.accessToken;
             if (token) {

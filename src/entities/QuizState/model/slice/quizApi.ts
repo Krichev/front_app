@@ -298,7 +298,7 @@ export interface PauseQuizSessionRequest {
 
 export const quizApi = createApi({
     reducerPath: 'quizApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['QuizQuestion', 'QuizSession', 'QuizRound', 'UserRelationship', 'UserQuestions', 'Topics'],
     endpoints: (builder) => ({
 
@@ -395,14 +395,14 @@ export const quizApi = createApi({
                     });
                     
                     console.log('🚀 [createQuestionWithMedia] Sending request:', {
-                        url: 'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
+                        url: 'http://10.0.2.2:8082/api/quiz/questions/with-media',
                         hasToken: !!token,
                         hasMediaFile: !!mediaFile,
                         questionType: questionData.questionType,
                     });
 
                     const response = await fetch(
-                        'http://10.0.2.2:8082/challenger/api/quiz/questions/with-media',
+                        'http://10.0.2.2:8082/api/quiz/questions/with-media',
                         {
                             method: 'POST',
                             headers: {

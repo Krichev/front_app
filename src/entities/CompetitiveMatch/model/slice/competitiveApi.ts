@@ -16,7 +16,7 @@ import {Platform} from 'react-native';
 
 export const competitiveApi = createApi({
     reducerPath: 'competitiveApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api/competitive'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api/competitive'),
     tagTypes: ['CompetitiveMatch', 'Matchmaking', 'Invitations'],
     endpoints: (builder) => ({
         // =================================================================

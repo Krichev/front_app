@@ -57,7 +57,7 @@ export const convertToUIDifficulty = (difficulty: APIDifficulty): UIDifficulty =
 
 export const tournamentQuestionApi = createApi({
     reducerPath: 'tournamentQuestionApi',
-    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/challenger/api'),
+    baseQuery: createBaseQueryWithAuth('http://10.0.2.2:8082/api'),
     tagTypes: ['TournamentQuestion', 'TournamentStats'],
     endpoints: (builder) => ({
         getQuestionsByDifficulty: builder.query<TournamentQuestionSummaryDTO[], {
