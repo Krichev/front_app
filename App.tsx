@@ -1,5 +1,23 @@
 // App.tsx
 import 'react-native-gesture-handler';
+import RemoteLogService from './src/services/logging/RemoteLogService';
+
+// Initialize remote logging as early as possible
+// Only active in RELEASE builds (unless force-enabled)
+RemoteLogService.getInstance().initialize();
+
+// Catch uncaught JS errors
+const globalHandler = (global as any).ErrorUtils?.getGlobalHandler();
+if ((global as any).ErrorUtils) {
+    (global as any).ErrorUtils.setGlobalHandler((error: any, isFatal: boolean) => {
+        console.error(`[FATAL=${isFatal}] Uncaught exception: ${error?.message}`, error);
+        // Call original handler
+        if (globalHandler) {
+            globalHandler(error, isFatal);
+        }
+    });
+}
+
 import React, {useCallback} from 'react';
 import {Provider} from 'react-redux';
 import {store} from './src/app/providers/StoreProvider/store.ts';
