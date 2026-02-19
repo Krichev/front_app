@@ -14,6 +14,7 @@ import {AuthInitializer} from './src/entities/AuthState/ui/AuthInitializer.tsx';
 import {ThemeProvider} from './src/shared/ui/theme/ThemeProvider';
 import { I18nProvider, useI18n } from './src/app/providers/I18nProvider';
 import { navigateToTabWithRef } from './src/utils/navigation';
+import { useAppUpdate, UpdateModal } from './src/features/AppUpdate';
 
 const linking = {
     prefixes: ['challengerapp://', 'https://play.yourapp.com'],
@@ -29,6 +30,15 @@ const linking = {
  */
 const AppContent: React.FC = () => {
     const { currentLanguage } = useI18n();
+    const { showModal, checkForUpdate, ...updateProps } = useAppUpdate();
+
+    React.useEffect(() => {
+        // Delay update check to not block app startup
+        const timer = setTimeout(() => {
+            checkForUpdate(); // auto-check (respects 4-hour interval)
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [checkForUpdate]);
 
     const handleViewPenalties = useCallback(() => {
         // Navigate to penalties - the overlay might block interaction unless we handle this carefully.
@@ -57,6 +67,7 @@ const AppContent: React.FC = () => {
                         onOpenSettings={handleOpenSettings}
                     />
                     <LowTimeWarningBanner />
+                    <UpdateModal visible={showModal} {...updateProps} />
                 </WWWGameProvider>
             </ScreenTimeProvider>
         </AuthInitializer>

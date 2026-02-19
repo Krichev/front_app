@@ -32,6 +32,7 @@ import KeychainService from '../services/auth/KeychainService';
 import { InvitationPreferencesSection } from '../features/Invitation/ui/InvitationPreferencesSection';
 import { Gender } from '../entities/InvitationState/model/types';
 import { Picker } from '@react-native-picker/picker';
+import { useAppUpdate } from '../features/AppUpdate';
 
 const SettingsScreen: React.FC = () => {
     const { t } = useTranslation();
@@ -41,6 +42,7 @@ const SettingsScreen: React.FC = () => {
     
     const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
     const { currentLanguage, changeLanguage, isChangingLanguage } = useI18n();
+    const { checkForUpdate, currentVersion, status } = useAppUpdate();
     
     // Fetch settings from API
     const { data: settings, isLoading } = useGetAppSettingsQuery(undefined, {
@@ -340,7 +342,7 @@ const SettingsScreen: React.FC = () => {
                         />
                     </TouchableOpacity>
 
-                    {/* App Version */}
+                    {/* App Version & Updates */}
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
                             <MaterialCommunityIcons 
@@ -348,9 +350,25 @@ const SettingsScreen: React.FC = () => {
                                 size={24} 
                                 color={theme.colors.text.secondary} 
                             />
-                            <Text style={styles.settingLabel}>{t('settings.version')}</Text>
+                            <View style={styles.settingText}>
+                                <Text style={styles.settingLabel}>{t('settings.version')}</Text>
+                                <Text style={styles.settingDescription}>
+                                    {t('appUpdate.currentVersion', { version: currentVersion })}
+                                </Text>
+                            </View>
                         </View>
-                        <Text style={styles.versionText}>1.0.0</Text>
+                        {status === 'checking' ? (
+                            <ActivityIndicator size="small" color={theme.colors.primary.main} />
+                        ) : (
+                            <TouchableOpacity 
+                                onPress={() => checkForUpdate(true)}
+                                style={styles.updateButton}
+                            >
+                                <Text style={styles.updateButtonText}>
+                                    {t('appUpdate.checkForUpdates')}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -492,6 +510,17 @@ const themeStyles = createStyles((theme) => ({
     versionText: {
         ...theme.typography.body.medium,
         color: theme.colors.text.disabled,
+    },
+    updateButton: {
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.primary.background || '#E3F2FD',
+    },
+    updateButtonText: {
+        ...theme.typography.body.small,
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     logoutButton: {
         flexDirection: 'row',
