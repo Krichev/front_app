@@ -35,6 +35,9 @@ import ControllerGameScreen from '../screens/ControllerGameScreen';
 import MultiplayerGameOverScreen from '../screens/MultiplayerGameOverScreen';
 import QRScannerScreen from '../screens/QRScannerScreen';
 import CameraScreen from '../screens/CameraScreen';
+import PuzzleSetupScreen from '../screens/PuzzleSetupScreen';
+import PuzzleGamePlayScreen from '../screens/PuzzleGamePlayScreen';
+import PuzzleResultsScreen from '../screens/PuzzleResultsScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -133,6 +136,20 @@ export type RootStackParamList = {
         mode: 'photo' | 'video';
         maxDuration?: number;
         onCapture?: (media: any) => void;
+    };
+    PuzzleSetup: {
+        challengeId: string;
+    };
+    PuzzleGamePlay: {
+        puzzleGameId: number;
+        gameMode: 'SHARED' | 'INDIVIDUAL';
+        gridRows: number;
+        gridCols: number;
+        timeLimitSeconds?: number;
+        roomCode?: string;
+    };
+    PuzzleResults: {
+        puzzleGameId: number;
     };
 };
 
@@ -377,6 +394,9 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                         <Stack.Screen name="MultiplayerGameOver" component={MultiplayerGameOverScreen} />
                         <Stack.Screen name="QRScanner" component={QRScannerScreen} />
                         <Stack.Screen name="CameraScreen" component={CameraScreen} />
+                        <Stack.Screen name="PuzzleSetup" component={PuzzleSetupScreen} />
+                        <Stack.Screen name="PuzzleGamePlay" component={PuzzleGamePlayScreen} />
+                        <Stack.Screen name="PuzzleResults" component={PuzzleResultsScreen} />
                     </>
                 )}
             </Stack.Navigator>

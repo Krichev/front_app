@@ -456,6 +456,9 @@ const ChallengeDetailsScreen: React.FC = () => {
                 case 'AUDIO':
                     await handleAudioQuiz(quizConfig);
                     break;
+                case 'PUZZLE':
+                    await handlePuzzleGame(quizConfig);
+                    break;
                 default:
                     // Fallback to WWW if no type specified, or show alert
                     if (!gameType) {
@@ -653,6 +656,15 @@ const ChallengeDetailsScreen: React.FC = () => {
              // Default audio behavior (e.g. just listening)
              Alert.alert('Audio Challenge', 'Listen to the audio track and complete the verification tasks.');
         }
+    };
+
+    const handlePuzzleGame = async (config: ParsedQuizConfig) => {
+        if (!challengeId) return;
+        
+        // Navigate to setup
+        navigation.navigate('PuzzleSetup' as any, {
+            challengeId: challengeId
+        });
     };
 
     const handleInvitationSubmit = async (request: CreateQuestInvitationRequest) => {
