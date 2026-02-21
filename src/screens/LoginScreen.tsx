@@ -109,8 +109,22 @@ const LoginScreen: React.FC = () => {
             );
         } catch (err: any) {
             console.error('❌ Login error:', err);
-            const errorMessage =
-                err?.data?.message || err?.message || t('auth.invalidCredentials');
+            
+            let errorMessage: string;
+            
+            if (err?.data?.message) {
+                // Server provided a specific message (e.g., "Invalid username or password")
+                errorMessage = err.data.message;
+            } else if (err?.status === 401) {
+                errorMessage = t('auth.invalidCredentials');
+            } else if (err?.status === 'FETCH_ERROR') {
+                errorMessage = t('errors.networkError');
+            } else if (err?.status >= 500) {
+                errorMessage = t('errors.serverError');
+            } else {
+                errorMessage = t('auth.invalidCredentials');
+            }
+            
             Alert.alert(t('auth.loginFailed'), errorMessage);
         }
     };
