@@ -61,7 +61,7 @@ const GamesHomeScreen: React.FC = () => {
             description: 'Add, edit, and manage questions for the WWW_QUIZ game.',
             icon: 'playlist-edit',
             color: '#673AB7',
-            onPress: () => navigation.navigate('QuestionManagement' as any), // Type cast as it might not be in RootStackParamList yet or defined elsewhere
+            onPress: () => navigation.navigate('QuestionManagement'),
         }
     ];
 

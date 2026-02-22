@@ -564,6 +564,45 @@ export const quizApi = createApi({
         }),
 
         /**
+         * Random questions endpoint
+         */
+        getRandomQuestions: builder.query<QuizQuestion[], { count?: number; difficulty?: APIDifficulty }>({
+            query: ({ count = 20, difficulty }) => ({
+                url: '/quiz/questions/random',
+                params: {
+                    count,
+                    ...(difficulty && { difficulty }),
+                },
+            }),
+            providesTags: (result) =>
+                result
+                    ? [...result.map(({ id }) => ({ type: 'QuizQuestion' as const, id })), { type: 'QuizQuestion', id: 'RANDOM_LIST' }]
+                    : [{ type: 'QuizQuestion', id: 'RANDOM_LIST' }],
+        }),
+
+        /**
+         * Keyword search endpoint (uses QuizQuestionSearchController)
+         */
+        searchQuestionsByKeyword: builder.query<QuizQuestion[], { keyword: string; count?: number; difficulty?: APIDifficulty }>({
+            query: ({ keyword, count = 20, difficulty }) => ({
+                url: '/quiz/questions/search',
+                params: {
+                    keyword,
+                    page: 0,
+                    size: count,
+                },
+            }),
+            // Client-side difficulty filter (matching current QuestionService behavior)
+            transformResponse: (response: QuizQuestion[], meta, arg) => {
+                if (arg.difficulty) {
+                    return response.filter(q => q.difficulty === arg.difficulty);
+                }
+                return response;
+            },
+            providesTags: [{ type: 'QuizQuestion', id: 'SEARCH_LIST' }],
+        }),
+
+        /**
          * Search accessible questions (public + friends + quiz-specific)
          */
         searchAccessibleQuestions: builder.query<PaginatedQuestionResponse, QuestionSearchParams & { quizId?: number }>({
@@ -837,6 +876,9 @@ export const {
     useGetQuizQuestionByIdQuery, // ✅ NEW
     useDeleteUserQuestionMutation,
     useSearchQuestionsQuery,
+    useGetRandomQuestionsQuery,
+    useLazyGetRandomQuestionsQuery,
+    useLazySearchQuestionsByKeywordQuery,
 
     // Question access control hooks
     useGetUserQuestionsPaginatedQuery,

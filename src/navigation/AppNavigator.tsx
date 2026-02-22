@@ -14,9 +14,10 @@ import ChallengesScreen from '../screens/ChallengeScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import SearchScreen from '../screens/SearchScreen';
 import ChallengeDetailsScreen from '../screens/ChallengeDetailsScreen';
-import ChallengeVerificationScreen from '../screens/ChallengeVerificationScreen';
+import ChallengeVerificationScreen from '../screens/ChallengeVerification/ChallengeVerificationScreen';
 import CreateChallengeScreen from '../screens/CreateChallengeScreen';
 import CreateWWWQuestScreen from '../screens/CreateWWWQuestScreen/CreateWWWQuestScreen.tsx';
+import QuestionManagementScreen from '../screens/QuestionManagementScreen';
 import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
 import LocationVerificationScreen from '../screens/LocationVerificationScreen';
 import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
@@ -105,6 +106,7 @@ export type RootStackParamList = {
         challengeId: string;
     };
     UserQuestions: undefined;
+    QuestionManagement: undefined;
     CreateUserQuestion: undefined;
     EditUserQuestion: { question: UserQuestion };
     CreateAudioQuestion: { 
@@ -350,6 +352,10 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                         <Stack.Screen
                             name="UserQuestions"
                             component={UserQuestionsScreen}
+                        />
+                        <Stack.Screen
+                            name="QuestionManagement"
+                            component={QuestionManagementScreen}
                         />
                         <Stack.Screen
                             name="CreateUserQuestion"
