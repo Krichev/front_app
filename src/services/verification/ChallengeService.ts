@@ -1,5 +1,6 @@
 import {ApiChallenge} from '../../entities/ChallengeState/model/slice/challengeApi';
 import {getVerificationMethods, VerificationMethod} from '../../app/types';
+import i18n from 'i18next';
 
 /**
  * Service for handling challenge-related operations
@@ -135,14 +136,14 @@ export class ChallengeService {
      * @returns {string} Remaining time string
      */
     static getRemainingTime(challenge: ApiChallenge): string {
-        if (!challenge.endDate) return 'No end date';
+        if (!challenge.endDate) return i18n.t('challengeVerification.timeRemaining.noEndDate');
 
         const endDate = new Date(challenge.endDate);
         const now = new Date();
 
         // If end date is in the past
         if (endDate < now) {
-            return 'Expired';
+            return i18n.t('challengeVerification.timeRemaining.expired');
         }
 
         const diffTime = Math.abs(endDate.getTime() - now.getTime());
@@ -150,12 +151,12 @@ export class ChallengeService {
 
         if (diffDays > 30) {
             const diffMonths = Math.floor(diffDays / 30);
-            return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} left`;
+            return i18n.t('challengeVerification.timeRemaining.monthLeft', { count: diffMonths });
         } else if (diffDays > 1) {
-            return `${diffDays} day${diffDays !== 1 ? 's' : ''} left`;
+            return i18n.t('challengeVerification.timeRemaining.daysLeft', { count: diffDays });
         } else {
             const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-            return `${diffHours} hour${diffHours !== 1 ? 's' : ''} left`;
+            return i18n.t('challengeVerification.timeRemaining.hoursLeft', { count: diffHours });
         }
     }
 
@@ -189,17 +190,17 @@ export class ChallengeService {
     static getVerificationTypeDisplayName(type: string): string {
         switch (type?.toUpperCase()) {
             case 'PHOTO':
-                return 'Photo Verification';
+                return i18n.t('challengeVerification.displayNames.photo');
             case 'LOCATION':
-                return 'Location Check-in';
+                return i18n.t('challengeVerification.displayNames.locationCheckin');
             case 'QUIZ':
-                return 'Quiz';
+                return i18n.t('challengeVerification.displayNames.quiz');
             case 'MANUAL':
-                return 'Manual Verification';
+                return i18n.t('challengeVerification.displayNames.manual');
             case 'FITNESS_API':
-                return 'Fitness Tracker';
+                return i18n.t('challengeVerification.displayNames.fitnessTracker');
             case 'ACTIVITY':
-                return 'Activity Tracking';
+                return i18n.t('challengeVerification.displayNames.activityTracking');
             default:
                 return type;
         }

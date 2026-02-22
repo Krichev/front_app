@@ -4,6 +4,7 @@ import {BaseQueryFn, FetchArgs, fetchBaseQuery, FetchBaseQueryError} from '@redu
 import {RootState} from '../providers/StoreProvider/store';
 import {logout, setTokens} from '../../entities/AuthState/model/slice/authSlice';
 import {Alert} from 'react-native';
+import i18n from 'i18next';
 import KeychainService from "../../services/auth/KeychainService.ts";
 import { getLanguageHeader } from '../../shared/config/i18n/apiHeaders';
 import NetworkConfigManager from '../../config/NetworkConfig';
@@ -117,9 +118,9 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                         await KeychainService.deleteAuthTokens()
 
                         Alert.alert(
-                            'Session Expired',
-                            'Your session has expired. Please log in again.',
-                            [{text: 'OK'}]
+                            i18n.t('auth.sessionExpired.title'),
+                            i18n.t('auth.sessionExpired.message'),
+                            [{text: i18n.t('common.ok')}]
                         );
                     }
                 } catch (error) {
@@ -128,9 +129,9 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                     await KeychainService.deleteAuthTokens()
 
                     Alert.alert(
-                        'Session Expired',
-                        'Your session has expired. Please log in again.',
-                        [{text: 'OK'}]
+                        i18n.t('auth.sessionExpired.title'),
+                        i18n.t('auth.sessionExpired.message'),
+                        [{text: i18n.t('common.ok')}]
                     );
                 }
             } else {
@@ -140,9 +141,9 @@ export const createBaseQueryWithAuth = (baseUrl: string): BaseQueryFn<
                 await KeychainService.deleteAuthTokens()
 
                 Alert.alert(
-                    'Authentication Required',
-                    'Please log in to continue.',
-                    [{text: 'OK'}]
+                    i18n.t('auth.authRequired.title'),
+                    i18n.t('auth.authRequired.message'),
+                    [{text: i18n.t('common.ok')}]
                 );
             }
         }

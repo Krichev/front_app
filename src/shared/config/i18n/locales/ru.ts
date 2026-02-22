@@ -1,5 +1,31 @@
 // src/shared/config/i18n/locales/ru.ts
 const ru = {
+    challengeActions: {
+        join: {
+            success: 'Вы присоединились к соревнованию!',
+            error: 'Не удалось присоединиться к соревнованию.',
+        },
+        submit: {
+            success: 'Ваше выполнение отправлено на проверку!',
+            error: 'Не удалось отправить выполнение. Пожалуйста, попробуйте еще раз.',
+        },
+        delete: {
+            title: 'Удалить квест',
+            message: 'Вы уверены, что хотите удалить этот квест? Это действие нельзя отменить.\n\nПримечание: статистика завершенных сессий будет сохранена.',
+            confirm: 'Удалить',
+            success: 'Квест успешно удален',
+            error: 'Не удалось удалить квест. Пожалуйста, попробуйте еще раз.',
+            errorForbidden: 'У вас нет прав для удаления этого квеста',
+            errorNotFound: 'Квест не найден',
+        },
+        invitation: {
+            success: 'Приглашение успешно отправлено!',
+            error: 'Не удалось отправить приглашение.',
+        },
+        creator: {
+            errorInfoNotAvailable: 'Информация о создателе недоступна',
+        },
+    },
     common: {
         loading: 'Загрузка...',
         error: 'Ошибка',
@@ -18,6 +44,7 @@ const ru = {
         search: 'Поиск',
         noResults: 'Ничего не найдено',
         close: 'Закрыть',
+        goBack: 'Назад',
         localizedInput: {
             fillAtLeastOne: 'Пожалуйста, заполните хотя бы один язык',
             fillBothLanguages: 'Пожалуйста, заполните оба языка',
@@ -246,6 +273,37 @@ const ru = {
         support: 'Поддержка и информация',
         updateSuccess: 'Настройки успешно обновлены',
         updateError: 'Не удалось обновить настройки',
+        themes: {
+            light: 'Светлая',
+            dark: 'Тёмная',
+            system: 'Системная',
+        },
+        gender: 'Пол',
+        genderDescription: 'Для приглашений с учётом пола',
+        genderOptions: {
+            MALE: 'Мужской',
+            FEMALE: 'Женский',
+            OTHER: 'Другой',
+            PREFER_NOT_TO_SAY: 'Предпочитаю не указывать',
+        },
+        invitationPreferences: {
+            title: 'Приватность приглашений',
+            allowInvitationsFrom: 'Разрешить приглашения от:',
+            genderPreference: 'Предпочтения по полу:',
+            saveChanges: 'Сохранить изменения',
+            updateSuccess: 'Настройки обновлены',
+            updateError: 'Не удалось обновить настройки',
+            options: {
+                ANYONE: 'Всех',
+                FRIENDS_ONLY: 'Только друзей',
+                FAMILY_ONLY: 'Только семьи',
+                FRIENDS_AND_FAMILY: 'Друзей и семьи',
+                NOBODY: 'Никого',
+                ANY_GENDER: 'Любой пол',
+                MALE_ONLY: 'Только мужчины',
+                FEMALE_ONLY: 'Только женщины',
+            },
+        },
     },
     navigation: {
         home: 'Главная',
@@ -290,6 +348,14 @@ const ru = {
         usernameOrEmailExists: 'Имя пользователя или email уже заняты',
         genericError: 'Ошибка регистрации. Попробуйте еще раз.',
         signInLink: 'Войти',
+        sessionExpired: {
+            title: 'Сессия истекла',
+            message: 'Ваша сессия истекла. Пожалуйста, войдите снова.',
+        },
+        authRequired: {
+            title: 'Требуется аутентификация',
+            message: 'Пожалуйста, войдите, чтобы продолжить.',
+        },
     },
     home: {
         welcome: 'Добро пожаловать',
@@ -448,7 +514,24 @@ const ru = {
         score: 'Оценка',
         passed: 'Пройдено!',
         failed: 'Не пройдено',
-        tryAgain: 'Попробовать снова',
+        createdTab: 'Создано',
+        joinedTab: 'Участие',
+    },
+    questionDisplay: {
+        types: {
+            question: 'Вопрос',
+            text: 'Текстовый вопрос',
+            image: 'Вопрос с картинкой',
+            video: 'Видео вопрос',
+            audioChallenge: 'Аудио челлендж',
+            audio: 'Аудио вопрос',
+        },
+        karaoke: {
+            passScore: 'Проходной балл: {{percentage}}%',
+            completeChallenge: 'Выполните аудио челлендж',
+            listenReference: 'Прослушать эталон',
+            recordResponse: 'Записать ваш ответ',
+        },
     },
     questions: {
         title: 'Вопросы',
@@ -669,6 +752,389 @@ const ru = {
             medium: 'Средне',
             hard: 'Сложно',
         },
+    },
+    wager: {
+        setup: {
+            title: 'Настройка ставки',
+            stakeAmount: 'Сумма ставки',
+            stakeAmountPlaceholder: 'напр. 100',
+            screenTime: 'Экранное время (мин)',
+            screenTimePlaceholder: 'напр. 30',
+            socialPenalty: 'Описание социального штрафа',
+            socialPenaltyPlaceholder: 'напр. Сменить аватар на клоуна на 24ч',
+            confirmButton: 'Подтвердить ставку',
+        },
+        invitation: {
+            challengeFrom: 'Вызов со ставкой от {{username}}',
+            expiresIn: 'Истекает через: {{time}}',
+            stake: 'Ставка: {{amount}} {{unit}}',
+            points: 'Очков',
+            minutes: 'Минут',
+            loserPenalty: 'Штраф проигравшему:',
+            decline: 'Отклонить',
+            accept: 'Принять',
+            expired: 'Истекло',
+        },
+    },
+    challengeVerification: {
+        // Main screen
+        loading: 'Загрузка проверки вызова...',
+        loadFailed: 'Не удалось загрузить данные вызова.',
+        verificationRequirements: 'Требования для проверки',
+        processing: 'Обработка проверки...',
+        challengeDescription: 'Описание вызова',
+        verificationMethods: 'Методы проверки',
+        noMethodsFound: 'Методы проверки для этого вызова не найдены.',
+        submitVerification: 'Отправить проверку',
+
+        // Status
+        status: {
+            verified: 'Проверено',
+            failed: 'Провалено',
+            pending: 'Ожидание',
+        },
+
+        // Photo verification
+        photo: {
+            title: 'Фотоверификация',
+            verified: 'Проверено ✓',
+            retake: 'Переснять фото',
+            take: 'Сделать фото',
+            defaultPrompt: 'Сделайте фото для проверки',
+            instructions: 'Инструкции:',
+            defaultInstructions: 'Сделайте четкое фото, показывающее выполнение вызова.',
+            loadingChallenge: 'Загрузка данных вызова...',
+            verificationSuccessful: 'Проверка успешна',
+            successMessage: 'Ваше фото успешно проверено!',
+            failedMessage: 'Ошибка фотоверификации. Попробуйте еще раз.',
+            submitFailed: 'Не удалось проверить фото. Попробуйте еще раз.',
+            backToChallenge: 'Вернуться к вызову',
+            takePhotoFirst: 'Сначала сделайте фото.',
+            noPhotoTaken: 'Фото еще не сделано',
+            processingError: 'Ошибка: не удалось обработать запрос на проверку.',
+        },
+
+        // Location verification
+        location: {
+            title: 'Проверка местоположения',
+            verified: 'Проверено ✓',
+            retry: 'Повторить проверку',
+            verify: 'Подтвердить местоположение',
+            verifyAtPrompt: 'Подтвердите, что вы находитесь здесь: {{locationName}}',
+            requiredLocation: 'обязательное местоположение',
+            currentAddress: 'Текущий: {{address}}',
+            distanceInfo: 'Расстояние: {{distance}}м (Требуется: в пределах {{radius}}м)',
+            instructions: 'Инструкции:',
+            defaultInstructions: 'Для проверки участия необходимо физически находиться в месте проведения вызова.',
+            locationPrefix: 'Местоположение: {{address}}',
+            radiusInfo: 'Вы должны находиться в радиусе {{radius}} метров от целевой локации.',
+            yourLocation: 'Ваше текущее местоположение:',
+            targetLocation: 'Целевое местоположение:',
+            latitude: 'Широта',
+            longitude: 'Долгота',
+            address: 'Адрес',
+            notChecked: 'Местоположение еще не проверено',
+            checkLocation: 'Проверить мое местоположение',
+            checking: 'Проверка...',
+            permissionRequired: 'Требуется разрешение',
+            permissionMessage: 'Для проверки необходимы разрешения на использование геолокации.',
+            openSettings: 'Открыть настройки',
+            locationFailed: 'Не удалось получить ваше местоположение. Попробуйте еще раз.',
+            loadingChallenge: 'Загрузка данных вызова...',
+            verificationSuccessful: 'Проверка успешна',
+            successMessage: 'Ваше местоположение успешно подтверждено!',
+            failedMessage: 'Проверка местоположения не удалась. Вы находитесь вне требуемой области.',
+            submitFailed: 'Не удалось проверить местоположение. Попробуйте еще раз.',
+            backToChallenge: 'Вернуться к вызову',
+            checkFirst: 'Сначала проверьте свое местоположение.',
+            targetMissing: 'Информация о целевой локации отсутствует.',
+            processingError: 'Ошибка: не удалось обработать запрос на проверку.',
+            distanceToTarget: 'Расстояние до цели: {{distance}} метров',
+            withinRange: ' (В пределах радиуса)',
+            requiredRadius: ' (Требуется: {{radius}} метров)',
+        },
+
+        // Generic verification types
+        types: {
+            quiz: 'Викторина',
+            manual: 'Ручная',
+            fitness: 'Фитнес',
+            activity: 'Активность',
+            photo: 'Фото',
+            location: 'Локация',
+        },
+        genericTitle: 'Проверка: {{type}}',
+        genericDefaultPrompt: 'Пройдите эту проверку, чтобы завершить вызов.',
+
+        // ChallengeService display names
+        displayNames: {
+            photo: 'Фотоверификация',
+            locationCheckin: 'Проверка местоположения',
+            quiz: 'Викторина',
+            manual: 'Ручная проверка',
+            fitnessTracker: 'Фитнес-трекер',
+            activityTracking: 'Отслеживание активности',
+        },
+
+        // Time remaining
+        timeRemaining: {
+            expired: 'Истек',
+            noEndDate: 'Нет даты окончания',
+            monthLeft: 'Остался {{count}} месяц',
+            monthLeft_plural: 'Осталось {{count}} месяцев',
+            daysLeft: 'Остался {{count}} день',
+            daysLeft_plural: 'Осталось {{count}} дней',
+            hoursLeft: 'Остался {{count}} час',
+            hoursLeft_plural: 'Осталось {{count}} часов',
+        },
+    },
+    createChallenge: {
+        title: 'Создать соревнование',
+        basicInfo: {
+            title: 'Название *',
+            titlePlaceholder: 'Введите название',
+            description: 'Описание *',
+            descriptionPlaceholder: 'Опишите ваше соревнование',
+            type: 'Тип соревнования',
+            types: {
+                QUEST: 'Квест',
+                QUIZ: 'Викторина',
+                ACTIVITY_PARTNER: 'Партнер для активности',
+                FITNESS_TRACKING: 'Фитнес-трекинг',
+                HABIT_BUILDING: 'Привычки',
+            },
+            visibility: 'Видимость',
+            visibilityOptions: {
+                PUBLIC: 'Публичное',
+                PRIVATE: 'Приватное',
+                GROUP_ONLY: 'Только для группы',
+            },
+            frequency: 'Частота',
+            frequencyOptions: {
+                ONE_TIME: 'Разово',
+                DAILY: 'Ежедневно',
+                WEEKLY: 'Еженедельно',
+            },
+        },
+        advanced: {
+            show: 'Показать доп. параметры',
+            hide: 'Скрыть доп. параметры',
+            title: 'Дополнительные параметры',
+            targetGroup: 'Целевая группа',
+            targetGroupPlaceholder: 'Выберите группу (опционально)',
+            tags: 'Теги',
+            tagsPlaceholder: 'Введите теги через запятую (напр., фитнес, воркаут)',
+            reward: 'Награда',
+            rewardPlaceholder: 'Какая награда за прохождение?',
+            penalty: 'Штраф',
+            penaltyPlaceholder: 'Какой штраф за провал?',
+        },
+        validation: {
+            titleRequired: 'Пожалуйста, введите название',
+            descriptionRequired: 'Пожалуйста, введите описание',
+            photoDescRequired: 'Пожалуйста, укажите описание для фото-проверки',
+            locationRequired: 'Пожалуйста, укажите координаты для проверки местоположения',
+        },
+    },
+    gameResults: {
+        alerts: {
+            error: {
+                title: 'Ошибка',
+                submitFailed: 'Не удалось отправить результаты. Пожалуйста, попробуйте еще раз.',
+            },
+            completeChallenge: {
+                title: 'Завершить соревнование?',
+                message: 'Хотите отметить это соревнование как завершенное?',
+                yesComplete: 'Да, завершить',
+                noPlayAgain: 'Нет, играть снова',
+                noReturnHome: 'Нет, вернуться на главную',
+                yes: 'Да',
+                no: 'Нет',
+            },
+        },
+        completionNotes: 'Викторина завершена со счётом {{score}}/{{total}}',
+    },
+    friendsFamily: {
+        header: {
+            title: 'Друзья и Семья',
+            subtitle: 'Управляйте своими контактами, чтобы делиться вопросами',
+        },
+        addSection: {
+            title: 'Добавить новое подключение',
+            friend: 'Друг',
+            family: 'Семья',
+            placeholder: 'Введите ID пользователя для подключения',
+            send: 'Отправить',
+            tip: 'Пользователи, которых вы добавили в друзья или семью, могут видеть вопросы, которые вы отметили как "Для друзей и семьи"',
+        },
+        tabs: {
+            connections: 'Контакты ({{count}})',
+            pending: 'В ожидании ({{count}})',
+        },
+        emptyStates: {
+            noConnections: {
+                title: 'Пока нет контактов',
+                text: 'Добавьте друзей и семью, чтобы делиться с ними своими вопросами',
+            },
+            noPending: {
+                title: 'Нет входящих запросов',
+                text: 'Здесь вы увидите запросы на подключение от других пользователей',
+            },
+        },
+        alerts: {
+            error: {
+                userIdRequired: 'Пожалуйста, введите ID пользователя',
+                failedToSend: 'Не удалось отправить запрос',
+                failedToAccept: 'Не удалось принять запрос',
+                failedToReject: 'Не удалось отклонить запрос',
+                failedToRemove: 'Не удалось удалить подключение',
+            },
+            success: {
+                requestSent: 'Запрос на подключение отправлен!',
+                accepted: 'Запрос принят!',
+                rejected: 'Запрос отклонен',
+                removed: 'Подключение удалено',
+            },
+            reject: {
+                title: 'Отклонить запрос',
+                message: 'Вы уверены, что хотите отклонить этот запрос?',
+                confirm: 'Отклонить',
+            },
+            remove: {
+                title: 'Удалить подключение',
+                message: 'Удалить {{username}} из ваших контактов?',
+                confirm: 'Удалить',
+            },
+        },
+        card: {
+            friend: 'Друг',
+            family: 'Семья',
+            wantsToConnect: 'хочет подключиться как {{type}}',
+        },
+    },
+    contacts: {
+        header: {
+            title: 'Контакты',
+        },
+        tabs: {
+            contacts: 'Контакты',
+            requests: 'Запросы',
+        },
+        search: {
+            placeholder: 'Поиск контактов...',
+        },
+        categories: {
+            all: 'Все',
+            friends: 'Друзья',
+            family: 'Семья',
+            work: 'Работа',
+            favorites: 'Избранное',
+        },
+        emptyStates: {
+            noContacts: 'Контакты не найдены',
+            noRequests: 'Нет входящих запросов',
+        },
+        alerts: {
+            error: {
+                favoriteUpdate: 'Не удалось обновить статус избранного',
+                failedToAccept: 'Не удалось принять запрос',
+                failedToReject: 'Не удалось отклонить запрос',
+                failedToRemove: 'Не удалось удалить контакт',
+            },
+            remove: {
+                title: 'Удалить контакт',
+                message: 'Вы уверены, что хотите удалить {{name}}?',
+                confirm: 'Удалить',
+            },
+            reject: {
+                title: 'Отклонить запрос',
+                message: 'Вы уверены, что хотите отклонить этот запрос?',
+                confirm: 'Отклонить',
+            },
+        },
+        requestText: 'хочет подключиться как {{type}}',
+    },
+    groups: {
+        header: {
+            title: 'Группы',
+        },
+        search: {
+            placeholder: 'Поиск групп...',
+        },
+        filters: {
+            label: 'Фильтровать по:',
+            types: {
+                all: 'Все',
+                challenges: 'Соревнования',
+                social: 'Социальные',
+            },
+            roles: {
+                all: 'Все роли',
+                admin: 'Мои группы',
+                member: 'Состою',
+            },
+        },
+        loading: 'Загрузка групп...',
+        error: {
+            failedToLoad: 'Не удалось загрузить группы.',
+            retry: 'Повторить',
+        },
+        emptyStates: {
+            noMatch: 'Нет групп, соответствующих вашим фильтрам',
+            noGroups: 'Вы еще не вступили ни в одну группу',
+            createButton: 'Создать группу',
+        },
+        card: {
+            members: '{{count}} участников',
+            created: 'Создана: {{date}}',
+        },
+        alerts: {
+            success: {
+                joined: 'Вы вступили в эту группу!',
+            },
+            error: {
+                joinFailed: 'Не удалось вступить в группу. Попробуйте снова.',
+            },
+            details: {
+                title: 'Детали группы',
+                message: 'Переход к деталям группы {{id}}',
+            },
+            create: {
+                title: 'Создать группу',
+                message: 'Здесь должен быть переход на экран создания группы',
+            },
+        },
+    },
+    controllerGame: {
+        phases: {
+            listen: {
+                title: 'Слушайте внимательно!',
+                subtitle: 'Идет обсуждение...',
+                buzz: 'КНОПКА!',
+            },
+            answering: {
+                sent: 'Ответ отправлен ✓',
+                wait: 'Ожидание остальных...',
+                placeholder: 'Введите ваш ответ...',
+                submit: 'ОТПРАВИТЬ',
+            },
+            feedback: {
+                title: 'Раунд завершен',
+                subtitle: 'Смотрите на ТВ!',
+            },
+            wait: 'Ожидание следующей фазы...',
+        },
+        reconnecting: 'Переподключение...',
+        score: {
+            pts: '{{count}} очков',
+        },
+    },
+    joinRoom: {
+        title: 'Вход в комнату',
+        subtitle: 'Введите 6-значный код с экрана ТВ',
+        placeholder: 'ABC123',
+        joinButton: 'ПРИСОЕДИНИТЬСЯ',
+        scanButton: 'СКАНИРОВАТЬ QR-КОД',
     },
 };
 

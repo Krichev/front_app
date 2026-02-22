@@ -15,6 +15,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {FormatterService} from '../services/verification/ui/Services';
@@ -31,6 +32,7 @@ type RootStackParamList = {
 type GroupsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const GroupsScreen: React.FC = () => {
+    const { t } = useTranslation();
     const navigation = useNavigation<GroupsScreenNavigationProp>();
     const { user } = useSelector((state: RootState) => state.auth);
 
@@ -78,23 +80,23 @@ const GroupsScreen: React.FC = () => {
     // Handle navigation to group details
     const navigateToGroupDetails = (groupId: string) => {
         // navigation.navigate('GroupDetails', { groupId });
-        Alert.alert('Group Details', `Navigating to details for group ${groupId}`);
+        Alert.alert(t('groups.alerts.details.title'), t('groups.alerts.details.message', { id: groupId }));
     };
 
     // Handle group creation
     const navigateToCreateGroup = () => {
         // navigation.navigate('CreateGroup');
-        Alert.alert('Create Group', 'This would navigate to group creation screen');
+        Alert.alert(t('groups.alerts.create.title'), t('groups.alerts.create.message'));
     };
 
     // Handle joining a group
     const handleJoinGroup = async (groupId: string) => {
         try {
             await joinGroup(groupId).unwrap();
-            Alert.alert('Success', 'You have joined this group!');
+            Alert.alert(t('common.success'), t('groups.alerts.success.joined'));
             refetch();
         } catch (error) {
-            Alert.alert('Error', 'Failed to join group. Please try again.');
+            Alert.alert(t('common.error'), t('groups.alerts.error.joinFailed'));
         }
     };
 
@@ -178,7 +180,7 @@ const GroupsScreen: React.FC = () => {
                 <View style={styles.groupFooter}>
                     <View style={styles.memberInfo}>
                         <MaterialCommunityIcons name="account-multiple" size={16} color="#757575" />
-                        <Text style={styles.memberCount}>{item.member_count} members</Text>
+                        <Text style={styles.memberCount}>{t('groups.card.members', { count: item.member_count })}</Text>
                     </View>
 
                     <View style={styles.roleContainer}>
@@ -190,7 +192,7 @@ const GroupsScreen: React.FC = () => {
 
                 {/* Created Date */}
                 <Text style={styles.dateText}>
-                    Created: {FormatterService.formatDate(item.created_at)}
+                    {t('groups.card.created', { date: FormatterService.formatDate(item.created_at) })}
                 </Text>
             </TouchableOpacity>
         );
@@ -201,7 +203,7 @@ const GroupsScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingText}>Loading groups...</Text>
+                <Text style={styles.loadingText}>{t('groups.loading')}</Text>
             </SafeAreaView>
         );
     }
@@ -211,9 +213,9 @@ const GroupsScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.errorContainer}>
                 <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336" />
-                <Text style={styles.errorText}>Failed to load groups.</Text>
+                <Text style={styles.errorText}>{t('groups.error.failedToLoad')}</Text>
                 <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                    <Text style={styles.retryButtonText}>Retry</Text>
+                    <Text style={styles.retryButtonText}>{t('groups.error.retry')}</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         );
@@ -223,7 +225,7 @@ const GroupsScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Groups</Text>
+                <Text style={styles.headerTitle}>{t('groups.header.title')}</Text>
                 <TouchableOpacity
                     style={styles.refreshButton}
                     onPress={() => refetch()}
@@ -238,7 +240,7 @@ const GroupsScreen: React.FC = () => {
                     <MaterialCommunityIcons name="magnify" size={20} color="#757575" style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search groups..."
+                        placeholder={t('groups.search.placeholder')}
                         value={searchTerm}
                         onChangeText={setSearchTerm}
                     />
@@ -247,7 +249,7 @@ const GroupsScreen: React.FC = () => {
 
             {/* Filter Options */}
             <View style={styles.filterContainer}>
-                <Text style={styles.filterLabel}>Filter by:</Text>
+                <Text style={styles.filterLabel}>{t('groups.filters.label')}</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScrollView}>
                     {/* Type Filters */}
                     <View style={styles.filterGroup}>
@@ -255,21 +257,21 @@ const GroupsScreen: React.FC = () => {
                             style={[styles.filterButton, filterType === 'ALL' && styles.activeFilter]}
                             onPress={() => setFilterType('ALL')}
                         >
-                            <Text style={[styles.filterText, filterType === 'ALL' && styles.activeFilterText]}>All</Text>
+                            <Text style={[styles.filterText, filterType === 'ALL' && styles.activeFilterText]}>{t('groups.filters.types.all')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.filterButton, filterType === 'CHALLENGE' && styles.activeFilter]}
                             onPress={() => setFilterType('CHALLENGE')}
                         >
                             <MaterialCommunityIcons name="trophy" size={16} color={filterType === 'CHALLENGE' ? 'white' : '#4CAF50'} />
-                            <Text style={[styles.filterText, filterType === 'CHALLENGE' && styles.activeFilterText]}>Challenges</Text>
+                            <Text style={[styles.filterText, filterType === 'CHALLENGE' && styles.activeFilterText]}>{t('groups.filters.types.challenges')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.filterButton, filterType === 'SOCIAL' && styles.activeFilter]}
                             onPress={() => setFilterType('SOCIAL')}
                         >
                             <MaterialCommunityIcons name="account-group" size={16} color={filterType === 'SOCIAL' ? 'white' : '#4CAF50'} />
-                            <Text style={[styles.filterText, filterType === 'SOCIAL' && styles.activeFilterText]}>Social</Text>
+                            <Text style={[styles.filterText, filterType === 'SOCIAL' && styles.activeFilterText]}>{t('groups.filters.types.social')}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -279,19 +281,19 @@ const GroupsScreen: React.FC = () => {
                             style={[styles.filterButton, filterRole === 'ALL' && styles.activeFilter]}
                             onPress={() => setFilterRole('ALL')}
                         >
-                            <Text style={[styles.filterText, filterRole === 'ALL' && styles.activeFilterText]}>All Roles</Text>
+                            <Text style={[styles.filterText, filterRole === 'ALL' && styles.activeFilterText]}>{t('groups.filters.roles.all')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.filterButton, filterRole === 'ADMIN' && styles.activeFilter]}
                             onPress={() => setFilterRole('ADMIN')}
                         >
-                            <Text style={[styles.filterText, filterRole === 'ADMIN' && styles.activeFilterText]}>My Groups</Text>
+                            <Text style={[styles.filterText, filterRole === 'ADMIN' && styles.activeFilterText]}>{t('groups.filters.roles.admin')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.filterButton, filterRole === 'MEMBER' && styles.activeFilter]}
                             onPress={() => setFilterRole('MEMBER')}
                         >
-                            <Text style={[styles.filterText, filterRole === 'MEMBER' && styles.activeFilterText]}>Joined</Text>
+                            <Text style={[styles.filterText, filterRole === 'MEMBER' && styles.activeFilterText]}>{t('groups.filters.roles.member')}</Text>
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
@@ -310,14 +312,14 @@ const GroupsScreen: React.FC = () => {
                     <MaterialCommunityIcons name="account-group" size={60} color="#e0e0e0" />
                     <Text style={styles.emptyText}>
                         {searchTerm || filterType !== 'ALL' || filterRole !== 'ALL'
-                            ? 'No groups match your filters'
-                            : 'You haven\'t joined any groups yet'}
+                            ? t('groups.emptyStates.noMatch')
+                            : t('groups.emptyStates.noGroups')}
                     </Text>
                     <TouchableOpacity
                         style={styles.createGroupButton}
                         onPress={navigateToCreateGroup}
                     >
-                        <Text style={styles.createGroupButtonText}>Create a Group</Text>
+                        <Text style={styles.createGroupButtonText}>{t('groups.emptyStates.createButton')}</Text>
                     </TouchableOpacity>
                 </View>
             )}

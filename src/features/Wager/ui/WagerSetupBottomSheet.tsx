@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StakeType, CreateWagerRequest } from '../../../entities/WagerState/model/types';
 import { useTheme } from '../../../shared/ui/theme';
 import { StakeSelector } from './StakeSelector';
@@ -16,6 +17,7 @@ export const WagerSetupBottomSheet: React.FC<WagerSetupBottomSheetProps> = ({
     initialData,
     onSave,
 }) => {
+    const { t } = useTranslation();
     const { theme } = useTheme();
     const [stakeType, setStakeType] = useState<StakeType>(initialData?.stakeType || 'POINTS');
     const [amount, setAmount] = useState(initialData?.stakeAmount?.toString() || '100');
@@ -43,36 +45,36 @@ export const WagerSetupBottomSheet: React.FC<WagerSetupBottomSheetProps> = ({
 
     return (
         <ScrollView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-            <Text style={[styles.title, { color: theme.colors.text.primary }]}>Setup Your Wager</Text>
+            <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('wager.setup.title')}</Text>
             
             <StakeSelector selectedType={stakeType} onSelect={setStakeType} />
 
             <Input
-                label="Stake Amount"
+                label={t('wager.setup.stakeAmount')}
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="numeric"
-                placeholder="e.g. 100"
+                placeholder={t('wager.setup.stakeAmountPlaceholder')}
             />
 
             {stakeType === 'SCREEN_TIME' && (
                 <Input
-                    label="Screen Time (Minutes)"
+                    label={t('wager.setup.screenTime')}
                     value={screenTime}
                     onChangeText={setScreenTime}
                     keyboardType="numeric"
-                    placeholder="e.g. 30"
+                    placeholder={t('wager.setup.screenTimePlaceholder')}
                 />
             )}
 
             {stakeType === 'SOCIAL_QUEST' && (
                 <Input
-                    label="Social Penalty Description"
+                    label={t('wager.setup.socialPenalty')}
                     value={socialPenalty}
                     onChangeText={setSocialPenalty}
                     multiline
                     numberOfLines={3}
-                    placeholder="e.g. Change profile pic to a clown for 24h"
+                    placeholder={t('wager.setup.socialPenaltyPlaceholder')}
                 />
             )}
 
@@ -81,7 +83,7 @@ export const WagerSetupBottomSheet: React.FC<WagerSetupBottomSheetProps> = ({
                     onPress={handleSave} 
                     fullWidth
                 >
-                    Confirm Wager
+                    {t('wager.setup.confirmButton')}
                 </Button>
             </View>
         </ScrollView>

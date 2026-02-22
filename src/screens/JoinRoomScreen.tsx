@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type JoinRoomNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const JoinRoomScreen: React.FC = () => {
+    const { t } = useTranslation();
     const navigation = useNavigation<JoinRoomNavigationProp>();
     const [roomCode, setRoomCode] = useState('');
 
@@ -22,12 +24,12 @@ const JoinRoomScreen: React.FC = () => {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.content}
             >
-                <Text style={styles.title}>Join Room</Text>
-                <Text style={styles.subtitle}>Enter the 6-character code shown on the TV</Text>
+                <Text style={styles.title}>{t('joinRoom.title')}</Text>
+                <Text style={styles.subtitle}>{t('joinRoom.subtitle')}</Text>
                 
                 <TextInput
                     style={styles.input}
-                    placeholder="ABC123"
+                    placeholder={t('joinRoom.placeholder')}
                     placeholderTextColor="#666"
                     value={roomCode}
                     onChangeText={(text) => setRoomCode(text.toUpperCase())}
@@ -41,14 +43,14 @@ const JoinRoomScreen: React.FC = () => {
                     onPress={handleJoin}
                     disabled={roomCode.length !== 6}
                 >
-                    <Text style={styles.buttonText}>JOIN GAME</Text>
+                    <Text style={styles.buttonText}>{t('joinRoom.joinButton')}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity 
                     style={styles.scanButton}
                     onPress={() => navigation.navigate('QRScanner')}
                 >
-                    <Text style={styles.scanButtonText}>SCAN QR CODE</Text>
+                    <Text style={styles.scanButtonText}>{t('joinRoom.scanButton')}</Text>
                 </TouchableOpacity>
             </KeyboardAvoidingView>
         </SafeAreaView>

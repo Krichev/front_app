@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../styles';
 import { Theme } from '../../../shared/ui/theme/types';
 import { CreateChallengeFormData } from '../hooks/useCreateChallengeForm';
@@ -23,6 +24,8 @@ export const AdvancedOptionsSection: React.FC<AdvancedOptionsSectionProps> = ({
     onToggle,
     theme,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <>
             <TouchableOpacity
@@ -30,34 +33,34 @@ export const AdvancedOptionsSection: React.FC<AdvancedOptionsSectionProps> = ({
                 onPress={onToggle}
             >
                 <Text style={styles.sectionToggleText}>
-                    {showAdvancedOptions ? 'Hide Advanced Options' : 'Show Advanced Options'}
+                    {showAdvancedOptions ? t('createChallenge.advanced.hide') : t('createChallenge.advanced.show')}
                 </Text>
             </TouchableOpacity>
 
             {showAdvancedOptions && (
                 <View style={styles.advancedContainer}>
-                    <Text style={styles.sectionTitle}>Advanced Options</Text>
+                    <Text style={styles.sectionTitle}>{t('createChallenge.advanced.title')}</Text>
 
                     {/* Target Group */}
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Target Group</Text>
+                        <Text style={styles.label}>{t('createChallenge.advanced.targetGroup')}</Text>
                         <TextInput
                             style={styles.input}
                             value={formData.targetGroup}
                             onChangeText={(text) => onUpdate('targetGroup', text)}
-                            placeholder="Choose group (optional)"
+                            placeholder={t('createChallenge.advanced.targetGroupPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                         />
                     </View>
 
                     {/* Tags */}
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Tags</Text>
+                        <Text style={styles.label}>{t('createChallenge.advanced.tags')}</Text>
                         <TextInput
                             style={styles.input}
                             value={tagsInput}
                             onChangeText={onTagsChange}
-                            placeholder="Enter tags separated by commas (e.g., fitness, daily, workout)"
+                            placeholder={t('createChallenge.advanced.tagsPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                         />
                         {formData.tags.length > 0 && (
@@ -73,24 +76,24 @@ export const AdvancedOptionsSection: React.FC<AdvancedOptionsSectionProps> = ({
 
                     {/* Reward */}
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Reward</Text>
+                        <Text style={styles.label}>{t('createChallenge.advanced.reward')}</Text>
                         <TextInput
                             style={styles.input}
                             value={formData.reward}
                             onChangeText={(text) => onUpdate('reward', text)}
-                            placeholder="What's the reward for completing this challenge?"
+                            placeholder={t('createChallenge.advanced.rewardPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                         />
                     </View>
 
                     {/* Penalty */}
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Penalty</Text>
+                        <Text style={styles.label}>{t('createChallenge.advanced.penalty')}</Text>
                         <TextInput
                             style={styles.input}
                             value={formData.penalty}
                             onChangeText={(text) => onUpdate('penalty', text)}
-                            placeholder="What's the penalty for failing?"
+                            placeholder={t('createChallenge.advanced.penaltyPlaceholder')}
                             placeholderTextColor={theme.colors.text.disabled}
                         />
                     </View>

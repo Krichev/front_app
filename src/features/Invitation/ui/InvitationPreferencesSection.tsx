@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../shared/ui/theme';
 import { 
     useGetInvitationPreferencesQuery, 
@@ -10,6 +11,7 @@ import { InvitationPreference, GenderPreference } from '../../../entities/Invita
 import { Button } from '../../../shared/ui/Button/Button';
 
 export const InvitationPreferencesSection: React.FC = () => {
+    const { t } = useTranslation();
     const { theme } = useTheme();
     const { data: preferences, isLoading } = useGetInvitationPreferencesQuery();
     const [updatePreferences, { isLoading: isUpdating }] = useUpdateInvitationPreferencesMutation();
@@ -30,9 +32,9 @@ export const InvitationPreferencesSection: React.FC = () => {
                 questInvitationPreference: invitationPref,
                 genderPreferenceForInvites: genderPref
             }).unwrap();
-            Alert.alert('Success', 'Preferences updated');
+            Alert.alert(t('common.success'), t('settings.invitationPreferences.updateSuccess'));
         } catch (error) {
-            Alert.alert('Error', 'Failed to update preferences');
+            Alert.alert(t('common.error'), t('settings.invitationPreferences.updateError'));
         }
     };
 
@@ -42,40 +44,40 @@ export const InvitationPreferencesSection: React.FC = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={[styles.title, { color: theme.colors.text.primary }]}>Invitation Privacy</Text>
+            <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('settings.invitationPreferences.title')}</Text>
             
             <View style={styles.field}>
-                <Text style={styles.label}>Allow invitations from:</Text>
+                <Text style={styles.label}>{t('settings.invitationPreferences.allowInvitationsFrom')}</Text>
                 <View style={[styles.pickerContainer, { borderColor: theme.colors.border.main }]}>
                     <Picker
                         selectedValue={invitationPref}
                         onValueChange={(itemValue) => setInvitationPref(itemValue)}
                     >
-                        <Picker.Item label="Anyone" value="ANYONE" />
-                        <Picker.Item label="Friends Only" value="FRIENDS_ONLY" />
-                        <Picker.Item label="Family Only" value="FAMILY_ONLY" />
-                        <Picker.Item label="Friends & Family" value="FRIENDS_AND_FAMILY" />
-                        <Picker.Item label="Nobody" value="NOBODY" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.ANYONE')} value="ANYONE" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.FRIENDS_ONLY')} value="FRIENDS_ONLY" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.FAMILY_ONLY')} value="FAMILY_ONLY" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.FRIENDS_AND_FAMILY')} value="FRIENDS_AND_FAMILY" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.NOBODY')} value="NOBODY" />
                     </Picker>
                 </View>
             </View>
 
             <View style={styles.field}>
-                <Text style={styles.label}>Gender preference:</Text>
+                <Text style={styles.label}>{t('settings.invitationPreferences.genderPreference')}</Text>
                 <View style={[styles.pickerContainer, { borderColor: theme.colors.border.main }]}>
                     <Picker
                         selectedValue={genderPref}
                         onValueChange={(itemValue) => setGenderPref(itemValue)}
                     >
-                        <Picker.Item label="Any Gender" value="ANY_GENDER" />
-                        <Picker.Item label="Male Only" value="MALE_ONLY" />
-                        <Picker.Item label="Female Only" value="FEMALE_ONLY" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.ANY_GENDER')} value="ANY_GENDER" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.MALE_ONLY')} value="MALE_ONLY" />
+                        <Picker.Item label={t('settings.invitationPreferences.options.FEMALE_ONLY')} value="FEMALE_ONLY" />
                     </Picker>
                 </View>
             </View>
 
             <Button onPress={handleSave} loading={isUpdating} style={styles.saveButton}>
-                Save Changes
+                {t('settings.invitationPreferences.saveChanges')}
             </Button>
         </View>
     );

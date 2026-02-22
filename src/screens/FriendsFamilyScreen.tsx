@@ -12,6 +12,7 @@ import {
     View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import {
     useAcceptRelationshipMutation,
     useCreateRelationshipMutation,
@@ -27,6 +28,7 @@ import {
 } from '../entities/QuizState/model/types/question.types';
 
 export const FriendsFamilyScreen: React.FC = () => {
+    const { t } = useTranslation();
     const [selectedTab, setSelectedTab] = useState<'connections' | 'pending'>('connections');
     const [searchUserId, setSearchUserId] = useState('');
     const [selectedRelationType, setSelectedRelationType] = useState<RelationshipType>(RelationshipType.FRIEND);
@@ -64,7 +66,7 @@ export const FriendsFamilyScreen: React.FC = () => {
 
     const handleSendRequest = async () => {
         if (!searchUserId.trim()) {
-            Alert.alert('Error', 'Please enter a user ID');
+            Alert.alert(t('common.error'), t('friendsFamily.alerts.error.userIdRequired'));
             return;
         }
 
@@ -74,37 +76,37 @@ export const FriendsFamilyScreen: React.FC = () => {
                 relationshipType: selectedRelationType,
             }).unwrap();
 
-            Alert.alert('Success', 'Connection request sent!');
+            Alert.alert(t('common.success'), t('friendsFamily.alerts.success.requestSent'));
             setSearchUserId('');
         } catch (error: any) {
-            Alert.alert('Error', error.data?.message || 'Failed to send request');
+            Alert.alert(t('common.error'), error.data?.message || t('friendsFamily.alerts.error.failedToSend'));
         }
     };
 
     const handleAcceptRequest = async (relationshipId: string) => {
         try {
             await acceptRelationship(parseInt(relationshipId)).unwrap();
-            Alert.alert('Success', 'Connection accepted!');
+            Alert.alert(t('common.success'), t('friendsFamily.alerts.success.accepted'));
         } catch (error: any) {
-            Alert.alert('Error', error.data?.message || 'Failed to accept request');
+            Alert.alert(t('common.error'), error.data?.message || t('friendsFamily.alerts.error.failedToAccept'));
         }
     };
 
     const handleRejectRequest = async (relationshipId: string) => {
         Alert.alert(
-            'Reject Request',
-            'Are you sure you want to reject this request?',
+            t('friendsFamily.alerts.reject.title'),
+            t('friendsFamily.alerts.reject.message'),
             [
-                {text: 'Cancel', style: 'cancel'},
+                {text: t('common.cancel'), style: 'cancel'},
                 {
-                    text: 'Reject',
+                    text: t('friendsFamily.alerts.reject.confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await rejectRelationship(parseInt(relationshipId)).unwrap();
-                            Alert.alert('Success', 'Request rejected');
+                            Alert.alert(t('common.success'), t('friendsFamily.alerts.success.rejected'));
                         } catch (error: any) {
-                            Alert.alert('Error', error.data?.message || 'Failed to reject request');
+                            Alert.alert(t('common.error'), error.data?.message || t('friendsFamily.alerts.error.failedToReject'));
                         }
                     },
                 },
@@ -114,19 +116,19 @@ export const FriendsFamilyScreen: React.FC = () => {
 
     const handleRemoveConnection = async (relationshipId: string, username: string) => {
         Alert.alert(
-            'Remove Connection',
-            `Remove ${username} from your connections?`,
+            t('friendsFamily.alerts.remove.title'),
+            t('friendsFamily.alerts.remove.message', { username }),
             [
-                {text: 'Cancel', style: 'cancel'},
+                {text: t('common.cancel'), style: 'cancel'},
                 {
-                    text: 'Remove',
+                    text: t('friendsFamily.alerts.remove.confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await removeRelationship(parseInt(relationshipId)).unwrap();
-                            Alert.alert('Success', 'Connection removed');
+                            Alert.alert(t('common.success'), t('friendsFamily.alerts.success.removed'));
                         } catch (error: any) {
-                            Alert.alert('Error', error.data?.message || 'Failed to remove connection');
+                            Alert.alert(t('common.error'), error.data?.message || t('friendsFamily.alerts.error.failedToRemove'));
                         }
                     },
                 },
@@ -136,7 +138,7 @@ export const FriendsFamilyScreen: React.FC = () => {
 
     const renderAddConnectionSection = () => (
         <View style={styles.addSection}>
-            <Text style={styles.addSectionTitle}>Add New Connection</Text>
+            <Text style={styles.addSectionTitle}>{t('friendsFamily.addSection.title')}</Text>
 
             <View style={styles.relationTypeSelector}>
                 <TouchableOpacity
@@ -155,7 +157,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                         styles.relationTypeText,
                         selectedRelationType === RelationshipType.FRIEND && styles.relationTypeTextSelected
                     ]}>
-                        Friend
+                        {t('friendsFamily.addSection.friend')}
                     </Text>
                 </TouchableOpacity>
 
@@ -175,7 +177,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                         styles.relationTypeText,
                         selectedRelationType === RelationshipType.FAMILY && styles.relationTypeTextSelected
                     ]}>
-                        Family
+                        {t('friendsFamily.addSection.family')}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -185,7 +187,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                     style={styles.searchInput}
                     value={searchUserId}
                     onChangeText={setSearchUserId}
-                    placeholder="Enter user ID to connect"
+                    placeholder={t('friendsFamily.addSection.placeholder')}
                     keyboardType="numeric"
                 />
                 <TouchableOpacity
@@ -198,14 +200,14 @@ export const FriendsFamilyScreen: React.FC = () => {
                     ) : (
                         <>
                             <Icon name="paper-plane" size={18} color="#fff" />
-                            <Text style={styles.sendButtonText}>Send</Text>
+                            <Text style={styles.sendButtonText}>{t('friendsFamily.addSection.send')}</Text>
                         </>
                     )}
                 </TouchableOpacity>
             </View>
 
             <Text style={styles.helperText}>
-                Users you add as friends or family can access questions you mark as "Friends & Family"
+                {t('friendsFamily.addSection.tip')}
             </Text>
         </View>
     );
@@ -225,7 +227,9 @@ export const FriendsFamilyScreen: React.FC = () => {
                             color="#666"
                         />
                         <Text style={styles.connectionType}>
-                            {relationship.relationshipType === RelationshipType.FAMILY ? 'Family' : 'Friend'}
+                            {relationship.relationshipType === RelationshipType.FAMILY 
+                                ? t('friendsFamily.card.family') 
+                                : t('friendsFamily.card.friend')}
                         </Text>
                     </View>
                 </View>
@@ -253,7 +257,11 @@ export const FriendsFamilyScreen: React.FC = () => {
                             color="#666"
                         />
                         <Text style={styles.connectionType}>
-                            wants to connect as {request.relationshipType === RelationshipType.FAMILY ? 'Family' : 'Friend'}
+                            {t('friendsFamily.card.wantsToConnect', { 
+                                type: request.relationshipType === RelationshipType.FAMILY 
+                                    ? t('friendsFamily.card.family').toLowerCase() 
+                                    : t('friendsFamily.card.friend').toLowerCase() 
+                            })}
                         </Text>
                     </View>
                 </View>
@@ -290,9 +298,9 @@ export const FriendsFamilyScreen: React.FC = () => {
             return (
                 <View style={styles.emptyState}>
                     <Icon name="people-outline" size={64} color="#ccc" />
-                    <Text style={styles.emptyStateTitle}>No Connections Yet</Text>
+                    <Text style={styles.emptyStateTitle}>{t('friendsFamily.emptyStates.noConnections.title')}</Text>
                     <Text style={styles.emptyStateText}>
-                        Add friends and family to share your custom questions with them
+                        {t('friendsFamily.emptyStates.noConnections.text')}
                     </Text>
                 </View>
             );
@@ -318,9 +326,9 @@ export const FriendsFamilyScreen: React.FC = () => {
             return (
                 <View style={styles.emptyState}>
                     <Icon name="mail-outline" size={64} color="#ccc" />
-                    <Text style={styles.emptyStateTitle}>No Pending Requests</Text>
+                    <Text style={styles.emptyStateTitle}>{t('friendsFamily.emptyStates.noPending.title')}</Text>
                     <Text style={styles.emptyStateText}>
-                        You'll see connection requests from other users here
+                        {t('friendsFamily.emptyStates.noPending.text')}
                     </Text>
                 </View>
             );
@@ -336,9 +344,9 @@ export const FriendsFamilyScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Friends & Family</Text>
+                <Text style={styles.headerTitle}>{t('friendsFamily.header.title')}</Text>
                 <Text style={styles.headerSubtitle}>
-                    Manage your connections to share questions
+                    {t('friendsFamily.header.subtitle')}
                 </Text>
             </View>
 
@@ -350,7 +358,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                     onPress={() => setSelectedTab('connections')}
                 >
                     <Text style={[styles.tabText, selectedTab === 'connections' && styles.tabTextActive]}>
-                        Connections ({acceptedRelationships.length})
+                        {t('friendsFamily.tabs.connections', { count: acceptedRelationships.length })}
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -358,7 +366,7 @@ export const FriendsFamilyScreen: React.FC = () => {
                     onPress={() => setSelectedTab('pending')}
                 >
                     <Text style={[styles.tabText, selectedTab === 'pending' && styles.tabTextActive]}>
-                        Pending ({pendingRequests.length})
+                        {t('friendsFamily.tabs.pending', { count: pendingRequests.length })}
                     </Text>
                     {pendingRequests.length > 0 && (
                         <View style={styles.badge}>

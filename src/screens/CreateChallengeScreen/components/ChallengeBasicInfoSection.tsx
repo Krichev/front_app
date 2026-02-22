@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { useTranslation } from 'react-i18next';
 import { LocalizedInput } from '../../../shared/ui/LocalizedInput';
 import { styles } from '../styles';
 import { CreateChallengeFormData } from '../hooks/useCreateChallengeForm';
@@ -11,41 +12,43 @@ interface ChallengeBasicInfoSectionProps {
     onUpdate: (field: keyof CreateChallengeFormData, value: any) => void;
 }
 
-const CHALLENGE_TYPE_OPTIONS = [
-    { label: 'Quest', value: 'QUEST' },
-    { label: 'Quiz', value: 'QUIZ' },
-    { label: 'Activity Partner', value: 'ACTIVITY_PARTNER' },
-    { label: 'Fitness Tracking', value: 'FITNESS_TRACKING' },
-    { label: 'Habit Building', value: 'HABIT_BUILDING' },
-];
-
-const VISIBILITY_OPTIONS = [
-    { label: 'Public', value: 'PUBLIC' },
-    { label: 'Private', value: 'PRIVATE' },
-    { label: 'Group Only', value: 'GROUP_ONLY' },
-];
-
-const FREQUENCY_OPTIONS = [
-    { label: 'One Time', value: 'ONE_TIME' },
-    { label: 'Daily', value: 'DAILY' },
-    { label: 'Weekly', value: 'WEEKLY' },
-];
-
 export const ChallengeBasicInfoSection: React.FC<ChallengeBasicInfoSectionProps> = ({
     formData,
     onUpdate,
 }) => {
+    const { t } = useTranslation();
+
+    const CHALLENGE_TYPE_OPTIONS = [
+        { label: t('createChallenge.basicInfo.types.QUEST'), value: 'QUEST' },
+        { label: t('createChallenge.basicInfo.types.QUIZ'), value: 'QUIZ' },
+        { label: t('createChallenge.basicInfo.types.ACTIVITY_PARTNER'), value: 'ACTIVITY_PARTNER' },
+        { label: t('createChallenge.basicInfo.types.FITNESS_TRACKING'), value: 'FITNESS_TRACKING' },
+        { label: t('createChallenge.basicInfo.types.HABIT_BUILDING'), value: 'HABIT_BUILDING' },
+    ];
+
+    const VISIBILITY_OPTIONS = [
+        { label: t('createChallenge.basicInfo.visibilityOptions.PUBLIC'), value: 'PUBLIC' },
+        { label: t('createChallenge.basicInfo.visibilityOptions.PRIVATE'), value: 'PRIVATE' },
+        { label: t('createChallenge.basicInfo.visibilityOptions.GROUP_ONLY'), value: 'GROUP_ONLY' },
+    ];
+
+    const FREQUENCY_OPTIONS = [
+        { label: t('createChallenge.basicInfo.frequencyOptions.ONE_TIME'), value: 'ONE_TIME' },
+        { label: t('createChallenge.basicInfo.frequencyOptions.DAILY'), value: 'DAILY' },
+        { label: t('createChallenge.basicInfo.frequencyOptions.WEEKLY'), value: 'WEEKLY' },
+    ];
+
     return (
         <>
             {/* Title */}
             <View style={styles.formGroup}>
                 <LocalizedInput
-                    label="Title *"
+                    label={t('createChallenge.basicInfo.title')}
                     value={formData.title}
                     onChangeLocalized={(text) => onUpdate('title', text)}
                     placeholder={{
-                        en: 'Enter challenge title',
-                        ru: 'Введите название челленджа'
+                        en: t('createChallenge.basicInfo.titlePlaceholder', { lng: 'en' }),
+                        ru: t('createChallenge.basicInfo.titlePlaceholder', { lng: 'ru' })
                     }}
                     required
                 />
@@ -54,12 +57,12 @@ export const ChallengeBasicInfoSection: React.FC<ChallengeBasicInfoSectionProps>
             {/* Description */}
             <View style={styles.formGroup}>
                 <LocalizedInput
-                    label="Description *"
+                    label={t('createChallenge.basicInfo.description')}
                     value={formData.description}
                     onChangeLocalized={(text) => onUpdate('description', text)}
                     placeholder={{
-                        en: 'Describe your challenge',
-                        ru: 'Опишите ваш челлендж'
+                        en: t('createChallenge.basicInfo.descriptionPlaceholder', { lng: 'en' }),
+                        ru: t('createChallenge.basicInfo.descriptionPlaceholder', { lng: 'ru' })
                     }}
                     multiline
                     numberOfLines={3}
@@ -69,7 +72,7 @@ export const ChallengeBasicInfoSection: React.FC<ChallengeBasicInfoSectionProps>
 
             {/* Type */}
             <View style={styles.formGroup}>
-                <Text style={styles.label}>Challenge Type</Text>
+                <Text style={styles.label}>{t('createChallenge.basicInfo.type')}</Text>
                 <View style={styles.pickerContainer}>
                     <Picker
                         selectedValue={formData.type}
@@ -85,7 +88,7 @@ export const ChallengeBasicInfoSection: React.FC<ChallengeBasicInfoSectionProps>
 
             {/* Visibility */}
             <View style={styles.formGroup}>
-                <Text style={styles.label}>Visibility</Text>
+                <Text style={styles.label}>{t('createChallenge.basicInfo.visibility')}</Text>
                 <View style={styles.pickerContainer}>
                     <Picker
                         selectedValue={formData.visibility}
@@ -101,7 +104,7 @@ export const ChallengeBasicInfoSection: React.FC<ChallengeBasicInfoSectionProps>
 
             {/* Frequency */}
             <View style={styles.formGroup}>
-                <Text style={styles.label}>Frequency</Text>
+                <Text style={styles.label}>{t('createChallenge.basicInfo.frequency')}</Text>
                 <View style={styles.pickerContainer}>
                     <Picker
                         selectedValue={formData.frequency}

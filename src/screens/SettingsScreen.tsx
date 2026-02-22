@@ -27,7 +27,12 @@ import {
     useGetUserProfileQuery, 
     useUpdateGenderMutation 
 } from '../entities/UserState/model/slice/userApi';
-import { AppLanguage, AVAILABLE_LANGUAGES } from '../entities/SettingsState/model/types/settings.types';
+import { 
+    AppLanguage, 
+    AVAILABLE_LANGUAGES,
+    AppTheme,
+    AVAILABLE_THEMES 
+} from '../entities/SettingsState/model/types/settings.types';
 import KeychainService from '../services/auth/KeychainService';
 import { InvitationPreferencesSection } from '../features/Invitation/ui/InvitationPreferencesSection';
 import { Gender } from '../entities/InvitationState/model/types';
@@ -56,6 +61,15 @@ const SettingsScreen: React.FC = () => {
     const [updateSettings, { isLoading: isUpdating }] = useUpdateAppSettingsMutation();
     const [updateGender, { isLoading: isUpdatingGender }] = useUpdateGenderMutation();
 
+    // Handle theme change
+    const handleThemeChange = useCallback(async (themeCode: AppTheme) => {
+        try {
+            await updateSettings({ theme: themeCode }).unwrap();
+        } catch (error) {
+            Alert.alert(t('common.error'), t('settings.updateError'));
+        }
+    }, [updateSettings, t]);
+
     // Handle language selection
     const handleLanguageChange = useCallback(async (language: AppLanguage) => {
         if (language === currentLanguage) return;
@@ -75,7 +89,7 @@ const SettingsScreen: React.FC = () => {
         try {
             await updateGender({ gender }).unwrap();
         } catch (error) {
-            Alert.alert(t('common.error'), 'Failed to update gender');
+            Alert.alert(t('common.error'), t('settings.updateError'));
         }
     };
 
@@ -137,6 +151,62 @@ const SettingsScreen: React.FC = () => {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>{t('settings.preferences')}</Text>
                     
+                    {/* Theme Setting */}
+                    <View style={styles.settingItem}>
+                        <View style={styles.settingInfo}>
+                            <MaterialCommunityIcons 
+                                name="palette-outline" 
+                                size={24} 
+                                color={theme.colors.primary.main} 
+                            />
+                            <View style={styles.settingText}>
+                                <Text style={styles.settingLabel}>{t('settings.theme')}</Text>
+                                <Text style={styles.settingDescription}>
+                                    {t('settings.themeDescription')}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.languageOptions}>
+                        {AVAILABLE_THEMES.map((themeOption) => (
+                            <TouchableOpacity
+                                key={themeOption.code}
+                                style={[
+                                    styles.languageOption,
+                                    settings?.theme === themeOption.code && styles.languageOptionSelected,
+                                ]}
+                                onPress={() => handleThemeChange(themeOption.code)}
+                                disabled={isUpdating}
+                                activeOpacity={0.7}
+                            >
+                                <MaterialCommunityIcons 
+                                    name={themeOption.icon as any} 
+                                    size={24} 
+                                    color={settings?.theme === themeOption.code ? theme.colors.primary.main : theme.colors.text.secondary} 
+                                />
+                                <View style={styles.languageTextContainer}>
+                                    <Text style={[
+                                        styles.languageName,
+                                        settings?.theme === themeOption.code && styles.languageNameSelected,
+                                        { marginLeft: 12 }
+                                    ]}>
+                                        {t(themeOption.labelKey)}
+                                    </Text>
+                                </View>
+                                {settings?.theme === themeOption.code && (
+                                    <MaterialCommunityIcons 
+                                        name="check-circle" 
+                                        size={24} 
+                                        color={theme.colors.primary.main} 
+                                    />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+
+                    <View style={styles.divider} />
+
                     {/* Gender Setting */}
                     <View style={styles.settingItem}>
                         <View style={styles.settingInfo}>
@@ -146,9 +216,9 @@ const SettingsScreen: React.FC = () => {
                                 color={theme.colors.primary.main} 
                             />
                             <View style={styles.settingText}>
-                                <Text style={styles.settingLabel}>Gender</Text>
+                                <Text style={styles.settingLabel}>{t('settings.gender')}</Text>
                                 <Text style={styles.settingDescription}>
-                                    For gender-specific invitations
+                                    {t('settings.genderDescription')}
                                 </Text>
                             </View>
                         </View>
@@ -158,10 +228,10 @@ const SettingsScreen: React.FC = () => {
                                 onValueChange={handleGenderChange}
                                 enabled={!isUpdatingGender}
                             >
-                                <Picker.Item label="Male" value="MALE" />
-                                <Picker.Item label="Female" value="FEMALE" />
-                                <Picker.Item label="Other" value="OTHER" />
-                                <Picker.Item label="Prefer Not to Say" value="PREFER_NOT_TO_SAY" />
+                                <Picker.Item label={t('settings.genderOptions.MALE')} value="MALE" />
+                                <Picker.Item label={t('settings.genderOptions.FEMALE')} value="FEMALE" />
+                                <Picker.Item label={t('settings.genderOptions.OTHER')} value="OTHER" />
+                                <Picker.Item label={t('settings.genderOptions.PREFER_NOT_TO_SAY')} value="PREFER_NOT_TO_SAY" />
                             </Picker>
                         </View>
                     </View>

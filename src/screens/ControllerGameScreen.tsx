@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useMultiplayerRoomService } from '../features/MultiplayerRoom/services/MultiplayerRoomService';
 import { GamePhase } from '../features/MultiplayerRoom/types';
@@ -13,6 +14,7 @@ type ControllerGameRouteProp = RouteProp<RootStackParamList, 'ControllerGame'>;
 type ControllerGameNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ControllerGameScreen: React.FC = () => {
+    const { t } = useTranslation();
     const route = useRoute<ControllerGameRouteProp>();
     const navigation = useNavigation<ControllerGameNavigationProp>();
     const { roomCode } = route.params;
@@ -54,11 +56,11 @@ const ControllerGameScreen: React.FC = () => {
             case GamePhase.DISCUSSION:
                 return (
                     <View style={styles.phaseContainer}>
-                        <Text style={styles.phaseTitle}>Listen Carefully!</Text>
-                        <Text style={styles.phaseSubtitle}>Discussion in progress...</Text>
+                        <Text style={styles.phaseTitle}>{t('controllerGame.phases.listen.title')}</Text>
+                        <Text style={styles.phaseSubtitle}>{t('controllerGame.phases.listen.subtitle')}</Text>
                         {/* If Brain Ring, show Buzz button */}
                         <TouchableOpacity style={styles.buzzButton} onPress={sendBuzz}>
-                            <Text style={styles.buzzText}>BUZZ!</Text>
+                            <Text style={styles.buzzText}>{t('controllerGame.phases.listen.buzz')}</Text>
                         </TouchableOpacity>
                     </View>
                 );
@@ -66,8 +68,8 @@ const ControllerGameScreen: React.FC = () => {
                 if (hasSubmitted) {
                     return (
                         <View style={styles.phaseContainer}>
-                            <Text style={styles.submittedText}>Answer Sent ✓</Text>
-                            <Text style={styles.waitText}>Waiting for others...</Text>
+                            <Text style={styles.submittedText}>{t('controllerGame.phases.answering.sent')}</Text>
+                            <Text style={styles.waitText}>{t('controllerGame.phases.answering.wait')}</Text>
                         </View>
                     );
                 }
@@ -79,7 +81,7 @@ const ControllerGameScreen: React.FC = () => {
                         <Text style={styles.questionHint}>{question?.question}</Text>
                         <TextInput
                             style={styles.textInput}
-                            placeholder="Type your answer..."
+                            placeholder={t('controllerGame.phases.answering.placeholder')}
                             placeholderTextColor="#666"
                             value={answerText}
                             onChangeText={setAnswerText}
@@ -89,19 +91,19 @@ const ControllerGameScreen: React.FC = () => {
                             style={styles.submitButton}
                             onPress={() => handleSubmit(answerText)}
                         >
-                            <Text style={styles.submitButtonText}>SUBMIT</Text>
+                            <Text style={styles.submitButtonText}>{t('controllerGame.phases.answering.submit')}</Text>
                         </TouchableOpacity>
                     </KeyboardAvoidingView>
                 );
             case GamePhase.FEEDBACK:
                 return (
                     <View style={styles.phaseContainer}>
-                        <Text style={styles.phaseTitle}>Round Finished</Text>
-                        <Text style={styles.feedbackText}>Look at the TV!</Text>
+                        <Text style={styles.phaseTitle}>{t('controllerGame.phases.feedback.title')}</Text>
+                        <Text style={styles.feedbackText}>{t('controllerGame.phases.feedback.subtitle')}</Text>
                     </View>
                 );
             default:
-                return <Text style={styles.waitText}>Waiting for next phase...</Text>;
+                return <Text style={styles.waitText}>{t('controllerGame.phases.wait')}</Text>;
         }
     };
 
@@ -110,7 +112,7 @@ const ControllerGameScreen: React.FC = () => {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.playerName}>{user?.username}</Text>
-                    <Text style={styles.playerScore}>{me?.score || 0} pts</Text>
+                    <Text style={styles.playerScore}>{t('controllerGame.score.pts', { count: me?.score || 0 })}</Text>
                 </View>
                 <View style={styles.roomBadge}>
                     <Text style={styles.roomText}>{roomCode}</Text>
@@ -123,7 +125,7 @@ const ControllerGameScreen: React.FC = () => {
 
             {connectionStatus !== 'CONNECTED' && (
                 <View style={styles.reconnecting}>
-                    <Text style={styles.reconnectingText}>Reconnecting...</Text>
+                    <Text style={styles.reconnectingText}>{t('controllerGame.reconnecting')}</Text>
                 </View>
             )}
         </SafeAreaView>

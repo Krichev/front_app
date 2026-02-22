@@ -1,6 +1,7 @@
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import {
     useJoinChallengeMutation,
     useSubmitChallengeCompletionMutation,
@@ -16,6 +17,7 @@ interface ActionsDeps {
 }
 
 export function useChallengeActions({ challengeId, safeRefetch }: ActionsDeps) {
+    const { t } = useTranslation();
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
     const [joinChallenge, { isLoading: isJoining }] = useJoinChallengeMutation();
@@ -27,10 +29,10 @@ export function useChallengeActions({ challengeId, safeRefetch }: ActionsDeps) {
         if (isJoining) return;
         try {
             await joinChallenge({ challengeId }).unwrap();
-            Alert.alert('Success', 'You have joined the challenge!');
+            Alert.alert(t('common.success'), t('challengeActions.join.success'));
             await safeRefetch();
         } catch (error: any) {
-            Alert.alert('Error', error?.data?.message || 'Failed to join challenge.');
+            Alert.alert(t('common.error'), error?.data?.message || t('challengeActions.join.error'));
             console.error('Join challenge error:', error);
         }
     };
@@ -45,41 +47,42 @@ export function useChallengeActions({ challengeId, safeRefetch }: ActionsDeps) {
                     notes: null,
                 },
             }).unwrap();
-            Alert.alert('Success', 'Your completion has been submitted for verification!');
+            Alert.alert(t('common.success'), t('challengeActions.submit.success'));
             await safeRefetch();
         } catch (error) {
-            Alert.alert('Error', 'Failed to submit completion. Please try again.');
+            Alert.alert(t('common.error'), t('challengeActions.submit.error'));
             console.error('Submit completion error:', error);
         }
     };
 
     const handleDeleteChallenge = () => {
         Alert.alert(
-            'Delete Quest',
-            'Are you sure you want to delete this quest? This action cannot be undone.\n\nNote: Statistics from completed sessions will be preserved.',
+            t('challengeActions.delete.title'),
+            t('challengeActions.delete.message'),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                    text: 'Delete',
+                    text: t('challengeActions.delete.confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         if (isDeleting) return;
                         try {
                             await deleteQuest(Number(challengeId)).unwrap();
-                            Alert.alert('Success', 'Quest deleted successfully', [
+                            Alert.alert(t('common.success'), t('challengeActions.delete.success'), [
                                 {
-                                    text: 'OK',
+                                    text: t('common.ok'),
                                     onPress: () => navigation.goBack(),
                                 },
                             ]);
                         } catch (error: any) {
                             console.error('Delete quest error:', error);
-                            const message = error?.status === 403
-                                ? "You don't have permission to delete this quest"
-                                : error?.status === 404
-                                ? 'Quest not found'
-                                : 'Failed to delete quest. Please try again.';
-                            Alert.alert('Error', message);
+                            let message = t('challengeActions.delete.error');
+                            if (error?.status === 403) {
+                                message = t('challengeActions.delete.errorForbidden');
+                            } else if (error?.status === 404) {
+                                message = t('challengeActions.delete.errorNotFound');
+                            }
+                            Alert.alert(t('common.error'), message);
                         }
                     },
                 },
@@ -90,10 +93,10 @@ export function useChallengeActions({ challengeId, safeRefetch }: ActionsDeps) {
     const handleInvitationSubmit = async (request: CreateQuestInvitationRequest) => {
         try {
             await createInvitation(request).unwrap();
-            Alert.alert('Success', 'Invitation sent successfully!');
+            Alert.alert(t('common.success'), t('challengeActions.invitation.success'));
             return true;
         } catch (error: any) {
-            Alert.alert('Error', error?.data?.message || 'Failed to send invitation.');
+            Alert.alert(t('common.error'), error?.data?.message || t('challengeActions.invitation.error'));
             return false;
         }
     };
@@ -106,7 +109,7 @@ export function useChallengeActions({ challengeId, safeRefetch }: ActionsDeps) {
         if (creatorId) {
             navigation.navigate('UserProfile', { userId: String(creatorId) });
         } else {
-            Alert.alert('Error', 'Creator information is not available');
+            Alert.alert(t('common.error'), t('challengeActions.creator.errorInfoNotAvailable'));
         }
     };
 

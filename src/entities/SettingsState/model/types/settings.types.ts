@@ -34,8 +34,7 @@ export interface LanguageOption {
 
 export interface ThemeOption {
     code: AppTheme;
-    name: string;
-    nameRu: string;
+    labelKey: string;
     icon: string;
 }
 
@@ -45,7 +44,7 @@ export const AVAILABLE_LANGUAGES: LanguageOption[] = [
 ];
 
 export const AVAILABLE_THEMES: ThemeOption[] = [
-    { code: 'light', name: 'Light', nameRu: 'Светлая', icon: 'white-balance-sunny' },
-    { code: 'dark', name: 'Dark', nameRu: 'Тёмная', icon: 'moon-waning-crescent' },
-    { code: 'system', name: 'System', nameRu: 'Системная', icon: 'cellphone' },
+    { code: 'light', labelKey: 'settings.themes.light', icon: 'white-balance-sunny' },
+    { code: 'dark', labelKey: 'settings.themes.dark', icon: 'moon-waning-crescent' },
+    { code: 'system', labelKey: 'settings.themes.system', icon: 'cellphone' },
 ];

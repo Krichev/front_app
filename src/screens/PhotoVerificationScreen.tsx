@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import {
     useGetChallengeByIdQuery,
     useVerifyPhotoChallengeMutation,
@@ -30,6 +31,7 @@ type PhotoVerificationRouteProp = RouteProp<RootStackParamList, 'PhotoVerificati
 type PhotoVerificationNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhotoVerification'>;
 
 const PhotoVerificationScreen: React.FC = () => {
+    const { t } = useTranslation();
     const route = useRoute<PhotoVerificationRouteProp>();
     const navigation = useNavigation<PhotoVerificationNavigationProp>();
     const { challengeId, prompt: routePrompt } = route.params;
@@ -75,14 +77,14 @@ const PhotoVerificationScreen: React.FC = () => {
             }
         } catch (error) {
             console.error('Error taking photo:', error);
-            Alert.alert('Error', 'Failed to capture photo. Please try again.');
+            Alert.alert(t('common.error'), t('challengeVerification.photo.failedMessage'));
         }
     };
 
     // Submit the photo for verification
     const submitPhoto = async () => {
         if (!photoUri) {
-            Alert.alert('Error', 'Please take a photo first.');
+            Alert.alert(t('common.error'), t('challengeVerification.photo.takePhotoFirst'));
             return;
         }
 
@@ -103,18 +105,18 @@ const PhotoVerificationScreen: React.FC = () => {
             setVerificationResult({
                 isVerified: response.isVerified,
                 message: response.message || (response.isVerified
-                    ? 'Photo verification successful!'
-                    : 'Photo verification failed. Please try again.'),
+                    ? t('challengeVerification.photo.verificationSuccessful')
+                    : t('challengeVerification.photo.failedMessage')),
             });
 
             // If verification is successful, show success message with option to return
             if (response.isVerified) {
                 Alert.alert(
-                    'Verification Successful',
-                    response.message || 'Your photo has been verified successfully!',
+                    t('challengeVerification.photo.verificationSuccessful'),
+                    response.message || t('challengeVerification.photo.successMessage'),
                     [
                         {
-                            text: 'Back to Challenge',
+                            text: t('challengeVerification.photo.backToChallenge'),
                             onPress: () => navigation.navigate('ChallengeDetails', { challengeId })
                         }
                     ]
@@ -122,10 +124,10 @@ const PhotoVerificationScreen: React.FC = () => {
             }
         } catch (error) {
             console.error('Error verifying photo:', error);
-            Alert.alert('Error', 'Failed to verify photo. Please try again.');
+            Alert.alert(t('common.error'), t('challengeVerification.photo.submitFailed'));
             setVerificationResult({
                 isVerified: false,
-                message: 'Error: Could not process verification request.',
+                message: t('challengeVerification.photo.processingError'),
             });
         } finally {
             setIsProcessing(false);
@@ -137,7 +139,7 @@ const PhotoVerificationScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#4CAF50" />
-                <Text style={styles.loadingText}>Loading challenge details...</Text>
+                <Text style={styles.loadingText}>{t('challengeVerification.photo.loadingChallenge')}</Text>
             </SafeAreaView>
         );
     }
@@ -146,7 +148,7 @@ const PhotoVerificationScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Photo Verification</Text>
+                    <Text style={styles.title}>{t('challengeVerification.photo.title')}</Text>
                     {challenge && (
                         <Text style={styles.subtitle}>{challenge.title}</Text>
                     )}
@@ -154,9 +156,9 @@ const PhotoVerificationScreen: React.FC = () => {
 
                 {/* Instructions */}
                 <View style={styles.instructionsContainer}>
-                    <Text style={styles.instructionsTitle}>Instructions:</Text>
+                    <Text style={styles.instructionsTitle}>{t('challengeVerification.photo.instructions')}</Text>
                     <Text style={styles.instructionsText}>
-                        {photoPrompt || 'Take a clear photo that shows you completing the challenge.'}
+                        {photoPrompt || t('challengeVerification.photo.defaultInstructions')}
                     </Text>
                 </View>
 
@@ -167,7 +169,7 @@ const PhotoVerificationScreen: React.FC = () => {
                     ) : (
                         <View style={styles.placeholderContainer}>
                             <MaterialIcons name="photo-camera" size={60} color="#CCCCCC" />
-                            <Text style={styles.placeholderText}>No photo taken yet</Text>
+                            <Text style={styles.placeholderText}>{t('challengeVerification.photo.noPhotoTaken')}</Text>
                         </View>
                     )}
                 </View>
@@ -179,7 +181,7 @@ const PhotoVerificationScreen: React.FC = () => {
                     disabled={isProcessing || isVerifying}
                 >
                     <MaterialIcons name="camera-alt" size={20} color="white" />
-                    <Text style={styles.buttonText}>Take Photo</Text>
+                    <Text style={styles.buttonText}>{t('challengeVerification.photo.take')}</Text>
                 </TouchableOpacity>
 
                 {/* Verification Result */}
@@ -212,7 +214,7 @@ const PhotoVerificationScreen: React.FC = () => {
                         ) : (
                             <>
                                 <MaterialIcons name="check" size={20} color="white" />
-                                <Text style={styles.submitButtonText}>Submit for Verification</Text>
+                                <Text style={styles.submitButtonText}>{t('challengeVerification.submitVerification')}</Text>
                             </>
                         )}
                     </TouchableOpacity>
@@ -225,7 +227,7 @@ const PhotoVerificationScreen: React.FC = () => {
                     disabled={isProcessing || isVerifying}
                 >
                     <MaterialIcons name="arrow-back" size={20} color="#555" />
-                    <Text style={styles.backButtonText}>Back to Challenge</Text>
+                    <Text style={styles.backButtonText}>{t('challengeVerification.photo.backToChallenge')}</Text>
                 </TouchableOpacity>
             </ScrollView>
 
@@ -233,7 +235,7 @@ const PhotoVerificationScreen: React.FC = () => {
             {(isProcessing || isVerifying) && (
                 <View style={styles.overlay}>
                     <ActivityIndicator size="large" color="#FFFFFF" />
-                    <Text style={styles.overlayText}>Processing verification...</Text>
+                    <Text style={styles.overlayText}>{t('challengeVerification.processing')}</Text>
                 </View>
             )}
         </SafeAreaView>

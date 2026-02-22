@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { VerificationMethod, LocationData } from '../../../app/types';
 import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../../shared/ui/theme/createStyles';
@@ -22,13 +23,14 @@ const LocationVerificationCard: React.FC<LocationVerificationCardProps> = ({
   isSubmitting,
   isProcessing,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = themeStyles;
   const status = (method.status as any) || 'PENDING';
 
   const getButtonText = () => {
-    if (status === 'COMPLETED') return 'Verified ✓'; // TODO: i18n
-    return status === 'FAILED' ? 'Retry Verification' : 'Verify Location'; // TODO: i18n
+    if (status === 'COMPLETED') return t('challengeVerification.location.verified');
+    return status === 'FAILED' ? t('challengeVerification.location.retry') : t('challengeVerification.location.verify');
   };
 
   const isDisabled = isSubmitting || isProcessing || status === 'COMPLETED';
@@ -36,22 +38,26 @@ const LocationVerificationCard: React.FC<LocationVerificationCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>Location Verification</Text> {/* TODO: i18n */}
+        <Text style={styles.title}>{t('challengeVerification.location.title')}</Text>
         <VerificationStatusBadge status={status} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.prompt}>
-          Verify you're at: {method.details.locationName || method.details.locationData?.address || 'required location'} {/* TODO: i18n */}
+          {t('challengeVerification.location.verifyAtPrompt', { 
+            locationName: method.details.locationName || method.details.locationData?.address || t('challengeVerification.location.requiredLocation') 
+          })}
         </Text>
 
         {locationData && (
           <View style={styles.locationInfo}>
-            <Text style={styles.locationText}>Current: {locationData.address}</Text> {/* TODO: i18n */}
+            <Text style={styles.locationText}>{t('challengeVerification.location.currentAddress', { address: locationData.address })}</Text>
             {method.result && method.result.distance !== undefined && (
               <Text style={styles.distanceText}>
-                Distance: {Math.round(method.result.distance)}m {/* TODO: i18n */}
-                (Required: within {method.details.radius || method.details.locationData?.radius || 100}m) {/* TODO: i18n */}
+                {t('challengeVerification.location.distanceInfo', { 
+                  distance: Math.round(method.result.distance),
+                  radius: method.details.radius || method.details.locationData?.radius || 100
+                })}
               </Text>
             )}
           </View>

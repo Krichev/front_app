@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { MediaType, QuestionType } from '../../services/wwwGame/questionService';
 import { AudioChallengeType } from '../../types/audioChallenge.types';
 import { KaraokeQuestionDisplay } from './KaraokeQuestionDisplay';
@@ -35,6 +36,7 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   onRecordingComplete,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const isKaraokeChallenge = question.questionType === QuestionType.AUDIO && !!question.audioChallengeType;
   const isRegularAudio = question.questionType === QuestionType.AUDIO && !question.audioChallengeType;
   const hasMedia = ([QuestionType.IMAGE, QuestionType.VIDEO, QuestionType.AUDIO] as QuestionType[]).includes(question.questionType);
@@ -42,33 +44,33 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
   // Helper to render type badge
   const renderTypeBadge = () => {
     let iconName = 'help-circle';
-    let label = 'Question';
+    let label = t('questionDisplay.types.question');
     let color = '#007AFF';
 
     switch (question.questionType) {
       case QuestionType.TEXT:
         iconName = 'text-box-outline';
-        label = 'Text Question';
+        label = t('questionDisplay.types.text');
         color = '#607D8B';
         break;
       case QuestionType.IMAGE:
         iconName = 'image';
-        label = 'Image Question';
+        label = t('questionDisplay.types.image');
         color = '#9C27B0';
         break;
       case QuestionType.VIDEO:
         iconName = 'video';
-        label = 'Video Question';
+        label = t('questionDisplay.types.video');
         color = '#F44336';
         break;
       case QuestionType.AUDIO:
         if (isKaraokeChallenge) {
           iconName = 'microphone';
-          label = 'Audio Challenge';
+          label = t('questionDisplay.types.audioChallenge');
           color = '#FF9800';
         } else {
           iconName = 'music';
-          label = 'Audio Question';
+          label = t('questionDisplay.types.audio');
           color = '#4CAF50';
         }
         break;

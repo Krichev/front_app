@@ -12,6 +12,7 @@ import {
     Image,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import {
     useGetRelationshipsQuery,
     useAcceptRelationshipMutation,
@@ -27,14 +28,15 @@ import {
 import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
 
 const CATEGORIES = [
-    { id: 'ALL', label: 'All', icon: 'people' },
-    { id: 'FRIEND', label: 'Friends', icon: 'person' },
-    { id: 'FAMILY', label: 'Family', icon: 'heart' },
-    { id: 'COLLEAGUE', label: 'Work', icon: 'briefcase' },
-    { id: 'FAVORITES', label: 'Favorites', icon: 'star' },
+    { id: 'ALL', labelKey: 'contacts.categories.all', icon: 'people' },
+    { id: 'FRIEND', labelKey: 'contacts.categories.friends', icon: 'person' },
+    { id: 'FAMILY', labelKey: 'contacts.categories.family', icon: 'heart' },
+    { id: 'COLLEAGUE', labelKey: 'contacts.categories.work', icon: 'briefcase' },
+    { id: 'FAVORITES', labelKey: 'contacts.categories.favorites', icon: 'star' },
 ];
 
 export const ContactsScreen: React.FC = () => {
+    const { t } = useTranslation();
     const [viewMode, setViewMode] = useState<'contacts' | 'requests'>('contacts');
     const [activeCategory, setActiveCategory] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
@@ -101,25 +103,25 @@ export const ContactsScreen: React.FC = () => {
         try {
             await toggleFavorite(id).unwrap();
         } catch (error) {
-            Alert.alert('Error', 'Failed to update favorite status');
+            Alert.alert(t('common.error'), t('contacts.alerts.error.favoriteUpdate'));
         }
     };
 
     const handleRemove = (id: string, name: string) => {
         if (isRemoving) {return;}
         Alert.alert(
-            'Remove Contact',
-            `Are you sure you want to remove ${name}?`,
+            t('contacts.alerts.remove.title'),
+            t('contacts.alerts.remove.message', { name }),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                    text: 'Remove',
+                    text: t('contacts.alerts.remove.confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await removeRelationship(id).unwrap();
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to remove contact');
+                            Alert.alert(t('common.error'), t('contacts.alerts.error.failedToRemove'));
                         }
                     },
                 },
@@ -133,25 +135,25 @@ export const ContactsScreen: React.FC = () => {
             await acceptRelationship(id).unwrap();
             // Automatically switch to contacts view to see new friend? Optional.
         } catch (error) {
-            Alert.alert('Error', 'Failed to accept request');
+            Alert.alert(t('common.error'), t('contacts.alerts.error.failedToAccept'));
         }
     };
 
     const handleRejectRequest = (id: string) => {
         if (isRejecting) {return;}
         Alert.alert(
-            'Reject Request',
-            'Are you sure you want to reject this request?',
+            t('contacts.alerts.reject.title'),
+            t('contacts.alerts.reject.message'),
             [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                    text: 'Reject',
+                    text: t('contacts.alerts.reject.confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await rejectRelationship(id).unwrap();
                         } catch (error) {
-                            Alert.alert('Error', 'Failed to reject request');
+                            Alert.alert(t('common.error'), t('contacts.alerts.error.failedToReject'));
                         }
                     },
                 },
@@ -221,7 +223,7 @@ export const ContactsScreen: React.FC = () => {
                     {item.relatedUserUsername}
                 </Text>
                 <Text style={styles.requestText}>
-                    wants to connect as {item.relationshipType}
+                    {t('contacts.requestText', { type: item.relationshipType })}
                 </Text>
             </View>
 
@@ -239,7 +241,7 @@ export const ContactsScreen: React.FC = () => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Contacts</Text>
+                <Text style={styles.title}>{t('contacts.header.title')}</Text>
                 <TouchableOpacity style={styles.addButton}>
                     <Icon name="person-add" size={24} color="#007AFF" />
                 </TouchableOpacity>
@@ -251,7 +253,7 @@ export const ContactsScreen: React.FC = () => {
                     onPress={() => setViewMode('contacts')}
                 >
                     <Text style={[styles.tabText, viewMode === 'contacts' && styles.activeTabText]}>
-                        Contacts
+                        {t('contacts.tabs.contacts')}
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -259,7 +261,7 @@ export const ContactsScreen: React.FC = () => {
                     onPress={() => setViewMode('requests')}
                 >
                     <Text style={[styles.tabText, viewMode === 'requests' && styles.activeTabText]}>
-                        Requests
+                        {t('contacts.tabs.requests')}
                     </Text>
                     {pendingRequests.length > 0 && (
                         <View style={styles.badge}>
@@ -276,7 +278,7 @@ export const ContactsScreen: React.FC = () => {
                             <Icon name="search" size={20} color="#999" />
                             <TextInput
                                 style={styles.searchInput}
-                                placeholder="Search contacts..."
+                                placeholder={t('contacts.search.placeholder')}
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
                             />
@@ -312,7 +314,7 @@ export const ContactsScreen: React.FC = () => {
                                         styles.categoryLabel,
                                         activeCategory === item.id && styles.activeCategoryLabel,
                                     ]}>
-                                        {item.label}
+                                        {t(item.labelKey)}
                                     </Text>
                                 </TouchableOpacity>
                             )}
@@ -335,7 +337,7 @@ export const ContactsScreen: React.FC = () => {
                                 ) : (
                                     <>
                                         <Icon name="people-outline" size={64} color="#ccc" />
-                                        <Text style={styles.emptyText}>No contacts found</Text>
+                                        <Text style={styles.emptyText}>{t('contacts.emptyStates.noContacts')}</Text>
                                     </>
                                 )}
                             </View>
@@ -358,7 +360,7 @@ export const ContactsScreen: React.FC = () => {
                             ) : (
                                 <>
                                     <Icon name="mail-open-outline" size={64} color="#ccc" />
-                                    <Text style={styles.emptyText}>No pending requests</Text>
+                                    <Text style={styles.emptyText}>{t('contacts.emptyStates.noRequests')}</Text>
                                 </>
                             )}
                         </View>

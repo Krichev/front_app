@@ -10,6 +10,7 @@ import {
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from "react-native-screens/native-stack";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 
 import { useGetChallengeByIdQuery } from '../../entities/ChallengeState/model/slice/challengeApi';
 import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
@@ -32,6 +33,7 @@ type ChallengeVerificationRouteProp = RouteProp<RootStackParamList, 'ChallengeVe
 type ChallengeVerificationNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChallengeVerification'>;
 
 const ChallengeVerificationScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<ChallengeVerificationRouteProp>();
   const navigation = useNavigation<ChallengeVerificationNavigationProp>();
   const { challengeId } = route.params;
@@ -75,7 +77,7 @@ const ChallengeVerificationScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary.main} />
-        <Text style={styles.loadingText}>Loading challenge verification...</Text> {/* TODO: i18n */}
+        <Text style={styles.loadingText}>{t('challengeVerification.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -85,9 +87,9 @@ const ChallengeVerificationScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.errorContainer}>
         <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error.main} />
-        <Text style={styles.errorText}>Failed to load challenge details.</Text> {/* TODO: i18n */}
+        <Text style={styles.errorText}>{t('challengeVerification.loadFailed')}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.retryButtonText}>Go Back</Text> {/* TODO: i18n */}
+          <Text style={styles.retryButtonText}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -98,26 +100,26 @@ const ChallengeVerificationScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>{challenge.title}</Text>
-          <Text style={styles.subtitle}>Verification Requirements</Text> {/* TODO: i18n */}
+          <Text style={styles.subtitle}>{t('challengeVerification.verificationRequirements')}</Text>
         </View>
 
         {isProcessing && (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="large" color={theme.colors.text.inverse || 'white'} />
-            <Text style={styles.processingText}>Processing verification...</Text> {/* TODO: i18n */}
+            <Text style={styles.processingText}>{t('challengeVerification.processing')}</Text>
           </View>
         )}
 
         <View style={styles.content}>
           {/* Challenge description */}
           <View style={styles.descriptionContainer}>
-            <Text style={styles.descriptionTitle}>Challenge Description</Text> {/* TODO: i18n */}
+            <Text style={styles.descriptionTitle}>{t('challengeVerification.challengeDescription')}</Text>
             <Text style={styles.descriptionText}>{challenge.description}</Text>
           </View>
 
           {/* Verification methods */}
           <View style={styles.methodsContainer}>
-            <Text style={styles.sectionTitle}>Verification Methods</Text> {/* TODO: i18n */}
+            <Text style={styles.sectionTitle}>{t('challengeVerification.verificationMethods')}</Text>
 
             {verificationMethods.length > 0 ? (
               verificationMethods.map((method, index) => {
@@ -152,7 +154,7 @@ const ChallengeVerificationScreen: React.FC = () => {
                 }
               })
             ) : (
-              <Text style={styles.noMethodsText}>No verification methods found for this challenge.</Text> {/* TODO: i18n */}
+              <Text style={styles.noMethodsText}>{t('challengeVerification.noMethodsFound')}</Text>
             )}
           </View>
 
@@ -175,7 +177,7 @@ const ChallengeVerificationScreen: React.FC = () => {
                     size={20} 
                     color={theme.colors.text.inverse || 'white'} 
                   />
-                  <Text style={styles.submitButtonText}>Submit Verification</Text> {/* TODO: i18n */}
+                  <Text style={styles.submitButtonText}>{t('challengeVerification.submitVerification')}</Text>
                 </>
               )}
             </TouchableOpacity>

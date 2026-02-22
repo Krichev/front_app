@@ -3,6 +3,7 @@ import {BaseQueryFn, createApi, FetchArgs, fetchBaseQuery, FetchBaseQueryError} 
 import {RootState} from '../../../../app/providers/StoreProvider/store';
 import {logout, setTokens} from './authSlice';
 import {Alert} from 'react-native';
+import i18n from 'i18next';
 import KeychainService from "../../../../services/auth/KeychainService.ts";
 import NetworkConfigManager from '../../../../config/NetworkConfig';
 
@@ -129,9 +130,9 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
 
                     // Show user-friendly error message
                     Alert.alert(
-                        'Session Expired',
-                        'Your session has expired. Please log in again.',
-                        [{text: 'OK'}]
+                        i18n.t('auth.sessionExpired.title'),
+                        i18n.t('auth.sessionExpired.message'),
+                        [{text: i18n.t('common.ok')}]
                     );
                 }
             } catch (error) {
@@ -140,9 +141,9 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
                 await KeychainService.deleteAuthTokens()
 
                 Alert.alert(
-                    'Session Expired',
-                    'Your session has expired. Please log in again.',
-                    [{text: 'OK'}]
+                    i18n.t('auth.sessionExpired.title'),
+                    i18n.t('auth.sessionExpired.message'),
+                    [{text: i18n.t('common.ok')}]
                 );
             }
         } else {
@@ -152,9 +153,9 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             await KeychainService.deleteAuthTokens()
 
             Alert.alert(
-                'Authentication Required',
-                'Please log in to continue.',
-                [{text: 'OK'}]
+                i18n.t('auth.authRequired.title'),
+                i18n.t('auth.authRequired.message'),
+                [{text: i18n.t('common.ok')}]
             );
         }
     }

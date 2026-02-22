@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { VerificationMethod, VerificationType } from '../../../app/types';
 import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../../shared/ui/theme/createStyles';
@@ -11,6 +12,7 @@ interface GenericVerificationCardProps {
 }
 
 const GenericVerificationCard: React.FC<GenericVerificationCardProps> = ({ method }) => {
+  const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = themeStyles;
   const status = (method.status as any) || 'PENDING';
@@ -18,13 +20,13 @@ const GenericVerificationCard: React.FC<GenericVerificationCardProps> = ({ metho
   const getTypeConfig = (type: VerificationType) => {
     switch (type) {
       case 'QUIZ':
-        return { icon: 'help-circle-outline' as const, label: 'Quiz' }; // TODO: i18n
+        return { icon: 'help-circle-outline' as const, label: t('challengeVerification.types.quiz') };
       case 'MANUAL':
-        return { icon: 'hand-pointing-right' as const, label: 'Manual' }; // TODO: i18n
+        return { icon: 'hand-pointing-right' as const, label: t('challengeVerification.types.manual') };
       case 'FITNESS_API':
-        return { icon: 'run' as const, label: 'Fitness' }; // TODO: i18n
+        return { icon: 'run' as const, label: t('challengeVerification.types.fitness') };
       case 'ACTIVITY':
-        return { icon: 'lightning-bolt' as const, label: 'Activity' }; // TODO: i18n
+        return { icon: 'lightning-bolt' as const, label: t('challengeVerification.types.activity') };
       default:
         return { icon: 'checkbox-marked-circle-outline' as const, label: type };
     }
@@ -42,14 +44,14 @@ const GenericVerificationCard: React.FC<GenericVerificationCardProps> = ({ metho
             color={theme.colors.primary.main || '#2196F3'} 
             style={styles.typeIcon}
           />
-          <Text style={styles.title}>{config.label} Verification</Text> {/* TODO: i18n */}
+          <Text style={styles.title}>{t('challengeVerification.genericTitle', { type: config.label })}</Text>
         </View>
         <VerificationStatusBadge status={status} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.prompt}>
-          {method.details.description || 'Complete this verification to finish the challenge.'} {/* TODO: i18n */}
+          {method.details.description || t('challengeVerification.genericDefaultPrompt')}
         </Text>
       </View>
     </View>

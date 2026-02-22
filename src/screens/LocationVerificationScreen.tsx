@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import {
   useGetChallengeByIdQuery,
   useVerifyLocationChallengeMutation,
@@ -39,6 +40,7 @@ interface LocationDetails {
 }
 
 const LocationVerificationScreen: React.FC = () => {
+  const { t } = useTranslation();
   const route = useRoute<LocationVerificationRouteProp>();
   const navigation = useNavigation<LocationVerificationNavigationProp>();
   const { challengeId } = route.params;
@@ -99,11 +101,11 @@ const LocationVerificationScreen: React.FC = () => {
   const getCurrentLocation = async () => {
     if (!permissionGranted) {
       Alert.alert(
-          'Permission Required',
-          'Location permissions are required for verification.',
+          t('challengeVerification.location.permissionRequired'),
+          t('challengeVerification.location.permissionMessage'),
           [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: openSettings }
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('challengeVerification.location.openSettings'), onPress: openSettings }
           ]
       );
       return;
@@ -116,11 +118,11 @@ const LocationVerificationScreen: React.FC = () => {
       if (location) {
         setUserLocation(location);
       } else {
-        Alert.alert('Error', 'Failed to get your location. Please try again.');
+        Alert.alert(t('common.error'), t('challengeVerification.location.locationFailed'));
       }
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert('Error', 'Failed to get your location. Please try again.');
+      Alert.alert(t('common.error'), t('challengeVerification.location.locationFailed'));
     } finally {
       setIsCheckingLocation(false);
     }
@@ -129,9 +131,9 @@ const LocationVerificationScreen: React.FC = () => {
   // Submit location for verification
   const submitLocation = async () => {
     if (!userLocation || !targetLocation) {
-      Alert.alert('Error', !userLocation
-          ? 'Please check your location first.'
-          : 'Target location information is missing.');
+      Alert.alert(t('common.error'), !userLocation
+          ? t('challengeVerification.location.checkFirst')
+          : t('challengeVerification.location.targetMissing'));
       return;
     }
 
@@ -161,19 +163,19 @@ const LocationVerificationScreen: React.FC = () => {
       setVerificationResult({
         isVerified: response.isVerified,
         message: response.message || (response.isVerified
-            ? 'Location verification successful!'
-            : 'Location verification failed. You are not at the required location.'),
+            ? t('challengeVerification.location.verificationSuccessful')
+            : t('challengeVerification.location.failedMessage')),
         // distance: response.distance || distanceMeters,
       });
 
       // If verification is successful, show success message with option to return
       if (response.isVerified) {
         Alert.alert(
-            'Verification Successful',
-            response.message || 'Your location has been verified successfully!',
+            t('challengeVerification.location.verificationSuccessful'),
+            response.message || t('challengeVerification.location.successMessage'),
             [
               {
-                text: 'Back to Challenge',
+                text: t('challengeVerification.location.backToChallenge'),
                 onPress: () => navigation.navigate('ChallengeDetails', { challengeId })
               }
             ]
@@ -181,10 +183,10 @@ const LocationVerificationScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Error verifying location:', error);
-      Alert.alert('Error', 'Failed to verify location. Please try again.');
+      Alert.alert(t('common.error'), t('challengeVerification.location.submitFailed'));
       setVerificationResult({
         isVerified: false,
-        message: 'Error: Could not process verification request.',
+        message: t('challengeVerification.location.processingError'),
       });
     } finally {
       setIsProcessing(false);
@@ -196,7 +198,7 @@ const LocationVerificationScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4CAF50" />
-          <Text style={styles.loadingText}>Loading challenge details...</Text>
+          <Text style={styles.loadingText}>{t('challengeVerification.location.loadingChallenge')}</Text>
         </SafeAreaView>
     );
   }
@@ -205,7 +207,7 @@ const LocationVerificationScreen: React.FC = () => {
       <SafeAreaView style={styles.container}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header}>
-            <Text style={styles.title}>Location Verification</Text>
+            <Text style={styles.title}>{t('challengeVerification.location.title')}</Text>
             {challenge && (
                 <Text style={styles.subtitle}>{challenge.title}</Text>
             )}
@@ -213,45 +215,48 @@ const LocationVerificationScreen: React.FC = () => {
 
           {/* Instructions */}
           <View style={styles.instructionsContainer}>
-            <Text style={styles.instructionsTitle}>Instructions:</Text>
+            <Text style={styles.instructionsTitle}>{t('challengeVerification.location.instructions')}</Text>
             <Text style={styles.instructionsText}>
-              You need to be physically present at the challenge location to verify your participation.
-              {targetLocation?.address ? ` Location: ${targetLocation.address}` : ''}
+              {t('challengeVerification.location.defaultInstructions')}
+              {targetLocation?.address ? ' ' + t('challengeVerification.location.locationPrefix', { address: targetLocation.address }) : ''}
             </Text>
             {targetLocation && (
                 <Text style={styles.radiusText}>
-                  You must be within {targetLocation.radius || 100} meters of the target location.
+                  {t('challengeVerification.location.radiusInfo', { radius: targetLocation.radius || 100 })}
                 </Text>
             )}
           </View>
 
           {/* Current Location */}
           <View style={styles.locationContainer}>
-            <Text style={styles.locationTitle}>Your Current Location:</Text>
+            <Text style={styles.locationTitle}>{t('challengeVerification.location.yourLocation')}</Text>
             {userLocation ? (
                 <View style={styles.locationInfo}>
                   <Text style={styles.locationText}>
-                    Latitude: {userLocation.latitude.toFixed(6)}
+                    {t('challengeVerification.location.latitude')}: {userLocation.latitude.toFixed(6)}
                   </Text>
                   <Text style={styles.locationText}>
-                    Longitude: {userLocation.longitude.toFixed(6)}
+                    {t('challengeVerification.location.longitude')}: {userLocation.longitude.toFixed(6)}
                   </Text>
                   {targetLocation && (
                       <Text style={styles.locationText}>
-                        Distance to target: {Math.round(VerificationService.calculateDistance(
-                          userLocation.latitude,
-                          userLocation.longitude,
-                          targetLocation.latitude,
-                          targetLocation.longitude
-                      ))} meters
+                        {t('challengeVerification.location.distanceInfo', {
+                          distance: Math.round(VerificationService.calculateDistance(
+                            userLocation.latitude,
+                            userLocation.longitude,
+                            targetLocation.latitude,
+                            targetLocation.longitude
+                          )),
+                          radius: targetLocation.radius || 100
+                        })}
                       </Text>
                   )}
                 </View>
             ) : (
                 <Text style={styles.noLocationText}>
                   {permissionGranted === false
-                      ? 'Location permission denied. Please enable location services.'
-                      : 'No location data. Tap "Check My Location" to begin.'}
+                      ? t('challengeVerification.location.permissionMessage')
+                      : t('challengeVerification.location.notChecked')}
                 </Text>
             )}
           </View>
@@ -259,17 +264,17 @@ const LocationVerificationScreen: React.FC = () => {
           {/* Target Location Info */}
           {targetLocation && (
               <View style={styles.targetContainer}>
-                <Text style={styles.locationTitle}>Target Location:</Text>
+                <Text style={styles.locationTitle}>{t('challengeVerification.location.targetLocation')}</Text>
                 <View style={styles.locationInfo}>
                   <Text style={styles.locationText}>
-                    Latitude: {targetLocation.latitude.toFixed(6)}
+                    {t('challengeVerification.location.latitude')}: {targetLocation.latitude.toFixed(6)}
                   </Text>
                   <Text style={styles.locationText}>
-                    Longitude: {targetLocation.longitude.toFixed(6)}
+                    {t('challengeVerification.location.longitude')}: {targetLocation.longitude.toFixed(6)}
                   </Text>
                   {targetLocation.address && (
                       <Text style={styles.locationText}>
-                        Address: {targetLocation.address}
+                        {t('challengeVerification.location.address')}: {targetLocation.address}
                       </Text>
                   )}
                 </View>
@@ -290,10 +295,10 @@ const LocationVerificationScreen: React.FC = () => {
                 <Text style={styles.resultText}>{verificationResult.message}</Text>
                 {verificationResult.distance && (
                     <Text style={styles.distanceText}>
-                      Distance to target: {Math.round(verificationResult.distance)} meters
+                      {t('challengeVerification.location.distanceToTarget', { distance: Math.round(verificationResult.distance) })}
                       {verificationResult.isVerified
-                          ? ' (Within range)'
-                          : ` (Required: ${targetLocation?.radius || 100} meters)`}
+                          ? t('challengeVerification.location.withinRange')
+                          : t('challengeVerification.location.requiredRadius', { radius: targetLocation?.radius || 100 })}
                     </Text>
                 )}
               </View>
@@ -313,7 +318,7 @@ const LocationVerificationScreen: React.FC = () => {
             ) : (
                 <>
                   <MaterialIcons name="my-location" size={20} color="white" />
-                  <Text style={styles.buttonText}>Check My Location</Text>
+                  <Text style={styles.buttonText}>{t('challengeVerification.location.checkLocation')}</Text>
                 </>
             )}
           </TouchableOpacity>
@@ -333,7 +338,7 @@ const LocationVerificationScreen: React.FC = () => {
                 ) : (
                     <>
                       <MaterialIcons name="check" size={20} color="white" />
-                      <Text style={styles.submitButtonText}>Submit for Verification</Text>
+                      <Text style={styles.submitButtonText}>{t('challengeVerification.submitVerification')}</Text>
                     </>
                 )}
               </TouchableOpacity>
@@ -346,7 +351,7 @@ const LocationVerificationScreen: React.FC = () => {
                   onPress={openSettings}
               >
                 <MaterialIcons name="settings" size={20} color="white" />
-                <Text style={styles.buttonText}>Open Location Settings</Text>
+                <Text style={styles.buttonText}>{t('challengeVerification.location.openSettings')}</Text>
               </TouchableOpacity>
           )}
 
@@ -357,7 +362,7 @@ const LocationVerificationScreen: React.FC = () => {
               disabled={isProcessing || isVerifying}
           >
             <MaterialIcons name="arrow-back" size={20} color="#555" />
-            <Text style={styles.backButtonText}>Back to Challenge</Text>
+            <Text style={styles.backButtonText}>{t('challengeVerification.location.backToChallenge')}</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -365,7 +370,7 @@ const LocationVerificationScreen: React.FC = () => {
         {(isProcessing || isVerifying) && (
             <View style={styles.overlay}>
               <ActivityIndicator size="large" color="#FFFFFF" />
-              <Text style={styles.overlayText}>Processing verification...</Text>
+              <Text style={styles.overlayText}>{t('challengeVerification.processing')}</Text>
             </View>
         )}
       </SafeAreaView>

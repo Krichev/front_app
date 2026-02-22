@@ -1,6 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import {AudioPlayer} from './AudioPlayer';
 import {AudioRecorder} from './AudioRecorder';
 import {AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType} from '../../types/audioChallenge.types';
@@ -26,6 +27,7 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
   onRecordingComplete,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const challengeTypeInfo = question.audioChallengeType
     ? AUDIO_CHALLENGE_TYPES_INFO[question.audioChallengeType]
     : null;
@@ -42,8 +44,8 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
             </Text>
             <Text style={styles.typeDescription}>
               {question.minimumScorePercentage 
-                ? `Pass score: ${question.minimumScorePercentage}%`
-                : 'Complete the audio challenge'}
+                ? t('questionDisplay.karaoke.passScore', { percentage: question.minimumScorePercentage })
+                : t('questionDisplay.karaoke.completeChallenge')}
             </Text>
           </View>
         </View>
@@ -54,7 +56,7 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
       {/* Reference Audio Player */}
       {question.questionMediaUrl && (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Listen to Reference</Text>
+          <Text style={styles.sectionTitle}>{t('questionDisplay.karaoke.listenReference')}</Text>
           <AudioPlayer 
             audioUrl={question.questionMediaUrl}
             segmentStart={question.audioSegmentStart}
@@ -65,7 +67,7 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
 
       {/* Audio Recorder */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Record Your Response</Text>
+        <Text style={styles.sectionTitle}>{t('questionDisplay.karaoke.recordResponse')}</Text>
         <AudioRecorder
           onRecordingComplete={onRecordingComplete}
           disabled={disabled}

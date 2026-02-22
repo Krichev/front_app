@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Wager } from '../../../entities/WagerState/model/types';
 import { useTheme } from '../../../shared/ui/theme';
 import { Button, ButtonVariant } from '../../../shared/ui/Button/Button';
@@ -10,6 +11,7 @@ interface WagerInvitationCardProps {
 }
 
 export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager }) => {
+    const { t } = useTranslation();
     const { theme } = useTheme();
     const [acceptWager, { isLoading: isAccepting }] = useAcceptWagerMutation();
     const [declineWager, { isLoading: isDeclining }] = useDeclineWagerMutation();
@@ -38,7 +40,7 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
             const diff = expires - now;
 
             if (diff <= 0) {
-                setTimeLeft('Expired');
+                setTimeLeft(t('wager.invitation.expired'));
                 clearInterval(timer);
             } else {
                 const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -91,22 +93,29 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
                 <Text style={styles.icon}>{getStakeIcon()}</Text>
                 <View style={styles.headerText}>
                     <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                        Wager Challenge from {wager.creatorUsername}
+                        {t('wager.invitation.challengeFrom', { username: wager.creatorUsername })}
                     </Text>
                     <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-                        Expires in: {timeLeft}
+                        {t('wager.invitation.expiresIn', { time: timeLeft })}
                     </Text>
                 </View>
             </View>
 
             <View style={styles.content}>
                 <Text style={[styles.amount, { color: theme.colors.primary.main }]}>
-                    Stake: {wager.stakeAmount} {wager.stakeType === 'POINTS' ? 'Points' : wager.stakeType === 'SCREEN_TIME' ? 'Minutes' : wager.stakeCurrency || ''}
+                    {t('wager.invitation.stake', { 
+                        amount: wager.stakeAmount, 
+                        unit: wager.stakeType === 'POINTS' 
+                            ? t('wager.invitation.points') 
+                            : wager.stakeType === 'SCREEN_TIME' 
+                                ? t('wager.invitation.minutes') 
+                                : wager.stakeCurrency || '' 
+                    })}
                 </Text>
                 
                 {wager.stakeType === 'SOCIAL_QUEST' && (
                     <View style={[styles.penaltyBox, { backgroundColor: theme.colors.background.secondary }]}>
-                        <Text style={[styles.penaltyLabel, { color: theme.colors.text.secondary }]}>Loser's Penalty:</Text>
+                        <Text style={[styles.penaltyLabel, { color: theme.colors.text.secondary }]}>{t('wager.invitation.loserPenalty')}</Text>
                         <Text style={[styles.penaltyText, { color: theme.colors.text.primary }]}>
                             {wager.socialPenaltyDescription}
                         </Text>
@@ -121,14 +130,14 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
                     loading={isDeclining}
                     style={styles.button}
                 >
-                    Decline
+                    {t('wager.invitation.decline')}
                 </Button>
                 <Button 
                     onPress={handleAccept} 
                     loading={isAccepting}
                     style={styles.button}
                 >
-                    Accept
+                    {t('wager.invitation.accept')}
                 </Button>
             </View>
         </Animated.View>

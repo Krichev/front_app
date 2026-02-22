@@ -1,6 +1,7 @@
 import React from 'react';
 import type {StyleProp, TextStyle, ViewStyle} from 'react-native';
 import {StyleSheet, Text, TouchableOpacity} from 'react-native';
+import i18n from 'i18next';
 import {useTheme} from '../theme/ThemeProvider';
 
 // New enum that maps to theme variants
@@ -29,6 +30,7 @@ interface ButtonProps {
     textStyle?: StyleProp<TextStyle>;
     fullWidth?: boolean;
     loading?: boolean;
+    loadingText?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -41,6 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
                                                   textStyle,
                                                   fullWidth = false,
                                                   loading = false,
+                                                  loadingText,
                                               }) => {
     const { theme, components } = useTheme();
 
@@ -87,7 +90,7 @@ export const Button: React.FC<ButtonProps> = ({
             activeOpacity={disabled || loading ? 1 : 0.7}
         >
             {loading ? (
-                <Text style={getTextStyle()}>Loading...</Text>
+                <Text style={getTextStyle()}>{loadingText || i18n.t('common.loading')}</Text>
             ) : (
                 <Text style={getTextStyle()}>
                     {children}

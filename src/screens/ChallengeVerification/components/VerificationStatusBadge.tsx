@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { VerificationStatus } from '../../../app/types';
 import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../../shared/ui/theme/createStyles';
@@ -10,6 +11,7 @@ interface VerificationStatusBadgeProps {
 }
 
 const VerificationStatusBadge: React.FC<VerificationStatusBadgeProps> = ({ status }) => {
+  const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = themeStyles;
 
@@ -19,20 +21,20 @@ const VerificationStatusBadge: React.FC<VerificationStatusBadgeProps> = ({ statu
         return {
           icon: 'check-circle' as const,
           color: theme.colors.success.main,
-          text: 'Verified', // TODO: i18n
+          text: t('challengeVerification.status.verified'),
         };
       case 'FAILED':
         return {
           icon: 'close-circle' as const,
           color: theme.colors.error.main,
-          text: 'Failed', // TODO: i18n
+          text: t('challengeVerification.status.failed'),
         };
       case 'PENDING':
       default:
         return {
           icon: 'clock-outline' as const,
           color: theme.colors.warning.main,
-          text: 'Pending', // TODO: i18n
+          text: t('challengeVerification.status.pending'),
         };
     }
   };

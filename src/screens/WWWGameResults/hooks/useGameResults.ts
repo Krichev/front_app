@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { RootState } from '../../../app/providers/StoreProvider/store';
 import { WWWGameService, PlayerPerformance } from "../../../services/wwwGame/wwwGameService";
 import {
@@ -56,6 +57,7 @@ export interface UseGameResultsReturn {
 }
 
 export const useGameResults = (): UseGameResultsReturn => {
+    const { t } = useTranslation();
     const route = useRoute<WWWGameResultsRouteProp>();
     const navigation = useNavigation<WWWGameResultsNavigationProp>();
     const { teamName, score, totalRounds, roundsData, challengeId } = route.params;
@@ -127,7 +129,7 @@ export const useGameResults = (): UseGameResultsReturn => {
                             playerWhoAnswered: round.playerWhoAnswered
                         }))
                     },
-                    notes: `Quiz completed with score ${score}/${totalRounds}`
+                    notes: t('gameResults.completionNotes', { score, total: totalRounds })
                 }
             }).unwrap();
 
@@ -141,30 +143,30 @@ export const useGameResults = (): UseGameResultsReturn => {
         } catch (error) {
             console.error('Error completing challenge:', error);
             Alert.alert(
-                'Error',
-                'Failed to submit challenge completion. Please try again.',
-                [{ text: 'OK', onPress: () => navigation.navigate('Main', { screen: 'Home' }) }]
+                t('gameResults.alerts.error.title'),
+                t('gameResults.alerts.error.submitFailed'),
+                [{ text: t('common.ok'), onPress: () => navigation.navigate('Main', { screen: 'Home' }) }]
             );
         } finally {
             setSubmittingChallenge(false);
         }
-    }, [challengeId, isSubmitting, submittingChallenge, score, totalRounds, teamName, roundsData, submitCompletion, navigation]);
+    }, [challengeId, isSubmitting, submittingChallenge, score, totalRounds, teamName, roundsData, submitCompletion, navigation, t]);
 
     // Play again button handler
     const playAgain = useCallback(() => {
         if (challengeId) {
             Alert.alert(
-                'Complete Challenge?',
-                'Would you like to mark this challenge as completed?',
+                t('gameResults.alerts.completeChallenge.title'),
+                t('gameResults.alerts.completeChallenge.message'),
                 [
                     {
-                        text: 'Yes, Complete It',
+                        text: t('gameResults.alerts.completeChallenge.yesComplete'),
                         onPress: () => {
                             submitChallengeWithResults();
                         }
                     },
                     {
-                        text: 'No, Play Again',
+                        text: t('gameResults.alerts.completeChallenge.noPlayAgain'),
                         onPress: () => navigation.navigate('CreateWWWQuest')
                     }
                 ]
@@ -172,23 +174,23 @@ export const useGameResults = (): UseGameResultsReturn => {
         } else {
             navigation.navigate('CreateWWWQuest');
         }
-    }, [challengeId, navigation, submitChallengeWithResults]);
+    }, [challengeId, navigation, submitChallengeWithResults, t]);
 
     // Return home button handler
     const returnHome = useCallback(() => {
         if (challengeId) {
             Alert.alert(
-                'Complete Challenge?',
-                'Would you like to mark this challenge as completed?',
+                t('gameResults.alerts.completeChallenge.title'),
+                t('gameResults.alerts.completeChallenge.message'),
                 [
                     {
-                        text: 'Yes, Complete It',
+                        text: t('gameResults.alerts.completeChallenge.yesComplete'),
                         onPress: () => {
                             submitChallengeWithResults();
                         }
                     },
                     {
-                        text: 'No, Return Home',
+                        text: t('gameResults.alerts.completeChallenge.noReturnHome'),
                         onPress: () => navigation.navigate('Main', { screen: 'Home' })
                     }
                 ]
@@ -196,7 +198,7 @@ export const useGameResults = (): UseGameResultsReturn => {
         } else {
             navigation.navigate('Main', { screen: 'Home' });
         }
-    }, [challengeId, navigation, submitChallengeWithResults]);
+    }, [challengeId, navigation, submitChallengeWithResults, t]);
 
     // End game function
     const endGame = useCallback(() => {
@@ -204,15 +206,15 @@ export const useGameResults = (): UseGameResultsReturn => {
 
         if (challengeId) {
             Alert.alert(
-                'Complete Challenge?',
-                'Would you like to mark this challenge as completed?',
+                t('gameResults.alerts.completeChallenge.title'),
+                t('gameResults.alerts.completeChallenge.message'),
                 [
                     {
-                        text: 'Yes',
+                        text: t('gameResults.alerts.completeChallenge.yes'),
                         onPress: submitChallengeWithResults
                     },
                     {
-                        text: 'No',
+                        text: t('gameResults.alerts.completeChallenge.no'),
                         onPress: () => navigation.navigate('Main', { screen: 'Home' })
                     }
                 ]
@@ -220,7 +222,7 @@ export const useGameResults = (): UseGameResultsReturn => {
         } else {
             navigation.navigate('Main', { screen: 'Home' });
         }
-    }, [challengeId, navigation, submitChallengeWithResults]);
+    }, [challengeId, navigation, submitChallengeWithResults, t]);
 
     return {
         teamName,

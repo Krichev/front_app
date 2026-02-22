@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { VerificationMethod } from '../../../app/types';
 import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../../shared/ui/theme/createStyles';
@@ -22,13 +23,14 @@ const PhotoVerificationCard: React.FC<PhotoVerificationCardProps> = ({
   isSubmitting,
   isProcessing,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = themeStyles;
   const status = (method.status as any) || 'PENDING';
 
   const getButtonText = () => {
-    if (status === 'COMPLETED') return 'Verified ✓'; // TODO: i18n
-    return photoUri ? 'Retake Photo' : 'Take Photo'; // TODO: i18n
+    if (status === 'COMPLETED') return t('challengeVerification.photo.verified');
+    return photoUri ? t('challengeVerification.photo.retake') : t('challengeVerification.photo.take');
   };
 
   const isDisabled = isSubmitting || isProcessing || status === 'COMPLETED';
@@ -36,13 +38,13 @@ const PhotoVerificationCard: React.FC<PhotoVerificationCardProps> = ({
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>Photo Verification</Text> {/* TODO: i18n */}
+        <Text style={styles.title}>{t('challengeVerification.photo.title')}</Text>
         <VerificationStatusBadge status={status} />
       </View>
 
       <View style={styles.content}>
         <Text style={styles.prompt}>
-          {method.details.photoPrompt || method.details.description || 'Take a photo for verification'} {/* TODO: i18n */}
+          {method.details.photoPrompt || method.details.description || t('challengeVerification.photo.defaultPrompt')}
         </Text>
 
         {photoUri && (

@@ -1,4 +1,4 @@
-import { createStyles } from '../../../shared/ui/theme/createStyles';
+import {createStyles} from '../../shared/ui/theme/createStyles';
 
 export const themeStyles = createStyles(theme => ({
     container: {
