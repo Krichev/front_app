@@ -268,7 +268,7 @@ const UserProfileScreen: React.FC = () => {
                         {formatDate(item.created_at)}
                     </Text>
                 </View>
-                {item.description && (
+                {!!item.description && (
                     <Text
                         style={[
                             styles.challengeDescription,
@@ -321,7 +321,7 @@ const UserProfileScreen: React.FC = () => {
 
                     <View style={styles.userInfo}>
                         <Text style={styles.username}>{user.username}</Text>
-                        {user.bio && <Text style={styles.bio}>{user.bio}</Text>}
+                        {!!user.bio && <Text style={styles.bio}>{user.bio}</Text>}
                         <Text style={styles.joinDate}>{formatJoinDate(user.createdAt)}</Text>
 
                         {!isCurrentUser && relationship && (
@@ -335,36 +335,37 @@ const UserProfileScreen: React.FC = () => {
                         )}
                     </View>
 
-                                            {isCurrentUser ? (
-                                            <TouchableOpacity
-                                                style={styles.editProfileButton}
-                                                onPress={handleEditProfile}
-                                            >
-                                                <MaterialCommunityIcons name="pencil" size={18} color={theme.colors.text.inverse} />
-                                                <Text style={styles.editProfileButtonText}>{t('profile.editProfile')}</Text>
-                                            </TouchableOpacity>
-                                        ) : (
-                                            !relationship ? (
-                                                <TouchableOpacity
-                                                    style={styles.addContactButton}
-                                                    onPress={handleAddContact}
-                                                    disabled={isSendingRequest}
-                                                >
-                                                    {isSendingRequest ? (
-                                                        <ActivityIndicator size="small" color={theme.colors.text.inverse} />
-                                                    ) : (
-                                                        <>
-                                                            <MaterialCommunityIcons name="account-plus" size={18} color={theme.colors.text.inverse} />
-                                                            <Text style={styles.addContactButtonText}>{t('profile.addToContacts')}</Text>
-                                                        </>
-                                                    )}
-                                                </TouchableOpacity>
-                                            ) : relationship.status === RelationshipStatus.PENDING ? (
-                                                <View style={styles.pendingBadge}>
-                                                    <Text style={styles.pendingText}>{t('profile.requestPending')}</Text>
-                                                </View>
-                                            ) : null
-                                        )}                </View>
+                    {isCurrentUser ? (
+                        <TouchableOpacity
+                            style={styles.editProfileButton}
+                            onPress={handleEditProfile}
+                        >
+                            <MaterialCommunityIcons name="pencil" size={18} color={theme.colors.text.inverse} />
+                            <Text style={styles.editProfileButtonText}>{t('profile.editProfile')}</Text>
+                        </TouchableOpacity>
+                    ) : (
+                        !relationship ? (
+                            <TouchableOpacity
+                                style={styles.addContactButton}
+                                onPress={handleAddContact}
+                                disabled={isSendingRequest}
+                            >
+                                {isSendingRequest ? (
+                                    <ActivityIndicator size="small" color={theme.colors.text.inverse} />
+                                ) : (
+                                    <>
+                                        <MaterialCommunityIcons name="account-plus" size={18} color={theme.colors.text.inverse} />
+                                        <Text style={styles.addContactButtonText}>{t('profile.addToContacts')}</Text>
+                                    </>
+                                )}
+                            </TouchableOpacity>
+                        ) : relationship.status === RelationshipStatus.PENDING ? (
+                            <View style={styles.pendingBadge}>
+                                <Text style={styles.pendingText}>{t('profile.requestPending')}</Text>
+                            </View>
+                        ) : null
+                    )}
+                </View>
 
                 {/* Screen Time Section (Self Only) */}
                 {isCurrentUser && <ScreenTimeBudgetWidget />}

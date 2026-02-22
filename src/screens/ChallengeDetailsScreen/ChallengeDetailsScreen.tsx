@@ -11,6 +11,7 @@ import {
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 
 // Hooks
 import { useChallengeDetails } from './hooks/useChallengeDetails';
@@ -49,6 +50,7 @@ const ChallengeDetailsScreen: React.FC = () => {
     const route = useRoute<ChallengeDetailsRouteProp>();
     const navigation = useNavigation<ChallengeDetailsNavigationProp>();
     const { colors } = useTheme();
+    const { t } = useTranslation();
 
     const challengeId = route.params?.challengeId;
     const [showInviteModal, setShowInviteModal] = useState(false);
@@ -58,12 +60,12 @@ const ChallengeDetailsScreen: React.FC = () => {
     useEffect(() => {
         if (!challengeId) {
             Alert.alert(
-                'Error',
-                'Challenge ID not found. Returning to challenges list.',
-                [{ text: 'OK', onPress: () => navigateToTab(navigation, 'Challenges') }]
+                t('common.error'),
+                t('challengeDetails.messages.idNotFound'),
+                [{ text: t('common.ok'), onPress: () => navigateToTab(navigation, 'Challenges') }]
             );
         }
-    }, [challengeId, navigation]);
+    }, [challengeId, navigation, t]);
 
     // Data fetching and derived state
     const details = useChallengeDetails(challengeId);
@@ -98,7 +100,7 @@ const ChallengeDetailsScreen: React.FC = () => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={colors.primary.main} />
-                    <Text style={styles.loadingText}>Loading challenge...</Text>
+                    <Text style={styles.loadingText}>{t('challengeDetails.messages.loading')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -110,9 +112,9 @@ const ChallengeDetailsScreen: React.FC = () => {
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
                     <MaterialCommunityIcons name="alert-circle" size={64} color={colors.error.main} />
-                    <Text style={styles.errorText}>Failed to load challenge</Text>
+                    <Text style={styles.errorText}>{t('challengeDetails.messages.error')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={() => details.safeRefetch()}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
+                        <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>

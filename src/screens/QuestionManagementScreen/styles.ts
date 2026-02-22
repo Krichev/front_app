@@ -132,7 +132,7 @@ export const themeStyles = createStyles(theme => ({
         backgroundColor: theme.colors.neutral.gray[100],
         paddingHorizontal: theme.spacing.sm,
         paddingVertical: theme.spacing.xs,
-        borderRadius: theme.layout.borderRadius.xs,
+        borderRadius: theme.layout.borderRadius.sm,
     },
     questionTopic: {
         fontSize: theme.typography.fontSize.xs,
@@ -158,7 +158,7 @@ export const themeStyles = createStyles(theme => ({
         backgroundColor: theme.colors.neutral.gray[300],
         paddingHorizontal: theme.spacing.sm,
         paddingVertical: theme.spacing.xs,
-        borderRadius: theme.layout.borderRadius.xs,
+        borderRadius: theme.layout.borderRadius.sm,
     },
     selectButtonText: {
         fontSize: theme.typography.fontSize.xs,

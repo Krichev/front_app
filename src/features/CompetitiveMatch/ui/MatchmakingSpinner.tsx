@@ -1,6 +1,7 @@
 // src/features/CompetitiveMatch/ui/MatchmakingSpinner.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../shared/ui/theme';
 
 interface MatchmakingSpinnerProps {
@@ -10,6 +11,7 @@ interface MatchmakingSpinnerProps {
 
 export const MatchmakingSpinner: React.FC<MatchmakingSpinnerProps> = ({ estimatedWait, queuePosition }) => {
     const { theme } = useTheme();
+    const { t } = useTranslation();
     const spinValue = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -33,15 +35,17 @@ export const MatchmakingSpinner: React.FC<MatchmakingSpinnerProps> = ({ estimate
             <Animated.View style={[styles.circle, { borderColor: theme.colors.primary.main, transform: [{ rotate: spin }] }]}>
                 <Text style={styles.icon}>🔍</Text>
             </Animated.View>
-            <Text style={[styles.text, { color: theme.colors.text.primary }]}>Looking for opponent...</Text>
+            <Text style={[styles.text, { color: theme.colors.text.primary }]}>
+                {t('competitive.matchmaking.lookingForOpponent')}
+            </Text>
             {queuePosition !== undefined && (
                 <Text style={[styles.subtext, { color: theme.colors.text.secondary }]}>
-                    Position in queue: {queuePosition}
+                    {t('competitive.matchmaking.queuePosition', { position: queuePosition })}
                 </Text>
             )}
             {estimatedWait !== undefined && (
                 <Text style={[styles.subtext, { color: theme.colors.text.secondary }]}>
-                    Estimated wait: ~{estimatedWait}s
+                    {t('competitive.matchmaking.estimatedWait', { seconds: estimatedWait })}
                 </Text>
             )}
         </View>

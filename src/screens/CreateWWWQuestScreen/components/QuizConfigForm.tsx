@@ -197,7 +197,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                     >
                         <Text style={styles.timeButtonText}>-</Text>
                     </TouchableOpacity>
-                    <Text style={styles.timeValue}>{t('createQuest.quizConfig.seconds', { count: config?.roundTime || 60 })}</Text>
+                    <Text style={styles.timeValue}>{t('common.seconds', { count: config?.roundTime || 60 })}</Text>
                     <TouchableOpacity
                         onPress={() => updateConfig({ roundTime: Math.min(300, (config?.roundTime || 60) + 10) })}
                         style={styles.timeButton}

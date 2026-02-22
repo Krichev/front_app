@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useGetUserMatchesQuery } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import { useTheme } from '../../shared/ui/theme';
 import { CompetitiveMatch } from '../../entities/CompetitiveMatch/model/types';
@@ -9,6 +10,7 @@ import { CompetitiveMatch } from '../../entities/CompetitiveMatch/model/types';
 export const CompetitiveHistoryScreen = () => {
     const navigation = useNavigation<any>();
     const { theme } = useTheme();
+    const { t } = useTranslation();
     const { data: matches, isLoading } = useGetUserMatchesQuery({});
 
     const renderItem = ({ item }: { item: CompetitiveMatch }) => (
@@ -18,14 +20,14 @@ export const CompetitiveHistoryScreen = () => {
         >
             <View style={styles.row}>
                 <Text style={[styles.type, { color: theme.colors.primary.main }]}>
-                    {item.audioChallengeType}
+                    {t(`audioChallenge.types.${item.audioChallengeType}.label`)}
                 </Text>
                 <Text style={[styles.date, { color: theme.colors.text.secondary }]}>
                     {new Date(item.createdAt || '').toLocaleDateString()}
                 </Text>
             </View>
             <Text style={[styles.vs, { color: theme.colors.text.primary }]}>
-                vs {item.player2Username || 'Opponent'}
+                vs {item.player2Username || t('competitive.history.opponent')}
             </Text>
             <Text style={[styles.status, { color: item.status === 'COMPLETED' ? theme.colors.success.main : theme.colors.text.secondary }]}>
                 {item.status}
@@ -42,7 +44,7 @@ export const CompetitiveHistoryScreen = () => {
                 contentContainerStyle={styles.list}
                 ListEmptyComponent={
                     <Text style={[styles.empty, { color: theme.colors.text.secondary }]}>
-                        No matches found
+                        {t('competitive.history.noMatches')}
                     </Text>
                 }
             />

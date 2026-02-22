@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, FlatList } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useMultiplayerRoomService } from '../features/MultiplayerRoom/services/MultiplayerRoomService';
 import { useSelector } from 'react-redux';
@@ -15,6 +16,7 @@ const MultiplayerGameOverScreen: React.FC = () => {
     const navigation = useNavigation<GameOverNavigationProp>();
     const { roomCode } = route.params;
     const user = useSelector((state: RootState) => state.auth.user);
+    const { t } = useTranslation();
 
     const { players } = useMultiplayerRoomService(roomCode);
     const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
@@ -24,16 +26,18 @@ const MultiplayerGameOverScreen: React.FC = () => {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.content}>
-                <Text style={styles.title}>Game Over!</Text>
+                <Text style={styles.title}>{t('multiplayer.gameOver.title')}</Text>
                 
                 <View style={styles.rankContainer}>
-                    <Text style={styles.rankLabel}>YOUR RANK</Text>
+                    <Text style={styles.rankLabel}>{t('multiplayer.gameOver.yourRank')}</Text>
                     <Text style={styles.rankValue}>#{myRank}</Text>
-                    <Text style={styles.scoreValue}>{me?.score || 0} pts</Text>
+                    <Text style={styles.scoreValue}>
+                        {t('multiplayer.gameOver.points', { count: me?.score || 0 })}
+                    </Text>
                 </View>
 
                 <View style={styles.leaderboard}>
-                    <Text style={styles.leaderboardTitle}>Leaderboard</Text>
+                    <Text style={styles.leaderboardTitle}>{t('multiplayer.gameOver.leaderboard')}</Text>
                     <FlatList
                         data={sortedPlayers}
                         keyExtractor={(item) => item.userId.toString()}
@@ -51,7 +55,7 @@ const MultiplayerGameOverScreen: React.FC = () => {
                     style={styles.homeButton}
                     onPress={() => navigation.navigate('Main', { screen: 'Home' })}
                 >
-                    <Text style={styles.homeButtonText}>RETURN HOME</Text>
+                    <Text style={styles.homeButtonText}>{t('multiplayer.gameOver.returnHome')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

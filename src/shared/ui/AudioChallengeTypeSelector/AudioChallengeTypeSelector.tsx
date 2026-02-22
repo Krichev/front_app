@@ -2,6 +2,7 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import {AUDIO_CHALLENGE_TYPES, AudioChallengeType, AudioChallengeTypeInfo,} from '../../../types/audioChallenge.types';
 
 // ============================================================================
@@ -31,8 +32,11 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
     selectedType,
     onSelectType,
     disabled = false,
-    label = 'Challenge Type *',
+    label,
 }) => {
+    const { t } = useTranslation();
+    const displayLabel = label || t('audioChallenge.selector.label');
+
     const renderTypeCard = (typeInfo: AudioChallengeTypeInfo) => {
         const isSelected = selectedType === typeInfo.type;
 
@@ -65,7 +69,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
                     ]}
                     numberOfLines={1}
                 >
-                    {typeInfo.label}
+                    {t(`audioChallenge.types.${typeInfo.type}.label`)}
                 </Text>
 
                 {/* Description */}
@@ -76,7 +80,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
                     ]}
                     numberOfLines={2}
                 >
-                    {typeInfo.description}
+                    {t(`audioChallenge.types.${typeInfo.type}.description`)}
                 </Text>
 
                 {/* Scoring indicators */}
@@ -89,7 +93,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
                                 color={isSelected ? '#007AFF' : '#999'}
                             />
                             <Text style={[styles.indicatorText, isSelected && styles.indicatorTextSelected]}>
-                                Pitch
+                                {t('audioChallenge.selector.pitch')}
                             </Text>
                         </View>
                     )}
@@ -101,7 +105,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
                                 color={isSelected ? '#007AFF' : '#999'}
                             />
                             <Text style={[styles.indicatorText, isSelected && styles.indicatorTextSelected]}>
-                                Rhythm
+                                {t('audioChallenge.selector.rhythm')}
                             </Text>
                         </View>
                     )}
@@ -113,7 +117,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
                                 color={isSelected ? '#007AFF' : '#999'}
                             />
                             <Text style={[styles.indicatorText, isSelected && styles.indicatorTextSelected]}>
-                                Voice
+                                {t('audioChallenge.selector.voice')}
                             </Text>
                         </View>
                     )}
@@ -127,7 +131,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
                             size={10}
                             color="#666"
                         />
-                        <Text style={styles.requiresAudioText}>Needs audio</Text>
+                        <Text style={styles.requiresAudioText}>{t('audioChallenge.selector.needsAudio')}</Text>
                     </View>
                 )}
 
@@ -147,7 +151,7 @@ export const AudioChallengeTypeSelector: React.FC<AudioChallengeTypeSelectorProp
 
     return (
         <View style={styles.container}>
-            <Text style={styles.label}>{label}</Text>
+            <Text style={styles.label}>{displayLabel}</Text>
             <View style={styles.grid}>
                 {AUDIO_CHALLENGE_TYPES.map(renderTypeCard)}
             </View>

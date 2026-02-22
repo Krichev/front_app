@@ -4,6 +4,7 @@ import {Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpaci
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
+import {useTranslation} from 'react-i18next';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {RootStackParamList} from '../navigation/AppNavigator';
@@ -14,41 +15,42 @@ type GamesHomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamLis
 const GamesHomeScreen: React.FC = () => {
     const navigation = useNavigation<GamesHomeScreenNavigationProp>();
     const { user } = useSelector((state: RootState) => state.auth);
+    const { t } = useTranslation();
 
     // Game options to display
     const gameOptions = [
         {
             id: 'www',
-            title: 'WWW_QUIZ',
-            description: 'A team trivia game where players discuss and answer challenging questions.',
+            title: t('games.www.title'),
+            description: t('games.www.description'),
             icon: 'brain',
             color: '#4CAF50',
             onPress: () => navigation.navigate('CreateWWWQuest'),
         },
         {
             id: 'vibration-quiz',
-            title: 'Feel the Beat',
-            description: 'Guess the song from its rhythm vibrations!',
+            title: t('games.vibration.title'),
+            description: t('games.vibration.description'),
             icon: 'vibrate',
             color: '#9C27B0',
             onPress: () => navigation.navigate('VibrationQuiz', {}),
         },
         {
             id: 'rhythm',
-            title: 'Rhythm Game',
-            description: 'Test your timing with this fun rhythm-based challenge.',
+            title: t('games.rhythm.title'),
+            description: t('games.rhythm.description'),
             icon: 'music-note',
             color: '#2196F3',
-            onPress: () =>  Alert.alert('Coming soon!'),
+            onPress: () =>  Alert.alert(t('games.comingSoonAlert')),
             comingSoon: true,
         },
         {
             id: 'quiz',
-            title: 'Quiz Challenge',
-            description: 'Test your knowledge in various categories.',
+            title: t('games.quiz.title'),
+            description: t('games.quiz.description'),
             icon: 'help-circle',
             color: '#FF9800',
-            onPress: () =>  Alert.alert('Coming soon!'),
+            onPress: () =>  Alert.alert(t('games.comingSoonAlert')),
             comingSoon: true,
         },
     ];
@@ -57,8 +59,8 @@ const GamesHomeScreen: React.FC = () => {
     const adminOptions = [
         {
             id: 'question-management',
-            title: 'Question Management',
-            description: 'Add, edit, and manage questions for the WWW_QUIZ game.',
+            title: t('games.questionManagement.title'),
+            description: t('games.questionManagement.description'),
             icon: 'playlist-edit',
             color: '#673AB7',
             onPress: () => navigation.navigate('QuestionManagement'),
@@ -81,7 +83,7 @@ const GamesHomeScreen: React.FC = () => {
                 <Text style={styles.gameDescription}>{game.description}</Text>
                 {game.comingSoon && (
                     <View style={styles.comingSoonTag}>
-                        <Text style={styles.comingSoonText}>COMING SOON</Text>
+                        <Text style={styles.comingSoonText}>{t('games.comingSoon')}</Text>
                     </View>
                 )}
             </View>
@@ -92,8 +94,8 @@ const GamesHomeScreen: React.FC = () => {
         <SafeAreaView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Games</Text>
-                    <Text style={styles.headerSubtitle}>Challenge your mind</Text>
+                    <Text style={styles.headerTitle}>{t('games.title')}</Text>
+                    <Text style={styles.headerSubtitle}>{t('games.subtitle')}</Text>
                 </View>
 
                 <View style={styles.gamesContainer}>
@@ -102,7 +104,7 @@ const GamesHomeScreen: React.FC = () => {
 
                 {/* Featured Game */}
                 <View style={styles.featuredGameSection}>
-                    <Text style={styles.sectionTitle}>Featured Game</Text>
+                    <Text style={styles.sectionTitle}>{t('games.featuredGame')}</Text>
                     <TouchableOpacity
                         style={styles.featuredGameCard}
                         onPress={() => navigation.navigate('CreateWWWQuest')}
@@ -113,16 +115,16 @@ const GamesHomeScreen: React.FC = () => {
                             defaultSource={require('../../assets/www-game-banner.png')}
                         />
                         <View style={styles.featuredOverlay}>
-                            <Text style={styles.featuredTitle}>WWW_QUIZ</Text>
+                            <Text style={styles.featuredTitle}>{t('games.www.title')}</Text>
                             <Text style={styles.featuredDescription}>
-                                A challenging team-based trivia game with AI-powered hosting
+                                {t('games.www.featuredDescription')}
                             </Text>
                             <View style={styles.playButtonContainer}>
                                 <TouchableOpacity
                                     style={styles.playButton}
                                     onPress={() => navigation.navigate('CreateWWWQuest')}
                                 >
-                                    <Text style={styles.playButtonText}>PLAY NOW</Text>
+                                    <Text style={styles.playButtonText}>{t('games.playNow')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -132,12 +134,12 @@ const GamesHomeScreen: React.FC = () => {
                 {/* Admin Tools Section */}
                 <View style={styles.adminSection}>
                     <View style={styles.adminHeaderRow}>
-                        <Text style={styles.sectionTitle}>Admin Tools</Text>
+                        <Text style={styles.sectionTitle}>{t('games.adminTools.title')}</Text>
                         <TouchableOpacity
                             style={styles.infoButton}
                             onPress={() => Alert.alert(
-                                'Admin Tools',
-                                'These tools allow you to manage game content and settings.'
+                                t('games.adminTools.title'),
+                                t('games.adminTools.description')
                             )}
                         >
                             <MaterialCommunityIcons name="information-outline" size={20} color="#666" />
@@ -149,12 +151,12 @@ const GamesHomeScreen: React.FC = () => {
 
                 {/* Recent Activity */}
                 <View style={styles.recentActivitySection}>
-                    <Text style={styles.sectionTitle}>Recent Activity</Text>
+                    <Text style={styles.sectionTitle}>{t('games.recentActivity.title')}</Text>
                     {/* Display a message when no activity is available */}
                     <View style={styles.emptyStateContainer}>
                         <MaterialCommunityIcons name="gamepad-variant" size={60} color="#e0e0e0" />
                         <Text style={styles.emptyStateText}>
-                            No recent games played. Start a new game to see your activity here!
+                            {t('games.recentActivity.noActivity')}
                         </Text>
                     </View>
                 </View>

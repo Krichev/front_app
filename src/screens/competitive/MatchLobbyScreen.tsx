@@ -1,10 +1,11 @@
 // src/screens/competitive/MatchLobbyScreen.tsx
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Clipboard, Share } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useGetMatchQuery, useStartMatchMutation } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import { useTheme } from '../../shared/ui/theme';
-import { Button, ButtonVariant } from '../../shared/ui/Button/Button';
+import { Button } from '../../shared/ui/Button/Button';
 
 type MatchLobbyRouteProp = RouteProp<{ params: { matchId: number } }, 'params'>;
 
@@ -13,6 +14,7 @@ export const MatchLobbyScreen = () => {
     const route = useRoute<MatchLobbyRouteProp>();
     const { matchId } = route.params;
     const { theme } = useTheme();
+    const { t } = useTranslation();
 
     const { data: match, isLoading } = useGetMatchQuery(matchId, {
         pollingInterval: 3000,
@@ -37,18 +39,22 @@ export const MatchLobbyScreen = () => {
     };
 
     if (isLoading || !match) {
-        return <View style={styles.container}><Text>Loading lobby...</Text></View>;
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.background.primary, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: theme.colors.text.primary }}>{t('competitive.matchLobby.loading')}</Text>
+            </View>
+        );
     }
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
             <View style={styles.content}>
                 <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                    Match Lobby
+                    {t('competitive.matchLobby.title')}
                 </Text>
                 
                 <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-                    {match.audioChallengeType} • {match.totalRounds} Rounds
+                    {match.audioChallengeType} • {t('competitive.matchLobby.rounds', { count: match.totalRounds })}
                 </Text>
 
                 <View style={styles.vsContainer}>
@@ -57,19 +63,19 @@ export const MatchLobbyScreen = () => {
                     </Text>
                     <Text style={[styles.vs, { color: theme.colors.primary.main }]}>VS</Text>
                     <Text style={[styles.player, { color: match.player2Username ? theme.colors.text.primary : theme.colors.text.disabled }]}>
-                        {match.player2Username || 'Waiting...'}
+                        {match.player2Username || t('competitive.matchLobby.waitingForOpponent')}
                     </Text>
                 </View>
 
                 {match.status === 'WAITING_FOR_OPPONENT' && (
                     <Text style={[styles.waiting, { color: theme.colors.text.secondary }]}>
-                        Waiting for opponent to accept...
+                        {t('competitive.matchLobby.waitingDescription')}
                     </Text>
                 )}
 
                 {match.status === 'READY' && (
                     <Button onPress={handleStart} style={styles.button}>
-                        Start Match
+                        {t('competitive.matchLobby.startMatch')}
                     </Button>
                 )}
             </View>

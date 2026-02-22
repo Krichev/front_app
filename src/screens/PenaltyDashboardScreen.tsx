@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     RefreshControl
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../shared/ui/theme';
 import { useGetMyPenaltiesQuery } from '../entities/WagerState/model/slice/wagerApi';
 import { Penalty, PenaltyStatus } from '../entities/WagerState/model/types';
@@ -23,6 +24,7 @@ type PenaltyTab = 'PENDING' | 'ACTIVE' | 'COMPLETED';
 
 export const PenaltyDashboardScreen: React.FC = () => {
     const { theme } = useTheme();
+    const { t } = useTranslation();
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const [activeTab, setActiveTab] = useState<PenaltyTab>('PENDING');
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -51,6 +53,24 @@ export const PenaltyDashboardScreen: React.FC = () => {
         }
     };
 
+    const getStatusLabel = (status: string) => {
+        switch (status) {
+            case 'PENDING': return t('penalty.status.pending');
+            case 'IN_PROGRESS': return t('penalty.status.inProgress');
+            case 'VERIFIED': return t('penalty.status.verified');
+            case 'FAILED': return t('penalty.status.failed');
+            default: return status;
+        }
+    };
+
+    const getTabLabel = (tab: PenaltyTab) => {
+        switch (tab) {
+            case 'PENDING': return t('penalty.tabs.pending');
+            case 'ACTIVE': return t('penalty.tabs.active');
+            case 'COMPLETED': return t('penalty.tabs.completed');
+        }
+    };
+
     const renderPenaltyItem = ({ item }: { item: Penalty }) => (
         <TouchableOpacity 
             style={[
@@ -67,7 +87,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
                     {item.description}
                 </Text>
                 <Text style={[styles.cardDate, { color: theme.colors.text.secondary }]}>
-                    Due: {new Date(item.dueDate).toLocaleDateString()}
+                    {t('penalty.due', { date: new Date(item.dueDate).toLocaleDateString() })}
                 </Text>
             </View>
             <View style={[
@@ -78,7 +98,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
                     styles.badgeText, 
                     { color: item.status === 'VERIFIED' ? theme.colors.success.dark : theme.colors.warning.dark }
                 ]}>
-                    {item.status}
+                    {getStatusLabel(item.status)}
                 </Text>
             </View>
         </TouchableOpacity>
@@ -87,7 +107,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.secondary }]}>
             <View style={[styles.header, { backgroundColor: theme.colors.background.primary }]}>
-                <Text style={[styles.title, { color: theme.colors.text.primary }]}>My Penalties</Text>
+                <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('penalty.title')}</Text>
             </View>
 
             <View style={[styles.tabs, { backgroundColor: theme.colors.background.primary }]}>
@@ -104,7 +124,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
                             styles.tabText,
                             { color: activeTab === tab ? theme.colors.primary.main : theme.colors.text.secondary }
                         ]}>
-                            {tab}
+                            {getTabLabel(tab)}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -127,7 +147,7 @@ export const PenaltyDashboardScreen: React.FC = () => {
                         <View style={styles.empty}>
                             <MaterialCommunityIcons name="emoticon-happy-outline" size={64} color={theme.colors.text.disabled} />
                             <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
-                                No penalties in this category!
+                                {t('penalty.noPenalties')}
                             </Text>
                         </View>
                     }

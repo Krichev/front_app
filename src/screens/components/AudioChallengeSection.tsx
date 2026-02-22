@@ -12,6 +12,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {Picker} from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
 import DocumentPicker from 'react-native-document-picker';
+import { useTranslation } from 'react-i18next';
 import {
     AudioChallengeType,
     AUDIO_CHALLENGE_TYPES,
@@ -64,6 +65,7 @@ export const AudioChallengeSection: React.FC<AudioChallengeSectionProps> = ({
     disabled = false,
 }) => {
     const [isUploading, setIsUploading] = React.useState(false);
+    const { t } = useTranslation();
 
     // ============================================================================
     // DERIVED STATE
@@ -131,12 +133,12 @@ export const AudioChallengeSection: React.FC<AudioChallengeSectionProps> = ({
         } catch (error) {
             if (!DocumentPicker.isCancel(error)) {
                 console.error('Audio pick error:', error);
-                Alert.alert('Error', 'Failed to select audio file');
+                Alert.alert(t('common.error'), t('audioChallenge.config.errorPick'));
             }
         } finally {
             setIsUploading(false);
         }
-    }, [updateConfig]);
+    }, [updateConfig, t]);
 
     const handleRemoveAudio = useCallback(() => {
         onConfigChange({
@@ -151,7 +153,7 @@ export const AudioChallengeSection: React.FC<AudioChallengeSectionProps> = ({
         <View style={styles.container}>
             <View style={styles.sectionHeader}>
               <MaterialCommunityIcons name="music-note" size={24} color="#007AFF" />
-              <Text style={styles.sectionTitle}>Audio Challenge Configuration</Text>
+              <Text style={styles.sectionTitle}>{t('audioChallenge.config.title')}</Text>
             </View>
 
             <View style={styles.typeGrid}>
@@ -180,7 +182,7 @@ export const AudioChallengeSection: React.FC<AudioChallengeSectionProps> = ({
                     styles.typeLabel,
                     config.audioChallengeType === typeInfo.type && styles.typeLabelSelected
                   ]}>
-                    {typeInfo.label}
+                    {t(`audioChallenge.types.${typeInfo.type}.label`)}
                   </Text>
                   {config.audioChallengeType === typeInfo.type && (
                     <View style={styles.checkmarkContainer}>

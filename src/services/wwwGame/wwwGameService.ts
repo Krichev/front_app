@@ -1,8 +1,4 @@
-// src/services/game/wwwGameService.ts
-
-// Define types for game data
-import {UserQuestion} from "./questionService.ts";
-import {QuizQuestion} from "../../entities/QuizState/model/slice/quizApi.ts";
+import i18n from '../../shared/config/i18n/i18n';
 
 export interface RoundData {
     question: string;
@@ -257,12 +253,12 @@ export class WWWGameService {
                 );
 
             if (wasCorrectAnswerDiscussed) {
-                return `I heard the correct answer "${roundData.correctAnswer}" during your discussion, but it wasn't your final answer.`;
+                return i18n.t('wwwGame.feedback.discussedCorrect', { answer: roundData.correctAnswer });
             } else {
-                return `The correct answer was "${roundData.correctAnswer}". I didn't hear this answer during your discussion.`;
+                return i18n.t('wwwGame.feedback.notDiscussedCorrect', { answer: roundData.correctAnswer });
             }
         } else {
-            return `Great job! "${roundData.correctAnswer}" is correct!`;
+            return i18n.t('wwwGame.feedback.correct', { answer: roundData.correctAnswer });
         }
     }
 
@@ -270,10 +266,10 @@ export class WWWGameService {
      * Generate an AI hint for the current question
      */
     static generateHint(correctAnswer: string): string {
-        let hint = `The answer contains ${correctAnswer.length} characters.`;
+        let hint = i18n.t('wwwGame.hint.characters', { count: correctAnswer.length });
 
         if (correctAnswer.includes(' ')) {
-            hint += ` It's ${correctAnswer.split(' ').length} words.`;
+            hint += i18n.t('wwwGame.hint.words', { count: correctAnswer.split(' ').length });
         }
 
         // Could add more sophisticated hints here
@@ -322,11 +318,11 @@ export class WWWGameService {
     static generateResultsMessage(score: number, totalRounds: number): string {
         const correctPercentage = (score / totalRounds) * 100;
 
-        if (correctPercentage >= 90) return 'Outstanding! Your team showcased exceptional knowledge!';
-        if (correctPercentage >= 70) return 'Great job! Your team has impressive knowledge!';
-        if (correctPercentage >= 50) return 'Good effort! Your team did well!';
-        if (correctPercentage >= 30) return 'Nice try! Keep learning and you\'ll improve!';
-        return 'Don\'t give up! Every game is a learning opportunity!';
+        if (correctPercentage >= 90) return i18n.t('wwwGame.performance.outstanding');
+        if (correctPercentage >= 70) return i18n.t('wwwGame.performance.great');
+        if (correctPercentage >= 50) return i18n.t('wwwGame.performance.good');
+        if (correctPercentage >= 30) return i18n.t('wwwGame.performance.niceTry');
+        return i18n.t('wwwGame.performance.dontGiveUp');
     }
 
     /**
@@ -451,6 +447,7 @@ export class WWWGameService {
             }
         }
 
-        return {mentionedCorrectAnswer, potentialAnswers};
-    }
-}
+                return {mentionedCorrectAnswer, potentialAnswers};
+            }
+        }
+        

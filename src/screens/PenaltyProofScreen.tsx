@@ -10,6 +10,7 @@ import {
     Alert
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../shared/ui/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useGetPenaltyQuery, useSubmitPenaltyProofMutation } from '../entities/WagerState/model/slice/wagerApi';
@@ -24,6 +25,7 @@ type PenaltyProofRouteProp = RouteProp<RootStackParamList, 'PenaltyProof'>;
 
 export const PenaltyProofScreen: React.FC = () => {
     const { theme } = useTheme();
+    const { t } = useTranslation();
     const route = useRoute<PenaltyProofRouteProp>();
     const navigation = useNavigation();
     const { penaltyId } = route.params;
@@ -53,7 +55,7 @@ export const PenaltyProofScreen: React.FC = () => {
 
     const handleSubmit = async () => {
         if (!image && !description.trim()) {
-            Alert.alert('Error', 'Please provide either a photo or a text description.');
+            Alert.alert(t('common.error'), t('penalty.proof.errorNoContent'));
             return;
         }
 
@@ -64,24 +66,24 @@ export const PenaltyProofScreen: React.FC = () => {
                 file: image || undefined,
             }).unwrap();
             
-            Alert.alert('Success', 'Proof submitted successfully!', [
-                { text: 'OK', onPress: () => navigation.goBack() }
+            Alert.alert(t('common.success'), t('penalty.proof.submitSuccess'), [
+                { text: t('common.ok'), onPress: () => navigation.goBack() }
             ]);
         } catch (error) {
             console.error('Failed to submit proof:', error);
-            Alert.alert('Error', 'Failed to submit proof. Please try again.');
+            Alert.alert(t('common.error'), t('penalty.proof.submitError'));
         }
     };
 
     if (isLoading || !penalty) {
-        return <View style={styles.center}><Text>Loading...</Text></View>;
+        return <View style={styles.center}><Text>{t('common.loading')}</Text></View>;
     }
 
     return (
         <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
             <ScrollView contentContainerStyle={styles.scroll}>
                 <View style={styles.header}>
-                    <Text style={[styles.title, { color: theme.colors.text.primary }]}>Submit Proof</Text>
+                    <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('penalty.proof.title')}</Text>
                     <View style={[styles.penaltyInfo, { backgroundColor: theme.colors.background.secondary }]}>
                         <Text style={[styles.penaltyType, { color: theme.colors.text.secondary }]}>{penalty.penaltyType}</Text>
                         <Text style={[styles.penaltyDesc, { color: theme.colors.text.primary }]}>{penalty.description}</Text>
@@ -89,7 +91,7 @@ export const PenaltyProofScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>Photo Proof</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>{t('penalty.proof.photoProof')}</Text>
                     <TouchableOpacity 
                         style={[
                             styles.imagePicker, 
@@ -102,7 +104,7 @@ export const PenaltyProofScreen: React.FC = () => {
                         ) : (
                             <View style={styles.pickerContent}>
                                 <MaterialCommunityIcons name="camera-plus" size={48} color={theme.colors.text.disabled} />
-                                <Text style={{ color: theme.colors.text.secondary, marginTop: 8 }}>Tap to select an image</Text>
+                                <Text style={{ color: theme.colors.text.secondary, marginTop: 8 }}>{t('penalty.proof.tapToSelect')}</Text>
                             </View>
                         )}
                     </TouchableOpacity>
@@ -110,12 +112,12 @@ export const PenaltyProofScreen: React.FC = () => {
 
                 <View style={styles.section}>
                     <Input
-                        label="Description (Optional)"
+                        label={t('penalty.proof.descriptionLabel')}
                         value={description}
                         onChangeText={setDescription}
                         multiline
                         numberOfLines={4}
-                        placeholder="Explain how you completed the penalty..."
+                        placeholder={t('penalty.proof.descriptionPlaceholder')}
                     />
                 </View>
 
@@ -125,7 +127,7 @@ export const PenaltyProofScreen: React.FC = () => {
                         loading={isSubmitting}
                         fullWidth
                     >
-                        Submit Completion
+                        {t('penalty.proof.submitButton')}
                     </Button>
                 </View>
             </ScrollView>

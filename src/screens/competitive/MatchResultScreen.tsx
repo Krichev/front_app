@@ -2,9 +2,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { useGetMatchResultQuery } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import { useTheme } from '../../shared/ui/theme';
-import { Button, ButtonVariant } from '../../shared/ui/Button/Button';
+import { Button } from '../../shared/ui/Button/Button';
 
 type ResultRouteProp = RouteProp<{ params: { matchId: number } }, 'params'>;
 
@@ -13,28 +14,30 @@ export const MatchResultScreen = () => {
     const route = useRoute<ResultRouteProp>();
     const { matchId } = route.params;
     const { theme } = useTheme();
+    const { t } = useTranslation();
 
     const { data: result, isLoading } = useGetMatchResultQuery(matchId);
 
     if (isLoading || !result) {
-        return <View style={styles.container}><Text>Loading results...</Text></View>;
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.background.primary, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: theme.colors.text.primary }}>{t('competitive.matchResult.loading')}</Text>
+            </View>
+        );
     }
 
     const isDraw = result.isDraw;
-    // Assuming current user context needed to determine "You Won" vs "You Lost"
-    // Since API returns winnerId, we'd compare. 
-    // For simplicity, just showing Winner Username.
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                    Match Results
+                    {t('competitive.matchResult.title')}
                 </Text>
 
                 <View style={styles.winnerBox}>
                     <Text style={styles.winnerText}>
-                        {isDraw ? 'Draw!' : `Winner: ${result.winnerUsername}`}
+                        {isDraw ? t('competitive.matchResult.draw') : t('competitive.matchResult.winner', { username: result.winnerUsername })}
                     </Text>
                     {!isDraw && (
                         <Text style={styles.crown}>👑</Text>
@@ -43,27 +46,34 @@ export const MatchResultScreen = () => {
 
                 <View style={styles.scoreContainer}>
                     <View style={styles.scoreBox}>
-                        <Text style={[styles.scoreLabel, { color: theme.colors.text.secondary }]}>Player 1</Text>
+                        <Text style={[styles.scoreLabel, { color: theme.colors.text.secondary }]}>{t('competitive.matchResult.player1')}</Text>
                         <Text style={[styles.scoreValue, { color: theme.colors.text.primary }]}>{result.player1TotalScore}</Text>
-                        <Text style={[styles.roundsWon, { color: theme.colors.text.secondary }]}>{result.player1RoundsWon} Rounds</Text>
+                        <Text style={[styles.roundsWon, { color: theme.colors.text.secondary }]}>
+                            {t('competitive.matchResult.roundsWon', { count: result.player1RoundsWon })}
+                        </Text>
                     </View>
                     <View style={styles.scoreBox}>
-                        <Text style={[styles.scoreLabel, { color: theme.colors.text.secondary }]}>Player 2</Text>
+                        <Text style={[styles.scoreLabel, { color: theme.colors.text.secondary }]}>{t('competitive.matchResult.player2')}</Text>
                         <Text style={[styles.scoreValue, { color: theme.colors.text.primary }]}>{result.player2TotalScore}</Text>
-                        <Text style={[styles.roundsWon, { color: theme.colors.text.secondary }]}>{result.player2RoundsWon} Rounds</Text>
+                        <Text style={[styles.roundsWon, { color: theme.colors.text.secondary }]}>
+                            {t('competitive.matchResult.roundsWon', { count: result.player2RoundsWon })}
+                        </Text>
                     </View>
                 </View>
 
                 {result.amountWon && (
                     <Text style={[styles.wagerText, { color: theme.colors.success.main }]}>
-                        Won: {result.amountWon} {result.currency || 'Points'}
+                        {t('competitive.matchResult.wonAmount', { 
+                            amount: result.amountWon, 
+                            currency: result.currency || t('competitive.matchResult.points') 
+                        })}
                     </Text>
                 )}
             </ScrollView>
 
             <View style={styles.footer}>
                 <Button onPress={() => navigation.navigate('Main', { screen: 'Home' })}>
-                    Return Home
+                    {t('competitive.matchResult.returnHome')}
                 </Button>
             </View>
         </View>

@@ -27,7 +27,7 @@ const en = {
         },
     },
     common: {
-        loading: 'Loading...',
+        loading: 'Loading...', 
         error: 'Error',
         success: 'Success',
         cancel: 'Cancel',
@@ -45,6 +45,7 @@ const en = {
         noResults: 'No results found',
         close: 'Close',
         goBack: 'Go Back',
+        seconds: '{{count}}s',
         localizedInput: {
             fillAtLeastOne: 'Please fill in at least one language',
             fillBothLanguages: 'Please fill in both languages',
@@ -53,7 +54,7 @@ const en = {
     createQuest: {
         // Main screen
         title: 'Create Quest',
-        creating: 'Creating...',
+        creating: 'Creating...', 
         createButton: 'Create Quest ({{count}})',
 
         // BasicInfoForm
@@ -69,7 +70,7 @@ const en = {
 
         // QuizConfigForm
         quizConfig: {
-            loadingConfig: 'Loading configuration...',
+            loadingConfig: 'Loading configuration...', 
             gameType: 'Game Type',
             wwwQuiz: 'WWW Quiz',
             teamName: 'Team Name',
@@ -85,7 +86,6 @@ const en = {
             medium: 'Medium',
             hard: 'Hard',
             timePerQuestion: 'Time per Question',
-            seconds: '{{count}}s',
             roundCount: 'Round Count',
             rounds: '{{count}} rounds',
             enableAIHost: 'Enable AI Host',
@@ -130,13 +130,13 @@ const en = {
 
         // QuestionList
         questionList: {
-            searchPlaceholder: 'Search questions...',
+            searchPlaceholder: 'Search questions...', 
             filterByDifficulty: 'Filter by difficulty',
             filterByTopic: 'Filter by topic',
             allDifficulties: 'All Difficulties',
             allTopics: 'All Topics',
             search: 'Search',
-            loading: 'Loading questions...',
+            loading: 'Loading questions...', 
             noQuestions: 'No questions found',
             noQuestionsDesc: 'Try adjusting your search or filters',
             selectAll: 'Select All',
@@ -225,7 +225,7 @@ const en = {
             videoSource: 'Video Source',
             upload: 'Upload',
             link: 'Link',
-            pasteLinkPlaceholder: 'Paste YouTube or video URL...',
+            pasteLinkPlaceholder: 'Paste YouTube or video URL...', 
             clearLink: 'Clear Link',
             playbackRange: 'Playback Range (optional)',
             startSec: 'Start (sec)',
@@ -344,14 +344,14 @@ const en = {
         fillAllFields: 'Please fill in all fields',
         welcomeBack: 'Welcome Back!',
         signInSubtitle: 'Sign in to continue',
-        loggingIn: 'Logging in...',
+        loggingIn: 'Logging in...', 
         createAccount: 'Create Account',
         chooseUsername: 'Choose a username',
         enterEmail: 'Enter your email',
         enterPassword: 'Enter your password',
         confirmPassword: 'Confirm Password',
         confirmPasswordPlaceholder: 'Confirm your password',
-        creatingAccount: 'Creating Account...',
+        creatingAccount: 'Creating Account...', 
         signupFailed: 'Signup Failed',
         passwordsDoNotMatch: 'Passwords do not match',
         invalidEmail: 'Please enter a valid email address',
@@ -389,7 +389,7 @@ const en = {
         filterLabel: 'Show challenges where I am:',
         participant: 'Participant',
         creator: 'Creator',
-        loading: 'Loading challenges...',
+        loading: 'Loading challenges...', 
         error: 'Failed to load challenges',
         retry: 'Retry',
         emptyTitle: 'No challenges found',
@@ -402,15 +402,15 @@ const en = {
         standardChallenge: 'Standard Challenge',
     },
     search: {
-        placeholder: 'Search users, quizzes, challenges...',
-        loading: 'Searching...',
+        placeholder: 'Search users, quizzes, challenges...', 
+        loading: 'Searching...', 
         title: 'Search WWW Quest',
         subtitle: 'Find users, quizzes, and challenges',
         recent: 'Recent Searches',
         minChars: 'Type at least 2 characters to search',
         noResults: 'No results found',
         tryDifferent: 'Try a different search term',
-        foundResults: 'Found {{count}} result{{plural}} for "{{query}}"',
+        foundResults: 'Found {{count}} result{{plural}} for "{{query}}" ',
         users: 'Users',
         quizzes: 'Quizzes',
         challenges: 'Challenges',
@@ -440,7 +440,7 @@ const en = {
         medium: 'Medium',
         hard: 'Hard',
         aiAcceptedBadge: 'Accepted as equivalent (AI)',
-        aiAcceptedExplanation: 'Your answer "{{userAnswer}}" was accepted as equivalent to "{{correctAnswer}}"',
+        aiAcceptedExplanation: 'Your answer "{{userAnswer}}" was accepted as equivalent to "{{correctAnswer}}" ',
     },
     profile: {
         editProfile: 'Edit Profile',
@@ -456,36 +456,37 @@ const en = {
         stats: 'Stats',
         hideCancelled: 'Hide Cancelled/Completed',
         showAll: 'Show All',
-        loadingCreated: 'Loading created challenges...',
-        loadingJoined: 'Loading joined challenges...',
+        loadingCreated: 'Loading created challenges...', 
+        loadingJoined: 'Loading joined challenges...', 
         noCreated: 'No challenges created',
         noJoined: 'No challenges joined',
         noCreatedSelf: "You haven't created any challenges yet",
         noJoinedSelf: "You haven't joined any challenges yet",
-        loadingProfile: 'Loading profile...',
+        loadingProfile: 'Loading profile...', 
         errorProfile: 'Failed to load user profile.',
         tryAgain: 'Try Again',
         joinedDate: 'Joined {{date}}',
-                createdTab: 'Created',
-                joinedTab: 'Joined',
-            },
-            questionDisplay: {
-                types: {
-                    question: 'Question',
-                    text: 'Text Question',
-                    image: 'Image Question',
-                    video: 'Video Question',
-                    audioChallenge: 'Audio Challenge',
-                    audio: 'Audio Question',
-                },
-                karaoke: {
-                    passScore: 'Pass score: {{percentage}}%',
-                    completeChallenge: 'Complete the audio challenge',
-                    listenReference: 'Listen to Reference',
-                    recordResponse: 'Record Your Response',
-                },
-            },
-            questions: {        title: 'Questions',
+        createdTab: 'Created',
+        joinedTab: 'Joined',
+    },
+    questionDisplay: {
+        types: {
+            question: 'Question',
+            text: 'Text Question',
+            image: 'Image Question',
+            video: 'Video Question',
+            audioChallenge: 'Audio Challenge',
+            audio: 'Audio Question',
+        },
+        karaoke: {
+            passScore: 'Pass score: {{percentage}}%',
+            completeChallenge: 'Complete the audio challenge',
+            listenReference: 'Listen to Reference',
+            recordResponse: 'Record Your Response',
+        },
+    },
+    questions: {
+        title: 'Questions',
         myQuestions: 'My Questions',
         createQuestion: 'Create Question',
         editQuestion: 'Edit Question',
@@ -531,10 +532,10 @@ const en = {
         releaseNotes: "What's New",
         updateNow: 'Update Now',
         later: 'Later',
-        downloading: 'Downloading update...',
+        downloading: 'Downloading update...', 
         downloadComplete: 'Download Complete',
         install: 'Install Update',
-        installing: 'Opening installer...',
+        installing: 'Opening installer...', 
         downloadFailed: 'Download failed. Please try again.',
         checkForUpdates: 'Check for Updates',
         upToDate: "You're up to date!",
@@ -542,7 +543,7 @@ const en = {
         forceUpdateMessage: 'This update is required to continue using the app.',
         retry: 'Retry',
         downloadProgress: '{{percentage}}% ({{downloaded}} / {{total}})',
-        checking: 'Checking for updates...',
+        checking: 'Checking for updates...', 
         errorChecking: 'Could not check for updates. Please try again later.',
     },
     userQuestions: {
@@ -580,8 +581,8 @@ const en = {
         // Buttons
         create: 'Create',
         update: 'Update',
-        creating: 'Creating...',
-        updating: 'Updating...',
+        creating: 'Creating...', 
+        updating: 'Updating...', 
         cancel: 'Cancel',
         delete: 'Delete',
 
@@ -604,7 +605,7 @@ const en = {
     editProfile: {
         title: 'Edit Profile',
         save: 'Save',
-        saving: 'Saving...',
+        saving: 'Saving...', 
         changePhoto: 'Tap to change profile picture',
         selectPicture: 'Select Profile Picture',
         chooseSource: 'Choose from where you want to select a profile picture',
@@ -619,7 +620,7 @@ const en = {
         usernameHelper: 'Minimum 3 characters, maximum 50',
 
         bioLabel: 'Bio',
-        bioPlaceholder: 'Tell something about yourself...',
+        bioPlaceholder: 'Tell something about yourself...', 
 
         // Messages
         updateSuccess: 'Profile updated successfully',
@@ -638,11 +639,11 @@ const en = {
         // Form fields
         questionLabel: 'Question',
         questionRequired: 'Question *',
-        questionPlaceholder: 'Enter your question here...',
+        questionPlaceholder: 'Enter your question here...', 
 
         answerLabel: 'Answer',
         answerRequired: 'Answer *',
-        answerPlaceholder: 'Enter the answer...',
+        answerPlaceholder: 'Enter the answer...', 
 
         // Media
         selectMedia: 'Select Media',
@@ -666,7 +667,7 @@ const en = {
 
         // Form fields
         questionLabel: 'Question / Instructions',
-        questionPlaceholder: 'Describe what the player should do...',
+        questionPlaceholder: 'Describe what the player should do...', 
 
         referenceAudio: 'Reference Audio',
         uploadReference: 'Upload Reference Audio',
@@ -683,7 +684,7 @@ const en = {
 
         // Buttons
         create: 'Create Audio Question',
-        creating: 'Creating...',
+        creating: 'Creating...', 
 
         // Messages
         createSuccess: 'Audio question created successfully',
@@ -711,7 +712,7 @@ const en = {
         replaysLeft: '{{count}} replays left',
         noReplaysLeft: 'No replays left',
         correct: 'Correct!',
-        incorrect: 'Not quite...',
+        incorrect: 'Not quite...', 
         theAnswerWas: 'The song was',
         nextQuestion: 'Next Question',
         finalScore: 'Final Score',
@@ -756,7 +757,7 @@ const en = {
             answer: 'Correct Answer',
             answerPlaceholder: 'What is in the picture?',
             createGame: 'Create Puzzle',
-            generating: 'Cutting puzzle pieces...',
+            generating: 'Cutting puzzle pieces...', 
         },
         game: {
             title: 'Picture Puzzle',
@@ -764,12 +765,12 @@ const en = {
             teamProgress: 'Team Progress',
             hint: 'Show Hint',
             submitAnswer: 'I Know What It Is!',
-            answerPlaceholder: 'Type your answer...',
+            answerPlaceholder: 'Type your answer...', 
             submit: 'Submit',
             correct: 'Correct! 🎉',
             incorrect: 'Not quite, keep trying!',
             timeUp: "Time's up!",
-            waitingForHost: 'Waiting for host to start...',
+            waitingForHost: 'Waiting for host to start...', 
             startGame: 'Start Game',
         },
         results: {
@@ -785,10 +786,10 @@ const en = {
     },
     challengeVerification: {
         // Main screen
-        loading: 'Loading challenge verification...',
+        loading: 'Loading challenge verification...', 
         loadFailed: 'Failed to load challenge details.',
         verificationRequirements: 'Verification Requirements',
-        processing: 'Processing verification...',
+        processing: 'Processing verification...', 
         challengeDescription: 'Challenge Description',
         verificationMethods: 'Verification Methods',
         noMethodsFound: 'No verification methods found for this challenge.',
@@ -810,7 +811,7 @@ const en = {
             defaultPrompt: 'Take a photo for verification',
             instructions: 'Instructions:',
             defaultInstructions: 'Take a clear photo that shows you completing the challenge.',
-            loadingChallenge: 'Loading challenge details...',
+            loadingChallenge: 'Loading challenge details...', 
             verificationSuccessful: 'Verification Successful',
             successMessage: 'Your photo has been verified successfully!',
             failedMessage: 'Photo verification failed. Please try again.',
@@ -842,12 +843,12 @@ const en = {
             address: 'Address',
             notChecked: 'Location not checked yet',
             checkLocation: 'Check My Location',
-            checking: 'Checking...',
+            checking: 'Checking...', 
             permissionRequired: 'Permission Required',
             permissionMessage: 'Location permissions are required for verification.',
             openSettings: 'Open Settings',
             locationFailed: 'Failed to get your location. Please try again.',
-            loadingChallenge: 'Loading challenge details...',
+            loadingChallenge: 'Loading challenge details...', 
             verificationSuccessful: 'Verification Successful',
             successMessage: 'Your location has been verified successfully!',
             failedMessage: 'Location verification failed. You are not at the required location.',
@@ -1028,7 +1029,7 @@ const en = {
             requests: 'Requests',
         },
         search: {
-            placeholder: 'Search contacts...',
+            placeholder: 'Search contacts...', 
         },
         categories: {
             all: 'All',
@@ -1066,7 +1067,7 @@ const en = {
             title: 'Groups',
         },
         search: {
-            placeholder: 'Search groups...',
+            placeholder: 'Search groups...', 
         },
         filters: {
             label: 'Filter by:',
@@ -1081,7 +1082,7 @@ const en = {
                 member: 'Joined',
             },
         },
-        loading: 'Loading groups...',
+        loading: 'Loading groups...', 
         error: {
             failedToLoad: 'Failed to load groups.',
             retry: 'Retry',
@@ -1116,22 +1117,22 @@ const en = {
         phases: {
             listen: {
                 title: 'Listen Carefully!',
-                subtitle: 'Discussion in progress...',
+                subtitle: 'Discussion in progress...', 
                 buzz: 'BUZZ!',
             },
             answering: {
                 sent: 'Answer Sent ✓',
-                wait: 'Waiting for others...',
-                placeholder: 'Type your answer...',
+                wait: 'Waiting for others...', 
+                placeholder: 'Type your answer...', 
                 submit: 'SUBMIT',
             },
             feedback: {
                 title: 'Round Finished',
                 subtitle: 'Look at the TV!',
             },
-            wait: 'Waiting for next phase...',
+            wait: 'Waiting for next phase...', 
         },
-        reconnecting: 'Reconnecting...',
+        reconnecting: 'Reconnecting...', 
         score: {
             pts: '{{count}} pts',
         },
@@ -1142,6 +1143,256 @@ const en = {
         placeholder: 'ABC123',
         joinButton: 'JOIN GAME',
         scanButton: 'SCAN QR CODE',
+    },
+    challengeDetails: {
+        actions: {
+            invitePlayers: 'Invite Players',
+            startQuiz: 'Start Quiz',
+            joinChallenge: 'Join Challenge',
+            submitProof: 'Submit Proof',
+            markAsComplete: 'Mark as Complete',
+            proofSubmitted: 'Proof Submitted ✓',
+        },
+        info: {
+            title: 'Challenge Info',
+            created: 'Created',
+            visibility: 'Visibility',
+            reward: 'Reward',
+            penalty: 'Penalty',
+            verification: 'Verification',
+            unknown: 'Unknown',
+            group: 'Group',
+        },
+        creator: {
+            title: 'Created By',
+            userId: 'User ID: {{id}}',
+            unknown: 'Unknown Creator',
+        },
+        quiz: {
+            title: 'Quiz Challenge',
+            gameType: 'Game Type:',
+            difficulty: 'Difficulty:',
+            rounds: 'Rounds:',
+            timePerRound: 'Time per Round:',
+            team: 'Team:',
+            standardQuiz: 'Standard Quiz',
+            quiz: 'Quiz',
+            medium: 'Medium',
+        },
+        description: {
+            title: 'Description',
+        },
+        audio: {
+            title: 'Quest Audio Track',
+            requirement: 'You must score at least {{percentage}}% to complete this quest',
+        },
+        debug: {
+            title: 'Debug Info',
+            isCreator: 'Is Creator:',
+            hasJoined: 'Has joined:',
+            participants: 'Participants:',
+        },
+        messages: {
+            loading: 'Loading challenge...', 
+            error: 'Failed to load challenge',
+            idNotFound: 'Challenge ID not found. Returning to challenges list.',
+            cancelled: 'This quest has been cancelled',
+        },
+        launcher: {
+            comingSoon: 'Coming Soon',
+            typeNotSupported: 'Quiz type "{{type}}" is not yet supported.',
+            audioConfigMissing: 'Audio configuration missing for this challenge.',
+            rhythmComingSoon: 'Rhythm game modes are under development.',
+            singingComingSoon: 'Singing challenge mode is under development.',
+            audioChallenge: 'Audio Challenge',
+            audioChallengeInstructions: 'Listen to the audio track and complete the verification tasks.',
+        }
+    },
+    games: {
+        title: 'Games',
+        subtitle: 'Challenge your mind',
+        comingSoon: 'COMING SOON',
+        comingSoonAlert: 'Coming soon!',
+        featuredGame: 'Featured Game',
+        playNow: 'PLAY NOW',
+        adminTools: {
+            title: 'Admin Tools',
+            description: 'These tools allow you to manage game content and settings.',
+        },
+        recentActivity: {
+            title: 'Recent Activity',
+            noActivity: 'No recent games played. Start a new game to see your activity here!',
+        },
+        www: {
+            title: 'WWW Quiz',
+            description: 'A team trivia game where players discuss and answer challenging questions.',
+            featuredDescription: 'A challenging team-based trivia game with AI-powered hosting',
+        },
+        vibration: {
+            title: 'Feel the Beat',
+            description: 'Guess the song from its rhythm vibrations!',
+        },
+        rhythm: {
+            title: 'Rhythm Game',
+            description: 'Test your timing with this fun rhythm-based challenge.',
+        },
+        quiz: {
+            title: 'Quiz Challenge',
+            description: 'Test your knowledge in various categories.',
+        },
+        questionManagement: {
+            title: 'Question Management',
+            description: 'Add, edit, and manage questions for the WWW Quiz game.',
+        },
+    },
+    penalty: {
+        title: 'My Penalties',
+        tabs: {
+            pending: 'Pending',
+            active: 'Active',
+            completed: 'Completed',
+        },
+        status: {
+            pending: 'Pending',
+            inProgress: 'In Progress',
+            verified: 'Verified',
+            failed: 'Failed',
+        },
+        due: 'Due: {{date}}',
+        noPenalties: 'No penalties in this category!',
+        proof: {
+            title: 'Submit Proof',
+            photoProof: 'Photo Proof',
+            tapToSelect: 'Tap to select an image',
+            descriptionLabel: 'Description (Optional)',
+            descriptionPlaceholder: 'Explain how you completed the penalty...', 
+            submitButton: 'Submit Completion',
+            errorNoContent: 'Please provide either a photo or a text description.',
+            submitSuccess: 'Proof submitted successfully!',
+            submitError: 'Failed to submit proof. Please try again.',
+        },
+    },
+    competitive: {
+        matchmaking: {
+            cancel: 'Cancel',
+            lookingForOpponent: 'Looking for opponent...', 
+            queuePosition: 'Position in queue: {{position}}',
+            estimatedWait: 'Estimated wait: ~{{seconds}}s',
+        },
+        liveMatch: {
+            loading: 'Loading match...', 
+            round: 'Round {{current}} / {{total}}',
+            opponent: 'Opponent',
+            status: 'Status: {{status}}',
+            startMatch: 'Start Match',
+            challenge: 'Challenge: {{challenge}}',
+            audioChallenge: 'Audio Challenge',
+            startRecording: 'Start Recording',
+            stopAndSubmit: 'Stop & Submit',
+            opponentStatus: 'Opponent Status:',
+            submitted: 'Submitted ✅',
+            recording: 'Recording... 🎙️',
+            submissionAlert: 'Submission',
+            submissionSuccessMock: 'Recording submitted (mock)',
+        },
+        matchLobby: {
+            loading: 'Loading lobby...', 
+            title: 'Match Lobby',
+            rounds: '{{count}} Rounds',
+            waitingForOpponent: 'Waiting...', 
+            waitingDescription: 'Waiting for opponent to accept...', 
+            startMatch: 'Start Match',
+        },
+        matchResult: {
+            loading: 'Loading results...', 
+            title: 'Match Results',
+            draw: 'Draw!',
+            winner: 'Winner: {{username}}',
+            player1: 'Player 1',
+            player2: 'Player 2',
+            roundsWon: '{{count}} Rounds',
+            wonAmount: 'Won: {{amount}} {{currency}}',
+            points: 'Points',
+            returnHome: 'Return Home',
+        },
+        history: {
+            title: 'Match History',
+            opponent: 'Opponent',
+            noMatches: 'No matches found',
+        },
+    },
+    audioChallenge: {
+        types: {
+            RHYTHM_CREATION: {
+                label: 'Create Rhythm',
+                description: 'Create your own rhythm pattern. Scored on consistency and creativity.',
+            },
+            RHYTHM_REPEAT: {
+                label: 'Repeat Rhythm',
+                description: 'Listen and repeat the rhythm pattern you hear.',
+            },
+            SOUND_MATCH: {
+                label: 'Match Sound',
+                description: 'Make sounds as close as possible to the reference.',
+            },
+            SINGING: {
+                label: 'Sing Along',
+                description: 'Sing the song segment and receive a karaoke-style score.',
+            },
+        },
+        config: {
+            title: 'Audio Challenge Configuration',
+            referenceAudio: 'Reference Audio *',
+            uploadButton: 'Upload Audio File',
+            segmentOptional: 'Audio Segment (optional)',
+            startSec: 'Start (sec)',
+            endSec: 'End (sec)',
+            fullPlaceholder: 'Full',
+            passScore: 'Minimum Score to Pass: {{percentage}}%',
+            rhythmSettings: 'Rhythm Settings',
+            bpm: 'BPM:',
+            time: 'Time:',
+            errorPick: 'Failed to select audio file',
+        },
+        header: {
+            title: 'Audio Challenge',
+            defaultDescription: 'Complete the audio task',
+            passScore: 'Pass Score: {{percentage}}%',
+        },
+        selector: {
+            label: 'Challenge Type *',
+            pitch: 'Pitch',
+            rhythm: 'Rhythm',
+            voice: 'Voice',
+            needsAudio: 'Needs audio',
+        },
+    },
+    wwwGame: {
+        performance: {
+            outstanding: 'Outstanding! Your team showcased exceptional knowledge!',
+            great: 'Great job! Your team has impressive knowledge!',
+            good: 'Good effort! Your team did well!',
+            niceTry: 'Nice try! Keep learning and you\'ll improve!',
+            dontGiveUp: 'Don\'t give up! Every game is a learning opportunity!',
+        },
+        feedback: {
+            discussedCorrect: 'I heard the correct answer "{{answer}}" during your discussion, but it wasn\'t your final answer.',
+            notDiscussedCorrect: 'The correct answer was "{{answer}}". I didn\'t hear this answer during your discussion.',
+            correct: 'Great job! "{{answer}}" is correct!',
+        },
+        hint: {
+            characters: 'The answer contains {{count}} characters.',
+            words: ' It\'s {{count}} words.',
+        },
+    },
+    multiplayer: {
+        gameOver: {
+            title: 'Game Over!',
+            yourRank: 'YOUR RANK',
+            points: '{{count}} pts',
+            leaderboard: 'Leaderboard',
+            returnHome: 'RETURN HOME',
+        },
     },
 };
 

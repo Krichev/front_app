@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { AudioChallengeType } from '../../types/audioChallenge.types';
 import { useJoinMatchmakingMutation, useGetMatchmakingStatusQuery, useLeaveMatchmakingMutation } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import { MatchmakingSpinner } from '../../features/CompetitiveMatch/ui/MatchmakingSpinner';
@@ -15,6 +16,7 @@ export const MatchmakingScreen = () => {
     const route = useRoute<MatchmakingRouteProp>();
     const { challengeType, rounds } = route.params;
     const { theme } = useTheme();
+    const { t } = useTranslation();
 
     const [joinQueue, { isError }] = useJoinMatchmakingMutation();
     const [leaveQueue] = useLeaveMatchmakingMutation();
@@ -61,7 +63,7 @@ export const MatchmakingScreen = () => {
                     onPress={handleCancel}
                     style={styles.cancelButton}
                 >
-                    Cancel
+                    {t('competitive.matchmaking.cancel')}
                 </Button>
             </View>
         </View>

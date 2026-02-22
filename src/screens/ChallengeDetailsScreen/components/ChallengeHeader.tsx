@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../styles';
 
 interface ChallengeHeaderProps {
@@ -22,13 +23,15 @@ export const ChallengeHeader: React.FC<ChallengeHeaderProps> = ({
     isDeleting,
     onDelete,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <>
             {isCancelled && (
                 <View style={styles.cancelledBanner}>
                     <MaterialCommunityIcons name="cancel" size={24} color="#fff" />
                     <Text style={styles.cancelledBannerText}>
-                        This quest has been cancelled
+                        {t('challengeDetails.messages.cancelled')}
                     </Text>
                 </View>
             )}

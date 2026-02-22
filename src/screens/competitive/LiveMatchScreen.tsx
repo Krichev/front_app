@@ -2,12 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { useGetMatchQuery, useStartMatchMutation, useStartRoundMutation, useSubmitPerformanceMutation } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
+import { useTranslation } from 'react-i18next';
+import { useGetMatchQuery, useStartMatchMutation, useStartRoundMutation } from '../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import { useTheme } from '../../shared/ui/theme';
 import { Button, ButtonVariant } from '../../shared/ui/Button/Button';
-import { CompetitiveMatchStatus } from '../../entities/CompetitiveMatch/model/types';
-// Assuming AudioRecorder component exists or using basic logic
-// For now, placeholder for recorder
 
 type LiveMatchRouteProp = RouteProp<{ params: { matchId: number } }, 'params'>;
 
@@ -16,6 +14,7 @@ export const LiveMatchScreen = () => {
     const route = useRoute<LiveMatchRouteProp>();
     const { matchId } = route.params;
     const { theme } = useTheme();
+    const { t } = useTranslation();
 
     const { data: match, isLoading, refetch } = useGetMatchQuery(matchId, {
         pollingInterval: 3000, // Poll for opponent updates
@@ -23,7 +22,6 @@ export const LiveMatchScreen = () => {
 
     const [startMatch] = useStartMatchMutation();
     const [startRound] = useStartRoundMutation();
-    // const [submitPerformance] = useSubmitPerformanceMutation();
 
     const [isRecording, setIsRecording] = useState(false);
 
@@ -57,13 +55,15 @@ export const LiveMatchScreen = () => {
     const handleStopAndSubmit = async () => {
         setIsRecording(false);
         // Mock submission
-        // In real app, get file path from recorder
-        // await submitPerformance({ matchId, roundId: match.currentRound, audioUri: '...' });
-        Alert.alert("Submission", "Recording submitted (mock)");
+        Alert.alert(t('competitive.liveMatch.submissionAlert'), t('competitive.liveMatch.submissionSuccessMock'));
     };
 
     if (isLoading || !match) {
-        return <View style={styles.container}><Text>Loading match...</Text></View>;
+        return (
+            <View style={[styles.container, { backgroundColor: theme.colors.background.primary, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: theme.colors.text.primary }}>{t('competitive.liveMatch.loading')}</Text>
+            </View>
+        );
     }
 
     const currentRound = match.rounds.find(r => r.roundNumber === match.currentRound);
@@ -72,10 +72,10 @@ export const LiveMatchScreen = () => {
         <ScrollView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
             <View style={styles.header}>
                 <Text style={[styles.title, { color: theme.colors.text.primary }]}>
-                    Round {match.currentRound} / {match.totalRounds}
+                    {t('competitive.liveMatch.round', { current: match.currentRound, total: match.totalRounds })}
                 </Text>
                 <Text style={{ color: theme.colors.text.secondary }}>
-                    {match.player1Username} vs {match.player2Username || 'Opponent'}
+                    {match.player1Username} vs {match.player2Username || t('competitive.liveMatch.opponent')}
                 </Text>
                 <Text style={{ color: theme.colors.primary.main, fontSize: 24, fontWeight: 'bold' }}>
                     {match.player1TotalScore} - {match.player2TotalScore}
@@ -84,28 +84,28 @@ export const LiveMatchScreen = () => {
 
             <View style={styles.content}>
                 <Text style={[styles.status, { color: theme.colors.text.primary }]}>
-                    Status: {match.status}
+                    {t('competitive.liveMatch.status', { status: match.status })}
                 </Text>
 
                 {match.status === 'READY' && (
-                    <Button onPress={handleStartMatch}>Start Match</Button>
+                    <Button onPress={handleStartMatch}>{t('competitive.liveMatch.startMatch')}</Button>
                 )}
 
                 {match.status === 'IN_PROGRESS' && currentRound && (
                     <View>
                         <Text style={[styles.question, { color: theme.colors.text.primary }]}>
-                            Challenge: {currentRound.question?.question || 'Audio Challenge'}
+                            {t('competitive.liveMatch.challenge', { challenge: currentRound.question?.question || t('competitive.liveMatch.audioChallenge') })}
                         </Text>
                         
                         {!isRecording ? (
-                            <Button onPress={handleStartRound}>Start Recording</Button>
+                            <Button onPress={handleStartRound}>{t('competitive.liveMatch.startRecording')}</Button>
                         ) : (
-                            <Button onPress={handleStopAndSubmit} variant={ButtonVariant.PRIMARY}>Stop & Submit</Button>
+                            <Button onPress={handleStopAndSubmit} variant={ButtonVariant.PRIMARY}>{t('competitive.liveMatch.stopAndSubmit')}</Button>
                         )}
                         
                         {/* Opponent status indicator */}
-                        <Text style={{ marginTop: 20, color: theme.colors.text.secondary }}>
-                            Opponent Status: {currentRound.player2Submitted ? 'Submitted ✅' : 'Recording... 🎙️'}
+                        <Text style={{ marginTop: 20, color: theme.colors.text.secondary, textAlign: 'center' }}>
+                            {t('competitive.liveMatch.opponentStatus')} {currentRound.player2Submitted ? t('competitive.liveMatch.submitted') : t('competitive.liveMatch.recording')}
                         </Text>
                     </View>
                 )}

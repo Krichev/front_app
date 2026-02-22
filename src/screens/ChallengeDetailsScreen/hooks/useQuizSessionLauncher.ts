@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { useStartQuizSessionMutation } from '../../../entities/QuizState/model/slice/quizApi';
 import { AudioChallengeType } from '../../../entities/ChallengeState/model/types';
 import { ParsedQuizConfig } from '../lib/quizConfigParser';
@@ -20,6 +21,7 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
     const navigation = useNavigation<NativeStackNavigationProp<any>>();
     const [startQuizSession] = useStartQuizSessionMutation();
     const [isStartingQuiz, setIsStartingQuiz] = useState(false);
+    const { t } = useTranslation();
 
     const handleStartQuiz = useCallback(async () => {
         if (!quizConfig || isStartingQuiz) return;
@@ -54,21 +56,21 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
                         await launchWWWQuiz(quizConfig);
                     } else {
                         Alert.alert(
-                            'Coming Soon',
-                            `Quiz type "${gameType}" is not yet supported.`
+                            t('challengeDetails.launcher.comingSoon'),
+                            t('challengeDetails.launcher.typeNotSupported', { type: gameType })
                         );
                     }
             }
         } catch (error: any) {
             console.error('Failed to start quiz:', error);
             Alert.alert(
-                'Error',
-                error?.data?.message || 'Failed to start quiz session. Please try again.'
+                t('challengeDetails.launcher.error'),
+                error?.data?.message || t('challengeDetails.launcher.failedToStart')
             );
         } finally {
             setIsStartingQuiz(false);
         }
-    }, [quizConfig, isStartingQuiz, challengeId, username, userId, customQuestions, audioConfig]);
+    }, [quizConfig, isStartingQuiz, challengeId, username, userId, customQuestions, audioConfig, t]);
 
     const launchWWWQuiz = async (config: ParsedQuizConfig) => {
         try {
@@ -209,7 +211,7 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
 
     const launchAudioQuiz = async (config: ParsedQuizConfig) => {
         if (!audioConfig && !config.audioChallengeType) {
-            Alert.alert('Error', 'Audio configuration missing for this challenge.');
+            Alert.alert(t('common.error'), t('challengeDetails.launcher.audioConfigMissing'));
             return;
         }
 
@@ -219,11 +221,11 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             audioType === AudioChallengeType.RHYTHM_CREATION ||
             audioType === AudioChallengeType.RHYTHM_REPEAT
         ) {
-            Alert.alert('Coming Soon', 'Rhythm game modes are under development.');
+            Alert.alert(t('challengeDetails.launcher.comingSoon'), t('challengeDetails.launcher.rhythmComingSoon'));
         } else if (audioType === AudioChallengeType.SINGING) {
-            Alert.alert('Coming Soon', 'Singing challenge mode is under development.');
+            Alert.alert(t('challengeDetails.launcher.comingSoon'), t('challengeDetails.launcher.singingComingSoon'));
         } else {
-            Alert.alert('Audio Challenge', 'Listen to the audio track and complete the verification tasks.');
+            Alert.alert(t('challengeDetails.launcher.audioChallenge'), t('challengeDetails.launcher.audioChallengeInstructions'));
         }
     };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { styles } from '../styles';
 
 interface ActionButtonsProps {
@@ -33,6 +34,8 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     onSubmitCompletion,
     onShowInviteModal,
 }) => {
+    const { t } = useTranslation();
+
     return (
         <View style={styles.actionSection}>
             {userIsCreator && (
@@ -41,7 +44,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                     onPress={onShowInviteModal}
                 >
                     <MaterialCommunityIcons name="email-plus" size={24} color="white"/>
-                    <Text style={styles.buttonText}>Invite Players</Text>
+                    <Text style={styles.buttonText}>{t('challengeDetails.actions.invitePlayers')}</Text>
                 </TouchableOpacity>
             )}
 
@@ -57,7 +60,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                     ) : (
                         <>
                             <MaterialCommunityIcons name="play-circle" size={24} color="white"/>
-                            <Text style={styles.buttonText}>Start Quiz</Text>
+                            <Text style={styles.buttonText}>{t('challengeDetails.actions.startQuiz')}</Text>
                         </>
                     )}
                 </TouchableOpacity>
@@ -75,7 +78,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                             ) : (
                                 <>
                                     <MaterialCommunityIcons name="account-plus" size={24} color="white"/>
-                                    <Text style={styles.buttonText}>Join Challenge</Text>
+                                    <Text style={styles.buttonText}>{t('challengeDetails.actions.joinChallenge')}</Text>
                                 </>
                             )}
                         </TouchableOpacity>
@@ -88,10 +91,10 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                                 onPress={onNavigateToVerification}
                             >
                                 <MaterialCommunityIcons name="camera" size={24} color="white"/>
-                                <Text style={styles.buttonText}>Submit Proof</Text>
+                                <Text style={styles.buttonText}>{t('challengeDetails.actions.submitProof')}</Text>
                             </TouchableOpacity>
 
-                            {!proofSubmitted && (
+                            {!proofSubmitted ? (
                                 <TouchableOpacity
                                     style={[styles.button, styles.successButton]}
                                     onPress={onSubmitCompletion}
@@ -103,10 +106,17 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                                         <>
                                             <MaterialCommunityIcons name="check-circle" size={24}
                                                                     color="white"/>
-                                            <Text style={styles.buttonText}>Mark as Complete</Text>
+                                            <Text style={styles.buttonText}>{t('challengeDetails.actions.markAsComplete')}</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
+                            ) : (
+                                <View style={[styles.button, styles.buttonDisabled, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}>
+                                    <MaterialCommunityIcons name="check-decagram" size={24} color="rgba(255,255,255,0.7)"/>
+                                    <Text style={[styles.buttonText, { color: 'rgba(255,255,255,0.7)', marginLeft: 8 }]}>
+                                        {t('challengeDetails.actions.proofSubmitted')}
+                                    </Text>
+                                </View>
                             )}
                         </>
                     )}

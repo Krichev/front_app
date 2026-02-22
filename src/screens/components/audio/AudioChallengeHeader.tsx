@@ -1,6 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import {AudioChallengeType, AUDIO_CHALLENGE_TYPES_INFO} from '../../../types/audioChallenge.types';
 
 interface AudioChallengeHeaderProps {
@@ -14,6 +15,7 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
   minimumScorePercentage,
   instructions,
 }) => {
+  const { t } = useTranslation();
   const typeInfo = challengeType ? AUDIO_CHALLENGE_TYPES_INFO[challengeType] : null;
 
   return (
@@ -29,10 +31,10 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
         </View>
         <View style={styles.textContainer}>
           <Text style={styles.title}>
-            {typeInfo?.label || 'Audio Challenge'}
+            {challengeType ? t(`audioChallenge.types.${challengeType}.label`) : t('audioChallenge.header.title')}
           </Text>
           <Text style={styles.description}>
-            {typeInfo?.description || 'Complete the audio task'}
+            {challengeType ? t(`audioChallenge.types.${challengeType}.description`) : t('audioChallenge.header.defaultDescription')}
           </Text>
         </View>
       </View>
@@ -49,7 +51,7 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
         <View style={styles.scoreContainer}>
           <MaterialCommunityIcons name="trophy-outline" size={16} color="#FF9800" />
           <Text style={styles.scoreText}>
-            Pass Score: {minimumScorePercentage}%
+            {t('audioChallenge.header.passScore', { percentage: minimumScorePercentage })}
           </Text>
         </View>
       )}
