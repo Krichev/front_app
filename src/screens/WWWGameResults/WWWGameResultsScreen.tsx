@@ -1,8 +1,7 @@
-// src/screens/WWWGameResultsScreen.tsx
-import React, {useState} from 'react';
+// src/screens/WWWGameResults/WWWGameResultsScreen.tsx
+import React from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Modal,
     Platform,
     SafeAreaView,
@@ -11,225 +10,35 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useSelector} from 'react-redux';
-import {RootState} from '../app/providers/StoreProvider/store';
-import {WWWGameService} from "../services/wwwGame/wwwGameService.ts";
-import {
-    useGetChallengeAudioConfigQuery,
-    useSubmitChallengeCompletionMutation
-} from '../entities/ChallengeState/model/slice/challengeApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
-import {createStyles} from '../shared/ui/theme';
-
-// Define the types for the navigation parameters
-type RootStackParamList = {
-    WWWGameResults: {
-        teamName: string;
-        score: number;
-        totalRounds: number;
-        roundsData: RoundData[];
-        challengeId?: string; // Optional challenge ID for tracking
-    };
-    CreateWWWQuest: undefined;
-    Main: { screen: string };
-    QuizResults: {
-        challengeId: string;
-        score: number;
-        totalRounds: number;
-        teamName: string;
-        roundsData: any[];
-    };
-};
-
-type WWWGameResultsRouteProp = RouteProp<RootStackParamList, 'WWWGameResults'>;
-type WWWGameResultsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGameResults'>;
-
-// Types for game data
-interface RoundData {
-    question: string;
-    correctAnswer: string;
-    teamAnswer: string;
-    isCorrect: boolean;
-    playerWhoAnswered: string;
-    discussionNotes: string;
-}
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../shared/ui/theme';
+import {useGameResults} from './hooks/useGameResults';
 
 const WWWGameResultsScreen: React.FC = () => {
-    const route = useRoute<WWWGameResultsRouteProp>();
-    const navigation = useNavigation<WWWGameResultsNavigationProp>();
-    const { teamName, score, totalRounds, roundsData, challengeId } = route.params;
-    const { user } = useSelector((state: RootState) => state.auth);
-    const [submitCompletion, { isLoading: isSubmitting }] = useSubmitChallengeCompletionMutation();
+    const {
+        teamName,
+        score,
+        totalRounds,
+        roundsData,
+        correctPercentage,
+        performances,
+        minimumScoreRequired,
+        meetsMinimumScore,
+        roundCount,
+        currentRound,
+        resultMessage,
+        aiFeedback,
+        showEndGameModal,
+        setShowEndGameModal,
+        submittingChallenge,
+        playAgain,
+        returnHome,
+        endGame
+    } = useGameResults();
+
     const {screen, theme} = useAppStyles();
     const styles = themeStyles;
-
-    // Fetch challenge audio configuration if challengeId exists
-    const { data: audioConfig } = useGetChallengeAudioConfigQuery(
-        challengeId || '',
-        { skip: !challengeId }
-    );
-
-    // State variables
-    const [showEndGameModal, setShowEndGameModal] = useState(false);
-    const [submittingChallenge, setSubmittingChallenge] = useState(false);
-
-    // Variables for progress bar - added these
-    const roundCount = totalRounds; // Total number of rounds
-    const currentRound = totalRounds; // On results screen, all rounds are complete
-
-    // Calculate stats
-    const correctPercentage = (score / totalRounds) * 100;
-
-    // Calculate player performance using the game service
-    const performances = WWWGameService.calculatePlayerPerformance(roundsData);
-
-    // Check if minimum score requirement is met
-    const minimumScoreRequired = audioConfig?.minimumScorePercentage || 0;
-    const meetsMinimumScore = minimumScoreRequired === 0 || correctPercentage >= minimumScoreRequired;
-
-    // Result message based on score
-    const getResultMessage = () => {
-        return WWWGameService.generateResultsMessage(score, totalRounds);
-    };
-
-    // AI host feedback on overall performance
-    const getAIFeedback = () => {
-        return WWWGameService.generateGameFeedback(roundsData, performances);
-    };
-
-    // Play again button handler
-    const playAgain = () => {
-        // Check if this game was part of a challenge
-        if (challengeId) {
-            // Prompt to complete the challenge
-            Alert.alert(
-                'Complete Challenge?',
-                'Would you like to mark this challenge as completed?',
-                [
-                    {
-                        text: 'Yes, Complete It',
-                        onPress: () => {
-                            // Submit challenge completion
-                            submitChallengeWithResults();
-                        }
-                    },
-                    {
-                        text: 'No, Play Again',
-                        onPress: () => navigation.navigate('CreateWWWQuest')
-                    }
-                ]
-            );
-        } else {
-            // Regular game, just go back to setup
-            navigation.navigate('CreateWWWQuest');
-        }
-    };
-
-    // Return home button handler
-    const returnHome = () => {
-        // Check if this game was part of a challenge
-        if (challengeId) {
-            // Prompt to complete the challenge
-            Alert.alert(
-                'Complete Challenge?',
-                'Would you like to mark this challenge as completed?',
-                [
-                    {
-                        text: 'Yes, Complete It',
-                        onPress: () => {
-                            // Submit challenge completion
-                            submitChallengeWithResults();
-                        }
-                    },
-                    {
-                        text: 'No, Return Home',
-                        onPress: () => navigation.navigate('Main', { screen: 'Home' })
-                    }
-                ]
-            );
-        } else {
-            // Regular game, just go home
-            navigation.navigate('Main', { screen: 'Home' });
-        }
-    };
-
-    // Submit challenge with results
-    const submitChallengeWithResults = async () => {
-        if (!challengeId) return;
-
-        try {
-            // Show loading indicator
-            setSubmittingChallenge(true);
-
-            // Submit completion with the game results
-            await submitCompletion({
-                challengeId: challengeId,
-                completionData: {
-                    verificationData: {
-                        score,
-                        totalRounds,
-                        completed: true,
-                        teamName,
-                        roundsData: roundsData.map(round => ({
-                            question: round.question,
-                            correctAnswer: round.correctAnswer,
-                            teamAnswer: round.teamAnswer,
-                            isCorrect: round.isCorrect,
-                            playerWhoAnswered: round.playerWhoAnswered
-                        }))
-                    },
-                    notes: `Quiz completed with score ${score}/${totalRounds}`
-                }
-            }).unwrap();
-
-            // Navigate to the quiz results screen
-            navigation.navigate('QuizResults', {
-                challengeId,
-                score,
-                totalRounds,
-                teamName,
-                roundsData
-            });
-        } catch (error) {
-            console.error('Error completing challenge:', error);
-            Alert.alert(
-                'Error',
-                'Failed to submit challenge completion. Please try again.',
-                [{ text: 'OK', onPress: () => navigation.navigate('Main', { screen: 'Home' }) }]
-            );
-        } finally {
-            setSubmittingChallenge(false);
-        }
-    };
-
-    // Legacy end game function for non-challenge games
-    const endGame = () => {
-        setShowEndGameModal(false);
-
-        // If this game was started from a challenge, offer to mark it as completed
-        if (challengeId) {
-            Alert.alert(
-                'Complete Challenge?',
-                'Would you like to mark this challenge as completed?',
-                [
-                    {
-                        text: 'Yes',
-                        onPress: submitChallengeWithResults
-                    },
-                    {
-                        text: 'No',
-                        onPress: () => navigation.navigate('Main', { screen: 'Home' })
-                    }
-                ]
-            );
-        } else {
-            // Regular game flow
-            navigation.navigate('Main', { screen: 'Home' });
-        }
-    };
 
     return (
         <SafeAreaView style={screen.container}>
@@ -260,7 +69,7 @@ const WWWGameResultsScreen: React.FC = () => {
                         />
                     </View>
                     <Text style={styles.scorePercentage}>{correctPercentage.toFixed(0)}% Correct</Text>
-                    <Text style={styles.resultMessage}>{getResultMessage()}</Text>
+                    <Text style={styles.resultMessage}>{resultMessage}</Text>
                 </View>
 
                 {/* Minimum Score Requirement Status */}
@@ -295,7 +104,7 @@ const WWWGameResultsScreen: React.FC = () => {
 
                 <View style={styles.feedbackContainer}>
                     <Text style={styles.sectionTitle}>AI Host Analysis</Text>
-                    <Text style={styles.feedbackText}>{getAIFeedback()}</Text>
+                    <Text style={styles.feedbackText}>{aiFeedback}</Text>
                 </View>
 
                 <View style={styles.performanceContainer}>

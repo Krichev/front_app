@@ -1,242 +1,72 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import {
     ActivityIndicator,
-    Image,
     SafeAreaView,
     ScrollView,
-    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useSearchChallengesQuery } from '../entities/ChallengeState/model/slice/challengeApi';
-import { useSearchUsersQuery } from '../entities/UserState/model/slice/userApi';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../shared/ui/theme/createStyles';
+import { useSearchResults } from './hooks/useSearchResults';
+import { SearchResultSection } from './components/SearchResultSection';
+import { UserSearchCard } from './components/UserSearchCard';
+import { ChallengeSearchCard } from './components/ChallengeSearchCard';
 import { UserSearchResult } from '../entities/QuizState/model/types/question.types';
+import { ApiChallenge } from '../entities/ChallengeState/model/types';
 
-type SearchScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-const PREVIEW_LIMIT = 3;
-
+/**
+ * SearchScreen component - allows searching for users, quizzes, and challenges
+ * Refactored to follow FSD and theme patterns.
+ */
 const SearchScreen: React.FC = () => {
-    const navigation = useNavigation<SearchScreenNavigationProp>();
     const { t } = useTranslation();
-
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedQuery, setDebouncedQuery] = useState('');
-    const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-        users: false,
-        quizzes: false,
-        challenges: false,
-    });
-    const [recentSearches, setRecentSearches] = useState<string[]>([]);
-
-    // Fetch ALL types when query is valid
-    const shouldSearch = debouncedQuery.length >= 2;
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
 
     const {
-        data: challengeResults,
-        isLoading: loadingChallenges,
-    } = useSearchChallengesQuery({ q: debouncedQuery }, { skip: !shouldSearch });
+        searchQuery,
+        setSearchQuery,
+        debouncedQuery,
+        isLoading,
+        hasResults,
+        totalResults,
+        users,
+        quizResults,
+        challengeOnlyResults,
+        expandedSections,
+        toggleSection,
+        recentSearches,
+        navigateToUserProfile,
+        navigateToChallengeDetails,
+    } = useSearchResults();
 
-    const {
-        data: userResults,
-        isLoading: loadingUsers,
-    } = useSearchUsersQuery(
-        { q: debouncedQuery, limit: 20 },
-        { skip: !shouldSearch }
-    );
+    const renderUserItem = useCallback((user: UserSearchResult) => (
+        <UserSearchCard user={user} onPress={navigateToUserProfile} />
+    ), [navigateToUserProfile]);
 
-    // Separate quizzes from challenges
-    const quizResults = useMemo(() => {
-        return challengeResults?.filter(c => c.type === 'QUIZ') || [];
-    }, [challengeResults]);
+    const renderQuizItem = useCallback((quiz: ApiChallenge) => (
+        <ChallengeSearchCard challenge={quiz} isQuiz onPress={navigateToChallengeDetails} />
+    ), [navigateToChallengeDetails]);
 
-    const challengeOnlyResults = useMemo(() => {
-        return challengeResults?.filter(c => c.type !== 'QUIZ') || [];
-    }, [challengeResults]);
-
-    const users = userResults?.content || [];
-
-    // Debounce
-    useEffect(() => {
-        const handler = setTimeout(() => {
-            if (searchQuery.length >= 2) {
-                setDebouncedQuery(searchQuery);
-                // eslint-disable-next-line react-hooks/exhaustive-deps
-                if (!recentSearches.includes(searchQuery)) {
-                    setRecentSearches(prev => [searchQuery, ...prev.slice(0, 4)]);
-                }
-            } else {
-                setDebouncedQuery('');
-            }
-        }, 400);
-        return () => clearTimeout(handler);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchQuery]);
-
-    const isLoading = loadingChallenges || loadingUsers;
-    const hasResults = users.length > 0 || quizResults.length > 0 || challengeOnlyResults.length > 0;
-    const totalResults = users.length + quizResults.length + challengeOnlyResults.length;
-
-    const toggleSection = (section: string) => {
-        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-    };
-
-    const navigateToUserProfile = (userId: string) => {
-        navigation.navigate('UserProfile', { userId });
-    };
-
-    const navigateToChallengeDetails = (challengeId: string) => {
-        navigation.navigate('ChallengeDetails', { challengeId });
-    };
-
-    // Render section header
-    const renderSectionHeader = (
-        title: string,
-        icon: string,
-        count: number,
-        sectionKey: string
-    ) => {
-        const isExpanded = expandedSections[sectionKey];
-        const showToggle = count > PREVIEW_LIMIT;
-
-        return (
-            <TouchableOpacity
-                style={styles.sectionHeader}
-                onPress={() => showToggle && toggleSection(sectionKey)}
-                disabled={!showToggle}
-            >
-                <View style={styles.sectionHeaderLeft}>
-                    <MaterialCommunityIcons name={icon} size={22} color='#007AFF' />
-                    <Text style={styles.sectionTitle}>{title}</Text>
-                    <View style={styles.countBadge}>
-                        <Text style={styles.countText}>{count}</Text>
-                    </View>
-                </View>
-                {showToggle && (
-                    <MaterialCommunityIcons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={24}
-                        color='#666'
-                    />
-                )}
-            </TouchableOpacity>
-        );
-    };
-
-    // Render user card
-    const renderUserCard = (user: UserSearchResult) => (
-        <TouchableOpacity
-            key={user.id}
-            style={styles.resultCard}
-            onPress={() => navigateToUserProfile(user.id)}
-        >
-            <View style={styles.avatarContainer}>
-                {user.avatar ? (
-                    <Image source={{ uri: user.avatar }} style={styles.avatar} />
-                ) : (
-                    <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarInitial}>
-                            {user.username.charAt(0).toUpperCase()}
-                        </Text>
-                    </View>
-                )}
-            </View>
-            <View style={styles.cardContent}>
-                <View style={styles.cardHeader}>
-                    <Text style={styles.cardTitle}>{user.username}</Text>
-                    {user.connectionStatus && user.connectionStatus !== 'NONE' && (
-                        <View style={[
-                            styles.statusBadge,
-                            user.connectionStatus === 'ACCEPTED' ? styles.statusConnected : styles.statusPending
-                        ]}>
-                            <Text style={styles.statusText}>
-                                {user.connectionStatus === 'ACCEPTED' ? 'Connected' : 'Pending'}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-                {user.bio && (
-                    <Text style={styles.cardSubtitle} numberOfLines={1}>{user.bio}</Text>
-                )}
-            </View>
-            <MaterialCommunityIcons name='chevron-right' size={20} color='#ccc' />
-        </TouchableOpacity>
-    );
-
-    // Render challenge/quiz card
-    const renderChallengeCard = (challenge: any, isQuiz: boolean) => (
-        <TouchableOpacity
-            key={challenge.id}
-            style={styles.resultCard}
-            onPress={() => navigateToChallengeDetails(challenge.id)}
-        >
-            <View style={[styles.iconContainer, isQuiz ? styles.quizIcon : styles.challengeIcon]}>
-                <MaterialCommunityIcons
-                    name={isQuiz ? 'brain' : 'trophy'}
-                    size={24}
-                    color='#fff'
-                />
-            </View>
-            <View style={styles.cardContent}>
-                <Text style={styles.cardTitle} numberOfLines={1}>{challenge.title}</Text>
-                <Text style={styles.cardSubtitle} numberOfLines={1}>
-                    {challenge.description || (isQuiz ? 'Quiz Challenge' : 'Challenge')}
-                </Text>
-            </View>
-            <MaterialCommunityIcons name='chevron-right' size={20} color='#ccc' />
-        </TouchableOpacity>
-    );
-
-    // Render section content
-    const renderSection = (
-        title: string,
-        icon: string,
-        items: any[],
-        sectionKey: string,
-        renderItem: (item: any) => React.ReactNode
-    ) => {
-        if (items.length === 0) return null;
-
-        const isExpanded = expandedSections[sectionKey];
-        const displayItems = isExpanded ? items : items.slice(0, PREVIEW_LIMIT);
-
-        return (
-            <View style={styles.section}>
-                {renderSectionHeader(title, icon, items.length, sectionKey)}
-                <View style={styles.sectionContent}>
-                    {displayItems.map(renderItem)}
-                </View>
-                {!isExpanded && items.length > PREVIEW_LIMIT && (
-                    <TouchableOpacity
-                        style={styles.seeAllButton}
-                        onPress={() => toggleSection(sectionKey)}
-                    >
-                        <Text style={styles.seeAllText}>
-                            See all {items.length} {title.toLowerCase()}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-            </View>
-        );
-    };
+    const renderChallengeItem = useCallback((challenge: ApiChallenge) => (
+        <ChallengeSearchCard challenge={challenge} isQuiz={false} onPress={navigateToChallengeDetails} />
+    ), [navigateToChallengeDetails]);
 
     return (
         <SafeAreaView style={styles.container}>
             {/* Search Input */}
             <View style={styles.searchContainer}>
                 <View style={styles.searchInputWrapper}>
-                    <MaterialCommunityIcons name='magnify' size={22} color='#888' />
+                    <MaterialCommunityIcons name='magnify' size={22} color={theme.colors.text.disabled} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder={t('search.placeholder')}
-                        placeholderTextColor='#999'
+                        placeholderTextColor={theme.colors.text.disabled}
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         autoCapitalize='none'
@@ -244,7 +74,7 @@ const SearchScreen: React.FC = () => {
                     />
                     {searchQuery.length > 0 && (
                         <TouchableOpacity onPress={() => setSearchQuery('')}>
-                            <MaterialCommunityIcons name='close-circle' size={20} color='#888' />
+                            <MaterialCommunityIcons name='close-circle' size={20} color={theme.colors.text.disabled} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -258,7 +88,7 @@ const SearchScreen: React.FC = () => {
                 {/* Loading State */}
                 {isLoading && debouncedQuery.length >= 2 && (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size='large' color='#007AFF' />
+                        <ActivityIndicator size='large' color={theme.colors.primary.main} />
                         <Text style={styles.loadingText}>{t('search.loading')}</Text>
                     </View>
                 )}
@@ -266,7 +96,7 @@ const SearchScreen: React.FC = () => {
                 {/* Empty Query State */}
                 {debouncedQuery.length < 2 && searchQuery.length === 0 && (
                     <View style={styles.emptyState}>
-                        <MaterialCommunityIcons name='magnify' size={64} color='#ddd' />
+                        <MaterialCommunityIcons name='magnify' size={64} color={theme.colors.background.tertiary} />
                         <Text style={styles.emptyStateTitle}>{t('search.title')}</Text>
                         <Text style={styles.emptyStateText}>
                             {t('search.subtitle')}
@@ -282,7 +112,7 @@ const SearchScreen: React.FC = () => {
                                         style={styles.recentItem}
                                         onPress={() => setSearchQuery(term)}
                                     >
-                                        <MaterialCommunityIcons name='history' size={18} color='#888' />
+                                        <MaterialCommunityIcons name='history' size={18} color={theme.colors.text.secondary} />
                                         <Text style={styles.recentText}>{term}</Text>
                                     </TouchableOpacity>
                                 ))}
@@ -301,7 +131,7 @@ const SearchScreen: React.FC = () => {
                 {/* No Results */}
                 {!isLoading && debouncedQuery.length >= 2 && !hasResults && (
                     <View style={styles.emptyState}>
-                        <MaterialCommunityIcons name='emoticon-sad-outline' size={64} color='#ddd' />
+                        <MaterialCommunityIcons name='emoticon-sad-outline' size={64} color={theme.colors.background.tertiary} />
                         <Text style={styles.emptyStateTitle}>{t('search.noResults')}</Text>
                         <Text style={styles.emptyStateText}>
                             {t('search.tryDifferent')}
@@ -318,261 +148,137 @@ const SearchScreen: React.FC = () => {
                     </View>
                 )}
 
-                {/* Users Section */}
-                {!isLoading && renderSection(
-                    t('search.users'),
-                    'account-group',
-                    users,
-                    'users',
-                    (user) => renderUserCard(user)
+                {/* Sections */}
+                {!isLoading && (
+                    <>
+                        <SearchResultSection
+                            title={t('search.users')}
+                            icon='account-group'
+                            items={users}
+                            sectionKey='users'
+                            isExpanded={expandedSections.users}
+                            onToggle={() => toggleSection('users')}
+                            renderItem={renderUserItem}
+                        />
+                        <SearchResultSection
+                            title={t('search.quizzes')}
+                            icon='brain'
+                            items={quizResults}
+                            sectionKey='quizzes'
+                            isExpanded={expandedSections.quizzes}
+                            onToggle={() => toggleSection('quizzes')}
+                            renderItem={renderQuizItem}
+                        />
+                        <SearchResultSection
+                            title={t('search.challenges')}
+                            icon='trophy'
+                            items={challengeOnlyResults}
+                            sectionKey='challenges'
+                            isExpanded={expandedSections.challenges}
+                            onToggle={() => toggleSection('challenges')}
+                            renderItem={renderChallengeItem}
+                        />
+                    </>
                 )}
 
-                {/* Quizzes Section */}
-                {!isLoading && renderSection(
-                    t('search.quizzes'),
-                    'brain',
-                    quizResults,
-                    'quizzes',
-                    (quiz) => renderChallengeCard(quiz, true)
-                )}
-
-                {/* Challenges Section */}
-                {!isLoading && renderSection(
-                    t('search.challenges'),
-                    'trophy',
-                    challengeOnlyResults,
-                    'challenges',
-                    (challenge) => renderChallengeCard(challenge, false)
-                )}
-
-                <View style={{ height: 40 }} />
+                <View style={{ height: theme.spacing['4xl'] }} />
             </ScrollView>
         </SafeAreaView>
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: theme.colors.background.secondary,
     },
     searchContainer: {
-        padding: 16,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
+        padding: theme.spacing.lg,
+        backgroundColor: theme.colors.background.primary,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.background.tertiary,
     },
     searchInputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.lg,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.md,
     },
     searchInput: {
         flex: 1,
-        marginLeft: 10,
-        fontSize: 16,
-        color: '#333',
+        marginLeft: theme.spacing.md,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
     },
     resultsContainer: {
         flex: 1,
     },
     loadingContainer: {
-        padding: 40,
+        padding: theme.spacing['4xl'],
         alignItems: 'center',
     },
     loadingText: {
-        marginTop: 12,
-        color: '#666',
-        fontSize: 14,
+        marginTop: theme.spacing.md,
+        color: theme.colors.text.secondary,
+        fontSize: theme.typography.fontSize.sm,
     },
     emptyState: {
-        padding: 40,
+        padding: theme.spacing['4xl'],
         alignItems: 'center',
     },
     emptyStateTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginTop: 16,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
+        marginTop: theme.spacing.lg,
     },
     emptyStateText: {
-        fontSize: 14,
-        color: '#888',
-        marginTop: 8,
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.sm,
         textAlign: 'center',
     },
     hintContainer: {
-        padding: 20,
+        padding: theme.spacing.xl,
         alignItems: 'center',
     },
     hintText: {
-        color: '#888',
-        fontSize: 14,
+        color: theme.colors.text.secondary,
+        fontSize: theme.typography.fontSize.sm,
     },
     summaryContainer: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.md,
     },
     summaryText: {
-        color: '#666',
-        fontSize: 13,
-    },
-    section: {
-        marginBottom: 8,
-    },
-    sectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    sectionHeaderLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginLeft: 10,
-    },
-    countBadge: {
-        backgroundColor: '#e8f4fd',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 10,
-        marginLeft: 8,
-    },
-    countText: {
-        fontSize: 12,
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    sectionContent: {
-        backgroundColor: '#fff',
-    },
-    resultCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f5f5f5',
-    },
-    avatarContainer: {
-        width: 44,
-        height: 44,
-        marginRight: 12,
-    },
-    avatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-    },
-    avatarPlaceholder: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#007AFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    avatarInitial: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '600',
-    },
-    iconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 10,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 12,
-    },
-    quizIcon: {
-        backgroundColor: '#9c27b0',
-    },
-    challengeIcon: {
-        backgroundColor: '#ff9800',
-    },
-    cardContent: {
-        flex: 1,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    cardTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#333',
-    },
-    cardSubtitle: {
-        fontSize: 13,
-        color: '#888',
-        marginTop: 2,
-    },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 10,
-        marginLeft: 8,
-    },
-    statusConnected: {
-        backgroundColor: '#e8f5e9',
-    },
-    statusPending: {
-        backgroundColor: '#fff3e0',
-    },
-    statusText: {
-        fontSize: 11,
-        fontWeight: '500',
-        color: '#666',
-    },
-    seeAllButton: {
-        paddingVertical: 12,
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    seeAllText: {
-        color: '#007AFF',
-        fontSize: 14,
-        fontWeight: '500',
+        color: theme.colors.text.secondary,
+        fontSize: theme.typography.fontSize.xs,
     },
     recentContainer: {
         width: '100%',
-        marginTop: 24,
-        paddingHorizontal: 16,
+        marginTop: theme.spacing['2xl'],
+        paddingHorizontal: theme.spacing.lg,
     },
     recentTitle: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
-        marginBottom: 12,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.md,
     },
     recentItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        paddingVertical: theme.spacing.md,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.background.tertiary,
     },
     recentText: {
-        marginLeft: 10,
-        fontSize: 15,
-        color: '#333',
+        marginLeft: theme.spacing.md,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
     },
-});
+}));
 
 export default SearchScreen;

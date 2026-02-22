@@ -1,4 +1,7 @@
 // src/screens/CreateWWWQuestScreen/components/RegularQuestionEditor.tsx
+// TODO: Refactor to use shared hooks from features/question-form
+// See: useQuestionForm, useMediaPicker, useExternalVideo, useQuestionSubmit
+// These components duplicate logic that has been extracted into the question-form feature module.
 import React, {useCallback, useEffect, useState} from 'react';
 import {
     ActivityIndicator,

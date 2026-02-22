@@ -22,7 +22,7 @@ import PhotoVerificationScreen from '../screens/PhotoVerificationScreen';
 import LocationVerificationScreen from '../screens/LocationVerificationScreen';
 import WWWGamePlayScreen from '../screens/WWWGamePlayScreen';
 import BrainRingGamePlayScreen from '../screens/BrainRingGamePlayScreen';
-import WWWGameResultsScreen from '../screens/WWWGameResultsScreen';
+import WWWGameResultsScreen from '../screens/WWWGameResults';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import GroupsScreen from '../screens/GroupsScreen';
