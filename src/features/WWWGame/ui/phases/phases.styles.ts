@@ -127,6 +127,11 @@ export const phaseStyles = (theme: Theme) =>
             overflow: 'hidden',
             borderRadius: 8
         },
+        mediaContainerFlexible: {
+            width: '100%',
+            overflow: 'hidden',
+            borderRadius: 8,
+        },
         mediaHeader: {
             flexDirection: 'row',
             alignItems: 'center',
@@ -186,8 +191,6 @@ export const phaseStyles = (theme: Theme) =>
         },
         mediaPlaybackContainer: {
             flex: 1,
-            justifyContent: 'center',
-            padding: theme.spacing.xl,
         },
         playbackProgress: {
             marginTop: theme.spacing.lg,

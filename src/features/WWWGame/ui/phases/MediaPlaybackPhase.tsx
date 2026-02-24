@@ -1,5 +1,5 @@
 import React, {useCallback, useState} from 'react';
-import {Text, TouchableOpacity, View} from 'react-native';
+import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
 import {phaseStyles} from './phases.styles';
 import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
@@ -68,7 +68,15 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
       : undefined;
 
   return (
-      <View style={styles.mediaPlaybackContainer}>
+      <ScrollView 
+          style={styles.mediaPlaybackContainer}
+          contentContainerStyle={{ 
+              flexGrow: 1, 
+              justifyContent: 'center',
+              padding: theme.spacing.xl
+          }}
+          showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>
           {mediaType === 'VIDEO' ? t('wwwPhases.mediaPlayback.watchVideo') : t('wwwPhases.mediaPlayback.listenAudio')}
         </Text>
@@ -88,7 +96,7 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
                       endTime={question.questionVideoEndTime}
                       onSegmentEnd={handleEnd}
                       autoPlay={true}
-                      showControls={false}
+                      showControls={true}
                       hideTitle={true}
                       enableFullscreen={true}
                       initialFullscreen={true}
@@ -139,6 +147,6 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
               <Text style={styles.skipButtonText}>{t('wwwPhases.mediaPlayback.skipMedia')}</Text>
             </TouchableOpacity>
         )}
-      </View>
+      </ScrollView>
   );
 };

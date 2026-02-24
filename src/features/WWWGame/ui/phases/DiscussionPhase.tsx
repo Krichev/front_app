@@ -98,7 +98,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
             ) : (
                 <View style={styles.questionContent}>
                     {showMedia && mediaType && (
-                        <View style={styles.mediaContainer}>
+                        <View style={(hasExternalMedia && mediaType === 'VIDEO') ? styles.mediaContainerFlexible : styles.mediaContainer}>
                             <View style={styles.mediaHeader}>
                                 <MaterialCommunityIcons
                                     name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
