@@ -1365,6 +1365,24 @@ const ru = {
             returnHome: 'НА ГЛАВНУЮ',
         },
     },
+    wwwPhases: {
+        mediaPlayback: {
+            watchVideo: 'Посмотрите видео',
+            listenAudio: 'Прослушайте аудио',
+            replay: 'Повторить',
+            continueToDiscussion: 'Перейти к обсуждению',
+            skipMedia: 'Пропустить медиа',
+        },
+        waiting: {
+            readyToStart: 'Готовы начать?',
+            startQuiz: 'Начать викторину',
+            starting: 'Начинаем...',
+        },
+        youtube: {
+            unavailable: 'Видео YouTube недоступно',
+            retry: 'Повторить',
+        },
+    },
 };
 
 export default ru;

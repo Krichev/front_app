@@ -1,21 +1,22 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
+    ActivityIndicator,
+    Animated,
+    Dimensions,
+    Image,
     LayoutChangeEvent,
+    Modal,
+    SafeAreaView,
+    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
     ViewStyle,
-    ActivityIndicator,
-    Animated,
-    Image,
-    Modal,
-    SafeAreaView,
-    Dimensions,
-    StatusBar,
 } from 'react-native';
 import YoutubePlayer, {YoutubeIframeRef} from 'react-native-youtube-iframe';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useTranslation} from 'react-i18next';
 
 interface YouTubePlayerProps {
     videoId: string;
@@ -52,6 +53,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          onPlayingChange,
                                                          style,
                                                      }) => {
+    const {t} = useTranslation();
     const playerRef = useRef<YoutubeIframeRef>(null);
     const [playing, setPlaying] = useState(false); // Start false to prevent flash
     const [isReady, setIsReady] = useState(false);
@@ -92,12 +94,17 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     const handleReady = useCallback(() => {
         setIsReady(true);
+        if (initialFullscreen) {
+            // Skip overlay fade — initialFullscreen effect will handle it
+            overlayOpacity.setValue(0);
+            setShowOverlay(false);
+        }
         if (autoPlay) {
             // Small delay to ensure iframe is fully rendered before starting playback
             setTimeout(() => setPlaying(true), 150);
         }
         onReady?.();
-    }, [onReady, autoPlay]);
+    }, [onReady, autoPlay, initialFullscreen, overlayOpacity]);
 
     const handleError = useCallback((error: any) => {
         console.error('🎬 [YouTube] Failed to load:', videoId, error);
@@ -106,7 +113,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     // Fade out overlay when ready
     useEffect(() => {
-        if (isReady && showOverlay) {
+        if (isReady && showOverlay && !initialFullscreen) {
             Animated.timing(overlayOpacity, {
                 toValue: 0,
                 duration: 300,
@@ -117,7 +124,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 }
             });
         }
-    }, [isReady, showOverlay, overlayOpacity]);
+    }, [isReady, showOverlay, overlayOpacity, initialFullscreen]);
 
     // Normal toggle (when onlyPlayButton = false)
     const togglePlayPause = useCallback(() => {
@@ -156,14 +163,31 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             playerRef.current?.seekTo(startTime, true);
         }
     }, [isReady, startTime]);
+    const openFullscreen = useCallback(async () => {
+        let currentTime = startTime;
+        try {
+            if (playerRef.current) {
+                currentTime = await playerRef.current.getCurrentTime();
+            }
+        } catch (e) {}
+
+        setFullscreenStartTime(currentTime);
+        setIsFullscreen(true);
+        setPlaying(false); // Pause inline player
+        onFullscreenChange?.(true);
+    }, [startTime, onFullscreenChange]);
 
     // Initial Fullscreen effect
     useEffect(() => {
         if (isReady && initialFullscreen && !hasTriggeredInitialFullscreen.current) {
             hasTriggeredInitialFullscreen.current = true;
-            openFullscreen();
+            // IMMEDIATELY hide overlay — don't wait for fade animation
+            overlayOpacity.setValue(0);
+            setShowOverlay(false);
+            // Small delay to ensure overlay is gone before modal opens
+            setTimeout(() => openFullscreen(), 50);
         }
-    }, [isReady, initialFullscreen]);
+    }, [isReady, initialFullscreen, overlayOpacity, openFullscreen]);
 
     const handleRetry = () => {
         setHasError(false);
@@ -173,22 +197,11 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         setReplayKey(prev => prev + 1);
     };
 
-    const openFullscreen = useCallback(async () => {
-        let currentTime = startTime;
-        try {
-            if (playerRef.current) {
-                currentTime = await playerRef.current.getCurrentTime();
-            }
-        } catch (e) {}
-        
-        setFullscreenStartTime(currentTime);
-        setIsFullscreen(true);
-        setPlaying(false); // Pause inline player
-        onFullscreenChange?.(true);
-    }, [startTime, onFullscreenChange]);
+
 
     const closeFullscreen = useCallback(async () => {
         setIsFullscreen(false);
+        setShowOverlay(false); // Ensure overlay doesn't come back
         onFullscreenChange?.(false);
         // The inline player will be re-synced if needed, but for now we just resume if it was playing
         setPlaying(true);
@@ -199,10 +212,10 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             {hasError ? (
                 <View style={styles.errorContainer}>
                     <MaterialCommunityIcons name="youtube" size={48} color="#FF0000" />
-                    <Text style={styles.errorText}>YouTube video unavailable</Text>
+                    <Text style={styles.errorText}>{t('wwwPhases.youtube.unavailable')}</Text>
                     <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
                         <MaterialCommunityIcons name="refresh" size={16} color="#fff" />
-                        <Text style={styles.retryText}>Retry</Text>
+                        <Text style={styles.retryText}>{t('wwwPhases.youtube.retry')}</Text>
                     </TouchableOpacity>
                 </View>
             ) : (
@@ -222,6 +235,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                 webViewStyle={{ backgroundColor: 'transparent' }}
                                 webViewProps={{
                                     allowsInlineMediaPlayback: true,
+                                    allowsFullscreenVideo: false, // Prevent YouTube native fullscreen
                                     mediaPlaybackRequiresUserAction: !autoPlay,
                                     javaScriptEnabled: true,
                                     domStorageEnabled: true,
@@ -236,7 +250,10 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     rel: false,
                                     controls: showControls,
                                     iv_load_policy: 3,
-                                }}
+                                    modestbranding: true,
+                                    fs: false, // Disable YouTube's own fullscreen
+                                    showinfo: 0,
+                                } as any}
                             />
                         )}
                     </View>
@@ -247,7 +264,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                             <Image
                                 source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
                                 style={StyleSheet.absoluteFill}
-                                resizeMode="cover"
+                                resizeMode="contain"
                             />
                             <View style={styles.loadingOverlayDimmed}>
                                 <ActivityIndicator size="large" color="#fff" />
@@ -313,9 +330,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                         rel: false,
                                         controls: true, // Always show controls in fullscreen
                                         iv_load_policy: 3,
-                                    }}
+                                        modestbranding: true,
+                                        fs: false,
+                                        showinfo: 0,
+                                    } as any}
                                     webViewProps={{
                                         allowsInlineMediaPlayback: true,
+                                        allowsFullscreenVideo: false,
                                         javaScriptEnabled: true,
                                         domStorageEnabled: true,
                                     }}
@@ -409,7 +430,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 15,
+        zIndex: 25,
     },
     fullscreenContainer: {
         flex: 1,

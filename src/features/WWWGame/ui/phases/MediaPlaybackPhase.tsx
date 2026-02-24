@@ -10,6 +10,7 @@ import {MediaType} from '../../../../services/wwwGame/questionService';
 import {MediaSourceType} from '../../../../entities/QuizState/model/types/question.types';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {extractYouTubeVideoId} from '../../../../utils/youtubeUtils';
+import {useTranslation} from 'react-i18next';
 
 interface MediaPlaybackPhaseProps {
   question: QuizQuestion;
@@ -24,6 +25,7 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
                                                                       }) => {
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
+  const { t } = useTranslation();
   const [playbackEnded, setPlaybackEnded] = useState(false);
   const [replayKey, setReplayKey] = useState(0);
 
@@ -68,10 +70,13 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
   return (
       <View style={styles.mediaPlaybackContainer}>
         <Text style={styles.title}>
-          {mediaType === 'VIDEO' ? 'Watch the Video' : 'Listen to the Audio'}
+          {mediaType === 'VIDEO' ? t('wwwPhases.mediaPlayback.watchVideo') : t('wwwPhases.mediaPlayback.listenAudio')}
         </Text>
 
-        <View style={[styles.mediaContainer, mediaType === 'VIDEO' && { aspectRatio: 16/9 }]}>
+        <View style={[
+            { width: '100%', overflow: 'hidden', borderRadius: 8 },
+            mediaType === 'VIDEO' && !isExternalMedia && { aspectRatio: 16/9 }
+        ]}>
           {mediaType === 'VIDEO' ? (
               isExternalMedia ? (
                   <ExternalVideoPlayer
@@ -114,14 +119,14 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
                   onPress={handleReplay}
               >
                 <MaterialCommunityIcons name="replay" size={24} color={theme.colors.text.secondary} />
-                <Text style={styles.skipButtonText}>Replay</Text>
+                <Text style={styles.skipButtonText}>{t('wwwPhases.mediaPlayback.replay')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                   style={styles.continueButton}
                   onPress={onPlaybackComplete}
               >
-                <Text style={styles.continueButtonText}>Continue to Discussion</Text>
+                <Text style={styles.continueButtonText}>{t('wwwPhases.mediaPlayback.continueToDiscussion')}</Text>
               </TouchableOpacity>
             </View>
         )}
@@ -131,7 +136,7 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
                 style={styles.skipButton}
                 onPress={onSkip}
             >
-              <Text style={styles.skipButtonText}>Skip Media</Text>
+              <Text style={styles.skipButtonText}>{t('wwwPhases.mediaPlayback.skipMedia')}</Text>
             </TouchableOpacity>
         )}
       </View>

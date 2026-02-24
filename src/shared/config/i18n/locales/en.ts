@@ -1394,6 +1394,24 @@ const en = {
             returnHome: 'RETURN HOME',
         },
     },
+    wwwPhases: {
+        mediaPlayback: {
+            watchVideo: 'Watch the Video',
+            listenAudio: 'Listen to the Audio',
+            replay: 'Replay',
+            continueToDiscussion: 'Continue to Discussion',
+            skipMedia: 'Skip Media',
+        },
+        waiting: {
+            readyToStart: 'Ready to Start?',
+            startQuiz: 'Start Quiz',
+            starting: 'Starting...',
+        },
+        youtube: {
+            unavailable: 'YouTube video unavailable',
+            retry: 'Retry',
+        },
+    },
 };
 
 export default en;

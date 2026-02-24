@@ -115,7 +115,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                 </Text>
                             </View>
                             {hasExternalMedia && mediaType === 'VIDEO' ? (
-                                <View style={{width: '100%', aspectRatio: 16 / 9, overflow: 'hidden', borderRadius: 8}}>
+                                <View style={{width: '100%', borderRadius: 8, overflow: 'hidden'}}>
                                     <ExternalVideoPlayer
                                         mediaSourceType={question.mediaSourceType as MediaSourceType}
                                         videoId={videoId}

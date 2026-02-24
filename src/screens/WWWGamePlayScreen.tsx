@@ -24,6 +24,7 @@ import { WagerResultsOverlay } from '../features/Wager/ui/WagerResultsOverlay';
 import { useGetWagersByChallengeQuery } from '../entities/WagerState/model/slice/wagerApi';
 import { useWager } from '../features/Wager/hooks/useWager';
 import { Wager, WagerOutcome } from '../entities/WagerState/model/types';
+import { extractYouTubeVideoId } from '../utils/youtubeUtils';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;

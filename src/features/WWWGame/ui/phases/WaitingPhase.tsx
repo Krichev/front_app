@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
+import { useTranslation } from 'react-i18next';
 
 interface WaitingPhaseProps {
   roundTime: number;
@@ -17,6 +18,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({
 }) => {
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -26,7 +28,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({
         color={theme.colors.success.main}
         style={styles.icon}
       />
-      <Text style={styles.title}>Ready to Start?</Text>
+      <Text style={styles.title}>{t('wwwPhases.waiting.readyToStart')}</Text>
       <Text style={styles.text}>
         {`Welcome to WWW_QUIZ!\n\nYou'll have ${roundTime} seconds to discuss each question with your team.\n\nWhen you're ready to begin, press the button below.`}
       </Text>
@@ -36,7 +38,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({
         disabled={isLoading}
       >
         <Text style={styles.buttonText}>
-          {isLoading ? 'Starting...' : 'Start Quiz'}
+          {isLoading ? t('wwwPhases.waiting.starting') : t('wwwPhases.waiting.startQuiz')}
         </Text>
       </TouchableOpacity>
     </View>
