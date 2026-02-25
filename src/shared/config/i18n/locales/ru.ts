@@ -894,6 +894,41 @@ const ru = {
             },
         },
         completionNotes: 'Викторина завершена со счётом {{score}}/{{total}}',
+        score: {
+            label: 'Счёт: {{score}}/{{total}}',
+            percentCorrect: '{{percent}}% правильных',
+        },
+        requirement: {
+            met: 'Требование квеста выполнено',
+            notMet: 'Требование квеста не выполнено',
+            description: 'Минимальный результат: {{required}}% | Ваш результат: {{actual}}%',
+            help: 'Необходимо набрать минимум {{required}}% для завершения квеста. Попробуйте ещё раз!',
+        },
+        sections: {
+            aiAnalysis: 'Анализ ИИ-ведущего',
+            playerPerformance: 'Результаты игроков',
+            questionResults: 'Результаты по вопросам',
+        },
+        question: {
+            number: 'Вопрос {{number}}',
+            correct: 'ВЕРНО',
+            incorrect: 'НЕВЕРНО',
+            yourAnswer: 'Ваш ответ:',
+            correctAnswer: 'Правильный ответ:',
+            answeredBy: 'Ответил(а): {{player}}',
+        },
+        buttons: {
+            playAgain: 'Играть снова',
+            returnHome: 'На главную',
+        },
+        modal: {
+            title: 'Игра окончена!',
+            teamScored: 'Ваша команда ответила правильно на {{score}} из {{total}} вопросов.',
+            perfectScore: 'Идеальный результат! Невероятно!',
+            wellDone: 'Отлично!',
+            betterLuck: 'В следующий раз повезёт больше!',
+            seeResults: 'Подробные результаты',
+        },
     },
     friendsFamily: {
         header: {
@@ -1355,6 +1390,12 @@ const ru = {
             characters: 'Ответ содержит {{count}} символов.',
             words: ' Это {{count}} слов.',
         },
+        gameFeedback: {
+            strongestPlayer: '{{player}} был(а) вашим лучшим игроком, ответив правильно на {{correct}} из {{total}} вопросов. ',
+            struggledWith: 'Команде было сложнее всего с вопросами о ',
+            studyMore: '. Рекомендуем уделить больше внимания этим темам!',
+            excellentKnowledge: 'Ваша команда показала отличные знания по всем категориям вопросов!',
+        },
     },
     multiplayer: {
         gameOver: {
@@ -1377,6 +1418,18 @@ const ru = {
             readyToStart: 'Готовы начать?',
             startQuiz: 'Начать викторину',
             starting: 'Начинаем...',
+            welcomeText: 'Добро пожаловать в викторину ЧГК!\n\nУ вас будет {{roundTime}} секунд на обсуждение каждого вопроса с командой.\n\nКогда будете готовы, нажмите кнопку ниже.',
+        },
+        feedback: {
+            title: 'Результаты раунда',
+            question: 'Вопрос:',
+            yourAnswer: 'Ваш ответ:',
+            correctAnswer: 'Правильный ответ:',
+            correct: 'ВЕРНО',
+            incorrect: 'НЕВЕРНО',
+            aiHostFeedback: 'Отзыв ИИ-ведущего:',
+            finishGame: 'Завершить игру',
+            nextQuestion: 'Следующий вопрос',
         },
         youtube: {
             unavailable: 'Видео YouTube недоступно',

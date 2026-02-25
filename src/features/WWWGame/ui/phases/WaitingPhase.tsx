@@ -30,7 +30,7 @@ export const WaitingPhase: React.FC<WaitingPhaseProps> = ({
       />
       <Text style={styles.title}>{t('wwwPhases.waiting.readyToStart')}</Text>
       <Text style={styles.text}>
-        {`Welcome to WWW_QUIZ!\n\nYou'll have ${roundTime} seconds to discuss each question with your team.\n\nWhen you're ready to begin, press the button below.`}
+        {t('wwwPhases.waiting.welcomeText', { roundTime })}
       </Text>
       <TouchableOpacity
         style={[styles.button, isLoading && styles.disabledButton]}

@@ -961,6 +961,47 @@ const en = {
             },
         },
         completionNotes: 'Quiz completed with score {{score}}/{{total}}',
+        // Score display
+        score: {
+            label: 'Score: {{score}}/{{total}}',
+            percentCorrect: '{{percent}}% Correct',
+        },
+        // Quest/Score requirement
+        requirement: {
+            met: 'Quest Requirement Met',
+            notMet: 'Quest Requirement Not Met',
+            description: 'Minimum score required: {{required}}% | Your score: {{actual}}%',
+            help: 'You need to score at least {{required}}% to complete this quest. Try again!',
+        },
+        // Section titles
+        sections: {
+            aiAnalysis: 'AI Host Analysis',
+            playerPerformance: 'Player Performance',
+            questionResults: 'Question Results',
+        },
+        // Question results
+        question: {
+            number: 'Question {{number}}',
+            correct: 'CORRECT',
+            incorrect: 'INCORRECT',
+            yourAnswer: 'Your Answer:',
+            correctAnswer: 'Correct Answer:',
+            answeredBy: 'Answered by: {{player}}',
+        },
+        // Buttons
+        buttons: {
+            playAgain: 'Play Again',
+            returnHome: 'Return to Home',
+        },
+        // End game modal
+        modal: {
+            title: 'Game Over!',
+            teamScored: 'Your team scored {{score}} out of {{total}} questions.',
+            perfectScore: 'Perfect score! Incredible!',
+            wellDone: 'Well done!',
+            betterLuck: 'Better luck next time!',
+            seeResults: 'See Detailed Results',
+        },
     },
     friendsFamily: {
         header: {
@@ -1384,6 +1425,12 @@ const en = {
             characters: 'The answer contains {{count}} characters.',
             words: ' It\'s {{count}} words.',
         },
+        gameFeedback: {
+            strongestPlayer: '{{player}} was your strongest player, answering {{correct}} out of {{total}} questions correctly. ',
+            struggledWith: 'The team struggled most with questions about ',
+            studyMore: '. Consider studying these topics more for next time!',
+            excellentKnowledge: 'Your team showed excellent knowledge across all question categories!',
+        },
     },
     multiplayer: {
         gameOver: {
@@ -1406,6 +1453,18 @@ const en = {
             readyToStart: 'Ready to Start?',
             startQuiz: 'Start Quiz',
             starting: 'Starting...',
+            welcomeText: 'Welcome to WWW Quiz!\n\nYou\'ll have {{roundTime}} seconds to discuss each question with your team.\n\nWhen you\'re ready to begin, press the button below.',
+        },
+        feedback: {
+            title: 'Round Results',
+            question: 'Question:',
+            yourAnswer: 'Your Answer:',
+            correctAnswer: 'Correct Answer:',
+            correct: 'CORRECT',
+            incorrect: 'INCORRECT',
+            aiHostFeedback: 'AI Host Feedback:',
+            finishGame: 'Finish Game',
+            nextQuestion: 'Next Question',
         },
         youtube: {
             unavailable: 'YouTube video unavailable',

@@ -35,27 +35,27 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Round Results</Text>
+      <Text style={styles.title}>{t('wwwPhases.feedback.title')}</Text>
 
       <View style={styles.resultContainer}>
         <View style={styles.resultRow}>
-          <Text style={styles.resultLabel}>Question:</Text>
+          <Text style={styles.resultLabel}>{t('wwwPhases.feedback.question')}</Text>
           <Text style={styles.resultValue}>{roundData.question.question}</Text>
         </View>
 
         <View style={styles.resultRow}>
-          <Text style={styles.resultLabel}>Your Answer:</Text>
+          <Text style={styles.resultLabel}>{t('wwwPhases.feedback.yourAnswer')}</Text>
           <Text style={styles.resultValue}>{roundData.teamAnswer}</Text>
         </View>
 
         <View style={styles.resultRow}>
-          <Text style={styles.resultLabel}>Correct Answer:</Text>
+          <Text style={styles.resultLabel}>{t('wwwPhases.feedback.correctAnswer')}</Text>
           <Text style={styles.resultValue}>{roundData.question.answer}</Text>
         </View>
 
         <View style={[styles.badge, isCorrect ? styles.correctBadge : styles.incorrectBadge]}>
           <Text style={styles.badgeText}>
-            {isCorrect ? 'CORRECT' : 'INCORRECT'}
+            {isCorrect ? t('wwwPhases.feedback.correct') : t('wwwPhases.feedback.incorrect')}
           </Text>
         </View>
       </View>
@@ -63,7 +63,7 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
       {roundData['aiFeedback'] && (
         <View style={{ backgroundColor: theme.colors.info.background, padding: theme.spacing.lg, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg }}>
           <Text style={{ ...theme.typography.body.small, color: theme.colors.info.dark, fontWeight: theme.typography.fontWeight.bold, marginBottom: theme.spacing.sm }}>
-            AI Host Feedback:
+            {t('wwwPhases.feedback.aiHostFeedback')}
           </Text>
           <Text style={{ color: theme.colors.text.primary }}>{roundData['aiFeedback']}</Text>
         </View>
@@ -102,7 +102,7 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
         onPress={handlePress}
       >
         <Text style={styles.buttonText}>
-          {isLastRound ? 'Finish Game' : 'Next Question'}
+          {isLastRound ? t('wwwPhases.feedback.finishGame') : t('wwwPhases.feedback.nextQuestion')}
         </Text>
       </TouchableOpacity>
     </View>

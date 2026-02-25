@@ -292,11 +292,11 @@ export class WWWGameService {
         let feedback = '';
 
         if (bestPlayer && bestPlayer.total > 1) {
-            feedback += `${bestPlayer.player} was your strongest player, answering ${bestPlayer.correct} out of ${bestPlayer.total} questions correctly. `;
+            feedback += i18n.t('wwwGame.gameFeedback.strongestPlayer', { player: bestPlayer.player, correct: bestPlayer.correct, total: bestPlayer.total });
         }
 
         if (incorrectQuestions.length > 0) {
-            feedback += 'The team struggled most with questions about ';
+            feedback += i18n.t('wwwGame.gameFeedback.struggledWith');
             const topics = incorrectQuestions.map(q => {
                 const words = q.question.split(' ');
                 // Extract a few words to represent the topic
@@ -304,9 +304,9 @@ export class WWWGameService {
             }).slice(0, 3);
 
             feedback += topics.join(', ');
-            feedback += '. Consider studying these topics more for next time!';
+            feedback += i18n.t('wwwGame.gameFeedback.studyMore');
         } else {
-            feedback += 'Your team showed excellent knowledge across all question categories!';
+            feedback += i18n.t('wwwGame.gameFeedback.excellentKnowledge');
         }
 
         return feedback;
