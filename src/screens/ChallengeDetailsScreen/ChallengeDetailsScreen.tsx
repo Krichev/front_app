@@ -29,6 +29,7 @@ import { WagerSection } from './components/WagerSection';
 import { ActionButtons } from './components/ActionButtons';
 import { DebugSection } from './components/DebugSection';
 import { DescriptionSection } from './components/DescriptionSection';
+import { SessionHistorySection } from './ui/SessionHistorySection';
 import { InviteUserModal } from '../../features/Invitation/ui/InviteUserModal';
 
 // Utils & Styles
@@ -173,11 +174,16 @@ const ChallengeDetailsScreen: React.FC = () => {
                         <AudioSection audioConfig={details.audioConfig} />
                     )}
 
+                    {details.challenge.status === 'COMPLETED' && details.isQuizType && (
+                        <SessionHistorySection challengeId={challengeId!} />
+                    )}
+
                     <ActionButtons
                         challengeId={challengeId!}
                         isQuizType={details.isQuizType}
                         userIsCreator={details.isCreator}
                         hasUserJoined={details.hasUserJoined}
+                        canReplay={details.canReplay}
                         isStartingQuiz={quizLauncher.isStartingQuiz}
                         isJoining={actions.isJoining}
                         isSubmitting={actions.isSubmitting}

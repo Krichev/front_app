@@ -288,6 +288,44 @@ export interface QuizChallengeConfig {
 }
 
 /**
+ * Completed challenge with additional statistics
+ */
+export interface CompletedChallenge extends ApiChallenge {
+    sessionCount: number;
+    bestScore: number;
+    bestScorePercentage: number;
+    lastPlayedAt: string | null;
+    totalRounds: number;
+}
+
+/**
+ * Summary of a quiz session for history view
+ */
+export interface QuizSessionSummary {
+    sessionId: string;
+    correctAnswers: number;
+    totalRounds: number;
+    scorePercentage: number;
+    status: string;
+    questionSource: string;
+    createdAt: string;
+    completedAt: string | null;
+    duration: number | null;
+}
+
+/**
+ * Configuration for replaying a challenge
+ */
+export interface ReplayChallengeConfig {
+    difficulty?: string;
+    roundCount?: number;
+    roundTime?: number;
+    enableAIHost?: boolean;
+    enableAiAnswerValidation?: boolean;
+    questionSource?: string;
+}
+
+/**
  * Participant settings for a quiz
  */
 export interface QuizParticipantSettings {

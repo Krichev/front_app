@@ -177,7 +177,14 @@ const WWWGameResultsScreen: React.FC = () => {
                         {submittingChallenge ? (
                             <ActivityIndicator size="small" color={theme.colors.text.inverse} />
                         ) : (
-                            <Text style={styles.buttonText}>{t('gameResults.buttons.playAgain')}</Text>
+                            <View style={{ alignItems: 'center' }}>
+                                <Text style={styles.buttonText}>Play Again →</Text>
+                                {challengeId && (
+                                    <Text style={{ fontSize: 10, color: 'white', opacity: 0.8, marginTop: 2 }}>
+                                        View stats & adjust settings before replaying
+                                    </Text>
+                                )}
+                            </View>
                         )}
                     </TouchableOpacity>
 

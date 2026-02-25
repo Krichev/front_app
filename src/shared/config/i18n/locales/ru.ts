@@ -878,6 +878,7 @@ const ru = {
         },
     },
     gameResults: {
+        // --- EXISTING (keep as-is) ---
         alerts: {
             error: {
                 title: 'Ошибка',
@@ -887,13 +888,15 @@ const ru = {
                 title: 'Завершить соревнование?',
                 message: 'Хотите отметить это соревнование как завершенное?',
                 yesComplete: 'Да, завершить',
-                noPlayAgain: 'Нет, играть снова',
-                noReturnHome: 'Нет, вернуться на главную',
+                noPlayAgain: 'Нет, играть ещё',
+                noReturnHome: 'Нет, на главную',
                 yes: 'Да',
                 no: 'Нет',
             },
         },
         completionNotes: 'Викторина завершена со счётом {{score}}/{{total}}',
+
+        // --- NEW KEYS BELOW ---
         score: {
             label: 'Счёт: {{score}}/{{total}}',
             percentCorrect: '{{percent}}% правильных',
@@ -1374,6 +1377,7 @@ const ru = {
         },
     },
     wwwGame: {
+        // --- EXISTING (keep as-is) ---
         performance: {
             outstanding: 'Выдающийся результат! Ваша команда показала исключительные знания!',
             great: 'Отличная работа! У вашей команды впечатляющие знания!',
@@ -1390,6 +1394,7 @@ const ru = {
             characters: 'Ответ содержит {{count}} символов.',
             words: ' Это {{count}} слов.',
         },
+        // --- NEW SUB-SECTION ---
         gameFeedback: {
             strongestPlayer: '{{player}} был(а) вашим лучшим игроком, ответив правильно на {{correct}} из {{total}} вопросов. ',
             struggledWith: 'Команде было сложнее всего с вопросами о ',
@@ -1407,6 +1412,7 @@ const ru = {
         },
     },
     wwwPhases: {
+        // --- EXISTING (keep as-is) ---
         mediaPlayback: {
             watchVideo: 'Посмотрите видео',
             listenAudio: 'Прослушайте аудио',
@@ -1418,8 +1424,14 @@ const ru = {
             readyToStart: 'Готовы начать?',
             startQuiz: 'Начать викторину',
             starting: 'Начинаем...',
+            // --- NEW KEY ---
             welcomeText: 'Добро пожаловать в викторину ЧГК!\n\nУ вас будет {{roundTime}} секунд на обсуждение каждого вопроса с командой.\n\nКогда будете готовы, нажмите кнопку ниже.',
         },
+        youtube: {
+            unavailable: 'Видео YouTube недоступно',
+            retry: 'Повторить',
+        },
+        // --- NEW SUB-SECTION ---
         feedback: {
             title: 'Результаты раунда',
             question: 'Вопрос:',
@@ -1430,10 +1442,6 @@ const ru = {
             aiHostFeedback: 'Отзыв ИИ-ведущего:',
             finishGame: 'Завершить игру',
             nextQuestion: 'Следующий вопрос',
-        },
-        youtube: {
-            unavailable: 'Видео YouTube недоступно',
-            retry: 'Повторить',
         },
     },
 };

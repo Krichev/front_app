@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/CreateWWWQuestScreen.tsx
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -11,7 +11,7 @@ import {
     View
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSelector} from 'react-redux';
 import {useTranslation} from 'react-i18next';
@@ -45,6 +45,13 @@ const CreateWWWQuestScreen = () => {
     const questCreator = useQuestCreator();
     const questionsManager = useQuestionsManager();
     const [createWager] = useCreateWagerMutation();
+
+    // Refetch user questions when screen comes into focus (Bug 4)
+    useFocusEffect(
+        useCallback(() => {
+            questionsManager.refetchUserQuestions();
+        }, [questionsManager])
+    );
 
     const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
     const [showTypeSelector, setShowTypeSelector] = useState(false);

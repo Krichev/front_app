@@ -244,22 +244,36 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         }
     }, [updateField, t]);
 
-    const handleRecordingComplete = useCallback((path: string) => {
-        const processedFile: ProcessedFileInfo = {
-            uri: `file://${path}`,
-            name: `recording_${Date.now()}.wav`,
-            type: 'audio/wav',
-            size: 0, // Should ideally get size
-            isImage: false,
-            isVideo: false,
-            extension: 'wav',
-            createdAt: new Date().toISOString(),
-            modifiedAt: new Date().toISOString(),
-            sizeFormatted: '0 B',
-        };
-        updateField('referenceAudioFile', processedFile);
-        setErrors(prev => ({...prev, referenceAudioFile: undefined}));
-    }, [updateField]);
+    const handleRecordingComplete = useCallback(async (path: string) => {
+        try {
+            // Validate file size
+            const stats = await RNFS.stat(path);
+            console.log('Recording stats:', stats);
+
+            if (stats.size === 0) {
+                Alert.alert(t('userQuestions.errorTitle'), 'Recording failed: File is empty (0 bytes). Please check microphone permissions and try again.');
+                return;
+            }
+
+            const processedFile: ProcessedFileInfo = {
+                uri: `file://${path}`,
+                name: `recording_${Date.now()}.wav`,
+                type: 'audio/wav',
+                size: stats.size,
+                isImage: false,
+                isVideo: false,
+                extension: 'wav',
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString(),
+                sizeFormatted: FileService.formatFileSize(stats.size),
+            };
+            updateField('referenceAudioFile', processedFile);
+            setErrors(prev => ({...prev, referenceAudioFile: undefined}));
+        } catch (error) {
+            console.error('Error processing recording:', error);
+            Alert.alert(t('userQuestions.errorTitle'), 'Failed to process recording.');
+        }
+    }, [updateField, t]);
 
     const handleRemoveAudio = useCallback(() => {
         updateField('referenceAudioFile', null);
@@ -755,19 +769,24 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 </View>
 
                 {/* Answer/Description */}
-                <View style={form.formGroup}>
-                     <LocalizedInput
-                        label={t('userQuestions.answerLabel')}
-                        value={formData.answer}
-                        onChangeLocalized={(value) => updateField('answer', value)}
-                        placeholder={{
-                            en: t('userQuestions.answerPlaceholder'),
-                            ru: t('userQuestions.answerPlaceholder'),
-                        }}
-                        multiline
-                        numberOfLines={2}
-                    />
-                </View>
+                {selectedTypeInfo?.requiresTextAnswer !== false && (
+                    <View style={form.formGroup}>
+                        <LocalizedInput
+                            label={t('userQuestions.answerLabel')}
+                            value={formData.answer}
+                            onChangeLocalized={(value) => updateField('answer', value)}
+                            placeholder={{
+                                en: t('userQuestions.answerPlaceholder'),
+                                ru: t('userQuestions.answerPlaceholder'),
+                            }}
+                            multiline
+                            numberOfLines={2}
+                        />
+                        <Text style={form.helperText}>
+                            {t('audioQuestion.answerHelperText', 'Optional: describe the expected response. For audio challenges, the audio itself serves as the answer.')}
+                        </Text>
+                    </View>
+                )}
             </View>
 
             {/* Audio Upload Section */}

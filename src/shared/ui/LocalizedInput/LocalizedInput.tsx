@@ -65,6 +65,9 @@ const LocalizedInput: React.FC<LocalizedInputProps> = ({
         error={!!error}
         errorText={error}
         style={flattenedStyle}
+        keyboardType="default"
+        autoCapitalize="sentences"
+        autoCorrect={true}
         {...rest}
       />
     </View>

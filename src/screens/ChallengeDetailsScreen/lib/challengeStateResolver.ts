@@ -9,6 +9,7 @@ export interface ChallengeState {
     canSubmitCompletion: boolean;
     canDelete: boolean;
     canInvite: boolean;
+    canReplay: boolean;
 }
 
 export function resolveChallengeState(
@@ -25,6 +26,7 @@ export function resolveChallengeState(
             canSubmitCompletion: false,
             canDelete: false,
             canInvite: false,
+            canReplay: false,
         };
     }
 
@@ -58,8 +60,9 @@ export function resolveChallengeState(
         hasUserJoined,
         isQuizType,
         canJoin: !hasUserJoined && !isCreator && !isCancelled,
-        canSubmitCompletion: (hasUserJoined || isCreator) && !isCancelled,
+        canSubmitCompletion: (hasUserJoined || isCreator) && !isCancelled && challenge.status !== 'COMPLETED',
         canDelete: isCreator && !isCancelled,
         canInvite: isCreator,
+        canReplay: challenge.status === 'COMPLETED' && isQuizType && hasUserJoined && !isCancelled,
     };
 }

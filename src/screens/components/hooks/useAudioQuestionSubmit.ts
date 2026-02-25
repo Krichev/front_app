@@ -1,11 +1,13 @@
 // src/screens/components/hooks/useAudioQuestionSubmit.ts
 import {useCallback, useState} from 'react';
 import {Alert} from 'react-native';
+import { useDispatch } from 'react-redux';
 import {
     useCreateAudioQuestionMutation,
     CreateAudioQuestionRequest,
     AudioChallengeType,
 } from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
+import { quizApi } from '../../../entities/QuizState/model/slice/quizApi';
 import {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {AudioQuestionFormData} from '../AudioQuestionForm';
 import {getLocalizedValue, isLocalizedStringEmpty, createLocalizedString} from '../../../shared/types/localized';
@@ -44,6 +46,7 @@ export const useAudioQuestionSubmit = (
 ): UseAudioQuestionSubmitReturn => {
     const {onSuccess, onError} = options;
     const {currentLanguage} = useI18n();
+    const dispatch = useDispatch();
 
     const [createAudioQuestion, {isLoading, reset}] = useCreateAudioQuestionMutation();
     const [error, setError] = useState<Error | null>(null);
@@ -103,6 +106,13 @@ export const useAudioQuestionSubmit = (
                 }).unwrap();
 
                 console.log('✅ Audio question created:', result.id);
+
+                // Invalidate quizApi cache so user questions list refreshes
+                dispatch(quizApi.util.invalidateTags([
+                    { type: 'QuizQuestion', id: 'USER_LIST' },
+                    'UserQuestions',
+                    'Topics'
+                ]));
 
                 // Call success callback
                 onSuccess?.(result.id);

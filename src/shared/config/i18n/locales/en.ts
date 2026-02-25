@@ -945,6 +945,7 @@ const en = {
         },
     },
     gameResults: {
+        // --- EXISTING (keep as-is) ---
         alerts: {
             error: {
                 title: 'Error',
@@ -961,25 +962,23 @@ const en = {
             },
         },
         completionNotes: 'Quiz completed with score {{score}}/{{total}}',
-        // Score display
+
+        // --- NEW KEYS BELOW ---
         score: {
             label: 'Score: {{score}}/{{total}}',
             percentCorrect: '{{percent}}% Correct',
         },
-        // Quest/Score requirement
         requirement: {
             met: 'Quest Requirement Met',
             notMet: 'Quest Requirement Not Met',
             description: 'Minimum score required: {{required}}% | Your score: {{actual}}%',
             help: 'You need to score at least {{required}}% to complete this quest. Try again!',
         },
-        // Section titles
         sections: {
             aiAnalysis: 'AI Host Analysis',
             playerPerformance: 'Player Performance',
             questionResults: 'Question Results',
         },
-        // Question results
         question: {
             number: 'Question {{number}}',
             correct: 'CORRECT',
@@ -988,12 +987,10 @@ const en = {
             correctAnswer: 'Correct Answer:',
             answeredBy: 'Answered by: {{player}}',
         },
-        // Buttons
         buttons: {
             playAgain: 'Play Again',
             returnHome: 'Return to Home',
         },
-        // End game modal
         modal: {
             title: 'Game Over!',
             teamScored: 'Your team scored {{score}} out of {{total}} questions.',
@@ -1409,12 +1406,13 @@ const en = {
         },
     },
     wwwGame: {
+        // --- EXISTING (keep as-is) ---
         performance: {
             outstanding: 'Outstanding! Your team showcased exceptional knowledge!',
             great: 'Great job! Your team has impressive knowledge!',
             good: 'Good effort! Your team did well!',
-            niceTry: 'Nice try! Keep learning and you\'ll improve!',
-            dontGiveUp: 'Don\'t give up! Every game is a learning opportunity!',
+            niceTry: "Nice try! Keep learning and you'll improve!",
+            dontGiveUp: "Don't give up! Every game is a learning opportunity!",
         },
         feedback: {
             discussedCorrect: 'I heard the correct answer "{{answer}}" during your discussion, but it wasn\'t your final answer.',
@@ -1423,8 +1421,9 @@ const en = {
         },
         hint: {
             characters: 'The answer contains {{count}} characters.',
-            words: ' It\'s {{count}} words.',
+            words: " It's {{count}} words.",
         },
+        // --- NEW SUB-SECTION ---
         gameFeedback: {
             strongestPlayer: '{{player}} was your strongest player, answering {{correct}} out of {{total}} questions correctly. ',
             struggledWith: 'The team struggled most with questions about ',
@@ -1442,6 +1441,7 @@ const en = {
         },
     },
     wwwPhases: {
+        // --- EXISTING (keep as-is) ---
         mediaPlayback: {
             watchVideo: 'Watch the Video',
             listenAudio: 'Listen to the Audio',
@@ -1453,8 +1453,14 @@ const en = {
             readyToStart: 'Ready to Start?',
             startQuiz: 'Start Quiz',
             starting: 'Starting...',
-            welcomeText: 'Welcome to WWW Quiz!\n\nYou\'ll have {{roundTime}} seconds to discuss each question with your team.\n\nWhen you\'re ready to begin, press the button below.',
+            // --- NEW KEY ---
+            welcomeText: "Welcome to WWW Quiz!\n\nYou'll have {{roundTime}} seconds to discuss each question with your team.\n\nWhen you're ready to begin, press the button below.",
         },
+        youtube: {
+            unavailable: 'YouTube video unavailable',
+            retry: 'Retry',
+        },
+        // --- NEW SUB-SECTION ---
         feedback: {
             title: 'Round Results',
             question: 'Question:',
@@ -1465,10 +1471,6 @@ const en = {
             aiHostFeedback: 'AI Host Feedback:',
             finishGame: 'Finish Game',
             nextQuestion: 'Next Question',
-        },
-        youtube: {
-            unavailable: 'YouTube video unavailable',
-            retry: 'Retry',
         },
     },
 };

@@ -13,10 +13,11 @@ import {
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
 import {NativeStackNavigationProp} from "@react-navigation/native-stack";
-import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
+import {useGetChallengesQuery, useGetCompletedChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import ChallengeFilters from './components/ChallengeFilters';
 import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
+import {CompletedQuestCard} from '../components/CompletedQuestCard/CompletedQuestCard';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
@@ -48,6 +49,7 @@ const ChallengesScreen: React.FC = () => {
 
     const [showParticipating, setShowParticipating] = useState<boolean>(true);
     const [showCreated, setShowCreated] = useState<boolean>(false);
+    const [showCompleted, setShowCompleted] = useState<boolean>(false);
 
     // RTK Query call to fetch challenges
     const {
@@ -62,9 +64,23 @@ const ChallengesScreen: React.FC = () => {
         type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType,
         participant_id: showParticipating ? user?.id : undefined,
         creator_id: showCreated ? user?.id : undefined,
-    });
+    }, { skip: showCompleted });
+
+    // RTK Query call for completed challenges
+    const {
+        data: completedChallenges,
+        isLoading: isCompletedLoading,
+        error: completedError,
+        refetch: refetchCompletedRaw,
+        isUninitialized: isCompletedUninitialized
+    } = useGetCompletedChallengesQuery({
+        page: 0,
+        size: 50,
+        type: selectedType === 'WWW_QUIZ' ? 'QUIZ' : selectedType || undefined,
+    }, { skip: !showCompleted });
 
     const refetch = useSafeRefetch(refetchRaw, isUninitialized);
+    const refetchCompleted = useSafeRefetch(refetchCompletedRaw, isCompletedUninitialized);
 
     const filteredChallenges = useMemo(() => {
         if (!challenges) return [];
@@ -92,6 +108,34 @@ const ChallengesScreen: React.FC = () => {
             return false;
         });
     }, [challenges, showParticipating, showCreated, user?.id]);
+
+    const handleToggleFilter = (filter: 'participating' | 'created' | 'completed') => {
+        if (filter === 'completed') {
+            setShowCompleted(true);
+            setShowParticipating(false);
+            setShowCreated(false);
+        } else {
+            setShowCompleted(false);
+            if (filter === 'participating') {
+                setShowParticipating(!showParticipating || showCreated === false);
+                if (showParticipating && !showCreated) {
+                    setShowCreated(true);
+                    setShowParticipating(false);
+                }
+            } else {
+                setShowCreated(!showCreated || showParticipating === false);
+                if (showCreated && !showParticipating) {
+                    setShowParticipating(true);
+                    setShowCreated(false);
+                }
+            }
+        }
+    };
+
+    const displayData = showCompleted ? completedChallenges : filteredChallenges;
+    const isDisplayLoading = showCompleted ? isCompletedLoading : isLoading;
+    const displayError = showCompleted ? completedError : error;
+    const handleRefetch = showCompleted ? refetchCompleted : refetch;
 
     // Simplified create challenge menu - 2 options
     const handleCreateChallengePress = () => {
@@ -123,7 +167,7 @@ const ChallengesScreen: React.FC = () => {
 
                 <TouchableOpacity
                     style={styles.refreshButton}
-                    onPress={() => refetch()}
+                    onPress={() => handleRefetch()}
                 >
                     <MaterialCommunityIcons name="refresh" size={24} color="white"/>
                 </TouchableOpacity>
@@ -139,7 +183,7 @@ const ChallengesScreen: React.FC = () => {
                 <View style={styles.checkboxRow}>
                     <TouchableOpacity
                         style={styles.checkboxContainer}
-                        onPress={() => setShowParticipating(!showParticipating)}
+                        onPress={() => handleToggleFilter('participating')}
                     >
                         <View style={[styles.checkbox, showParticipating && styles.checkboxChecked]}>
                             {showParticipating && (
@@ -151,7 +195,7 @@ const ChallengesScreen: React.FC = () => {
 
                     <TouchableOpacity
                         style={styles.checkboxContainer}
-                        onPress={() => setShowCreated(!showCreated)}
+                        onPress={() => handleToggleFilter('created')}
                     >
                         <View style={[styles.checkbox, showCreated && styles.checkboxChecked]}>
                             {showCreated && (
@@ -160,45 +204,72 @@ const ChallengesScreen: React.FC = () => {
                         </View>
                         <Text style={styles.checkboxLabel}>{t('challenges.creator')}</Text>
                     </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.checkboxContainer}
+                        onPress={() => handleToggleFilter('completed')}
+                    >
+                        <View style={[styles.checkbox, showCompleted && styles.checkboxChecked]}>
+                            {showCompleted && (
+                                <MaterialCommunityIcons name="check" size={16} color="white" />
+                            )}
+                        </View>
+                        <Text style={styles.checkboxLabel}>Completed ✓</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
             {/* Main content area */}
             <View style={styles.content}>
-                {isLoading ? (
+                {isDisplayLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#4CAF50"/>
                         <Text style={styles.loadingText}>{t('challenges.loading')}</Text>
                     </View>
-                ) : error ? (
+                ) : displayError ? (
                     <View style={styles.errorContainer}>
                         <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
                         <Text style={styles.errorText}>{t('challenges.error')}</Text>
-                        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                        <TouchableOpacity style={styles.retryButton} onPress={() => handleRefetch()}>
                             <Text style={styles.retryButtonText}>{t('challenges.retry')}</Text>
                         </TouchableOpacity>
                     </View>
-                ) : filteredChallenges.length === 0 ? (
+                ) : !displayData || displayData.length === 0 ? (
                     <View style={styles.emptyContainer}>
-                        <MaterialCommunityIcons name="trophy-outline" size={64} color="#999"/>
-                        <Text style={styles.emptyText}>{t('challenges.emptyTitle')}</Text>
+                        <MaterialCommunityIcons 
+                            name={showCompleted ? "trophy" : "trophy-outline"} 
+                            size={64} 
+                            color="#999"
+                        />
+                        <Text style={styles.emptyText}>
+                            {showCompleted ? "No completed quests yet" : t('challenges.emptyTitle')}
+                        </Text>
                         <Text style={styles.emptySubtext}>
-                            {showParticipating && !showCreated
-                                ? t('challenges.emptyJoined')
-                                : !showParticipating && showCreated
-                                    ? t('challenges.emptyCreated')
-                                    : t('challenges.emptyAdjust')}
+                            {showCompleted 
+                                ? "Complete your first quest to see it here!"
+                                : (showParticipating && !showCreated
+                                    ? t('challenges.emptyJoined')
+                                    : !showParticipating && showCreated
+                                        ? t('challenges.emptyCreated')
+                                        : t('challenges.emptyAdjust'))}
                         </Text>
                     </View>
                 ) : (
                     <FlatList
-                        data={filteredChallenges}
+                        data={displayData}
                         keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
                         renderItem={({item}) => (
-                            <QuizChallengeCard
-                                challenge={item}
-                                onPress={() => navigation.navigate('ChallengeDetails', {challengeId: item.id!.toString()})}
-                            />
+                            showCompleted ? (
+                                <CompletedQuestCard
+                                    challenge={item as any}
+                                    onPress={() => navigation.navigate('ChallengeDetails', {challengeId: item.id!.toString()})}
+                                />
+                            ) : (
+                                <QuizChallengeCard
+                                    challenge={item}
+                                    onPress={() => navigation.navigate('ChallengeDetails', {challengeId: item.id!.toString()})}
+                                />
+                            )
                         )}
                         contentContainerStyle={styles.listContent}
                         showsVerticalScrollIndicator={false}

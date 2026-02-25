@@ -155,74 +155,24 @@ export const useGameResults = (): UseGameResultsReturn => {
     // Play again button handler
     const playAgain = useCallback(() => {
         if (challengeId) {
-            Alert.alert(
-                t('gameResults.alerts.completeChallenge.title'),
-                t('gameResults.alerts.completeChallenge.message'),
-                [
-                    {
-                        text: t('gameResults.alerts.completeChallenge.yesComplete'),
-                        onPress: () => {
-                            submitChallengeWithResults();
-                        }
-                    },
-                    {
-                        text: t('gameResults.alerts.completeChallenge.noPlayAgain'),
-                        onPress: () => navigation.navigate('CreateWWWQuest')
-                    }
-                ]
-            );
+            // Navigate to ChallengeDetails so user can see stats and tweak config
+            navigation.navigate('ChallengeDetails', { challengeId: String(challengeId) });
         } else {
+            // Fallback for standalone games without a challenge
             navigation.navigate('CreateWWWQuest');
         }
-    }, [challengeId, navigation, submitChallengeWithResults, t]);
+    }, [challengeId, navigation]);
 
     // Return home button handler
     const returnHome = useCallback(() => {
-        if (challengeId) {
-            Alert.alert(
-                t('gameResults.alerts.completeChallenge.title'),
-                t('gameResults.alerts.completeChallenge.message'),
-                [
-                    {
-                        text: t('gameResults.alerts.completeChallenge.yesComplete'),
-                        onPress: () => {
-                            submitChallengeWithResults();
-                        }
-                    },
-                    {
-                        text: t('gameResults.alerts.completeChallenge.noReturnHome'),
-                        onPress: () => navigation.navigate('Main', { screen: 'Home' })
-                    }
-                ]
-            );
-        } else {
-            navigation.navigate('Main', { screen: 'Home' });
-        }
-    }, [challengeId, navigation, submitChallengeWithResults, t]);
+        navigation.navigate('Main', { screen: 'Home' });
+    }, [navigation]);
 
     // End game function
     const endGame = useCallback(() => {
         setShowEndGameModal(false);
-
-        if (challengeId) {
-            Alert.alert(
-                t('gameResults.alerts.completeChallenge.title'),
-                t('gameResults.alerts.completeChallenge.message'),
-                [
-                    {
-                        text: t('gameResults.alerts.completeChallenge.yes'),
-                        onPress: submitChallengeWithResults
-                    },
-                    {
-                        text: t('gameResults.alerts.completeChallenge.no'),
-                        onPress: () => navigation.navigate('Main', { screen: 'Home' })
-                    }
-                ]
-            );
-        } else {
-            navigation.navigate('Main', { screen: 'Home' });
-        }
-    }, [challengeId, navigation, submitChallengeWithResults, t]);
+        navigation.navigate('Main', { screen: 'Home' });
+    }, [navigation]);
 
     return {
         teamName,

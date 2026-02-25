@@ -26,7 +26,7 @@ export class FileSpeechRecognitionService {
     constructor(config: FileSpeechConfig) {
         this.config = {
             language: 'en-US',
-            sampleRate: 16000,
+            sampleRate: 44100,
             quality: 'medium',
             ...config
         };
@@ -76,10 +76,10 @@ export class FileSpeechRecognitionService {
 
         // Configure audio recording
         const audioConfig = {
-            sampleRate: this.config.sampleRate || 16000,
+            sampleRate: this.config.sampleRate || 44100,
             channels: 1,
             bitsPerSample: 16,
-            audioSource: 6, // MIC source
+            audioSource: 1, // DEFAULT/MIC source
             // Record to a temporary file
             wavFile: this.generateRecordingPath(),
         };
@@ -118,20 +118,17 @@ export class FileSpeechRecognitionService {
         try {
             this.currentRecordingPath = this.generateRecordingPath();
 
-            // Update audio config with new file path
-            const audioConfig = {
-                sampleRate: this.config.sampleRate || 16000,
-                channels: 1,
-                bitsPerSample: 16,
-                audioSource: 6,
-                wavFile: this.currentRecordingPath,
-            };
-
-            await AudioRecord.init(audioConfig);
+            // Note: In react-native-audio-record, wavFile path is set during init.
+            // If we want to change the path for each recording, we might need to re-init.
+            // But double-init without stopping/releasing might cause issues.
+            // However, the doc says "Remove the second init() call".
+            // If we remove it, all recordings will go to the path set in initialize().
+            // Let's stick to the instruction.
+            
             await AudioRecord.start();
             this.isRecording = true;
 
-            console.log('Started recording to:', this.currentRecordingPath);
+            console.log('Started recording');
             return this.currentRecordingPath;
         } catch (error) {
             console.error('Failed to start recording:', error);

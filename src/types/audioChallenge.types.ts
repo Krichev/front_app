@@ -39,6 +39,7 @@ export interface AudioChallengeTypeInfo {
     showRhythmSettings: boolean;
     showClassificationSection: boolean;
     showAudioSegmentTrim: boolean;
+    requiresTextAnswer?: boolean;
     
     // Contextual help text
     rhythmSettingsHint?: string;
@@ -62,6 +63,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showRhythmSettings: true,
         showClassificationSection: true,
         showAudioSegmentTrim: false,
+        requiresTextAnswer: false,
         rhythmSettingsHint: 'Set the target tempo for rhythm creation',
     },
     RHYTHM_REPEAT: {
@@ -77,6 +79,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showRhythmSettings: false,
         showClassificationSection: false,
         showAudioSegmentTrim: true,
+        requiresTextAnswer: false,
         rhythmSettingsHint: 'Rhythm pattern is extracted from your reference audio',
     },
     SOUND_MATCH: {
@@ -92,6 +95,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showRhythmSettings: false,
         showClassificationSection: false,
         showAudioSegmentTrim: true,
+        requiresTextAnswer: false,
     },
     SINGING: {
         type: 'SINGING',
@@ -106,6 +110,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showRhythmSettings: true,
         showClassificationSection: true,
         showAudioSegmentTrim: true,
+        requiresTextAnswer: false,
         rhythmSettingsHint: 'Optional: Set BPM as a visual guide for the singer',
     },
 };

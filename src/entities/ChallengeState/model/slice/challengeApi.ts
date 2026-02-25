@@ -23,6 +23,9 @@ import type {
     ChallengeAudioResponse,
     UpdateChallengeAudioConfigRequest,
     QuizChallengeConfig,
+    CompletedChallenge,
+    QuizSessionSummary,
+    ReplayChallengeConfig,
 } from '../types';
 
 
@@ -32,7 +35,7 @@ const BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
 export const challengeApi = createApi({
     reducerPath: 'challengeApi',
     baseQuery: createBaseQueryWithAuth(BASE_URL),
-    tagTypes: ['Challenge', 'Verification', 'QuizQuestion', 'ChallengeAccess', 'Quest'],
+    tagTypes: ['Challenge', 'Verification', 'QuizQuestion', 'ChallengeAccess', 'Quest', 'QuizSession'],
     endpoints: (builder) => ({
         // Existing endpoints
         getChallenges: builder.query<ApiChallenge[], GetChallengesParams>({
@@ -50,6 +53,24 @@ export const challengeApi = createApi({
                         {type: 'Challenge', id: 'LIST'},
                     ]
                     : [{type: 'Challenge', id: 'LIST'}],
+        }),
+
+        getCompletedChallenges: builder.query<CompletedChallenge[], {
+            page?: number;
+            size?: number;
+            type?: string;
+        }>({
+            query: ({ page = 0, size = 20, type }) => ({
+                url: '/quiz/challenges/completed',
+                params: { page, size, ...(type && { type }) },
+            }),
+            providesTags: (result) =>
+                result
+                    ? [
+                        ...result.map(({ id }) => ({ type: 'Challenge' as const, id: `COMPLETED_${id}` })),
+                        { type: 'Challenge', id: 'COMPLETED_LIST' },
+                    ]
+                    : [{ type: 'Challenge', id: 'COMPLETED_LIST' }],
         }),
 
         // NEW: Get accessible challenges (public + user's private challenges)
@@ -263,6 +284,36 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
             ],
         }),
 
+        getSessionHistory: builder.query<QuizSessionSummary[], {
+            challengeId: string;
+            page?: number;
+            size?: number;
+        }>({
+            query: ({ challengeId, page = 0, size = 10 }) => ({
+                url: `/quiz/challenges/${challengeId}/session-history`,
+                params: { page, size },
+            }),
+            providesTags: (_, __, { challengeId }) => [
+                { type: 'QuizSession' as any, id: `HISTORY_${challengeId}` },
+            ],
+        }),
+
+        replayChallenge: builder.mutation<any, {
+            challengeId: string;
+            config?: ReplayChallengeConfig;
+        }>({
+            query: ({ challengeId, config }) => ({
+                url: `/quiz/challenges/${challengeId}/replay`,
+                method: 'POST',
+                body: config || {},
+            }),
+            invalidatesTags: (_, __, { challengeId }) => [
+                { type: 'Challenge', id: `COMPLETED_${challengeId}` },
+                { type: 'Challenge', id: 'COMPLETED_LIST' },
+                { type: 'QuizSession' as any, id: `HISTORY_${challengeId}` },
+            ],
+        }),
+
         // =============================================================================
         // QUEST ALIASES (For backward compatibility with UI terminology)
         // =============================================================================
@@ -418,6 +469,11 @@ export const {
     useVerifyPhotoChallengeMutation,
     useVerifyLocationChallengeMutation,
     useGetVerificationHistoryQuery,
+
+    // NEW: Completed challenges & Replay
+    useGetCompletedChallengesQuery,
+    useGetSessionHistoryQuery,
+    useReplayChallengeMutation,
 
     // Quiz-related hooks
     useCreateQuizChallengeMutation,

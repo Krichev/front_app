@@ -239,6 +239,14 @@ const QuizResultsScreen: React.FC = () => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
+                        style={styles.playAgainButton}
+                        onPress={() => navigation.navigate('ChallengeDetails', {challengeId})}
+                    >
+                        <MaterialCommunityIcons name="refresh" size={18} color="white"/>
+                        <Text style={styles.buttonText}>Play Again</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
                         style={styles.backButton}
                         onPress={() => navigation.navigate('ChallengeDetails', {challengeId})}
                     >
@@ -450,6 +458,17 @@ const styles = StyleSheet.create({
     completeButton: {
         flexDirection: 'row',
         backgroundColor: '#4CAF50',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginBottom: 12,
+        width: '100%',
+        justifyContent: 'center',
+    },
+    playAgainButton: {
+        flexDirection: 'row',
+        backgroundColor: '#2196F3',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 8,

@@ -9,6 +9,7 @@ interface ActionButtonsProps {
     isQuizType: boolean;
     userIsCreator: boolean;
     hasUserJoined: boolean;
+    canReplay: boolean;
     isStartingQuiz: boolean;
     isJoining: boolean;
     isSubmitting: boolean;
@@ -24,6 +25,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     isQuizType,
     userIsCreator,
     hasUserJoined,
+    canReplay,
     isStartingQuiz,
     isJoining,
     isSubmitting,
@@ -48,10 +50,9 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                 </TouchableOpacity>
             )}
 
-            {isQuizType ? (
-                // Quiz-specific button
+            {canReplay && (
                 <TouchableOpacity
-                    style={[styles.button, styles.primaryButton, isStartingQuiz && styles.buttonDisabled]}
+                    style={[styles.button, styles.primaryButton, { backgroundColor: '#4CAF50', marginBottom: 12 }]}
                     onPress={onStartQuiz}
                     disabled={isStartingQuiz}
                 >
@@ -59,11 +60,31 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                         <ActivityIndicator size="small" color="white" />
                     ) : (
                         <>
-                            <MaterialCommunityIcons name="play-circle" size={24} color="white"/>
-                            <Text style={styles.buttonText}>{t('challengeDetails.actions.startQuiz')}</Text>
+                            <MaterialCommunityIcons name="refresh" size={24} color="white"/>
+                            <Text style={styles.buttonText}>Replay Quiz 🔄</Text>
                         </>
                     )}
                 </TouchableOpacity>
+            )}
+
+            {isQuizType ? (
+                // Quiz-specific button (only show if not replaying or replaying is handled separately)
+                !canReplay && (
+                    <TouchableOpacity
+                        style={[styles.button, styles.primaryButton, isStartingQuiz && styles.buttonDisabled]}
+                        onPress={onStartQuiz}
+                        disabled={isStartingQuiz}
+                    >
+                        {isStartingQuiz ? (
+                            <ActivityIndicator size="small" color="white" />
+                        ) : (
+                            <>
+                                <MaterialCommunityIcons name="play-circle" size={24} color="white"/>
+                                <Text style={styles.buttonText}>{t('challengeDetails.actions.startQuiz')}</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                )
             ) : (
                 // Regular challenge buttons
                 <>
