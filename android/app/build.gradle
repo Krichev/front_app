@@ -2,6 +2,10 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+import groovy.json.JsonSlurper
+
+def packageJson = new JsonSlurper().parseText(file('../../package.json').text)
+
 apply from: file("../../node_modules/react-native-config/android/dotenv.gradle")
 apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
 
@@ -86,7 +90,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode calculateVersionCode()
-        versionName project.hasProperty('VERSION_NAME') ? project.property('VERSION_NAME') : "1.0.0"
+        versionName project.hasProperty('VERSION_NAME') ? project.property('VERSION_NAME') : packageJson.version
     }
     signingConfigs {
         debug {
