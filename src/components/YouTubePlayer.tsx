@@ -2,11 +2,10 @@ import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
     ActivityIndicator,
     Animated,
+    BackHandler,
     Dimensions,
     Image,
     LayoutChangeEvent,
-    Modal,
-    SafeAreaView,
     StatusBar,
     StyleSheet,
     Text,
@@ -63,14 +62,12 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     // Fullscreen state
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [screenDimensions, setScreenDimensions] = useState(Dimensions.get('window'));
     const hasTriggeredInitialFullscreen = useRef(false);
-    const [fullscreenStartTime, setFullscreenStartTime] = useState(startTime);
-    const [fullscreenPlaying, setFullscreenPlaying] = useState(true);
     const [showFullscreenControls, setShowFullscreenControls] = useState(true);
     const [fullscreenProgress, setFullscreenProgress] = useState(0);
     const [fullscreenCurrentTime, setFullscreenCurrentTime] = useState(0);
     const [fullscreenDuration, setFullscreenDuration] = useState(0);
-    const fullscreenPlayerRef = useRef<YoutubeIframeRef>(null);
     const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Loading overlay state
@@ -88,17 +85,44 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         if (controlsTimeoutRef.current) {
             clearTimeout(controlsTimeoutRef.current);
         }
-        if (fullscreenPlaying) {
+        if (playing) {
             controlsTimeoutRef.current = setTimeout(() => {
                 setShowFullscreenControls(false);
             }, 3000);
         }
-    }, [fullscreenPlaying]);
+    }, [playing]);
 
-    const toggleFullscreenPlayback = useCallback(() => {
-        setFullscreenPlaying(prev => !prev);
-        showControlsFunc();
-    }, [showControlsFunc]);
+    useEffect(() => {
+        const sub = Dimensions.addEventListener('change', ({ window }) => {
+            setScreenDimensions(window);
+        });
+        return () => sub.remove();
+    }, []);
+
+    const openFullscreen = useCallback(() => {
+        setIsFullscreen(true);
+        setShowFullscreenControls(true);
+        onFullscreenChange?.(true);
+    }, [onFullscreenChange]);
+
+    const closeFullscreen = useCallback(() => {
+        setIsFullscreen(false);
+        StatusBar.setHidden(false, 'fade');
+        onFullscreenChange?.(false);
+    }, [onFullscreenChange]);
+
+    useEffect(() => {
+        if (!isFullscreen) return;
+        const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+            closeFullscreen();
+            return true;
+        });
+        return () => handler.remove();
+    }, [isFullscreen, closeFullscreen]);
+
+    useEffect(() => {
+        StatusBar.setHidden(isFullscreen, 'fade');
+    }, [isFullscreen]);
 
     const handleFullscreenTap = useCallback(() => {
         if (showFullscreenControls) {
@@ -111,41 +135,25 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         }
     }, [showFullscreenControls, showControlsFunc]);
 
-    const handleFullscreenStateChange = useCallback((state: string) => {
-        if (state === 'ended') {
-            setFullscreenPlaying(false);
-            setFullscreenProgress(1);
-            // Close fullscreen when video ends
-            setTimeout(() => {
-                setIsFullscreen(false);
-                onFullscreenChange?.(false);
-                onSegmentEnd?.();
-            }, 500);
-        } else if (state === 'playing') {
-            setFullscreenPlaying(true);
-        } else if (state === 'paused') {
-            setFullscreenPlaying(false);
-        }
-    }, [onFullscreenChange, onSegmentEnd]);
-
     // Track progress in fullscreen
     useEffect(() => {
-        if (!isFullscreen || !fullscreenPlaying) return;
+        if (!isFullscreen || !playing || !isReady) return;
 
         const interval = setInterval(async () => {
             try {
-                const currentTime = await fullscreenPlayerRef.current?.getCurrentTime();
-                const duration = await fullscreenPlayerRef.current?.getDuration();
+                const currentTime = await playerRef.current?.getCurrentTime();
+                const duration = await playerRef.current?.getDuration();
                 if (currentTime !== undefined && duration) {
                     setFullscreenCurrentTime(currentTime);
                     setFullscreenDuration(duration);
-                                    const effectiveEnd = endTime || duration;
-                                    const effectiveStart = startTime || 0;
-                                    const progress = (currentTime - effectiveStart) / (effectiveEnd - effectiveStart);
-                                    setFullscreenProgress(Math.min(Math.max(progress, 0), 1));
+                    const effectiveEnd = endTime || duration;
+                    const effectiveStart = startTime || 0;
+                    const progress = (currentTime - effectiveStart) / (effectiveEnd - effectiveStart);
+                    setFullscreenProgress(Math.min(Math.max(progress, 0), 1));
+                    
                     // Check endTime
                     if (endTime && currentTime >= endTime) {
-                        setFullscreenPlaying(false);
+                        setPlaying(false);
                         onSegmentEnd?.();
                     }
                 }
@@ -153,7 +161,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         }, 500);
 
         return () => clearInterval(interval);
-    }, [isFullscreen, fullscreenPlaying, endTime, fullscreenStartTime, onSegmentEnd]);
+    }, [isFullscreen, playing, isReady, endTime, startTime, onSegmentEnd]);
 
     // Cleanup for controls timeout
     useEffect(() => {
@@ -176,14 +184,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             if (state === 'ended') {
                 setPlaying(false);
                 if (isFullscreen) {
-                    setIsFullscreen(false);
-                    onFullscreenChange?.(false);
+                    closeFullscreen();
                 }
                 onSegmentEnd?.();
             }
             onStateChange?.(state);
         },
-        [onSegmentEnd, onStateChange, isFullscreen, onFullscreenChange]
+        [onSegmentEnd, onStateChange, isFullscreen, closeFullscreen]
     );
 
     const handleReady = useCallback(() => {
@@ -257,35 +264,21 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             playerRef.current?.seekTo(startTime, true);
         }
     }, [isReady, startTime]);
-    const openFullscreen = useCallback(async () => {
-        let currentTime = startTime;
-        try {
-            if (playerRef.current) {
-                currentTime = await playerRef.current.getCurrentTime();
-            }
-        } catch (e) {}
-
-        setFullscreenStartTime(currentTime);
-        setFullscreenPlaying(true);
-        setShowFullscreenControls(true);
-        setFullscreenProgress(0);
-        setFullscreenCurrentTime(currentTime);
-        setIsFullscreen(true);
-        setPlaying(false); // Pause inline player
-        onFullscreenChange?.(true);
-    }, [startTime, onFullscreenChange]);
 
     // Initial Fullscreen effect
     useEffect(() => {
         if (isReady && initialFullscreen && !hasTriggeredInitialFullscreen.current) {
             hasTriggeredInitialFullscreen.current = true;
-            // IMMEDIATELY hide overlay — don't wait for fade animation
             overlayOpacity.setValue(0);
             setShowOverlay(false);
-            // Small delay to ensure overlay is gone before modal opens
-            setTimeout(() => openFullscreen(), 50);
+            setIsFullscreen(true);
+            setShowFullscreenControls(true);
+            onFullscreenChange?.(true);
+            if (autoPlay) {
+                setTimeout(() => setPlaying(true), 150);
+            }
         }
-    }, [isReady, initialFullscreen, overlayOpacity, openFullscreen]);
+    }, [isReady, initialFullscreen, autoPlay, onFullscreenChange, overlayOpacity]);
 
     const handleRetry = () => {
         setHasError(false);
@@ -295,18 +288,21 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         setReplayKey(prev => prev + 1);
     };
 
-
-
-    const closeFullscreen = useCallback(async () => {
-        setIsFullscreen(false);
-        setShowOverlay(false); // Ensure overlay doesn't come back
-        onFullscreenChange?.(false);
-        // The inline player will be re-synced if needed, but for now we just resume if it was playing
-        setPlaying(true);
-    }, [onFullscreenChange]);
-
     return (
-        <View style={[styles.outerContainer, style]}>
+        <View style={[
+            styles.outerContainer,
+            style,
+            isFullscreen && {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: screenDimensions.width,
+                height: screenDimensions.height,
+                backgroundColor: '#000',
+                zIndex: 9999,
+                elevation: 9999,
+            }
+        ]}>
             {hasError ? (
                 <View style={styles.errorContainer}>
                     <MaterialCommunityIcons name="youtube" size={48} color="#FF0000" />
@@ -318,22 +314,29 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 </View>
             ) : (
                 <>
-                    {/* 16:9 container */}
-                    <View style={styles.videoWrapper} onLayout={handleLayout}>
-                        {playerHeight > 0 && (
+                    <View style={[
+                        styles.videoWrapper,
+                        isFullscreen && {
+                            width: screenDimensions.width,
+                            height: screenDimensions.height,
+                            aspectRatio: undefined,
+                            justifyContent: 'center',
+                        }
+                    ]} onLayout={!isFullscreen ? handleLayout : undefined}>
+                        {(playerHeight > 0 || isFullscreen) && (
                             <YoutubePlayer
                                 key={replayKey}
                                 ref={playerRef}
                                 videoId={videoId}
-                                play={playing && !isFullscreen}
+                                play={playing}
                                 onChangeState={handleStateChange}
                                 onReady={handleReady}
                                 onError={handleError}
-                                height={playerHeight}
+                                height={isFullscreen ? screenDimensions.width * (9/16) : playerHeight}
                                 webViewStyle={{ backgroundColor: 'transparent' }}
                                 webViewProps={{
                                     allowsInlineMediaPlayback: true,
-                                    allowsFullscreenVideo: false, // Prevent YouTube native fullscreen
+                                    allowsFullscreenVideo: false,
                                     mediaPlaybackRequiresUserAction: !autoPlay,
                                     javaScriptEnabled: true,
                                     domStorageEnabled: true,
@@ -346,18 +349,18 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     start: startTime,
                                     end: endTime,
                                     rel: false,
-                                    controls: showControls,
+                                    controls: isFullscreen ? false : showControls,
                                     iv_load_policy: 3,
                                     modestbranding: true,
-                                    fs: false, // Disable YouTube's own fullscreen
+                                    fs: false,
                                     showinfo: 0,
                                 } as any}
                             />
                         )}
                     </View>
 
-                    {/* Loading overlay — hides YouTube iframe initialization flash */}
-                    {showOverlay && !hasError && (
+                    {/* Loading overlay — only when not fullscreen */}
+                    {showOverlay && !hasError && !isFullscreen && (
                         <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
                             <Image
                                 source={{ uri: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` }}
@@ -370,10 +373,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         </Animated.View>
                     )}
 
-                    {/* Custom play overlay */}
-                    {!showControls && isReady && !hasError && (
+                    {/* Custom play overlay — only when not fullscreen */}
+                    {!isFullscreen && !showControls && isReady && !hasError && (
                         <>
-                            {/* When onlyPlayButton = true → show ONLY when not playing */}
                             {(!onlyPlayButton || !playing) && (
                                 <TouchableOpacity
                                     style={styles.playPauseOverlay}
@@ -390,8 +392,8 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         </>
                     )}
 
-                    {/* Fullscreen Toggle Button */}
-                    {enableFullscreen && isReady && !hasError && (
+                    {/* Fullscreen Toggle Button — only when not fullscreen */}
+                    {!isFullscreen && enableFullscreen && isReady && !hasError && (
                         <TouchableOpacity 
                             style={styles.fullscreenButton} 
                             onPress={openFullscreen}
@@ -400,98 +402,53 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         </TouchableOpacity>
                     )}
 
-                    {/* Fullscreen Modal */}
-                    <Modal
-                        visible={isFullscreen}
-                        transparent={false}
-                        animationType="fade"
-                        onRequestClose={closeFullscreen}
-                        supportedOrientations={['portrait', 'landscape']}
-                    >
-                        <StatusBar hidden />
-                        <SafeAreaView style={styles.fullscreenContainer}>
-                            <View style={styles.fullscreenVideoWrapper}>
-                                <YoutubePlayer
-                                    key={`fullscreen-${replayKey}`}
-                                    ref={fullscreenPlayerRef}
-                                    videoId={videoId}
-                                    play={fullscreenPlaying}
-                                    onChangeState={handleFullscreenStateChange}
-                                    onReady={() => {
-                                        showControlsFunc();
-                                    }}
-                                    onError={handleError}
-                                    height={Dimensions.get('window').width * (9/16)}
-                                    initialPlayerParams={{
-                                        start: fullscreenStartTime,
-                                        end: endTime,
-                                        rel: false,
-                                        controls: false, // KEY: no YouTube controls!
-                                        iv_load_policy: 3,
-                                        modestbranding: true,
-                                        fs: false,
-                                        showinfo: 0,
-                                    } as any}
-                                    webViewProps={{
-                                        allowsInlineMediaPlayback: true,
-                                        allowsFullscreenVideo: false,
-                                        javaScriptEnabled: true,
-                                        domStorageEnabled: true,
-                                    }}
-                                />
-                            </View>
+                    {/* Fullscreen controls overlay */}
+                    {isFullscreen && (
+                        <TouchableOpacity
+                            style={StyleSheet.absoluteFill}
+                            activeOpacity={1}
+                            onPress={handleFullscreenTap}
+                        >
+                            {showFullscreenControls && (
+                                <View style={styles.fullscreenControlsOverlay}>
+                                    <TouchableOpacity 
+                                        style={styles.fullscreenCloseButton} 
+                                        onPress={closeFullscreen}
+                                    >
+                                        <MaterialCommunityIcons name="close" size={28} color="#fff" />
+                                    </TouchableOpacity>
 
-                            {/* Tap area to show/hide controls */}
-                            <TouchableOpacity
-                                style={StyleSheet.absoluteFill}
-                                activeOpacity={1}
-                                onPress={handleFullscreenTap}
-                            >
-                                {/* Custom controls overlay */}
-                                {showFullscreenControls && (
-                                    <View style={styles.fullscreenControlsOverlay}>
-                                        {/* Close button — top right */}
-                                        <TouchableOpacity 
-                                            style={styles.fullscreenCloseButton} 
-                                            onPress={closeFullscreen}
-                                        >
-                                            <MaterialCommunityIcons name="close" size={28} color="#fff" />
-                                        </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.fullscreenCenterButton}
+                                        onPress={togglePlayPause}
+                                    >
+                                        <MaterialCommunityIcons
+                                            name={playing ? 'pause' : 'play'}
+                                            size={56}
+                                            color="#fff"
+                                        />
+                                    </TouchableOpacity>
 
-                                        {/* Center play/pause */}
-                                        <TouchableOpacity
-                                            style={styles.fullscreenCenterButton}
-                                            onPress={toggleFullscreenPlayback}
-                                        >
-                                            <MaterialCommunityIcons
-                                                name={fullscreenPlaying ? 'pause' : 'play'}
-                                                size={56}
-                                                color="#fff"
+                                    <View style={styles.fullscreenBottomBar}>
+                                        <Text style={styles.fullscreenTimeText}>
+                                            {formatTime(fullscreenCurrentTime)}
+                                        </Text>
+                                        <View style={styles.fullscreenProgressBar}>
+                                            <View
+                                                style={[
+                                                    styles.fullscreenProgressFill,
+                                                    { width: `${fullscreenProgress * 100}%` },
+                                                ]}
                                             />
-                                        </TouchableOpacity>
-
-                                        {/* Bottom bar: progress + time */}
-                                        <View style={styles.fullscreenBottomBar}>
-                                            <Text style={styles.fullscreenTimeText}>
-                                                {formatTime(fullscreenCurrentTime)}
-                                            </Text>
-                                            <View style={styles.fullscreenProgressBar}>
-                                                <View
-                                                    style={[
-                                                        styles.fullscreenProgressFill,
-                                                        { width: `${fullscreenProgress * 100}%` },
-                                                    ]}
-                                                />
-                                            </View>
-                                            <Text style={styles.fullscreenTimeText}>
-                                                {formatTime(endTime || fullscreenDuration)}
-                                            </Text>
                                         </View>
+                                        <Text style={styles.fullscreenTimeText}>
+                                            {formatTime(endTime || fullscreenDuration)}
+                                        </Text>
                                     </View>
-                                )}
-                            </TouchableOpacity>
-                        </SafeAreaView>
-                    </Modal>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    )}
                 </>
             )}
         </View>
@@ -580,12 +537,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         zIndex: 25,
     },
-    fullscreenContainer: {
-        flex: 1,
-        backgroundColor: '#000',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     fullscreenCloseButton: {
         position: 'absolute',
         top: 44,
@@ -597,10 +548,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 100,
-    },
-    fullscreenVideoWrapper: {
-        width: '100%',
-        aspectRatio: 16 / 9,
     },
     fullscreenControlsOverlay: {
         ...StyleSheet.absoluteFillObject,
