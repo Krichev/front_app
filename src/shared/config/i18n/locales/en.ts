@@ -669,6 +669,8 @@ const en = {
         questionLabel: 'Question / Instructions',
         questionPlaceholder: 'Describe what the player should do...', 
 
+        answerHelperText: 'Optional: describe the expected response. For audio challenges, the audio itself serves as the answer.',
+
         referenceAudio: 'Reference Audio',
         uploadReference: 'Upload Reference Audio',
         recordReference: 'Record Reference',

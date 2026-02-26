@@ -28,6 +28,24 @@ import type {
     PaginatedResponse,
 } from '../types';
 
+export interface QuizRoundDTO {
+    id: number;
+    quizSessionId: number;
+    question: QuizQuestion;
+    roundNumber: number;
+    teamAnswer: string | null;
+    isCorrect: boolean;
+    playerWhoAnswered: string | null;
+    discussionNotes: string | null;
+    roundStartedAt: string | null;
+    answerSubmittedAt: string | null;
+    discussionDurationSeconds: number | null;
+    totalRoundDurationSeconds: number | null;
+    hintUsed: boolean;
+    voiceRecordingUsed: boolean;
+    aiFeedback: string | null;
+}
+
 
 // Get base URL from centralized config
 const BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
@@ -284,6 +302,23 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
             ],
         }),
 
+        /**
+         * Get actually-played questions with round context (answers, correctness).
+         * Uses quiz_rounds from the latest completed session — source of truth.
+         */
+        getPlayedQuestionsForChallenge: builder.query<QuizRoundDTO[], {
+            challengeId: string;
+            sessionId?: number;
+        }>({
+            query: ({ challengeId, sessionId }) => ({
+                url: `/quiz/challenges/${challengeId}/played-questions`,
+                params: sessionId ? { sessionId } : undefined,
+            }),
+            providesTags: (result, error, { challengeId }) => [
+                { type: 'QuizQuestion', id: `PLAYED_${challengeId}` }
+            ],
+        }),
+
         getSessionHistory: builder.query<QuizSessionSummary[], {
             challengeId: string;
             page?: number;
@@ -480,6 +515,7 @@ export const {
     useCreateQuizChallengeMutation,
     useSaveQuizQuestionsForChallengeMutation,
     useGetQuestionsForChallengeQuery,
+    useGetPlayedQuestionsForChallengeQuery,
 
     // NEW: Access control hooks
     useGetAccessibleChallengesQuery,

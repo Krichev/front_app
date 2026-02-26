@@ -1,7 +1,7 @@
 // src/services/speech/FileSpeechRecognitionService.ts
 import {PermissionsAndroid, Platform} from 'react-native';
 import AudioRecord from 'react-native-audio-record';
-import RNFS from 'react-native-fs';
+import { safeRNFS as RNFS, isRNFSAvailable } from '../../shared/lib/fileSystem';
 
 export interface FileSpeechConfig {
     serverUrl: string;
@@ -100,6 +100,9 @@ export class FileSpeechRecognitionService {
     private generateRecordingPath(): string {
         const timestamp = Date.now();
         const filename = `recording_${timestamp}.wav`;
+        if (!isRNFSAvailable()) {
+            return `/tmp/${filename}`; // Fallback or handle differently
+        }
         return `${RNFS.CachesDirectoryPath}/${filename}`;
     }
 
@@ -165,6 +168,9 @@ export class FileSpeechRecognitionService {
      */
     async recognizeAudioFile(filePath: string): Promise<RecognitionResult> {
         try {
+            if (!isRNFSAvailable()) {
+                throw new Error('File system not available for recognition');
+            }
             // Check if file exists
             const fileExists = await RNFS.exists(filePath);
             if (!fileExists) {
@@ -242,6 +248,7 @@ export class FileSpeechRecognitionService {
      * Clean up temporary audio files
      */
     private async cleanupFile(filePath: string): Promise<void> {
+        if (!isRNFSAvailable()) return;
         try {
             const exists = await RNFS.exists(filePath);
             if (exists) {
@@ -257,16 +264,17 @@ export class FileSpeechRecognitionService {
      * Clean up all recording-related files in cache
      */
     async cleanupAllRecordings(): Promise<void> {
+        if (!isRNFSAvailable()) return;
         try {
             const cacheDir = RNFS.CachesDirectoryPath;
             const files = await RNFS.readDir(cacheDir);
 
-            const recordingFiles = files.filter(file =>
+            const recordingFiles = files.filter((file: any) =>
                 file.name.startsWith('recording_') && file.name.endsWith('.wav')
             );
 
             await Promise.all(
-                recordingFiles.map(file => this.cleanupFile(file.path))
+                recordingFiles.map((file: any) => this.cleanupFile(file.path))
             );
 
             console.log(`Cleaned up ${recordingFiles.length} recording files`);

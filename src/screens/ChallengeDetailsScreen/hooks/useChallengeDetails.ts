@@ -4,6 +4,7 @@ import {
     useGetChallengeByIdQuery,
     useGetChallengeAudioConfigQuery,
     useGetQuestionsForChallengeQuery,
+    useGetPlayedQuestionsForChallengeQuery,
 } from '../../../entities/ChallengeState/model/slice/challengeApi';
 import { useGetWagersByChallengeQuery } from '../../../entities/WagerState/model/slice/wagerApi';
 import { resolveChallengeState } from '../lib/challengeStateResolver';
@@ -36,11 +37,23 @@ export function useChallengeDetails(challengeId: string | undefined) {
     const quizConfig = parseQuizConfig(challenge?.quizConfig);
     const isCancelled = challenge?.status === 'CANCELLED';
 
-    // Prefetch custom questions if needed
-    const { data: customQuestions } = useGetQuestionsForChallengeQuery(
+    // Prefetch custom questions (still needed for quest creation flow)
+    const { data: customQuestionsRaw } = useGetQuestionsForChallengeQuery(
         { challengeId: challengeId! },
         { skip: !challengeId || isCancelled }
     );
+
+    // Fetch played questions with round context (for review UI)
+    const { data: playedRounds } = useGetPlayedQuestionsForChallengeQuery(
+        { challengeId: challengeId! },
+        { skip: !challengeId || isCancelled }
+    );
+
+    // Derive: questions that were actually played (from rounds)
+    const playedQuestions = playedRounds?.map(round => round.question) ?? [];
+
+    // Use played questions if available, fall back to customQuestions
+    const customQuestions = playedQuestions.length > 0 ? playedQuestions : (customQuestionsRaw ?? []);
 
     // --- Derived state ---
     const challengeState = resolveChallengeState(challenge, user?.id);
@@ -67,6 +80,7 @@ export function useChallengeDetails(challengeId: string | undefined) {
         audioConfig,
         quizConfig,
         customQuestions,
+        playedRounds,
         user,
         pendingWagerInvitation,
         verificationMethods,

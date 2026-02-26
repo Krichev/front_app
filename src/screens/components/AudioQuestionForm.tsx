@@ -18,6 +18,7 @@ import {useTranslation} from 'react-i18next';
 import { LocalizedInput } from '../../shared/ui/LocalizedInput';
 import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
 import { useI18n } from '../../app/providers/I18nProvider';
+import { safeRNFS as RNFS } from '../../shared/lib/fileSystem';
 
 // ============================================================================
 // TYPES
@@ -395,7 +396,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                 color={audioInputMode === 'upload' ? theme.colors.primary.main : theme.colors.text.secondary} 
                             />
                             <Text style={[styles.tabText, audioInputMode === 'upload' && styles.activeTabText]}>
-                                {t('questionEditor.upload')}
+                                {t('createQuest.questionEditor.upload')}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -680,7 +681,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             <View style={form.section}>
                 <View style={form.sectionHeader}>
                     <MaterialCommunityIcons name="tag" size={20} color={theme.colors.text.primary} />
-                    <Text style={form.sectionTitle}>{t('questionList.additionalInfo')}</Text>
+                    <Text style={form.sectionTitle}>{t('createQuest.questionList.additionalInfo')}</Text>
                 </View>
 
                 {/* Difficulty */}
@@ -783,7 +784,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             numberOfLines={2}
                         />
                         <Text style={form.helperText}>
-                            {t('audioQuestion.answerHelperText', 'Optional: describe the expected response. For audio challenges, the audio itself serves as the answer.')}
+                            {t('audioQuestion.answerHelperText')}
                         </Text>
                     </View>
                 )}

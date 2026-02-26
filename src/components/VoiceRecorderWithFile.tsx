@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AudioRecord from 'react-native-audio-record';
-import RNFS from 'react-native-fs';
+import { safeRNFS as RNFS, isRNFSAvailable } from '../shared/lib/fileSystem';
 import {FileService} from "../services/speech/FileService.ts";
 
 interface VoiceRecorderWithFileProps {
@@ -102,6 +102,12 @@ const VoiceRecorderWithFile: React.FC<VoiceRecorderWithFileProps> = ({
         // Generate unique filename
         const timestamp = new Date().getTime();
         const fileName = `voice_recording_${timestamp}.wav`;
+        
+        if (!isRNFSAvailable()) {
+            setError('File system not available');
+            return false;
+        }
+
         const filePath = `${RNFS.CachesDirectoryPath}/${fileName}`;
 
         const options = {
@@ -127,6 +133,10 @@ const VoiceRecorderWithFile: React.FC<VoiceRecorderWithFileProps> = ({
     const sendAudioFileToAPI = async (filePath: string) => {
         try {
             setIsProcessing(true);
+
+            if (!isRNFSAvailable()) {
+                throw new Error('File system not available for verification');
+            }
 
             // Check if file exists
             const fileExists = await RNFS.exists(filePath);
@@ -252,7 +262,7 @@ const VoiceRecorderWithFile: React.FC<VoiceRecorderWithFileProps> = ({
 
     // Clean up audio files
     const cleanupAudioFiles = async () => {
-        if (audioFilePath) {
+        if (audioFilePath && isRNFSAvailable()) {
             try {
                 const exists = await RNFS.exists(audioFilePath);
                 if (exists) {

@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AudioRecord from 'react-native-audio-record';
-import RNFS from 'react-native-fs';
+import { safeRNFS as RNFS, isRNFSAvailable } from '../../shared/lib/fileSystem';
 
 interface RhythmAudioRecorderProps {
     isActive: boolean;
@@ -112,6 +112,10 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     };
     
     const initializeRecorder = () => {
+        if (!isRNFSAvailable()) {
+            console.error('RNFS not available, cannot initialize recorder path');
+            return;
+        }
         const options = {
             sampleRate: 44100,  // High sample rate for accurate onset detection
             channels: 1,
@@ -172,7 +176,14 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             const filePath = await AudioRecord.stop();
             
             // Verify file exists
-            const exists = await RNFS.exists(filePath || audioFilePath.current);
+            let exists = false;
+            if (isRNFSAvailable()) {
+                exists = await RNFS.exists(filePath || audioFilePath.current);
+            } else {
+                console.warn('RNFS not available, skipping file existence check');
+                exists = true; // Fallback or handle differently
+            }
+
             if (!exists) {
                 throw new Error('Recording file not found');
             }

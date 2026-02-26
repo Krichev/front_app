@@ -75,6 +75,14 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
     const launchWWWQuiz = async (config: ParsedQuizConfig) => {
         try {
             const gameMode = config.gameMode || 'STANDARD';
+
+            // Extract question IDs from customQuestions (which now prioritizes played questions)
+            const customQuestionIds = customQuestions
+                ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
+                .filter((id: any) => !isNaN(id)) ?? [];
+
+            const hasCustomQuestions = customQuestionIds.length > 0;
+
             const sessionParams = {
                 challengeId: challengeId,
                 teamName: config.teamName || 'Team',
@@ -86,7 +94,8 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
                 totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
                 enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
-                questionSource: 'app' as const,
+                questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
+                customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
             };
 
             const session = await startQuizSession(sessionParams).unwrap();
@@ -129,6 +138,11 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
         const BLITZ_ROUND_TIME = 15;
         const BLITZ_AI_HOST = false;
 
+        const customQuestionIds = customQuestions
+            ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
+            .filter((id: any) => !isNaN(id)) ?? [];
+        const hasCustomQuestions = customQuestionIds.length > 0;
+
         const session = await startQuizSession({
             challengeId,
             teamName: config.teamName || 'Blitz Team',
@@ -138,7 +152,8 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             totalRounds: config.roundCount || 10,
             enableAiHost: BLITZ_AI_HOST,
             enableAiAnswerValidation: false,
-            questionSource: 'app' as const,
+            questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
+            customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
         }).unwrap();
 
         navigation.navigate('WWWGamePlay', {
@@ -155,6 +170,11 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
     };
 
     const launchTriviaQuiz = async (config: ParsedQuizConfig) => {
+        const customQuestionIds = customQuestions
+            ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
+            .filter((id: any) => !isNaN(id)) ?? [];
+        const hasCustomQuestions = customQuestionIds.length > 0;
+
         const session = await startQuizSession({
             challengeId,
             teamName: username || 'Player',
@@ -164,7 +184,8 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             totalRounds: config.roundCount || 10,
             enableAiHost: false,
             enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
-            questionSource: 'app' as const,
+            questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
+            customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
         }).unwrap();
 
         navigation.navigate('WWWGamePlay', {

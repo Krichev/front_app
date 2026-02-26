@@ -644,6 +644,8 @@ const ru = {
         questionLabel: 'Вопрос / Инструкции',
         questionPlaceholder: 'Опишите, что должен сделать игрок...',
 
+        answerHelperText: 'Опционально: опишите ожидаемый ответ. В аудио-челленджах сам звук служит ответом.',
+
         referenceAudio: 'Эталонное аудио',
         uploadReference: 'Загрузить эталонное аудио',
         recordReference: 'Записать эталон',
