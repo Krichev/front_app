@@ -91,7 +91,9 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
                 gameMode: gameMode as any,
                 answerTimeSeconds: config.answerTimeSeconds || 20,
                 roundTimeSeconds: config.roundTime || 30,
-                totalRounds: config.roundCount || 5,
+                totalRounds: hasCustomQuestions 
+                    ? Math.min(config.roundCount || 5, customQuestionIds.length) 
+                    : (config.roundCount || 5),
                 enableAiHost: config.enableAIHost !== false,
                 enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
                 questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
@@ -149,7 +151,9 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             teamMembers: config.teamMembers || [],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'HARD',
             roundTimeSeconds: BLITZ_ROUND_TIME,
-            totalRounds: config.roundCount || 10,
+            totalRounds: hasCustomQuestions 
+                ? Math.min(config.roundCount || 10, customQuestionIds.length) 
+                : (config.roundCount || 10),
             enableAiHost: BLITZ_AI_HOST,
             enableAiAnswerValidation: false,
             questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
@@ -181,7 +185,9 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             teamMembers: [username || 'Player'],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
             roundTimeSeconds: config.roundTime || 20,
-            totalRounds: config.roundCount || 10,
+            totalRounds: hasCustomQuestions 
+                ? Math.min(config.roundCount || 10, customQuestionIds.length) 
+                : (config.roundCount || 10),
             enableAiHost: false,
             enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
             questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
@@ -210,7 +216,9 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             teamMembers: config.teamMembers || [],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
             roundTimeSeconds: config.roundTime || 30,
-            totalRounds: config.roundCount || 5,
+            totalRounds: customQuestionIds.length > 0 
+                ? Math.min(config.roundCount || 5, customQuestionIds.length) 
+                : (config.roundCount || 5),
             enableAiHost: config.enableAIHost !== false,
             enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
             questionSource: 'user' as const,

@@ -144,7 +144,9 @@ export const useQuestCreator = () => {
                 difficulty: quizConfig.difficulty,
                 gameMode: quizConfig.gameMode,
                 answerTimeSeconds: quizConfig.answerTimeSeconds,
-                totalRounds: Math.min(quizConfig.roundCount, selectedQuestions.length > 0 ? selectedQuestions.length : quizConfig.roundCount),
+                totalRounds: selectedQuestions.length > 0 
+                    ? Math.min(quizConfig.roundCount, selectedQuestions.length) 
+                    : quizConfig.roundCount,
                 roundTimeSeconds: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
                 enableAiAnswerValidation: quizConfig.enableAiAnswerValidation,
