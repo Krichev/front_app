@@ -108,6 +108,9 @@ export const useQuestCreator = () => {
             const backendQuizConfig = mapQuizConfigToBackend(quizConfig);
             console.log('Mapped backend config:', backendQuizConfig);
 
+            // Extract IDs of selected existing questions
+            const selectedQuestionIds: number[] = extractQuestionIds(selectedQuestions);
+
             // Step 2: Create Quiz Challenge with proper payload
             const challengePayload: CreateQuizChallengeRequest = {
                 title: getLocalizedValue(title, currentLanguage),
@@ -118,7 +121,8 @@ export const useQuestCreator = () => {
                 endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week
                 quizConfig: backendQuizConfig,
                 // Note: customQuestions can be added here if needed
-                customQuestions: []
+                customQuestions: [],
+                selectedQuestionIds: selectedQuestionIds,
             };
 
             console.log('Creating quiz challenge with payload:', challengePayload);
@@ -128,9 +132,6 @@ export const useQuestCreator = () => {
             if (!challengeResult?.id) {
                 throw new Error('Challenge creation failed - no ID returned');
             }
-
-            // Step 3: Prepare custom question IDs (if questions have IDs from app/user)
-            const customQuestionIds: number[] = extractQuestionIds(selectedQuestions);
 
             const hasUserQuestions = selectedQuestions.some(q => q.source === 'user');
             const questionSource = hasUserQuestions ? 'user' : 'app';
@@ -148,7 +149,7 @@ export const useQuestCreator = () => {
                 enableAiHost: quizConfig.enableAIHost,
                 enableAiAnswerValidation: quizConfig.enableAiAnswerValidation,
                 questionSource: questionSource as 'app' | 'user',
-                customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
+                customQuestionIds: selectedQuestionIds.length > 0 ? selectedQuestionIds : undefined,
             };
 
             console.log('Starting quiz session with payload:', sessionPayload);

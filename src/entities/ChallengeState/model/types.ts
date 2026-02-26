@@ -359,6 +359,7 @@ export interface CreateQuizChallengeRequest {
     frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONE_TIME';
     quizConfig: QuizChallengeConfig;
     customQuestions: any[]; // CreateQuizQuestionRequest[] from quizApi
+    selectedQuestionIds?: number[];
 }
 
 // ============================================================================
