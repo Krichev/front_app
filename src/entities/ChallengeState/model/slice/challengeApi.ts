@@ -15,7 +15,6 @@ import type {
     PaymentType,
     PhotoVerificationRequest,
     VerificationResponse,
-    QuestAudioConfig,
     QuestAudioResponse,
     UpdateQuestAudioConfigRequest,
     UploadQuestAudioRequest,
@@ -26,6 +25,7 @@ import type {
     CompletedChallenge,
     QuizSessionSummary,
     ReplayChallengeConfig,
+    PaginatedResponse,
 } from '../types';
 
 
@@ -293,6 +293,7 @@ export const enhancedChallengeApi = challengeApi.injectEndpoints({
                 url: `/quiz/challenges/${challengeId}/session-history`,
                 params: { page, size },
             }),
+            transformResponse: (response: PaginatedResponse<QuizSessionSummary>) => response.content || [],
             providesTags: (_, __, { challengeId }) => [
                 { type: 'QuizSession' as any, id: `HISTORY_${challengeId}` },
             ],

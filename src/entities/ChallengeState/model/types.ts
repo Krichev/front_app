@@ -299,6 +299,21 @@ export interface CompletedChallenge extends ApiChallenge {
 }
 
 /**
+ * Generic paginated response from Spring Boot
+ */
+export interface PaginatedResponse<T> {
+    content: T[];
+    empty: boolean;
+    first: boolean;
+    last: boolean;
+    number: number;
+    numberOfElements: number;
+    totalElements: number;
+    totalPages: number;
+    size?: number;
+}
+
+/**
  * Summary of a quiz session for history view
  */
 export interface QuizSessionSummary {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { List, Text, useTheme, Divider, ActivityIndicator } from 'react-native-paper';
+import { List, Text, Divider, ActivityIndicator } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useGetSessionHistoryQuery } from '../../../entities/ChallengeState/model/slice/challengeApi';
 
@@ -9,7 +9,6 @@ interface SessionHistorySectionProps {
 }
 
 export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ challengeId }) => {
-  const theme = useTheme();
   const [expanded, setExpanded] = useState(true);
   
   const { data: history, isLoading, error } = useGetSessionHistoryQuery({ 
@@ -32,7 +31,10 @@ export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ ch
     return <ActivityIndicator style={{ margin: 20 }} />;
   }
 
-  if (error || !history || history.length === 0) {
+  // Ensure history is an array before attempting to use it
+  const sessions = Array.isArray(history) ? history : [];
+
+  if (error || sessions.length === 0) {
     return null; // Don't show if no history or error
   }
 
@@ -45,7 +47,7 @@ export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ ch
       style={styles.accordion}
     >
       <View style={styles.container}>
-        {history.map((session, index) => {
+        {sessions.map((session, index) => {
           const icon = getScoreIcon(session.scorePercentage);
 
           return (
@@ -54,7 +56,7 @@ export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ ch
                 <MaterialCommunityIcons name={icon.name as any} size={20} color={icon.color} />
                 <View style={styles.sessionInfo}>
                   <Text variant="bodyMedium" style={styles.sessionTitle}>
-                    Session #{history.length - index}
+                    Session #{sessions.length - index}
                   </Text>
                   <Text variant="bodySmall" style={styles.sessionMeta}>
                     {formatDate(session.createdAt)} • {session.duration ? Math.floor(session.duration / 60) + 'm ' + (session.duration % 60) + 's' : 'N/A'}
@@ -69,7 +71,7 @@ export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ ch
                   </Text>
                 </View>
               </View>
-              {index < history.length - 1 && <Divider style={styles.divider} />}
+              {index < sessions.length - 1 && <Divider style={styles.divider} />}
             </View>
           );
         })}
