@@ -23,6 +23,7 @@ const WWWGameResultsScreen: React.FC = () => {
         score,
         totalRounds,
         roundsData,
+        challengeId,
         correctPercentage,
         performances,
         minimumScoreRequired,
@@ -47,7 +48,7 @@ const WWWGameResultsScreen: React.FC = () => {
             <View style={styles.header}>
                 <View style={styles.headerTop}>
                     <Text style={styles.teamName}>{teamName}</Text>
-                    <Text style={styles.scoreText}>{t('gameResults.score.label', { score, total: totalRounds })}</Text>
+                    <Text style={styles.scoreText}>{t('gameResults.screen.score', { score, total: totalRounds })}</Text>
                 </View>
                 <View style={styles.progressBar}>
                     <View
@@ -61,7 +62,7 @@ const WWWGameResultsScreen: React.FC = () => {
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.scoreContainer}>
-                    <Text style={styles.scoreText}>{t('gameResults.score.label', { score, total: totalRounds })}</Text>
+                    <Text style={styles.scoreText}>{t('gameResults.screen.score', { score, total: totalRounds })}</Text>
                     <View style={styles.scoreBar}>
                         <View
                             style={[
@@ -70,7 +71,7 @@ const WWWGameResultsScreen: React.FC = () => {
                             ]}
                         />
                     </View>
-                    <Text style={styles.scorePercentage}>{t('gameResults.score.percentCorrect', { percent: correctPercentage.toFixed(0) })}</Text>
+                    <Text style={styles.scorePercentage}>{t('gameResults.screen.correctPercentage', { percentage: correctPercentage.toFixed(0) })}</Text>
                     <Text style={styles.resultMessage}>{resultMessage}</Text>
                 </View>
 
@@ -90,14 +91,14 @@ const WWWGameResultsScreen: React.FC = () => {
                                 styles.scoreRequirementTitle,
                                 meetsMinimumScore ? styles.scoreRequirementMetText : styles.scoreRequirementNotMetText
                             ]}>
-                                {meetsMinimumScore ? t('gameResults.requirement.met') : t('gameResults.requirement.notMet')}
+                                {meetsMinimumScore ? t('gameResults.screen.requirementMet') : t('gameResults.screen.requirementNotMet')}
                             </Text>
                             <Text style={styles.scoreRequirementDescription}>
-                                {t('gameResults.requirement.description', { required: minimumScoreRequired, actual: correctPercentage.toFixed(0) })}
+                                {t('gameResults.screen.requirementDescription', { required: minimumScoreRequired, actual: correctPercentage.toFixed(0) })}
                             </Text>
                             {!meetsMinimumScore && (
                                 <Text style={styles.scoreRequirementHelp}>
-                                    {t('gameResults.requirement.help', { required: minimumScoreRequired })}
+                                    {t('gameResults.screen.requirementHelp', { required: minimumScoreRequired })}
                                 </Text>
                             )}
                         </View>
@@ -105,12 +106,12 @@ const WWWGameResultsScreen: React.FC = () => {
                 )}
 
                 <View style={styles.feedbackContainer}>
-                    <Text style={styles.sectionTitle}>{t('gameResults.sections.aiAnalysis')}</Text>
+                    <Text style={styles.sectionTitle}>{t('gameResults.screen.aiAnalysis')}</Text>
                     <Text style={styles.feedbackText}>{aiFeedback}</Text>
                 </View>
 
                 <View style={styles.performanceContainer}>
-                    <Text style={styles.sectionTitle}>{t('gameResults.sections.playerPerformance')}</Text>
+                    <Text style={styles.sectionTitle}>{t('gameResults.screen.playerPerformance')}</Text>
                     {performances.map((perf, index) => (
                         <View key={index} style={styles.playerItem}>
                             <View style={styles.playerInfo}>
@@ -132,17 +133,17 @@ const WWWGameResultsScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.questionsContainer}>
-                    <Text style={styles.sectionTitle}>{t('gameResults.sections.questionResults')}</Text>
+                    <Text style={styles.sectionTitle}>{t('gameResults.screen.questionResults')}</Text>
                     {roundsData.map((round, index) => (
                         <View key={index} style={styles.questionItem}>
                             <View style={styles.questionHeader}>
-                                <Text style={styles.questionNumber}>{t('gameResults.question.number', { number: index + 1 })}</Text>
+                                <Text style={styles.questionNumber}>{t('gameResults.screen.questionNumber', { number: index + 1 })}</Text>
                                 <View style={[
                                     styles.resultBadge,
                                     round.isCorrect ? styles.correctBadge : styles.incorrectBadge
                                 ]}>
                                     <Text style={styles.resultBadgeText}>
-                                        {round.isCorrect ? t('gameResults.question.correct') : t('gameResults.question.incorrect')}
+                                        {round.isCorrect ? t('gameResults.screen.correct') : t('gameResults.screen.incorrect')}
                                     </Text>
                                 </View>
                             </View>
@@ -151,17 +152,17 @@ const WWWGameResultsScreen: React.FC = () => {
 
                             <View style={styles.answerContainer}>
                                 <View style={styles.answerItem}>
-                                    <Text style={styles.answerLabel}>{t('gameResults.question.yourAnswer')}</Text>
+                                    <Text style={styles.answerLabel}>{t('gameResults.screen.yourAnswer')}</Text>
                                     <Text style={styles.answerText}>{round.teamAnswer}</Text>
                                 </View>
 
                                 <View style={styles.answerItem}>
-                                    <Text style={styles.answerLabel}>{t('gameResults.question.correctAnswer')}</Text>
+                                    <Text style={styles.answerLabel}>{t('gameResults.screen.correctAnswer')}</Text>
                                     <Text style={styles.answerText}>{round.correctAnswer}</Text>
                                 </View>
 
                                 <Text style={styles.playerAnswered}>
-                                    {t('gameResults.question.answeredBy', { player: round.playerWhoAnswered })}
+                                    {t('gameResults.screen.answeredBy', { player: round.playerWhoAnswered })}
                                 </Text>
                             </View>
                         </View>
@@ -177,11 +178,11 @@ const WWWGameResultsScreen: React.FC = () => {
                         {submittingChallenge ? (
                             <ActivityIndicator size="small" color={theme.colors.text.inverse} />
                         ) : (
-                            <View style={{ alignItems: 'center' }}>
-                                <Text style={styles.buttonText}>Play Again →</Text>
+                            <View style={styles.playAgainButtonContent}>
+                                <Text style={styles.buttonText}>{t('gameResults.screen.playAgain')}</Text>
                                 {challengeId && (
-                                    <Text style={{ fontSize: 10, color: 'white', opacity: 0.8, marginTop: 2 }}>
-                                        View stats & adjust settings before replaying
+                                    <Text style={styles.playAgainHintText}>
+                                        {t('gameResults.screen.playAgainHint')}
                                     </Text>
                                 )}
                             </View>
@@ -193,7 +194,7 @@ const WWWGameResultsScreen: React.FC = () => {
                         onPress={returnHome}
                         disabled={submittingChallenge}
                     >
-                        <Text style={styles.secondaryButtonText}>{t('gameResults.buttons.returnHome')}</Text>
+                        <Text style={styles.secondaryButtonText}>{t('gameResults.screen.returnHome')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -206,9 +207,9 @@ const WWWGameResultsScreen: React.FC = () => {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>{t('gameResults.modal.title')}</Text>
+                        <Text style={styles.modalTitle}>{t('gameResults.screen.gameOver')}</Text>
                         <Text style={styles.modalText}>
-                            {t('gameResults.modal.teamScored', { score, total: totalRounds })}
+                            {t('gameResults.screen.teamScored', { score, total: totalRounds })}
                         </Text>
                         <Text style={styles.modalScore}>
                             {score === totalRounds
@@ -222,7 +223,7 @@ const WWWGameResultsScreen: React.FC = () => {
                             style={styles.modalButton}
                             onPress={endGame}
                         >
-                            <Text style={styles.modalButtonText}>{t('gameResults.modal.seeResults')}</Text>
+                            <Text style={styles.modalButtonText}>{t('gameResults.screen.endGame')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -444,6 +445,16 @@ const themeStyles = createStyles(theme => ({
         color: theme.colors.text.inverse,
         ...theme.typography.body.medium,
         fontWeight: theme.typography.fontWeight.bold,
+    },
+    playAgainButtonContent: {
+        alignItems: 'center',
+    },
+    playAgainHintText: {
+        fontSize: 10,
+        color: 'white',
+        opacity: 0.8,
+        marginTop: 2,
+        textAlign: 'center',
     },
     secondaryButton: {
         backgroundColor: 'transparent',

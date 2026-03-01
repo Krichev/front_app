@@ -60,7 +60,11 @@ export const useGameResults = (): UseGameResultsReturn => {
     const { t } = useTranslation();
     const route = useRoute<WWWGameResultsRouteProp>();
     const navigation = useNavigation<WWWGameResultsNavigationProp>();
-    const { teamName, score, totalRounds, roundsData, challengeId } = route.params;
+    
+    // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+    const { teamName, score, totalRounds, roundsData } = route.params;
+    const challengeId = route.params?.challengeId;
+    const sessionId = route.params?.sessionId;
     
     // Auth user from Redux store
     const { user } = useSelector((state: RootState) => state.auth);

@@ -12,7 +12,11 @@ type CameraScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const CameraScreen: React.FC = () => {
   const navigation = useNavigation<CameraScreenNavigationProp>();
   const route = useRoute<CameraScreenRouteProp>();
-  const { mode, maxDuration, onCapture } = route.params;
+  
+  // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+  const mode = route.params?.mode;
+  const maxDuration = route.params?.maxDuration;
+  const onCapture = route.params?.onCapture;
   
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
 

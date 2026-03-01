@@ -27,6 +27,7 @@ const en = {
         },
     },
     common: {
+        all: 'All',
         loading: 'Loading...', 
         error: 'Error',
         success: 'Success',
@@ -964,6 +965,30 @@ const en = {
             },
         },
         completionNotes: 'Quiz completed with score {{score}}/{{total}}',
+
+        screen: {
+            score: 'Score: {{score}}/{{total}}',
+            correctPercentage: '{{percentage}}% Correct',
+            correct: 'CORRECT',
+            incorrect: 'INCORRECT',
+            questionNumber: 'Question {{number}}',
+            yourAnswer: 'Your Answer:',
+            correctAnswer: 'Correct Answer:',
+            answeredBy: 'Answered by: {{player}}',
+            playAgain: 'Play Again →',
+            playAgainHint: 'View stats & adjust settings before replaying',
+            returnHome: 'Return to Home',
+            gameOver: 'Game Over!',
+            teamScored: 'Your team scored {{score}} out of {{total}} questions.',
+            endGame: 'End Game',
+            aiAnalysis: 'AI Analysis',
+            playerPerformance: 'Player Performance',
+            questionResults: 'Question Results',
+            requirementMet: 'Quest Requirement Met',
+            requirementNotMet: 'Quest Requirement Not Met',
+            requirementDescription: 'Minimum score required: {{required}}% | Your score: {{actual}}%',
+            requirementHelp: 'You need to score at least {{required}}% to complete this quest. Try again!',
+        },
 
         // --- NEW KEYS BELOW ---
         score: {

@@ -34,7 +34,10 @@ const PhotoVerificationScreen: React.FC = () => {
     const { t } = useTranslation();
     const route = useRoute<PhotoVerificationRouteProp>();
     const navigation = useNavigation<PhotoVerificationNavigationProp>();
-    const { challengeId, prompt: routePrompt } = route.params;
+    
+    // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+    const challengeId = route.params?.challengeId;
+    const routePrompt = route.params?.prompt;
 
     // State for handling the photo capture process
     const [photoUri, setPhotoUri] = useState<string | null>(null);

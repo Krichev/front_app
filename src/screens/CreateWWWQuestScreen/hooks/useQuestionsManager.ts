@@ -133,7 +133,7 @@ export const useQuestionsManager = () => {
     const loadAppQuestions = async () => {
         setIsLoadingAppQuestions(true);
         try {
-            const questions = await QuestionService.advancedSearchQuestions({page: 0, size: 100});
+            const questions = await QuestionService.advancedSearchQuestions({page: 0, size: 100, isUserCreated: false});
             setAppQuestions(questions.content || []);
         } catch (error) {
             console.error('Error loading app questions:', error);

@@ -27,6 +27,7 @@ const ru = {
         },
     },
     common: {
+        all: 'Все',
         loading: 'Загрузка...', 
         error: 'Ошибка',
         success: 'Успешно',
@@ -897,6 +898,30 @@ const ru = {
             },
         },
         completionNotes: 'Викторина завершена со счётом {{score}}/{{total}}',
+
+        screen: {
+            score: 'Счёт: {{score}}/{{total}}',
+            correctPercentage: '{{percentage}}% верно',
+            correct: 'ВЕРНО',
+            incorrect: 'НЕВЕРНО',
+            questionNumber: 'Вопрос {{number}}',
+            yourAnswer: 'Ваш ответ:',
+            correctAnswer: 'Правильный ответ:',
+            answeredBy: 'Ответил(а): {{player}}',
+            playAgain: 'Играть снова →',
+            playAgainHint: 'Посмотрите статистику перед повторной игрой',
+            returnHome: 'На главную',
+            gameOver: 'Игра окончена!',
+            teamScored: 'Ваша команда набрала {{score}} из {{total}} очков.',
+            endGame: 'Завершить игру',
+            aiAnalysis: 'Анализ ИИ',
+            playerPerformance: 'Результаты игроков',
+            questionResults: 'Обзор вопросов',
+            requirementMet: 'Требование квеста выполнено',
+            requirementNotMet: 'Требование квеста не выполнено',
+            requirementDescription: 'Минимальный результат: {{required}}% | Ваш результат: {{actual}}%',
+            requirementHelp: 'Вам нужно набрать как минимум {{required}}% для выполнения квеста. Попробуйте снова!',
+        },
 
         // --- NEW KEYS BELOW ---
         score: {

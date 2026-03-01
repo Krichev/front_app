@@ -43,12 +43,18 @@ const QuizResultsScreen: React.FC = () => {
     const {user} = useSelector((state: RootState) => state.auth);
     const [updateChallenge, {isLoading}] = useUpdateChallengeMutation();
 
-    const {challengeId, score, totalRounds, teamName, roundsData} = route.params;
+    // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+    const challengeId = route.params?.challengeId;
+    const score = route.params?.score;
+    const totalRounds = route.params?.totalRounds;
+    const teamName = route.params?.teamName;
+    const roundsData = route.params?.roundsData || [];
+    
     const [feedback, setFeedback] = React.useState<string>('');
     const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
 
     // Calculate score percentage
-    const scorePercentage = (score / totalRounds) * 100;
+    const scorePercentage = (totalRounds && totalRounds > 0) ? (score / totalRounds) * 100 : 0;
 
     // Generate feedback using DeepSeek service
     useEffect(() => {

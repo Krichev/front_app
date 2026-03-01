@@ -34,7 +34,9 @@ const WWWGamePlayScreen: React.FC = () => {
   const navigation = useNavigation<WWWGamePlayNavigationProp>();
   const { screen } = useAppStyles();
   
-  const { sessionId, challengeId } = route.params;
+  // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+  const sessionId = route.params?.sessionId;
+  const challengeId = route.params?.challengeId;
   const gameSettings = route.params as any; // Legacy params support
 
   // Wager State

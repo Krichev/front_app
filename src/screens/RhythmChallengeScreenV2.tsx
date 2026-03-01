@@ -55,12 +55,16 @@ type RhythmChallengeRouteProp = RouteProp<RootStackParamList, 'RhythmChallenge'>
 export const RhythmChallengeScreenV2: React.FC = () => {
     const navigation = useNavigation();
     const route = useRoute<RhythmChallengeRouteProp>();
-    const { questionId, onComplete } = route.params;
+    
+    // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+    const questionId = route.params?.questionId;
+    const onComplete = route.params?.onComplete;
+
     const {theme} = useAppStyles();
     const styles = themeStyles;
     
     // API hooks
-    const { data: question, isLoading: questionLoading } = useGetAudioQuestionQuery(questionId);
+    const { data: question, isLoading: questionLoading } = useGetAudioQuestionQuery(questionId as number);
     const [scoreRhythmTaps] = useScoreRhythmTapsMutation();
     const [scoreRhythmAudio] = useScoreRhythmAudioMutation();
     

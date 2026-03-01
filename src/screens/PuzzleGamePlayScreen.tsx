@@ -29,7 +29,14 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PuzzleGameP
 const PuzzleGamePlayScreen: React.FC = () => {
     const navigation = useNavigation<NavigationProp>();
     const route = useRoute<PuzzleGamePlayRouteProp>();
-    const { puzzleGameId, gameMode, gridRows, gridCols, timeLimitSeconds } = route.params;
+    
+    // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
+    const puzzleGameId = route.params?.puzzleGameId;
+    const gameMode = route.params?.gameMode;
+    const gridRows = route.params?.gridRows;
+    const gridCols = route.params?.gridCols;
+    const timeLimitSeconds = route.params?.timeLimitSeconds;
+    
     const { screen, theme, text, form } = useAppStyles();
 
     const [boardLayout, setBoardLayout] = useState<any>(null);
