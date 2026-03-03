@@ -13,12 +13,13 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../../app/providers/StoreProvider/store';
 import { DeviceLockService, LockConfig } from '../../services/deviceLock/DeviceLockService';
 
-interface ScreenTimeContextValue {
+export interface ScreenTimeContextValue {
     // State
     budget: ScreenTimeBudget | null;
     status: ScreenTimeStatus | null;
     isLocked: boolean;
     isInitialized: boolean;
+    isFirstLoad: boolean; // True if this is the very first budget load after login
     availableSeconds: number; // For live countdown
     isTracking: boolean;
     isScreenTimeEnabled: boolean;
@@ -64,6 +65,12 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const appStateRef = useRef(AppState.currentState);
+    const isAuthenticatedRef = useRef(isAuthenticated);
+    const isFirstBudgetLoadRef = useRef(true);
+
+    useEffect(() => {
+        isAuthenticatedRef.current = isAuthenticated;
+    }, [isAuthenticated]);
 
     // Load initial accumulated seconds and last known lock state from storage
     useEffect(() => {
@@ -104,12 +111,15 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             const isEnabled = budget.screenTimeEnabled !== false;
             const shouldLock = isEnabled && (budget.availableMinutes <= 0 || budget.lockedMinutes > 0);
             const wasLocked = isLocked;
+            const isFirstLoad = isFirstBudgetLoadRef.current;
             
             setIsLocked(shouldLock);
             setIsInitialized(true);
+            isFirstBudgetLoadRef.current = false; // Mark first load complete
             screenTimeStorage.saveLastLockState(shouldLock);
             
-            if (shouldLock && !wasLocked && Platform.OS === 'android' && lockConfig) {
+            // Only activate native lock on CHANGES, not on first load
+            if (shouldLock && !wasLocked && !isFirstLoad && Platform.OS === 'android' && lockConfig) {
                 const config: LockConfig = {
                     lockType: lockConfig.escalationEnabled ? 'both' : 'overlay',
                     resetTime: new Date(budget.lastResetDate).toISOString(), // Simplified
@@ -151,17 +161,34 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     // Reset state when user logs out or is not authenticated
     useEffect(() => {
         if (!isAuthenticated) {
+            // IMMEDIATELY clear intervals to prevent any more ticks
+            if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+            }
+            if (syncIntervalRef.current) {
+                clearInterval(syncIntervalRef.current);
+                syncIntervalRef.current = null;
+            }
+
             setIsLocked(false);
             setIsInitialized(false);
             setAvailableSeconds(0);
             setIsTracking(false);
             setStatus(null);
             accumulatedSecondsRef.current = 0;
+            isFirstBudgetLoadRef.current = true;
             // Clear stored data to prevent stale lock state on next login
             screenTimeStorage.clearAll();
+
+            // Deactivate native lock service
+            if (Platform.OS === 'android') {
+                DeviceLockService.deactivateLock();
+            }
+
             console.log('[ScreenTime] Reset state - user not authenticated');
         }
-    }, [isAuthenticated, setIsLocked, setAvailableSeconds, setIsTracking, setStatus]);
+    }, [isAuthenticated]);
 
     // Native Event Listeners
     useEffect(() => {
@@ -285,6 +312,9 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         if (isTracking && !isLocked && budget?.screenTimeEnabled !== false) {
             lastTickTimeRef.current = Date.now();
             countdownIntervalRef.current = setInterval(() => {
+                // CRITICAL: Don't process if user logged out while interval was pending
+                if (!isAuthenticatedRef.current) return;
+
                 const now = Date.now();
                 const delta = now - lastTickTimeRef.current;
                 
@@ -299,7 +329,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
                     setAvailableSeconds(prev => {
                         const next = Math.max(0, prev - secondsPassed);
-                        if (next === 0) {
+                        if (next === 0 && isAuthenticatedRef.current) {
                             setIsLocked(true);
                             syncNow(); // Final sync
                         }
@@ -316,7 +346,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         return () => {
             if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
         };
-    }, [isTracking, isLocked, syncNow, setAvailableSeconds, setIsLocked, budget?.screenTimeEnabled]);
+    }, [isTracking, isLocked, syncNow, setAvailableSeconds, setIsLocked, budget?.screenTimeEnabled, isAuthenticated]);
 
     // Sync interval
     useEffect(() => {
@@ -380,6 +410,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         status,
         isLocked,
         isInitialized,
+        isFirstLoad: isFirstBudgetLoadRef.current,
         availableSeconds,
         isTracking,
         isScreenTimeEnabled: budget?.screenTimeEnabled !== false,

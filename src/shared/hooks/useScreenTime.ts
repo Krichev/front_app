@@ -1,8 +1,8 @@
 import { useContext } from 'react';
-import { ScreenTimeContext } from '../../app/providers/ScreenTimeProvider';
+import { ScreenTimeContext, ScreenTimeContextValue } from '../../app/providers/ScreenTimeProvider';
 
 export const useScreenTime = () => {
-    const context = useContext(ScreenTimeContext);
+    const context = useContext(ScreenTimeContext) as ScreenTimeContextValue;
     if (!context) {
         throw new Error('useScreenTime must be used within ScreenTimeProvider');
     }

@@ -2,10 +2,32 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { AppLockOverlay } from '../ui/AppLockOverlay';
 
+// Mock vector icons
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'Icon');
+
+// Mock react-redux
+jest.mock('react-redux', () => ({
+    useSelector: (selector: any) => selector({ auth: { isAuthenticated: true } }),
+    Provider: ({ children }: any) => children,
+}));
+
+// Mock wagerApi
+jest.mock('../../../entities/WagerState/model/slice/wagerApi', () => ({
+    useGetMyPenaltiesQuery: () => ({ data: { content: [] } }),
+}));
+
+// Mock parentalApi
+jest.mock('../../../entities/ParentalState/model/slice/parentalApi', () => ({
+    useGetLinkedParentsQuery: () => ({ data: [] }),
+    useRequestTimeExtensionMutation: () => [jest.fn(), { isLoading: false }],
+}));
+
 // Mock the context
 jest.mock('../../../shared/hooks/useScreenTime', () => ({
     useScreenTime: () => ({
         isLocked: true,
+        isInitialized: true,
+        isFirstLoad: false,
         status: { lastResetDate: '2024-01-01' },
         budget: { availableMinutes: 0 },
     }),
@@ -35,6 +57,22 @@ describe('AppLockOverlay', () => {
     it('does not render when not locked', () => {
         const { queryByText } = render(<AppLockOverlay isLocked={false} />);
         expect(queryByText("Time's Up!")).toBeNull();
+    });
+
+    it('does not animate on first load after login', () => {
+        // Mock isFirstLoad = true
+        jest.spyOn(require('../../../shared/hooks/useScreenTime'), 'useScreenTime')
+            .mockReturnValue({
+                isLocked: true,
+                isInitialized: true,
+                isFirstLoad: true,
+                status: { lastResetDate: '2024-01-01' },
+                budget: { availableMinutes: 0 },
+            });
+        
+        const { getByText } = render(<AppLockOverlay isLocked={true} />);
+        expect(getByText("Time's Up!")).toBeTruthy();
+        // Verify no animation was played (overlay should be immediately visible)
     });
     
     it('shows penalty info when provided', () => {

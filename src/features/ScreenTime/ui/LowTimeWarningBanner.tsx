@@ -4,6 +4,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useTheme } from '../../../shared/ui/theme';
 import { useScreenTime } from '../../../shared/hooks/useScreenTime';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../../app/providers/StoreProvider/store';
 
 interface LowTimeWarningBannerProps {
     thresholdMinutes?: number;
@@ -17,12 +19,19 @@ export const LowTimeWarningBanner: React.FC<LowTimeWarningBannerProps> = ({
     const { availableSeconds, isLocked } = useScreenTime();
     const { theme } = useTheme();
     const insets = useSafeAreaInsets();
+    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     
     const [visible, setVisible] = useState(false);
     const [dismissedAt, setDismissedAt] = useState<number | null>(null);
     const slideAnim = useRef(new Animated.Value(-100)).current;
 
     useEffect(() => {
+        // Don't show banner when user is not authenticated
+        if (!isAuthenticated) {
+            if (visible) hideBanner();
+            return;
+        }
+
         const availableMinutes = availableSeconds / 60;
         
         // Don't show if locked or plenty of time
@@ -43,7 +52,7 @@ export const LowTimeWarningBanner: React.FC<LowTimeWarningBannerProps> = ({
             showBanner();
         }
 
-    }, [availableSeconds, isLocked, dismissedAt]);
+    }, [availableSeconds, isLocked, dismissedAt, isAuthenticated]);
 
     const showBanner = () => {
         setVisible(true);
@@ -67,7 +76,7 @@ export const LowTimeWarningBanner: React.FC<LowTimeWarningBannerProps> = ({
         hideBanner();
     };
 
-    if (!visible) return null;
+    if (!visible || !isAuthenticated) return null;
 
     return (
         <Animated.View 

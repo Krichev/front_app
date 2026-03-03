@@ -48,7 +48,8 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     const { 
         isLocked: contextLocked, 
         status: contextStatus, 
-        isInitialized 
+        isInitialized,
+        isFirstLoad 
     } = useScreenTime();
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     
@@ -89,13 +90,15 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     // Entrance animation
     useEffect(() => {
         if (isLocked) {
-            if (!isInitialized) {
-                // Skip animation if first render from cache
+            // Skip animation on first budget load after login (prevents blink)
+            // OR when loading from cache before initialization
+            if (isFirstLoad || !isInitialized) {
                 fadeAnim.setValue(1);
                 scaleAnim.setValue(1);
                 return;
             }
 
+            // Normal entrance animation (lock state changed while using the app)
             Animated.parallel([
                 Animated.timing(fadeAnim, {
                     toValue: 1,
@@ -124,7 +127,7 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
                 }),
             ]).start();
         }
-    }, [isLocked, isUnlocking, fadeAnim, scaleAnim, isInitialized]);
+    }, [isLocked, isUnlocking, fadeAnim, scaleAnim, isInitialized, isFirstLoad]);
 
     
     // CRITICAL: Block hardware back button on Android
