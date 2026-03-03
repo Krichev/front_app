@@ -45,12 +45,16 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     showPenaltyInfo = true,
 }) => {
     const { theme } = useTheme();
-    const screenTimeContext = useScreenTime();
+    const { 
+        isLocked: contextLocked, 
+        status: contextStatus, 
+        isInitialized 
+    } = useScreenTime();
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
     
     // Use prop override or context value
-    const isLocked = isLockedProp ?? screenTimeContext.isLocked;
-    const resetTime = dailyResetTime ?? screenTimeContext.status?.lastResetDate;
+    const isLocked = isLockedProp ?? contextLocked;
+    const resetTime = dailyResetTime ?? contextStatus?.lastResetDate;
 
     // Parental control hooks
     const { data: parents } = useGetLinkedParentsQuery(undefined, { skip: !isAuthenticated });
@@ -85,6 +89,13 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     // Entrance animation
     useEffect(() => {
         if (isLocked) {
+            if (!isInitialized) {
+                // Skip animation if first render from cache
+                fadeAnim.setValue(1);
+                scaleAnim.setValue(1);
+                return;
+            }
+
             Animated.parallel([
                 Animated.timing(fadeAnim, {
                     toValue: 1,
@@ -113,7 +124,7 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
                 }),
             ]).start();
         }
-    }, [isLocked, isUnlocking, fadeAnim, scaleAnim]);
+    }, [isLocked, isUnlocking, fadeAnim, scaleAnim, isInitialized]);
 
     
     // CRITICAL: Block hardware back button on Android

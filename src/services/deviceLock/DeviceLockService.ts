@@ -46,6 +46,11 @@ class DeviceLockServiceClass {
     return DeviceLockModule.deactivateLock();
   }
 
+  async setScreenTimeEnabled(enabled: boolean): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    return DeviceLockModule.setScreenTimeEnabled(enabled);
+  }
+
   async escalateToHardLock(): Promise<void> {
     if (Platform.OS !== 'android') return;
     return DeviceLockModule.escalateToHardLock();

@@ -137,6 +137,16 @@ class DeviceLockModule(reactContext: ReactApplicationContext) : ReactContextBase
     }
 
     @ReactMethod
+    fun setScreenTimeEnabled(enabled: Boolean) {
+        prefs.isScreenTimeEnabled = enabled
+        if (!enabled && prefs.isLockActive) {
+            prefs.isLockActive = false
+            val intent = Intent(reactApplicationContext, DeviceLockService::class.java)
+            reactApplicationContext.stopService(intent)
+        }
+    }
+
+    @ReactMethod
     fun getLockStatus(promise: Promise) {
         val status = Arguments.createMap()
         status.putBoolean("isActive", prefs.isLockActive)

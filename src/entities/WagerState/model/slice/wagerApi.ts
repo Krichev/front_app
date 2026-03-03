@@ -307,6 +307,41 @@ export const wagerApi = createApi({
             }),
             invalidatesTags: ['ScreenTime'],
         }),
+
+        toggleScreenTime: builder.mutation<ScreenTimeBudget, { enabled: boolean }>({
+            query: (request) => ({
+                url: '/screen-time/budget/toggle',
+                method: 'PUT',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        delegateScreenTimeControl: builder.mutation<ScreenTimeBudget, { controllerUserId: number }>({
+            query: (request) => ({
+                url: '/screen-time/budget/delegate-control',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        releaseScreenTimeControl: builder.mutation<ScreenTimeBudget, number>({
+            query: (userId) => ({
+                url: `/screen-time/budget/${userId}/release-control`,
+                method: 'POST',
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
+
+        toggleScreenTimeForUser: builder.mutation<ScreenTimeBudget, { userId: number; enabled: boolean }>({
+            query: ({ userId, ...body }) => ({
+                url: `/screen-time/budget/${userId}/toggle`,
+                method: 'PUT',
+                body,
+            }),
+            invalidatesTags: ['ScreenTime'],
+        }),
     }),
 });
 
@@ -342,4 +377,8 @@ export const {
     usePayPenaltyToUnlockMutation,
     useGetMyLockConfigQuery,
     useUpdateMyLockConfigMutation,
-} = wagerApi;
+    useToggleScreenTimeMutation,
+    useDelegateScreenTimeControlMutation,
+    useReleaseScreenTimeControlMutation,
+    useToggleScreenTimeForUserMutation,
+    } = wagerApi;

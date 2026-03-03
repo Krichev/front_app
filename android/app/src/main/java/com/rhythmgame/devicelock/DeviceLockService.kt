@@ -59,6 +59,10 @@ class DeviceLockService : Service() {
     }
 
     private fun showOverlay() {
+        if (!prefs.isScreenTimeEnabled) {
+            stopSelf()
+            return
+        }
         if (overlayView != null) return
 
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

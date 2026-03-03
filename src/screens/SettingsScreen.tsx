@@ -35,6 +35,7 @@ import {
 } from '../entities/SettingsState/model/types/settings.types';
 import KeychainService from '../services/auth/KeychainService';
 import { InvitationPreferencesSection } from '../features/Invitation/ui/InvitationPreferencesSection';
+import { ScreenTimeSettingsSection } from '../features/ScreenTime/ui/ScreenTimeSettingsSection';
 import { Gender } from '../entities/InvitationState/model/types';
 import { Picker } from '@react-native-picker/picker';
 import { useAppUpdate } from '../features/AppUpdate';
@@ -240,6 +241,11 @@ const SettingsScreen: React.FC = () => {
 
                     {/* Invitation Preferences */}
                     <InvitationPreferencesSection />
+
+                    <View style={styles.divider} />
+
+                    {/* Screen Time Settings */}
+                    <ScreenTimeSettingsSection />
 
                     <View style={styles.divider} />
 

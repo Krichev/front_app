@@ -53,4 +53,8 @@ class DeviceLockPreferences(context: Context) {
     var escalateAfterDismissAttempts: Int
         get() = prefs.getInt("escalateAfterDismissAttempts", 3)
         set(value) = prefs.edit().putInt("escalateAfterDismissAttempts", value).apply()
+
+    var isScreenTimeEnabled: Boolean
+        get() = prefs.getBoolean("isScreenTimeEnabled", true)
+        set(value) = prefs.edit().putBoolean("isScreenTimeEnabled", value).apply()
 }

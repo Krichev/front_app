@@ -18,8 +18,10 @@ interface ScreenTimeContextValue {
     budget: ScreenTimeBudget | null;
     status: ScreenTimeStatus | null;
     isLocked: boolean;
+    isInitialized: boolean;
     availableSeconds: number; // For live countdown
     isTracking: boolean;
+    isScreenTimeEnabled: boolean;
     
     // Actions
     startTracking: () => void;
@@ -53,6 +55,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     const [availableSeconds, setAvailableSeconds] = useState(0);
     const [isTracking, setIsTracking] = useState(false);
     const [isLocked, setIsLocked] = useState(false);
+    const [isInitialized, setIsInitialized] = useState(false);
     const [status, setStatus] = useState<ScreenTimeStatus | null>(null);
     
     // Refs for mutable tracking
@@ -62,14 +65,22 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const appStateRef = useRef(AppState.currentState);
 
-    // Load initial accumulated seconds from storage
+    // Load initial accumulated seconds and last known lock state from storage
     useEffect(() => {
         const loadStorage = async () => {
-            const stored = await screenTimeStorage.getAccumulatedSeconds();
-            accumulatedSecondsRef.current = stored;
+            const [storedSeconds, cachedLocked] = await Promise.all([
+                screenTimeStorage.getAccumulatedSeconds(),
+                screenTimeStorage.getLastLockState()
+            ]);
+            accumulatedSecondsRef.current = storedSeconds;
+            if (cachedLocked !== null && !isInitialized) {
+                setIsLocked(cachedLocked);
+            }
         };
-        loadStorage();
-    }, []);
+        if (isAuthenticated) {
+            loadStorage();
+        }
+    }, [isAuthenticated, isInitialized]);
 
     // Initialize from budget
     useEffect(() => {
@@ -80,6 +91,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
         if (isBudgetError) {
             setIsLocked(false);
+            setIsInitialized(true);
             if (Platform.OS === 'android') DeviceLockService.deactivateLock();
             return;
         }
@@ -89,9 +101,13 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         if (budget) {
             setAvailableSeconds(budget.availableMinutes * 60);
             
-            const shouldLock = budget.availableMinutes <= 0 || budget.lockedMinutes > 0;
+            const isEnabled = budget.screenTimeEnabled !== false;
+            const shouldLock = isEnabled && (budget.availableMinutes <= 0 || budget.lockedMinutes > 0);
             const wasLocked = isLocked;
+            
             setIsLocked(shouldLock);
+            setIsInitialized(true);
+            screenTimeStorage.saveLastLockState(shouldLock);
             
             if (shouldLock && !wasLocked && Platform.OS === 'android' && lockConfig) {
                 const config: LockConfig = {
@@ -122,7 +138,10 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
                 const localBudget = await screenTimeStorage.getLastKnownBudget();
                 if (localBudget && !budget) {
                      setAvailableSeconds(localBudget.availableMinutes * 60);
-                     setIsLocked(localBudget.availableMinutes <= 0 || localBudget.lockedMinutes > 0);
+                     const isEnabled = localBudget.screenTimeEnabled !== false;
+                     const shouldLock = isEnabled && (localBudget.availableMinutes <= 0 || localBudget.lockedMinutes > 0);
+                     setIsLocked(shouldLock);
+                     setIsInitialized(true);
                 }
              };
              loadLocalBudget();
@@ -133,6 +152,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
     useEffect(() => {
         if (!isAuthenticated) {
             setIsLocked(false);
+            setIsInitialized(false);
             setAvailableSeconds(0);
             setIsTracking(false);
             setStatus(null);
@@ -197,7 +217,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
     // Sync logic
     const syncNow = useCallback(async () => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated || budget?.screenTimeEnabled === false) return;
         const secondsToSync = accumulatedSecondsRef.current;
         if (secondsToSync < 60) return; // Only sync if we have at least 1 minute (or maybe less? Requirements say "Track time... max 60 per sync"?)
         // Requirement: "Sync accumulated usage with backend every 1-5 minutes".
@@ -225,7 +245,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
              accumulatedSecondsRef.current -= (minutesToSync * 60);
              await screenTimeStorage.saveAccumulatedSeconds(accumulatedSecondsRef.current);
         }
-    }, [syncTime, isAuthenticated]);
+    }, [syncTime, isAuthenticated, budget?.screenTimeEnabled]);
 
     // Process pending syncs (e.g. on reconnect)
     const processPendingSyncs = useCallback(async () => {
@@ -262,7 +282,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
     // Countdown logic
     useEffect(() => {
-        if (isTracking && !isLocked) {
+        if (isTracking && !isLocked && budget?.screenTimeEnabled !== false) {
             lastTickTimeRef.current = Date.now();
             countdownIntervalRef.current = setInterval(() => {
                 const now = Date.now();
@@ -296,11 +316,11 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         return () => {
             if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
         };
-    }, [isTracking, isLocked, syncNow, setAvailableSeconds, setIsLocked]);
+    }, [isTracking, isLocked, syncNow, setAvailableSeconds, setIsLocked, budget?.screenTimeEnabled]);
 
     // Sync interval
     useEffect(() => {
-        if (isTracking) {
+        if (isTracking && budget?.screenTimeEnabled !== false) {
             syncIntervalRef.current = setInterval(() => {
                 syncNow();
             }, 3 * 60 * 1000); // 3 minutes
@@ -310,7 +330,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         return () => {
             if (syncIntervalRef.current) clearInterval(syncIntervalRef.current);
         };
-    }, [isTracking, syncNow]);
+    }, [isTracking, syncNow, budget?.screenTimeEnabled]);
 
     // AppState handling
     useEffect(() => {
@@ -359,8 +379,10 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         budget: budget || null,
         status,
         isLocked,
+        isInitialized,
         availableSeconds,
         isTracking,
+        isScreenTimeEnabled: budget?.screenTimeEnabled !== false,
         startTracking,
         pauseTracking,
         syncNow,

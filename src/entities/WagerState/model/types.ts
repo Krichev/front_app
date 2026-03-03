@@ -131,6 +131,10 @@ export interface ScreenTimeBudget {
     totalWonMinutes: number;
     totalLostMinutes: number;
     lastResetDate: string;
+    screenTimeEnabled: boolean;
+    controlledBy: number | null;
+    controllerUsername: string | null;
+    controlLocked: boolean;
     createdAt: string;
     updatedAt: string;
 }

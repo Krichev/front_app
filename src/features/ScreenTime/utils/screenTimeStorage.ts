@@ -5,9 +5,29 @@ const KEYS = {
     PENDING_SYNCS: '@screen_time_pending_syncs',
     LAST_KNOWN_BUDGET: '@screen_time_last_budget',
     ACCUMULATED_SECONDS: '@screen_time_accumulated',
+    LAST_LOCK_STATE: '@screen_time_last_lock_state',
 };
 
 export const screenTimeStorage = {
+    // Store last known lock state to prevent blink
+    saveLastLockState: async (isLocked: boolean) => {
+        try {
+            await AsyncStorage.setItem(KEYS.LAST_LOCK_STATE, JSON.stringify(isLocked));
+        } catch (e) {
+            console.error('Failed to save last lock state', e);
+        }
+    },
+
+    getLastLockState: async (): Promise<boolean | null> => {
+        try {
+            const val = await AsyncStorage.getItem(KEYS.LAST_LOCK_STATE);
+            return val ? JSON.parse(val) : null;
+        } catch (e) {
+            console.error('Failed to get last lock state', e);
+            return null;
+        }
+    },
+
     // Store accumulated seconds for sync
     saveAccumulatedSeconds: async (seconds: number) => {
         try {
