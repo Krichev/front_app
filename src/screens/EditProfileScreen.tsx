@@ -19,7 +19,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useDispatch, useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import {updateUser} from '../entities/AuthState/model/slice/authSlice';
-import {useGetUserProfileQuery, useUpdateUserProfileMutation} from '../entities/UserState/model/slice/userApi';
+import {useGetUserProfileQuery, useUpdateUserProfileMutation, UpdateUserProfileRequest} from '../entities/UserState/model/slice/userApi';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {
     CameraOptions,
@@ -187,10 +187,9 @@ const EditProfileScreen: React.FC = () => {
                 return;
             }
 
-            const updateData = {
+            const updateData: UpdateUserProfileRequest = {
                 username: formData.username.trim(),
                 bio: getLocalizedValue(formData.bio, currentLanguage).trim(),
-                bioLocalized: formData.bio,
                 avatar: formData.avatar,
             };
 
@@ -282,30 +281,35 @@ const EditProfileScreen: React.FC = () => {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header - Fixed at the top */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
+                    <Text style={styles.cancelText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.headerTitle} numberOfLines={1}>{t('editProfile.title')}</Text>
+                <TouchableOpacity
+                    onPress={handleSaveProfile}
+                    style={[styles.headerButton, isUpdating && styles.disabledButton]}
+                    disabled={isUpdating}
+                >
+                    {isUpdating ? (
+                        <ActivityIndicator size="small" color="#007AFF" />
+                    ) : (
+                        <Text style={styles.saveText}>{t('editProfile.save')}</Text>
+                    )}
+                </TouchableOpacity>
+            </View>
+
             <KeyboardAvoidingView
                 style={styles.keyboardAvoidingView}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
-                        <Text style={styles.cancelText}>{t('common.cancel')}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
-                    <TouchableOpacity
-                        onPress={handleSaveProfile}
-                        style={[styles.headerButton, isUpdating && styles.disabledButton]}
-                        disabled={isUpdating}
-                    >
-                        {isUpdating ? (
-                            <ActivityIndicator size="small" color="#007AFF" />
-                        ) : (
-                            <Text style={styles.saveText}>{t('editProfile.save')}</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-
-                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                <ScrollView 
+                    style={styles.scrollView} 
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
                     {/* Avatar Section */}
                     <View style={styles.avatarSection}>
                         <TouchableOpacity onPress={selectAvatar} style={styles.avatarContainer}>
@@ -375,18 +379,26 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 8,
+        minHeight: 56,
         borderBottomWidth: 1,
         borderBottomColor: '#E5E5E5',
+        backgroundColor: '#fff',
     },
     headerButton: {
-        padding: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        minWidth: 70,
+        minHeight: 44,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     headerTitle: {
+        flex: 1,
         fontSize: 18,
         fontWeight: '600',
         color: '#000',
+        textAlign: 'center',
     },
     cancelText: {
         fontSize: 16,
@@ -402,6 +414,9 @@ const styles = StyleSheet.create({
     },
     scrollView: {
         flex: 1,
+    },
+    scrollContent: {
+        paddingBottom: 40,
     },
     loadingContainer: {
         flex: 1,
@@ -438,7 +453,7 @@ const styles = StyleSheet.create({
     },
     avatarSection: {
         alignItems: 'center',
-        paddingVertical: 32,
+        paddingVertical: 24,
     },
     avatarContainer: {
         position: 'relative',
