@@ -38,6 +38,7 @@ export interface CreateQuestionRequest {
     answerVideoStartTime?: number;
     answerVideoEndTime?: number;
     answerTextVerification?: string;
+    timeLimitSeconds?: number;
 }
 
 /**
@@ -101,6 +102,9 @@ export interface QuizQuestion {
     rhythmTimeSignature?: string | null;
     /** JSON string with additional config */
     audioChallengeConfig?: string | null;
+
+    /** Per-question time limit override in seconds. null = use session roundTimeSeconds */
+    timeLimitSeconds?: number | null;
 
     // User creation tracking
     isUserCreated: boolean;

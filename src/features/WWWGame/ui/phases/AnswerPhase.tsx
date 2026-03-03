@@ -5,7 +5,7 @@ import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import VoiceRecorder from '../../../../components/VoiceRecorder';
-import { AudioChallengeContainer } from '../../../../screens/components/audio';
+import { AudioChallengePhase } from './AudioChallengePhase';
 import { useAnswerTimer } from '../../hooks/useAnswerTimer';
 
 interface AnswerPhaseProps {
@@ -42,6 +42,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const hasStartedTyping = useRef(false);
 
   const isAudioChallenge = question.questionType === 'AUDIO' && !!question.audioChallengeType;
+  const isAnyAudioQuestion = question.questionType === 'AUDIO';
 
   // Initialize two-phase timer
   const timer = useAnswerTimer({
@@ -64,25 +65,17 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     }
   };
 
-  if (isAudioChallenge) {
+  if (isAudioChallenge || (isAnyAudioQuestion && onAudioRecordingComplete)) {
+    const timeLimit = question.timeLimitSeconds || gameSettings?.roundTimeSeconds || 120;
     return (
-      <View style={styles.container}>
-        <AudioChallengeContainer
-          question={question as any}
-          mode="record"
-          onRecordingComplete={onAudioRecordingComplete!}
-          disabled={isSubmitting}
-        />
-        <TouchableOpacity
-          style={[styles.button, (!recordedAudio || isSubmitting) && styles.disabledButton]}
-          onPress={onSubmit}
-          disabled={!recordedAudio || isSubmitting}
-        >
-          <Text style={styles.buttonText}>
-            {isSubmitting ? 'Uploading...' : 'Submit Recording'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <AudioChallengePhase
+        question={question}
+        timeLimitSeconds={timeLimit}
+        onRecordingComplete={onAudioRecordingComplete!}
+        onSubmit={onSubmit}
+        isSubmitting={isSubmitting}
+        recordedAudio={recordedAudio}
+      />
     );
   }
 

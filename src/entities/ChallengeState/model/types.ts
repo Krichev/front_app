@@ -690,6 +690,7 @@ export interface AudioChallengeConfig {
     minimumScorePercentage: number;
     rhythmBpm?: number;
     rhythmTimeSignature?: string;
+    timeLimitSeconds?: number;
 }
 
 /**
@@ -728,4 +729,5 @@ export interface CreateAudioQuestionRequest {
     minimumScorePercentage?: number;
     rhythmBpm?: number;
     rhythmTimeSignature?: string;
+    timeLimitSeconds?: number;
 }

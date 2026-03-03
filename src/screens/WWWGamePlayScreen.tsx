@@ -173,9 +173,12 @@ const WWWGamePlayScreen: React.FC = () => {
   const prevRoundRef = useRef<number>(state.currentRound);
   const configuredRoundTime = controller.session?.roundTimeSeconds || 60;
 
+  // Use question-specific time limit if available, otherwise session default
+  const effectiveRoundTime = currentRound?.question?.timeLimitSeconds ?? configuredRoundTime;
+
   const handleNextRound = useCallback(() => {
-    actions.nextRound(configuredRoundTime);
-  }, [actions, configuredRoundTime]);
+    actions.nextRound(effectiveRoundTime);
+  }, [actions, effectiveRoundTime]);
 
   // Initialize game when session data is loaded
   useEffect(() => {
@@ -184,7 +187,7 @@ const WWWGamePlayScreen: React.FC = () => {
         const currentRoundIndex = controller.session.completedRounds || 0;
         if (currentRoundIndex < controller.rounds.length) {
           actions.setRound(currentRoundIndex);
-          actions.startSession(configuredRoundTime);
+          actions.startSession(effectiveRoundTime);
         } else {
           // All rounds completed, show results?
           handleGameCompletion();
@@ -193,7 +196,7 @@ const WWWGamePlayScreen: React.FC = () => {
         // Restore paused state
         const pausedRound = (controller.session.pausedAtRound || 1) - 1; // Convert back to 0-based
         const validRound = Math.max(0, pausedRound);
-        const remainingTime = controller.session.remainingTimeSeconds || configuredRoundTime;
+        const remainingTime = controller.session.remainingTimeSeconds || effectiveRoundTime;
 
         actions.setRound(validRound);
         if (controller.session.pausedAnswer) actions.setAnswer(controller.session.pausedAnswer);
@@ -211,14 +214,34 @@ const WWWGamePlayScreen: React.FC = () => {
         });
       }
     }
-  }, [controller.session, controller.rounds, state.phase, state.gameStartTime, actions, handleGameCompletion, configuredRoundTime, timerReset, timerStart]);
+  }, [controller.session, controller.rounds, state.phase, state.gameStartTime, actions, handleGameCompletion, effectiveRoundTime, timerReset, timerStart]);
 
   // Orchestration: Determine sub-phase when starting round
   useEffect(() => {
     if (state.phase === 'waiting' && currentRound && state.gameStartTime && controller.session?.status === 'IN_PROGRESS') {
       const q = currentRound.question;
+      
+      // === DIAGNOSTIC: Log ALL audio-related fields ===
+      console.log('🔍 [AUDIO DEBUG] Question routing data:', {
+        questionId: q.id,
+        questionType: q.questionType,
+        questionTypeExact: JSON.stringify(q.questionType), // catches hidden chars
+        audioChallengeType: q.audioChallengeType,
+        audioChallengeTypeExact: JSON.stringify(q.audioChallengeType),
+        isAudioChallenge: q.questionType === 'AUDIO' && !!q.audioChallengeType,
+        questionMediaId: q.questionMediaId,
+        questionMediaUrl: q.questionMediaUrl?.substring(0, 80),
+        audioReferenceMediaId: q.audioReferenceMediaId,
+        questionMediaType: q.questionMediaType,
+        mediaSourceType: q.mediaSourceType,
+      });
+
       const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
       
+      // FALLBACK: If questionType is AUDIO but audioChallengeType is missing,
+      // still treat it as an audio challenge (don't send to text reading!)
+      const isAnyAudioQuestion = q.questionType === 'AUDIO';
+
       // Check for media
       const mediaType = q.questionMediaType || q.questionType;
       const hasUploadedMedia = ['VIDEO', 'AUDIO'].includes(mediaType as string) && !!q.questionMediaId;
@@ -237,8 +260,15 @@ const WWWGamePlayScreen: React.FC = () => {
         mediaSourceType: q.mediaSourceType 
       });
 
-      if (isAudioChallenge) {
-         actions.startDiscussion(configuredRoundTime);
+      if (isAudioChallenge || isAnyAudioQuestion) {
+         // Audio questions should NEVER go through reading phase
+         // For proper karaoke: go to discussion → immediately to answer (existing flow)
+         console.log('🎵 [Orchestration] Routing as audio question:', {
+           isAudioChallenge,
+           isAnyAudioQuestion,
+           audioChallengeType: q.audioChallengeType
+         });
+         actions.startDiscussion(effectiveRoundTime);
       } else if (hasMedia) {
          actions.startMediaPlayback();
       } else {
@@ -246,7 +276,7 @@ const WWWGamePlayScreen: React.FC = () => {
          actions.startReading(readingTime);
       }
     }
-  }, [state.phase, currentRound, state.gameStartTime, controller.session?.status, actions, calculateReadingTime, configuredRoundTime]);
+  }, [state.phase, currentRound, state.gameStartTime, controller.session?.status, actions, calculateReadingTime, effectiveRoundTime]);
 
   useEffect(() => {
     const isEnteringDiscussion = state.phase === 'discussion' &&
@@ -257,21 +287,23 @@ const WWWGamePlayScreen: React.FC = () => {
 
     if (isEnteringDiscussion && currentRound) {
       const isAudioChallenge = currentRound.question.questionType === 'AUDIO' && !!currentRound.question.audioChallengeType;
+      const isAnyAudioQuestion = currentRound.question.questionType === 'AUDIO';
 
-      if (isAudioChallenge) {
-        // Skip discussion timer for audio challenges, go straight to answer/record
+      if (isAudioChallenge || isAnyAudioQuestion) {
+        // Skip discussion phase for audio challenges, go straight to answer/record
+        // AudioChallengePhase manages its own timer
         actions.timeUp();
       } else {
         requestAnimationFrame(() => {
           // If we just resumed (timer running), don't reset
           if (!timer.isRunning) {
-             timerReset(configuredRoundTime);
+             timerReset(effectiveRoundTime);
              timerStart();
           }
         });
       }
     }
-  }, [state.phase, state.currentRound, currentRound, configuredRoundTime, actions, timerReset, timerStart, timer.isRunning]);
+  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timerReset, timerStart, timer.isRunning]);
 
   // Pause timer when leaving discussion phase
   useEffect(() => {

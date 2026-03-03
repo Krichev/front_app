@@ -46,6 +46,7 @@ export interface AudioQuestionFormData {
     // Rhythm-specific
     rhythmBpm: number | null;
     rhythmTimeSignature: string;
+    timeLimitSeconds: number | null;
 }
 
 interface AudioQuestionFormProps {
@@ -82,6 +83,7 @@ const DEFAULT_FORM_DATA: AudioQuestionFormData = {
     minimumScorePercentage: 60,
     rhythmBpm: 120,
     rhythmTimeSignature: '4/4',
+    timeLimitSeconds: null,
 };
 
 // ============================================================================
@@ -574,6 +576,61 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         );
     };
 
+    const renderTimeLimitSection = () => {
+        if (!formData.audioChallengeType) return null;
+
+        const isCustom = formData.timeLimitSeconds !== null;
+
+        return (
+            <View style={form.section}>
+                <View style={form.sectionHeader}>
+                    <MaterialCommunityIcons name="timer-outline" size={20} color={theme.colors.text.primary} />
+                    <Text style={form.sectionTitle}>{t('audioChallenge.customTimeLimit')}</Text>
+                    <TouchableOpacity 
+                        style={[styles.toggleContainer, isCustom && styles.toggleContainerActive]}
+                        onPress={() => updateField('timeLimitSeconds', isCustom ? null : 120)}
+                    >
+                        <View style={[styles.toggleCircle, isCustom && styles.toggleCircleActive]} />
+                    </TouchableOpacity>
+                </View>
+
+                <Text style={form.helperText}>
+                    {t('audioChallenge.customTimeLimitHint')}
+                </Text>
+
+                {isCustom && (
+                    <View style={styles.bpmContainer}>
+                        <TouchableOpacity
+                            style={styles.bpmButton}
+                            onPress={() => {
+                                const newVal = Math.max(30, (formData.timeLimitSeconds || 120) - 10);
+                                updateField('timeLimitSeconds', newVal);
+                            }}
+                        >
+                            <MaterialCommunityIcons name="minus" size={24} color={theme.colors.primary.main} />
+                        </TouchableOpacity>
+                        
+                        <View style={styles.bpmInput}>
+                            <Text style={theme.typography.heading.h5}>
+                                {formData.timeLimitSeconds}s
+                            </Text>
+                        </View>
+                        
+                        <TouchableOpacity
+                            style={styles.bpmButton}
+                            onPress={() => {
+                                const newVal = Math.min(300, (formData.timeLimitSeconds || 120) + 10);
+                                updateField('timeLimitSeconds', newVal);
+                            }}
+                        >
+                            <MaterialCommunityIcons name="plus" size={24} color={theme.colors.primary.main} />
+                        </TouchableOpacity>
+                    </View>
+                )}
+            </View>
+        );
+    };
+
     const renderRhythmSettingsSection = () => {
         if (!showRhythmSettings) return null;
 
@@ -795,6 +852,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
             {/* Passing Score Section */}
             {renderPassingScoreSection()}
+
+            {/* Time Limit Section */}
+            {renderTimeLimitSection()}
 
             {/* Rhythm Settings Section */}
             {renderRhythmSettingsSection()}
@@ -1079,7 +1139,29 @@ const themeStyles = createStyles(theme => ({
     },
     inputArea: {
         marginBottom: theme.spacing.sm,
-    }
+    },
+    // Toggle styles
+    toggleContainer: {
+        width: 48,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: theme.colors.neutral.gray[300],
+        padding: 2,
+        marginLeft: 'auto',
+    },
+    toggleContainerActive: {
+        backgroundColor: theme.colors.success.main,
+    },
+    toggleCircle: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: theme.colors.text.inverse,
+        transform: [{translateX: 0}],
+    },
+    toggleCircleActive: {
+        transform: [{translateX: 24}],
+    },
 }));
 
 export default AudioQuestionForm;

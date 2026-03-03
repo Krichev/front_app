@@ -15,6 +15,7 @@ interface UseAudioRecorderResult {
     isPlaying: boolean;
     resetRecording: () => void;
     hasPermission: boolean;
+    isInitialized: boolean;
     initializeRecorder: () => Promise<void>;
 }
 
@@ -170,6 +171,7 @@ export const useAudioRecorder = (): UseAudioRecorderResult => {
         isPlaying,
         resetRecording,
         hasPermission,
+        isInitialized,
         initializeRecorder
     };
 };

@@ -693,6 +693,7 @@ const en = {
         createSuccess: 'Audio question created successfully',
         createFailed: 'Failed to create audio question. Please try again.',
         audioRequired: 'Reference audio is required for this challenge type',
+        recordReferenceAudio: 'Record Reference Audio',
     },
     challenge: {
         // Payment options
@@ -1387,6 +1388,17 @@ const en = {
         },
     },
     audioChallenge: {
+        listenFirst: 'Listen to the reference audio first',
+        readyToRecord: 'Ready to Record',
+        recording: 'Recording...',
+        reviewRecording: 'Review Your Recording',
+        reRecord: 'Record Again',
+        submitRecording: 'Submit Recording',
+        timeRemaining: '{{seconds}}s remaining',
+        listenAtLeastOnce: 'Listen to the reference at least once before recording',
+        timerStartsAfterListen: 'Timer starts when you begin recording',
+        customTimeLimit: 'Custom Time Limit',
+        customTimeLimitHint: 'Audio challenges typically need 60-180 seconds. Leave off to use quest default.',
         types: {
             RHYTHM_CREATION: {
                 label: 'Create Rhythm',

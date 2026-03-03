@@ -1,12 +1,21 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 import {AudioPlayer} from '../AudioPlayer';
+import NetworkConfigManager from '../../../config/NetworkConfig';
 
 interface ReferenceAudioSectionProps {
   audioUrl?: string;
   segmentStart?: number;
   segmentEnd?: number;
   title?: string;
+  question?: {
+    questionMediaUrl?: string;
+    audioSegmentStart?: number;
+    audioSegmentEnd?: number;
+    audioReferenceMediaId?: number | string;
+  };
+  onPlaybackComplete?: () => void;
+  mini?: boolean;
 }
 
 export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
@@ -14,16 +23,30 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   segmentStart,
   segmentEnd,
   title = 'Listen to Reference',
+  question,
+  onPlaybackComplete,
+  mini = false,
 }) => {
-  if (!audioUrl) return null;
+  const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
+  
+  const fallbackUrl = question?.audioReferenceMediaId 
+    ? `${API_BASE_URL}/media/audio/${question.audioReferenceMediaId}/playback-url`
+    : undefined;
+
+  const effectiveUrl = audioUrl || question?.questionMediaUrl || fallbackUrl;
+  const effectiveStart = segmentStart ?? question?.audioSegmentStart ?? 0;
+  const effectiveEnd = segmentEnd ?? question?.audioSegmentEnd;
+
+  if (!effectiveUrl) return null;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={[styles.container, mini && styles.miniContainer]}>
+      {!mini && <Text style={styles.title}>{title}</Text>}
       <AudioPlayer 
-        audioUrl={audioUrl}
-        segmentStart={segmentStart}
-        segmentEnd={segmentEnd}
+        audioUrl={effectiveUrl}
+        segmentStart={effectiveStart}
+        segmentEnd={effectiveEnd}
+        onPlaybackComplete={onPlaybackComplete}
       />
     </View>
   );
@@ -40,6 +63,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 1,
+    width: '100%',
+  },
+  miniContainer: {
+    padding: 8,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
   },
   title: {
     fontSize: 14,

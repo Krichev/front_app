@@ -42,6 +42,7 @@ export interface CreateQuizQuestionRequest {
     answerVideoStartTime?: number;
     answerVideoEndTime?: number;
     answerTextVerification?: string;
+    timeLimitSeconds?: number;
 
     // New localized fields (optional for backward compatibility)
     questionLocalized?: LocalizedString;

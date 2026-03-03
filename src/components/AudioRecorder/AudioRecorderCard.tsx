@@ -1,6 +1,6 @@
 // src/components/AudioRecorder/AudioRecorderCard.tsx
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 
@@ -26,6 +26,7 @@ export const AudioRecorderCard: React.FC<AudioRecorderCardProps> = ({
         isPlaying,
         resetRecording,
         hasPermission,
+        isInitialized,
         initializeRecorder
     } = useAudioRecorder();
 
@@ -121,19 +122,24 @@ export const AudioRecorderCard: React.FC<AudioRecorderCardProps> = ({
                         
                         <TouchableOpacity
                             onPress={isRecording ? handleStop : startRecording}
-                            disabled={!hasPermission}
+                            disabled={!hasPermission || !isInitialized}
                             style={styles.recordButtonWrapper}
                         >
                             <Animated.View style={[
                                 styles.recordButton, 
                                 isRecording ? styles.recording : styles.idle,
+                                (!hasPermission || !isInitialized) && styles.disabled,
                                 { transform: [{ scale: pulseAnim }] }
                             ]}>
-                                <MaterialCommunityIcons 
-                                    name={isRecording ? "stop" : "microphone"} 
-                                    size={32} 
-                                    color="white" 
-                                />
+                                {!isInitialized ? (
+                                    <ActivityIndicator color="white" />
+                                ) : (
+                                    <MaterialCommunityIcons 
+                                        name={isRecording ? "stop" : "microphone"} 
+                                        size={32} 
+                                        color="white" 
+                                    />
+                                )}
                             </Animated.View>
                         </TouchableOpacity>
                         
@@ -197,6 +203,9 @@ const styles = StyleSheet.create({
     },
     recording: {
         backgroundColor: '#D32F2F',
+    },
+    disabled: {
+        opacity: 0.5,
     },
     statusText: {
         fontSize: 14,
