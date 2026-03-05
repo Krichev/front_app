@@ -16,6 +16,8 @@ import {
   AnswerPhase,
   FeedbackPhase,
 } from '../features/WWWGame/ui/phases';
+import { AudioAnswerPhase } from './WWWGamePlayScreen/components/AudioAnswerPhase';
+import { AudioChallengeSubmission } from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import { useCountdownTimer } from '../shared/hooks/useCountdownTimer';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -45,6 +47,9 @@ const WWWGamePlayScreen: React.FC = () => {
   const [activeWager, setActiveWager] = useState<Wager | null>(null);
   const [wagerOutcome, setWagerOutcome] = useState<WagerOutcome | null>(null);
   const [showWagerOverlay, setShowWagerResults] = useState(false);
+
+  // Audio Results State
+  const [audioSubmissionResults, setAudioSubmissionResults] = useState<Record<string, AudioChallengeSubmission>>({});
 
   // Guard clause for missing sessionId
   useEffect(() => {
@@ -359,6 +364,26 @@ const WWWGamePlayScreen: React.FC = () => {
     }
   };
 
+  const handleAudioSubmissionComplete = useCallback(async (submission: AudioChallengeSubmission) => {
+    if (!currentRound) return;
+    
+    setAudioSubmissionResults(prev => ({
+      ...prev,
+      [currentRound.id]: submission
+    }));
+
+    try {
+      await controller.submitAnswer(currentRound.id, {
+        teamAnswer: `Audio submission: ${submission.id}`,
+        playerWhoAnswered: state.selectedPlayer || 'Team',
+        discussionNotes: state.discussionNotes,
+      });
+      actions.answerSubmitted();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit audio answer');
+    }
+  }, [currentRound, controller, state.selectedPlayer, state.discussionNotes, actions]);
+
   const handleAudioRecordingComplete = async (audioFile: { uri: string; name: string; type: string }) => {
     if (!currentRound) { return; }
 
@@ -450,6 +475,19 @@ const WWWGamePlayScreen: React.FC = () => {
         );
       case 'answer':
         if (!currentRound) { return null; }
+
+        // Handle Audio Challenges with the new AudioAnswerPhase
+        if (currentRound.question.questionType === 'AUDIO' && currentRound.question.audioChallengeType) {
+           return (
+             <AudioAnswerPhase
+               question={currentRound.question}
+               onSubmissionComplete={handleAudioSubmissionComplete}
+               onCancel={() => actions.timeUp()}
+               isSubmitting={controller.isSubmittingAnswer || controller.isSubmittingAudio}
+             />
+           );
+        }
+
         return (
           <AnswerPhase
             question={currentRound.question}
@@ -466,6 +504,7 @@ const WWWGamePlayScreen: React.FC = () => {
         );
       case 'feedback':
         if (!currentRound) { return null; }
+        const audioSubmission = audioSubmissionResults[currentRound.id];
         return (
           <FeedbackPhase
             roundData={currentRound}
@@ -473,6 +512,7 @@ const WWWGamePlayScreen: React.FC = () => {
             isLastRound={isLastRound}
             onNextRound={handleNextRound}
             onComplete={handleGameCompletion}
+            audioSubmission={audioSubmission}
           />
         );
       default:

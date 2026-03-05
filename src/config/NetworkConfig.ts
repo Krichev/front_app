@@ -20,9 +20,9 @@ const DEV_DEFAULTS = {
         default: 'http://localhost:8080/api',
     }),
     KARAOKE_API_BASE_URL: Platform.select({
-        android: 'http://10.0.2.2:8081/api',
-        ios: 'http://localhost:8081/api',
-        default: 'http://localhost:8081/api',
+        android: 'http://10.0.2.2:8083/api',
+        ios: 'http://localhost:8083/api',
+        default: 'http://localhost:8083/api',
     }),
 };
 
@@ -53,12 +53,12 @@ class NetworkConfigManager {
         return NetworkConfigManager.instance;
     }
 
-    /** Main Challenger API base URL (e.g., http://155.212.244.150:8081/api) */
+    /** Main Challenger API base URL (e.g., http://45.129.186.166:8080/api) */
     public getBaseUrl(): string {
         return this.apiBaseUrl;
     }
 
-    /** Karaoke service base URL (e.g., http://155.212.244.150:8083/api) */
+    /** Karaoke service base URL (e.g., http://45.129.186.166:8083/api) */
     public getKaraokeBaseUrl(): string {
         return this.karaokeApiBaseUrl;
     }

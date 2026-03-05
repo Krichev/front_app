@@ -3,7 +3,7 @@ import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
 import {RootState} from '../../../../app/providers/StoreProvider/store';
-import {updateUser} from '../../../AuthState/model/slice/authSlice'; // ADDED: Import updateUser
+import {updateUser, updateAccessToken} from '../../../AuthState/model/slice/authSlice'; // ADDED: Import updateAccessToken
 import TokenRefreshService from '../../../../services/auth/TokenRefreshService'; // ADDED: Import TokenRefreshService
 import { UserSearchResult } from '../../../QuizState/model/types/question.types';
 import { Gender } from '../../../InvitationState/model/types'; // ADDED: Import Gender
@@ -100,6 +100,10 @@ export const userApi = createApi({
                         dispatch(updateUser(updatedUser));
 
                         if (data.newToken) {
+                            // CRITICAL: Update Redux state FIRST so all subsequent
+                            // RTK Query requests use the new token immediately
+                            dispatch(updateAccessToken(data.newToken));
+
                             // FIXED: TokenRefreshService now imported
                             await TokenRefreshService.saveTokensToStorage(
                                 data.newToken,
@@ -183,10 +187,24 @@ export const userApi = createApi({
 
                     // FIXED: Type-safe comparison
                     if (currentUser && currentUser.id === userId) {
-                        dispatch(updateUser({
+                        const updatedUser = {
                             ...currentUser,
                             ...data.user,
-                        }));
+                        };
+
+                        dispatch(updateUser(updatedUser));
+
+                        // ADD: Handle new token if username changed
+                        if (data.newToken) {
+                            dispatch(updateAccessToken(data.newToken));
+
+                            await TokenRefreshService.saveTokensToStorage(
+                                data.newToken,
+                                state.auth.refreshToken || '',
+                                updatedUser
+                            );
+                            console.log('✅ Username mutation: new JWT token set in Redux and persisted');
+                        }
                     }
                 } catch (error) {
                     console.error('Failed to update username:', error);

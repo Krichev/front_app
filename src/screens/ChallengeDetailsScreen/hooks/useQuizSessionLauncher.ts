@@ -244,18 +244,37 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             return;
         }
 
-        const audioType = config.audioChallengeType || AudioChallengeType.RHYTHM_CREATION;
+        const customQuestionIds = customQuestions
+            ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
+            .filter((id: any) => !isNaN(id)) ?? [];
+        const hasCustomQuestions = customQuestionIds.length > 0;
 
-        if (
-            audioType === AudioChallengeType.RHYTHM_CREATION ||
-            audioType === AudioChallengeType.RHYTHM_REPEAT
-        ) {
-            Alert.alert(t('challengeDetails.launcher.comingSoon'), t('challengeDetails.launcher.rhythmComingSoon'));
-        } else if (audioType === AudioChallengeType.SINGING) {
-            Alert.alert(t('challengeDetails.launcher.comingSoon'), t('challengeDetails.launcher.singingComingSoon'));
-        } else {
-            Alert.alert(t('challengeDetails.launcher.audioChallenge'), t('challengeDetails.launcher.audioChallengeInstructions'));
-        }
+        const session = await startQuizSession({
+            challengeId,
+            teamName: config.teamName || username || 'Player',
+            teamMembers: config.teamMembers || [username || 'Player'],
+            difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
+            roundTimeSeconds: config.roundTime || 60,  // Audio challenges need more time
+            totalRounds: hasCustomQuestions 
+                ? Math.min(config.roundCount || 5, customQuestionIds.length)
+                : (config.roundCount || 5),
+            enableAiHost: false,  // No AI host for audio quizzes
+            enableAiAnswerValidation: false,  // Scoring is done by karaoke backend
+            questionSource: hasCustomQuestions ? 'user' : 'app',
+            customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
+        }).unwrap();
+
+        navigation.navigate('WWWGamePlay', {
+            sessionId: session.id,
+            challengeId: challengeId,
+            teamName: config.teamName || username || 'Player',
+            teamMembers: config.teamMembers || [username || 'Player'],
+            difficulty: config.difficulty || 'MEDIUM',
+            roundTime: config.roundTime || 60,
+            roundCount: config.roundCount || 5,
+            enableAIHost: false,
+            enableAiAnswerValidation: false,
+        });
     };
 
     const launchPuzzleGame = async (_config: ParsedQuizConfig) => {

@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
+import { AudioChallengeSubmission } from '../../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
+import { AudioChallengeScoreDisplay } from '../../../../components/AudioChallengeScoreDisplay';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface FeedbackPhaseProps {
@@ -12,6 +14,7 @@ interface FeedbackPhaseProps {
   isLastRound: boolean;
   onNextRound: () => void;
   onComplete?: () => void; // Optional if handled by onNextRound for last round logic
+  audioSubmission?: AudioChallengeSubmission | null;
 }
 
 export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
@@ -20,6 +23,7 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
   isLastRound,
   onNextRound,
   onComplete,
+  audioSubmission,
 }) => {
   const { t } = useTranslation();
   const { theme } = useAppStyles();
@@ -33,8 +37,10 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
     }
   };
 
+  const isAudioQuestion = roundData.question.questionType === 'AUDIO';
+
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Text style={styles.title}>{t('wwwPhases.feedback.title')}</Text>
 
       <View style={styles.resultContainer}>
@@ -43,15 +49,25 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
           <Text style={styles.resultValue}>{roundData.question.question}</Text>
         </View>
 
-        <View style={styles.resultRow}>
-          <Text style={styles.resultLabel}>{t('wwwPhases.feedback.yourAnswer')}</Text>
-          <Text style={styles.resultValue}>{roundData.teamAnswer}</Text>
-        </View>
+        {!isAudioQuestion && (
+          <>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>{t('wwwPhases.feedback.yourAnswer')}</Text>
+              <Text style={styles.resultValue}>{roundData.teamAnswer}</Text>
+            </View>
 
-        <View style={styles.resultRow}>
-          <Text style={styles.resultLabel}>{t('wwwPhases.feedback.correctAnswer')}</Text>
-          <Text style={styles.resultValue}>{roundData.question.answer}</Text>
-        </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>{t('wwwPhases.feedback.correctAnswer')}</Text>
+              <Text style={styles.resultValue}>{roundData.question.answer}</Text>
+            </View>
+          </>
+        )}
+
+        {isAudioQuestion && audioSubmission && (
+          <View style={{ marginVertical: theme.spacing.lg }}>
+            <AudioChallengeScoreDisplay submission={audioSubmission} />
+          </View>
+        )}
 
         <View style={[styles.badge, isCorrect ? styles.correctBadge : styles.incorrectBadge]}>
           <Text style={styles.badgeText}>
@@ -105,6 +121,6 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
           {isLastRound ? t('wwwPhases.feedback.finishGame') : t('wwwPhases.feedback.nextQuestion')}
         </Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };

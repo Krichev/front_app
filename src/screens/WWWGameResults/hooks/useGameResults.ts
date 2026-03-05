@@ -80,7 +80,6 @@ export const useGameResults = (): UseGameResultsReturn => {
 
     // Local state
     const [showEndGameModal, setShowEndGameModal] = useState(false);
-    const [submittingChallenge, setSubmittingChallenge] = useState(false);
 
     // Derived data
     const roundCount = totalRounds;
@@ -110,52 +109,6 @@ export const useGameResults = (): UseGameResultsReturn => {
         [roundsData, performances]
     );
 
-    // Submit challenge with results
-    const submitChallengeWithResults = useCallback(async () => {
-        if (!challengeId || isSubmitting || submittingChallenge) return;
-
-        try {
-            setSubmittingChallenge(true);
-
-            await submitCompletion({
-                challengeId: challengeId,
-                completionData: {
-                    verificationData: {
-                        score,
-                        totalRounds,
-                        completed: true,
-                        teamName,
-                        roundsData: roundsData.map(round => ({
-                            question: round.question,
-                            correctAnswer: round.correctAnswer,
-                            teamAnswer: round.teamAnswer,
-                            isCorrect: round.isCorrect,
-                            playerWhoAnswered: round.playerWhoAnswered
-                        }))
-                    },
-                    notes: t('gameResults.completionNotes', { score, total: totalRounds })
-                }
-            }).unwrap();
-
-            navigation.navigate('QuizResults', {
-                challengeId,
-                score,
-                totalRounds,
-                teamName,
-                roundsData: roundsData as any
-            });
-        } catch (error) {
-            console.error('Error completing challenge:', error);
-            Alert.alert(
-                t('gameResults.alerts.error.title'),
-                t('gameResults.alerts.error.submitFailed'),
-                [{ text: t('common.ok'), onPress: () => navigation.navigate('Main', { screen: 'Home' }) }]
-            );
-        } finally {
-            setSubmittingChallenge(false);
-        }
-    }, [challengeId, isSubmitting, submittingChallenge, score, totalRounds, teamName, roundsData, submitCompletion, navigation, t]);
-
     // Play again button handler
     const playAgain = useCallback(() => {
         if (challengeId) {
@@ -175,8 +128,18 @@ export const useGameResults = (): UseGameResultsReturn => {
     // End game function
     const endGame = useCallback(() => {
         setShowEndGameModal(false);
-        navigation.navigate('Main', { screen: 'Home' });
-    }, [navigation]);
+        if (challengeId) {
+            navigation.navigate('QuizResults', {
+                challengeId,
+                score,
+                totalRounds,
+                teamName,
+                roundsData: roundsData as any
+            });
+        } else {
+            navigation.navigate('Main', { screen: 'Home' });
+        }
+    }, [navigation, challengeId, score, totalRounds, teamName, roundsData]);
 
     return {
         teamName,
@@ -194,11 +157,11 @@ export const useGameResults = (): UseGameResultsReturn => {
         aiFeedback,
         showEndGameModal,
         setShowEndGameModal,
-        submittingChallenge,
-        isSubmitting,
+        submittingChallenge: false,
+        isSubmitting: false,
         playAgain,
         returnHome,
-        submitChallengeWithResults,
+        submitChallengeWithResults: async () => {}, // No-op fallback
         endGame
     };
 };

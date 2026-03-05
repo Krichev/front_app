@@ -198,17 +198,10 @@ const EditProfileScreen: React.FC = () => {
                 userData: updateData
             }).unwrap();
 
-            // If this is the current user's profile and username changed, update Redux auth state
-            if (isOwn && usernameChanged && currentUser) {
-                const updatedUser = {
-                    ...currentUser,
-                    username: formData.username.trim(),
-                    bio: getLocalizedValue(formData.bio, currentLanguage).trim(),
-                    avatar: formData.avatar,
-                };
-
-                // Update the auth state in Redux
-                dispatch(updateUser(updatedUser));
+            // Token and user state are already updated by the mutation's onQueryStarted handler.
+            // No additional dispatch needed here.
+            if (isOwn && usernameChanged) {
+                console.log('Username changed - new token handled by mutation callback');
             }
 
             Alert.alert(

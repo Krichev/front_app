@@ -17,9 +17,10 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
-import {useUpdateChallengeMutation} from '../entities/ChallengeState/model/slice/challengeApi';
+import {
+    useGetChallengeAudioConfigQuery,
+} from '../entities/ChallengeState/model/slice/challengeApi';
 import {DeepSeekHostService} from '../services/wwwGame/deepseekHostService';
-import {navigateToTab} from "../utils/navigation.ts";
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -41,7 +42,6 @@ const QuizResultsScreen: React.FC = () => {
     const route = useRoute<QuizResultsRouteProp>();
     const navigation = useNavigation<QuizResultsNavigationProp>();
     const {user} = useSelector((state: RootState) => state.auth);
-    const [updateChallenge, {isLoading}] = useUpdateChallengeMutation();
 
     // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
     const challengeId = route.params?.challengeId;
@@ -50,11 +50,21 @@ const QuizResultsScreen: React.FC = () => {
     const teamName = route.params?.teamName;
     const roundsData = route.params?.roundsData || [];
     
+    // Fetch audio config for minimum score requirement
+    const { data: audioConfig } = useGetChallengeAudioConfigQuery(
+        challengeId || '',
+        { skip: !challengeId }
+    );
+
     const [feedback, setFeedback] = React.useState<string>('');
     const [isGeneratingFeedback, setIsGeneratingFeedback] = React.useState(false);
 
     // Calculate score percentage
     const scorePercentage = (totalRounds && totalRounds > 0) ? (score / totalRounds) * 100 : 0;
+    
+    // Check if requirement is met
+    const minimumRequired = audioConfig?.minimumScorePercentage || 0;
+    const requirementMet = minimumRequired === 0 || scorePercentage >= minimumRequired;
 
     // Generate feedback using DeepSeek service
     useEffect(() => {
@@ -103,28 +113,10 @@ const QuizResultsScreen: React.FC = () => {
         generateFeedback();
     }, [roundsData, score, teamName, totalRounds]);
 
-    // Mark challenge as completed
-    const markChallengeCompleted = async () => {
-        try {
-            await updateChallenge({
-                id: challengeId, // Changed from challengeId to id
-                status: 'COMPLETED'
-            }).unwrap();
-
-            Alert.alert(
-                'Success',
-                'Challenge marked as completed!',
-                [{text: 'OK', onPress: () => navigateToTab(navigation, 'Challenges')}]
-            );
-        } catch (error) {
-            console.error('Error updating challenge:', error);
-            Alert.alert('Error', 'Failed to update challenge status');
-        }
-    };
     // Share quiz results
     const shareResults = async () => {
         try {
-            const shareMessage = `I just completed the "${teamName}" WWW_QUIZ quiz challenge with ${score}/${totalRounds} correct answers (${scorePercentage.toFixed(0)}%)!`;
+            const shareMessage = `I just completed the "${teamName}" quiz challenge with ${score}/${totalRounds} correct answers (${scorePercentage.toFixed(0)}%)!`;
 
             await Share.share({
                 message: shareMessage,
@@ -157,6 +149,31 @@ const QuizResultsScreen: React.FC = () => {
                                 scorePercentage >= 40 ? 'Good effort!' :
                                     'Keep trying!'}
                     </Text>
+                </View>
+
+                {/* Quest Completion Status Indicator */}
+                <View style={[
+                    styles.completionStatusCard,
+                    requirementMet ? styles.completionSuccess : styles.completionFailure
+                ]}>
+                    <MaterialCommunityIcons 
+                        name={requirementMet ? "check-circle" : "alert-circle"} 
+                        size={24} 
+                        color={requirementMet ? "#4CAF50" : "#F44336"} 
+                    />
+                    <View style={styles.completionTextContainer}>
+                        <Text style={[
+                            styles.completionTitle,
+                            requirementMet ? styles.textSuccess : styles.textFailure
+                        ]}>
+                            {requirementMet ? 'Quest Completed ✓' : 'Quest Requirement Not Met'}
+                        </Text>
+                        <Text style={styles.completionSubtitle}>
+                            {requirementMet 
+                                ? 'Your results have been recorded automatically.' 
+                                : `Requires ${minimumRequired}% correct answers to complete.`}
+                        </Text>
+                    </View>
                 </View>
 
                 {/* AI Feedback */}
@@ -227,21 +244,6 @@ const QuizResultsScreen: React.FC = () => {
                     >
                         <MaterialCommunityIcons name="share" size={18} color="white"/>
                         <Text style={styles.buttonText}>Share Results</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.completeButton, isLoading && styles.disabledButton]}
-                        onPress={markChallengeCompleted}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator size="small" color="white"/>
-                        ) : (
-                            <>
-                                <MaterialCommunityIcons name="check-circle" size={18} color="white"/>
-                                <Text style={styles.buttonText}>Mark Completed</Text>
-                            </>
-                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -323,6 +325,45 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#4CAF50',
+    },
+    completionStatusCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'white',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 20,
+        elevation: 1,
+        shadowColor: '#000',
+        shadowOffset: {width: 0, height: 1},
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        borderLeftWidth: 4,
+    },
+    completionSuccess: {
+        borderLeftColor: '#4CAF50',
+    },
+    completionFailure: {
+        borderLeftColor: '#F44336',
+    },
+    completionTextContainer: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    completionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        marginBottom: 2,
+    },
+    textSuccess: {
+        color: '#4CAF50',
+    },
+    textFailure: {
+        color: '#F44336',
+    },
+    completionSubtitle: {
+        fontSize: 12,
+        color: '#666',
     },
     feedbackContainer: {
         backgroundColor: 'white',
@@ -449,6 +490,7 @@ const styles = StyleSheet.create({
     actionsContainer: {
         alignItems: 'center',
         marginBottom: 32,
+        width: '100%',
     },
     shareButton: {
         flexDirection: 'row',
@@ -461,20 +503,9 @@ const styles = StyleSheet.create({
         width: '100%',
         justifyContent: 'center',
     },
-    completeButton: {
-        flexDirection: 'row',
-        backgroundColor: '#4CAF50',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginBottom: 12,
-        width: '100%',
-        justifyContent: 'center',
-    },
     playAgainButton: {
         flexDirection: 'row',
-        backgroundColor: '#2196F3',
+        backgroundColor: '#4CAF50',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 8,
@@ -497,9 +528,6 @@ const styles = StyleSheet.create({
         color: '#555',
         fontSize: 14,
         marginLeft: 4,
-    },
-    disabledButton: {
-        opacity: 0.7,
     },
 });
 
