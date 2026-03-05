@@ -49,7 +49,7 @@ export const QuestionPhase: React.FC<QuestionPhaseProps> = ({
     <View style={styles.container}>
       {isAudioChallenge ? (
         <AudioChallengeContainer
-          question={question as any}
+          question={question}
           mode="preview"
         />
       ) : (

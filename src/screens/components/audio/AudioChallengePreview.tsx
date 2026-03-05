@@ -9,10 +9,10 @@ interface AudioChallengePreviewProps {
   question: {
     question?: string;
     questionMediaUrl?: string;
-    audioChallengeType?: AudioChallengeType;
-    audioSegmentStart?: number;
-    audioSegmentEnd?: number;
-    minimumScorePercentage?: number;
+    audioChallengeType?: AudioChallengeType | null;
+    audioSegmentStart?: number | null;
+    audioSegmentEnd?: number | null;
+    minimumScorePercentage?: number | null;
     additionalInfo?: string;
   };
 }
@@ -25,15 +25,15 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
   return (
     <View style={styles.container}>
       <AudioChallengeHeader 
-        challengeType={question.audioChallengeType}
-        minimumScorePercentage={question.minimumScorePercentage}
+        challengeType={question.audioChallengeType ?? undefined}
+        minimumScorePercentage={question.minimumScorePercentage ?? undefined}
         instructions={question.question}
       />
       
       <ReferenceAudioSection 
         audioUrl={question.questionMediaUrl}
-        segmentStart={question.audioSegmentStart}
-        segmentEnd={question.audioSegmentEnd}
+        segmentStart={question.audioSegmentStart ?? undefined}
+        segmentEnd={question.audioSegmentEnd ?? undefined}
         title="Reference Audio"
       />
     </View>

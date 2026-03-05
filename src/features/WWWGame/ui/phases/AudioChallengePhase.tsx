@@ -93,8 +93,9 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
       )}
 
       <AudioChallengeHeader 
-        challengeType={question.audioChallengeType as any} 
-        difficulty={question.difficulty as any}
+        challengeType={question.audioChallengeType} 
+        minimumScorePercentage={question.minimumScorePercentage}
+        instructions={question.question}
       />
 
       <View style={localStyles.content}>
@@ -106,7 +107,7 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
               {t('audioChallenge.listenFirst')}
             </Text>
             <ReferenceAudioSection 
-              question={question as any} 
+              question={question} 
               onPlaybackComplete={handlePlaybackComplete}
             />
             <Text style={localStyles.hintText}>
@@ -194,7 +195,7 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
              )}
 
              <View style={localStyles.miniReference}>
-                <ReferenceAudioSection question={question as any} mini />
+                <ReferenceAudioSection question={question} mini />
              </View>
           </View>
         )}

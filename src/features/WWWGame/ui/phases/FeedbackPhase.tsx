@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
-import { phaseStyles } from './phases.styles';
-import { QuizRound } from '../../../../entities/QuizState/model/slice/quizApi';
-import { AudioChallengeSubmission } from '../../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
-import { AudioChallengeScoreDisplay } from '../../../../components/AudioChallengeScoreDisplay';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
+import {phaseStyles} from './phases.styles';
+import {QuizRound} from '../../../../entities/QuizState/model/slice/quizApi';
+import {AudioChallengeSubmission} from '../../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
+import AudioChallengeScoreDisplay from "../../../../components/AudioChallengeScoreDisplay.tsx";
 
 interface FeedbackPhaseProps {
   roundData: QuizRound;

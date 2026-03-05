@@ -5,14 +5,14 @@ import NetworkConfigManager from '../../../config/NetworkConfig';
 
 interface ReferenceAudioSectionProps {
   audioUrl?: string;
-  segmentStart?: number;
-  segmentEnd?: number;
+  segmentStart?: number | null;
+  segmentEnd?: number | null;
   title?: string;
   question?: {
     questionMediaUrl?: string;
-    audioSegmentStart?: number;
-    audioSegmentEnd?: number;
-    audioReferenceMediaId?: number | string;
+    audioSegmentStart?: number | null;
+    audioSegmentEnd?: number | null;
+    audioReferenceMediaId?: number | string | null;
   };
   onPlaybackComplete?: () => void;
   mini?: boolean;
@@ -34,8 +34,8 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
     : undefined;
 
   const effectiveUrl = audioUrl || question?.questionMediaUrl || fallbackUrl;
-  const effectiveStart = segmentStart ?? question?.audioSegmentStart ?? 0;
-  const effectiveEnd = segmentEnd ?? question?.audioSegmentEnd;
+  const effectiveStart = (segmentStart ?? question?.audioSegmentStart) ?? 0;
+  const effectiveEnd = (segmentEnd ?? question?.audioSegmentEnd) ?? undefined;
 
   if (!effectiveUrl) return null;
 

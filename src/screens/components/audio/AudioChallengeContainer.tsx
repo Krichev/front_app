@@ -8,10 +8,10 @@ interface AudioChallengeContainerProps {
   question: {
     question?: string;
     questionMediaUrl?: string;
-    audioChallengeType?: AudioChallengeType;
-    audioSegmentStart?: number;
-    audioSegmentEnd?: number;
-    minimumScorePercentage?: number;
+    audioChallengeType?: AudioChallengeType | null;
+    audioSegmentStart?: number | null;
+    audioSegmentEnd?: number | null;
+    minimumScorePercentage?: number | null;
     additionalInfo?: string;
   };
   mode: 'preview' | 'record';

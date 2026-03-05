@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import {AudioChallengeType, AUDIO_CHALLENGE_TYPES_INFO} from '../../../types/audioChallenge.types';
 
 interface AudioChallengeHeaderProps {
-  challengeType?: AudioChallengeType;
-  minimumScorePercentage?: number;
+  challengeType?: AudioChallengeType | null;
+  minimumScorePercentage?: number | null;
   instructions?: string;
 }
 
@@ -47,7 +47,7 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
       )}
 
       {/* Passing Score Badge */}
-      {minimumScorePercentage !== undefined && minimumScorePercentage > 0 && (
+      {(minimumScorePercentage ?? 0) > 0 && (
         <View style={styles.scoreContainer}>
           <MaterialCommunityIcons name="trophy-outline" size={16} color="#FF9800" />
           <Text style={styles.scoreText}>
