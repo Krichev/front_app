@@ -1,21 +1,31 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useMultiplayerRoomService } from '../features/MultiplayerRoom/services/MultiplayerRoomService';
 import { GamePhase } from '../features/MultiplayerRoom/types';
+import { useClaimTvDisplayMutation } from '../entities/TvDisplayState/model/slice/tvDisplayApi';
+import { Modal } from '../shared/ui/Modal/Modal';
 
 type ControllerLobbyRouteProp = RouteProp<RootStackParamList, 'ControllerLobby'>;
 type ControllerLobbyNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ControllerLobbyScreen: React.FC = () => {
+    const { t } = useTranslation();
     const route = useRoute<ControllerLobbyRouteProp>();
     const navigation = useNavigation<ControllerLobbyNavigationProp>();
     const { roomCode } = route.params;
 
     const { players, connectionStatus, gameState } = useMultiplayerRoomService(roomCode);
+    const [claimTv, { isLoading: isClaiming }] = useClaimTvDisplayMutation();
+
+    const [pairingModalVisible, setPairingModalVisible] = React.useState(false);
+    const [pairingCode, setPairingCode] = React.useState('');
+    const [claimError, setClaimError] = React.useState<string | null>(null);
 
     // Navigate to game screen when phase changes
     React.useEffect(() => {
@@ -24,11 +34,43 @@ const ControllerLobbyScreen: React.FC = () => {
         }
     }, [gameState?.phase, navigation, roomCode]);
 
+    const handleClaimTv = async () => {
+        if (pairingCode.length !== 6) return;
+        
+        setClaimError(null);
+        try {
+            await claimTv({ 
+                pairingCode: pairingCode.toUpperCase(), 
+                roomCode 
+            }).unwrap();
+            
+            setPairingModalVisible(false);
+            setPairingCode('');
+            Alert.alert(t('common.success'), t('tvDisplay.connect.success'));
+        } catch (err: any) {
+            console.error('Failed to claim TV:', err);
+            const errorMsg = err?.status === 410 
+                ? t('tvDisplay.connect.error.expired') 
+                : err?.status === 409
+                ? t('tvDisplay.connect.error.alreadyClaimed')
+                : t('tvDisplay.connect.error.invalid');
+            setClaimError(errorMsg);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.roomLabel}>ROOM CODE</Text>
                 <Text style={styles.roomCode}>{roomCode}</Text>
+                
+                <TouchableOpacity 
+                    style={styles.connectTvButton}
+                    onPress={() => setPairingModalVisible(true)}
+                >
+                    <MaterialCommunityIcons name="television" size={24} color="#fff" />
+                    <Text style={styles.connectTvButtonText}>{t('tvDisplay.connect.title').toUpperCase()}</Text>
+                </TouchableOpacity>
             </View>
 
             <View style={styles.statusContainer}>
@@ -62,6 +104,50 @@ const ControllerLobbyScreen: React.FC = () => {
                     <Text style={styles.leaveButtonText}>LEAVE ROOM</Text>
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                isOpen={pairingModalVisible}
+                onClose={() => {
+                    setPairingModalVisible(false);
+                    setPairingCode('');
+                    setClaimError(null);
+                }}
+                title={t('tvDisplay.connect.title')}
+            >
+                <View style={styles.modalContent}>
+                    <Text style={styles.modalInstruction}>
+                        {t('tvDisplay.connect.instruction')}
+                    </Text>
+                    
+                    <TextInput
+                        style={styles.pairingInput}
+                        value={pairingCode}
+                        onChangeText={(text) => setPairingCode(text.toUpperCase())}
+                        placeholder={t('tvDisplay.connect.placeholder')}
+                        placeholderTextColor="#666"
+                        maxLength={6}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                    />
+                    
+                    {claimError && <Text style={styles.errorText}>{claimError}</Text>}
+                    
+                    <TouchableOpacity 
+                        style={[
+                            styles.modalButton, 
+                            (pairingCode.length !== 6 || isClaiming) && styles.modalButtonDisabled
+                        ]}
+                        onPress={handleClaimTv}
+                        disabled={pairingCode.length !== 6 || isClaiming}
+                    >
+                        {isClaiming ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.modalButtonText}>{t('tvDisplay.connect.button').toUpperCase()}</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };
@@ -73,21 +159,38 @@ const styles = StyleSheet.create({
     },
     header: {
         alignItems: 'center',
-        paddingVertical: 40,
+        paddingVertical: 30,
         backgroundColor: '#16213e',
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
     },
     roomLabel: {
         color: '#ccc',
-        fontSize: 18,
+        fontSize: 14,
         letterSpacing: 2,
     },
     roomCode: {
         color: '#fff',
-        fontSize: 64,
+        fontSize: 54,
         fontWeight: '900',
         letterSpacing: 4,
+        marginBottom: 10,
+    },
+    connectTvButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#0f3460',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+        borderWidth: 1,
+        borderColor: '#e94560',
+        gap: 8,
+    },
+    connectTvButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     statusContainer: {
         flexDirection: 'row',
@@ -99,6 +202,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
+        zIndex: 1,
     },
     statusIndicator: {
         width: 10,
@@ -117,7 +221,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         color: '#fff',
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
         marginBottom: 16,
     },
@@ -159,9 +263,9 @@ const styles = StyleSheet.create({
     },
     waitingText: {
         color: '#ccc',
-        fontSize: 18,
+        fontSize: 16,
         fontStyle: 'italic',
-        marginBottom: 20,
+        marginBottom: 15,
     },
     leaveButton: {
         padding: 12,
@@ -169,6 +273,50 @@ const styles = StyleSheet.create({
     leaveButtonText: {
         color: '#e94560',
         fontSize: 16,
+        fontWeight: 'bold',
+    },
+    modalContent: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    modalInstruction: {
+        color: '#333',
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 20,
+    },
+    pairingInput: {
+        width: '100%',
+        backgroundColor: '#f5f5f5',
+        borderRadius: 12,
+        padding: 15,
+        fontSize: 28,
+        color: '#1a1a2e',
+        textAlign: 'center',
+        letterSpacing: 6,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        marginBottom: 20,
+    },
+    errorText: {
+        color: '#e94560',
+        fontSize: 14,
+        marginBottom: 15,
+        textAlign: 'center',
+    },
+    modalButton: {
+        width: '100%',
+        backgroundColor: '#e94560',
+        padding: 15,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalButtonDisabled: {
+        opacity: 0.5,
+    },
+    modalButtonText: {
+        color: '#fff',
+        fontSize: 18,
         fontWeight: 'bold',
     }
 });

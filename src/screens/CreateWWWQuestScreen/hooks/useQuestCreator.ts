@@ -133,9 +133,6 @@ export const useQuestCreator = () => {
                 throw new Error('Challenge creation failed - no ID returned');
             }
 
-            const hasUserQuestions = selectedQuestions.some(q => q.source === 'user');
-            const questionSource = hasUserQuestions ? 'user' : 'app';
-
             // Step 4: Create session payload with ALL required fields
             const sessionPayload = {
                 challengeId: challengeResult.id,
@@ -150,8 +147,8 @@ export const useQuestCreator = () => {
                 roundTimeSeconds: quizConfig.roundTime,
                 enableAiHost: quizConfig.enableAIHost,
                 enableAiAnswerValidation: quizConfig.enableAiAnswerValidation,
-                questionSource: questionSource as 'app' | 'user',
-                customQuestionIds: selectedQuestionIds.length > 0 ? selectedQuestionIds : undefined,
+                // NO customQuestionIds — backend reads from challenge_questions
+                // NO questionSource — backend derives it
             };
 
             console.log('Starting quiz session with payload:', sessionPayload);

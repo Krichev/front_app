@@ -76,13 +76,6 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
         try {
             const gameMode = config.gameMode || 'STANDARD';
 
-            // Extract question IDs from customQuestions (which now prioritizes played questions)
-            const customQuestionIds = customQuestions
-                ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
-                .filter((id: any) => !isNaN(id)) ?? [];
-
-            const hasCustomQuestions = customQuestionIds.length > 0;
-
             const sessionParams = {
                 challengeId: challengeId,
                 teamName: config.teamName || 'Team',
@@ -91,13 +84,9 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
                 gameMode: gameMode as any,
                 answerTimeSeconds: config.answerTimeSeconds || 20,
                 roundTimeSeconds: config.roundTime || 30,
-                totalRounds: hasCustomQuestions 
-                    ? Math.min(config.roundCount || 5, customQuestionIds.length) 
-                    : (config.roundCount || 5),
+                totalRounds: config.roundCount || 5,
                 enableAiHost: config.enableAIHost !== false,
                 enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
-                questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
-                customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
             };
 
             const session = await startQuizSession(sessionParams).unwrap();
@@ -140,24 +129,15 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
         const BLITZ_ROUND_TIME = 15;
         const BLITZ_AI_HOST = false;
 
-        const customQuestionIds = customQuestions
-            ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
-            .filter((id: any) => !isNaN(id)) ?? [];
-        const hasCustomQuestions = customQuestionIds.length > 0;
-
         const session = await startQuizSession({
             challengeId,
             teamName: config.teamName || 'Blitz Team',
             teamMembers: config.teamMembers || [],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'HARD',
             roundTimeSeconds: BLITZ_ROUND_TIME,
-            totalRounds: hasCustomQuestions 
-                ? Math.min(config.roundCount || 10, customQuestionIds.length) 
-                : (config.roundCount || 10),
+            totalRounds: config.roundCount || 10,
             enableAiHost: BLITZ_AI_HOST,
             enableAiAnswerValidation: false,
-            questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
-            customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
         }).unwrap();
 
         navigation.navigate('WWWGamePlay', {
@@ -174,24 +154,15 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
     };
 
     const launchTriviaQuiz = async (config: ParsedQuizConfig) => {
-        const customQuestionIds = customQuestions
-            ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
-            .filter((id: any) => !isNaN(id)) ?? [];
-        const hasCustomQuestions = customQuestionIds.length > 0;
-
         const session = await startQuizSession({
             challengeId,
             teamName: username || 'Player',
             teamMembers: [username || 'Player'],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
             roundTimeSeconds: config.roundTime || 20,
-            totalRounds: hasCustomQuestions 
-                ? Math.min(config.roundCount || 10, customQuestionIds.length) 
-                : (config.roundCount || 10),
+            totalRounds: config.roundCount || 10,
             enableAiHost: false,
             enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
-            questionSource: hasCustomQuestions ? ('user' as const) : ('app' as const),
-            customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
         }).unwrap();
 
         navigation.navigate('WWWGamePlay', {
@@ -208,21 +179,15 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
     };
 
     const launchCustomQuiz = async (config: ParsedQuizConfig) => {
-        const customQuestionIds = customQuestions?.map((q: any) => q.id) || [];
-
         const session = await startQuizSession({
             challengeId,
             teamName: config.teamName || 'Team',
             teamMembers: config.teamMembers || [],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
             roundTimeSeconds: config.roundTime || 30,
-            totalRounds: customQuestionIds.length > 0 
-                ? Math.min(config.roundCount || 5, customQuestionIds.length) 
-                : (config.roundCount || 5),
+            totalRounds: config.roundCount || 5,
             enableAiHost: config.enableAIHost !== false,
             enableAiAnswerValidation: config.enableAiAnswerValidation ?? false,
-            questionSource: 'user' as const,
-            customQuestionIds: customQuestionIds.length > 0 ? customQuestionIds : undefined,
         }).unwrap();
 
         navigation.navigate('WWWGamePlay', {
@@ -244,24 +209,15 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
             return;
         }
 
-        const customQuestionIds = customQuestions
-            ?.map((q: any) => typeof q.id === 'string' ? parseInt(q.id) : q.id)
-            .filter((id: any) => !isNaN(id)) ?? [];
-        const hasCustomQuestions = customQuestionIds.length > 0;
-
         const session = await startQuizSession({
             challengeId,
             teamName: config.teamName || username || 'Player',
             teamMembers: config.teamMembers || [username || 'Player'],
             difficulty: (config.difficulty?.toUpperCase() as any) || 'MEDIUM',
             roundTimeSeconds: config.roundTime || 60,  // Audio challenges need more time
-            totalRounds: hasCustomQuestions 
-                ? Math.min(config.roundCount || 5, customQuestionIds.length)
-                : (config.roundCount || 5),
+            totalRounds: config.roundCount || 5,
             enableAiHost: false,  // No AI host for audio quizzes
             enableAiAnswerValidation: false,  // Scoring is done by karaoke backend
-            questionSource: hasCustomQuestions ? 'user' : 'app',
-            customQuestionIds: hasCustomQuestions ? customQuestionIds : undefined,
         }).unwrap();
 
         navigation.navigate('WWWGamePlay', {

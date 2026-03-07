@@ -1542,6 +1542,21 @@ const en = {
             nextQuestion: 'Next Question',
         },
     },
+    tvDisplay: {
+        connect: {
+            title: 'Connect TV Display',
+            instruction: 'Enter the code shown on your TV',
+            placeholder: 'TV CODE',
+            button: 'Connect',
+            success: 'TV connected!',
+            error: {
+                invalid: 'Invalid code. Check your TV and try again.',
+                expired: 'Code expired. Check your TV for a new code.',
+                alreadyClaimed: 'This TV is already connected to a room.',
+                unknown: 'Failed to connect TV display.',
+            },
+        },
+    },
 };
 
 export default en;

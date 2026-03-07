@@ -257,7 +257,9 @@ export interface StartQuizSessionRequest {
     totalRounds: number;
     enableAiHost: boolean;
     enableAiAnswerValidation?: boolean;
-    questionSource: 'app' | 'user';
+    /** @deprecated Backend derives source from challenge junction table */
+    questionSource?: 'app' | 'user';
+    /** @deprecated Backend uses challenge junction table as source of truth */
     customQuestionIds?: number[];
 }
 
