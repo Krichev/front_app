@@ -10,6 +10,8 @@ import {QuestionVisibility} from '../../entities/QuizState/model/types/question.
 import {TopicTreeSelector} from '../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../entities/TopicState';
 import {AudioChallengeTypeSelector} from '../../shared/ui/AudioChallengeTypeSelector/AudioChallengeTypeSelector';
+import AnswerModeSelector from './AnswerModeSelector';
+import ReplaySettingsSection from './ReplaySettingsSection';
 import FileService, {ProcessedFileInfo} from '../../services/speech/FileService';
 import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCard';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
@@ -46,6 +48,9 @@ export interface AudioQuestionFormData {
     // Rhythm-specific
     rhythmBpm: number | null;
     rhythmTimeSignature: string;
+    answerInputMode: 'TAP' | 'AUDIO' | 'BOTH';
+    allowReplay: boolean;
+    maxReplays: number; // 0 = unlimited
     timeLimitSeconds: number | null;
 }
 
@@ -83,6 +88,9 @@ const DEFAULT_FORM_DATA: AudioQuestionFormData = {
     minimumScorePercentage: 60,
     rhythmBpm: 120,
     rhythmTimeSignature: '4/4',
+    answerInputMode: 'BOTH',
+    allowReplay: true,
+    maxReplays: 3,
     timeLimitSeconds: null,
 };
 
@@ -805,6 +813,17 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 {errors.audioChallengeType && (
                     <Text style={form.errorText}>{errors.audioChallengeType}</Text>
                 )}
+
+                {/* Answer Mode Selector - Shown only for rhythm challenges */}
+                {showRhythmSettings && (
+                    <View style={{marginTop: theme.spacing.md}}>
+                        <AnswerModeSelector
+                            selectedMode={formData.answerInputMode}
+                            onChange={(mode) => updateField('answerInputMode', mode)}
+                            disabled={isSubmitting}
+                        />
+                    </View>
+                )}
             </View>
 
             {/* Question Text */}
@@ -849,6 +868,19 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
             {/* Audio Upload Section */}
             {renderAudioUploadSection()}
+
+            {/* Replay Settings Section */}
+            {formData.audioChallengeType && (
+                <View style={form.section}>
+                    <ReplaySettingsSection
+                        allowReplay={formData.allowReplay}
+                        maxReplays={formData.maxReplays}
+                        onAllowReplayChange={(v) => updateField('allowReplay', v)}
+                        onMaxReplaysChange={(v) => updateField('maxReplays', v)}
+                        disabled={isSubmitting}
+                    />
+                </View>
+            )}
 
             {/* Passing Score Section */}
             {renderPassingScoreSection()}

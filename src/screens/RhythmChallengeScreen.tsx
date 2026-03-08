@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use RhythmChallengeScreenV2 instead for enhanced features including 
+ * audio recording support and improved UI.
+ */
 // src/screens/RhythmChallengeScreen.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {

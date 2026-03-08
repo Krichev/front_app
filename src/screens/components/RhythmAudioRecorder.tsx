@@ -3,16 +3,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     TouchableOpacity,
     Animated,
     PermissionsAndroid,
     Platform,
     Alert,
+    ActivityIndicator,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AudioRecord from 'react-native-audio-record';
+import { useTranslation } from 'react-i18next';
 import { safeRNFS as RNFS, isRNFSAvailable } from '../../shared/lib/fileSystem';
+import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../shared/ui/theme';
 
 interface RhythmAudioRecorderProps {
     isActive: boolean;
@@ -25,10 +28,6 @@ interface RhythmAudioRecorderProps {
 
 type RecordingPhase = 'IDLE' | 'COUNTDOWN' | 'RECORDING' | 'PROCESSING';
 
-/**
- * Audio recorder optimized for rhythm/clap capture
- * Uses high sample rate for accurate onset detection
- */
 export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     isActive,
     onRecordingStart,
@@ -37,14 +36,16 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     maxDuration = 30,
     countdownSeconds = 3,
 }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
+    
     const [phase, setPhase] = useState<RecordingPhase>('IDLE');
     const [countdown, setCountdown] = useState(countdownSeconds);
     const [duration, setDuration] = useState(0);
     const [hasPermission, setHasPermission] = useState(false);
-    const [audioLevel, setAudioLevel] = useState(0);
     
     const pulseAnim = useRef(new Animated.Value(1)).current;
-    const levelAnim = useRef(new Animated.Value(0)).current;
     const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
     const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     const audioFilePath = useRef<string>('');
@@ -94,11 +95,11 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
                 const granted = await PermissionsAndroid.request(
                     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
                     {
-                        title: 'Microphone Permission',
-                        message: 'This app needs access to your microphone to record your rhythm.',
-                        buttonNeutral: 'Ask Later',
-                        buttonNegative: 'Cancel',
-                        buttonPositive: 'OK',
+                        title: t('rhythmChallenge.errors.microphonePermissionTitle', 'Microphone Permission'),
+                        message: t('rhythmChallenge.errors.microphonePermission', 'This app needs access to your microphone to record your rhythm.'),
+                        buttonNeutral: t('common.askLater', 'Ask Later'),
+                        buttonNegative: t('common.cancel', 'Cancel'),
+                        buttonPositive: t('common.ok', 'OK'),
                     }
                 );
                 setHasPermission(granted === PermissionsAndroid.RESULTS.GRANTED);
@@ -117,7 +118,7 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             return;
         }
         const options = {
-            sampleRate: 44100,  // High sample rate for accurate onset detection
+            sampleRate: 44100,
             channels: 1,
             bitsPerSample: 16,
             wavFile: `rhythm_recording_${Date.now()}.wav`,
@@ -150,7 +151,6 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
         AudioRecord.start();
         onRecordingStart();
         
-        // Duration timer
         durationTimerRef.current = setInterval(() => {
             setDuration(prev => {
                 if (prev >= maxDuration - 1) {
@@ -160,9 +160,6 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
                 return prev + 1;
             });
         }, 1000);
-        
-        // Audio level monitoring (simulated - actual implementation depends on library)
-        // In a real implementation, use AudioRecord's onData callback
     }, [maxDuration, onRecordingStart]);
     
     const stopRecording = useCallback(async () => {
@@ -175,21 +172,31 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
         try {
             const filePath = await AudioRecord.stop();
             
+            if (duration < 1) {
+                Alert.alert(t('common.error'), t('rhythmChallenge.errors.recordingTooShort'));
+                setPhase('IDLE');
+                return;
+            }
+
             // Verify file exists
             let exists = false;
+            const finalPath = filePath || audioFilePath.current;
             if (isRNFSAvailable()) {
-                exists = await RNFS.exists(filePath || audioFilePath.current);
+                exists = await RNFS.exists(finalPath);
             } else {
-                console.warn('RNFS not available, skipping file existence check');
-                exists = true; // Fallback or handle differently
+                exists = true; 
             }
 
             if (!exists) {
                 throw new Error('Recording file not found');
             }
             
+            const uri = Platform.OS === 'android' && !finalPath.startsWith('file://')
+                ? `file://${finalPath}`
+                : finalPath;
+
             const audioFile = {
-                uri: `file://${filePath || audioFilePath.current}`,
+                uri,
                 name: `rhythm_${Date.now()}.wav`,
                 type: 'audio/wav',
             };
@@ -199,10 +206,10 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             
         } catch (error) {
             console.error('Recording error:', error);
-            Alert.alert('Error', 'Failed to save recording. Please try again.');
+            Alert.alert(t('common.error'), t('rhythmChallenge.errors.recordingFailed'));
             setPhase('IDLE');
         }
-    }, [onRecordingComplete]);
+    }, [onRecordingComplete, duration, t]);
     
     const cancelRecording = useCallback(() => {
         cleanup();
@@ -220,9 +227,7 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
         }
         try {
             AudioRecord.stop();
-        } catch (e) {
-            // Ignore
-        }
+        } catch (e) {}
     };
     
     const formatDuration = (seconds: number) => {
@@ -234,10 +239,10 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     if (!hasPermission) {
         return (
             <View style={styles.container}>
-                <MaterialCommunityIcons name="microphone-off" size={48} color="#F44336" />
-                <Text style={styles.errorText}>Microphone permission required</Text>
+                <MaterialCommunityIcons name="microphone-off" size={64} color={theme.colors.error.main} />
+                <Text style={styles.errorText}>{t('rhythmChallenge.errors.microphonePermission')}</Text>
                 <TouchableOpacity style={styles.permissionButton} onPress={requestPermissions}>
-                    <Text style={styles.permissionButtonText}>Grant Permission</Text>
+                    <Text style={styles.permissionButtonText}>{t('common.retry', 'Retry')}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -248,11 +253,11 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             {phase === 'IDLE' && (
                 <View style={styles.idleContainer}>
                     <TouchableOpacity style={styles.startButton} onPress={startCountdown}>
-                        <MaterialCommunityIcons name="microphone" size={48} color="#fff" />
-                        <Text style={styles.startButtonText}>Start Recording</Text>
+                        <MaterialCommunityIcons name="microphone" size={48} color={theme.colors.text.inverse} />
+                        <Text style={styles.startButtonText}>{t('rhythmChallenge.startRecording')}</Text>
                     </TouchableOpacity>
                     <Text style={styles.hintText}>
-                        Record your claps to match the rhythm pattern
+                        {t('rhythmChallenge.tapAlong')}
                     </Text>
                 </View>
             )}
@@ -260,7 +265,7 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             {phase === 'COUNTDOWN' && (
                 <View style={styles.countdownContainer}>
                     <Text style={styles.countdownText}>{countdown}</Text>
-                    <Text style={styles.countdownLabel}>Get ready to clap!</Text>
+                    <Text style={styles.countdownLabel}>{t('rhythmChallenge.getReady')}</Text>
                 </View>
             )}
             
@@ -270,34 +275,21 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
                         styles.recordingIndicator,
                         { transform: [{ scale: pulseAnim }] }
                     ]}>
-                        <MaterialCommunityIcons name="microphone" size={64} color="#F44336" />
+                        <MaterialCommunityIcons name="microphone" size={64} color={theme.colors.error.main} />
                     </Animated.View>
                     
-                    {/* Audio Level Visualization */}
-                    <View style={styles.levelContainer}>
-                        {[...Array(10)].map((_, i) => (
-                            <View
-                                key={i}
-                                style={[
-                                    styles.levelBar,
-                                    i < Math.floor(audioLevel * 10) && styles.levelBarActive,
-                                ]}
-                            />
-                        ))}
-                    </View>
-                    
                     <Text style={styles.recordingDuration}>{formatDuration(duration)}</Text>
-                    <Text style={styles.recordingHint}>Clap along with the rhythm!</Text>
+                    <Text style={styles.recordingHint}>{t('rhythmChallenge.recording')}</Text>
                     
                     <View style={styles.recordingControls}>
                         <TouchableOpacity style={styles.cancelButton} onPress={cancelRecording}>
-                            <MaterialCommunityIcons name="close" size={24} color="#fff" />
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                            <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.inverse} />
+                            <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                         </TouchableOpacity>
                         
                         <TouchableOpacity style={styles.stopButton} onPress={stopRecording}>
-                            <MaterialCommunityIcons name="stop" size={32} color="#fff" />
-                            <Text style={styles.stopButtonText}>Done</Text>
+                            <MaterialCommunityIcons name="check" size={32} color={theme.colors.text.inverse} />
+                            <Text style={styles.stopButtonText}>{t('rhythmChallenge.done')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -305,61 +297,58 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             
             {phase === 'PROCESSING' && (
                 <View style={styles.processingContainer}>
-                    <MaterialCommunityIcons name="loading" size={48} color="#4CAF50" />
-                    <Text style={styles.processingText}>Processing recording...</Text>
+                    <ActivityIndicator size="large" color={theme.colors.primary.main} />
+                    <Text style={styles.processingText}>{t('rhythmChallenge.processing')}</Text>
                 </View>
             )}
         </View>
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     idleContainer: {
         alignItems: 'center',
     },
     startButton: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.primary.main,
         width: 150,
         height: 150,
         borderRadius: 75,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#4CAF50',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 8,
+        ...theme.shadows.medium,
     },
     startButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 14,
-        fontWeight: '600',
-        marginTop: 8,
+        fontWeight: 'bold',
+        marginTop: theme.spacing.xs,
     },
     hintText: {
-        color: '#888',
-        fontSize: 14,
+        color: theme.colors.text.secondary,
+        fontSize: 16,
         textAlign: 'center',
-        marginTop: 20,
+        marginTop: theme.spacing.xl,
+        fontStyle: 'italic',
     },
     countdownContainer: {
         alignItems: 'center',
     },
     countdownText: {
         fontSize: 120,
-        fontWeight: 'bold',
-        color: '#4CAF50',
+        fontWeight: '900',
+        color: theme.colors.primary.main,
     },
     countdownLabel: {
-        fontSize: 20,
-        color: '#888',
-        marginTop: 16,
+        fontSize: 24,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.md,
     },
     recordingContainer: {
         alignItems: 'center',
@@ -368,91 +357,83 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: 'rgba(244, 67, 54, 0.2)',
+        backgroundColor: 'rgba(244, 67, 54, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    levelContainer: {
-        flexDirection: 'row',
-        marginTop: 20,
-        gap: 4,
-    },
-    levelBar: {
-        width: 8,
-        height: 30,
-        backgroundColor: '#333',
-        borderRadius: 4,
-    },
-    levelBarActive: {
-        backgroundColor: '#4CAF50',
+        borderWidth: 2,
+        borderColor: theme.colors.error.main,
     },
     recordingDuration: {
-        fontSize: 48,
+        fontSize: 56,
         fontWeight: 'bold',
-        color: '#fff',
-        marginTop: 20,
-        fontFamily: 'monospace',
+        color: theme.colors.text.inverse,
+        marginTop: theme.spacing.xl,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     },
     recordingHint: {
-        color: '#888',
-        fontSize: 16,
-        marginTop: 8,
+        color: theme.colors.error.main,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: theme.spacing.sm,
     },
     recordingControls: {
         flexDirection: 'row',
-        marginTop: 32,
-        gap: 20,
+        marginTop: theme.spacing['3xl'],
+        gap: theme.spacing.lg,
     },
     cancelButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#333',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.neutral.gray[700],
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     cancelButtonText: {
-        color: '#fff',
-        marginLeft: 8,
+        color: theme.colors.text.inverse,
+        marginLeft: theme.spacing.sm,
+        fontWeight: '600',
     },
     stopButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F44336',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        ...theme.shadows.small,
     },
     stopButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '600',
-        marginLeft: 8,
+        color: theme.colors.text.inverse,
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginLeft: theme.spacing.sm,
     },
     processingContainer: {
         alignItems: 'center',
     },
     processingText: {
-        color: '#888',
-        fontSize: 16,
-        marginTop: 16,
+        color: theme.colors.text.secondary,
+        fontSize: 18,
+        marginTop: theme.spacing.lg,
     },
     errorText: {
-        color: '#F44336',
+        color: theme.colors.error.main,
         fontSize: 16,
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
+        textAlign: 'center',
     },
     permissionButton: {
-        backgroundColor: '#2196F3',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 8,
-        marginTop: 16,
+        backgroundColor: theme.colors.primary.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.xl,
     },
     permissionButtonText: {
-        color: '#fff',
-        fontWeight: '600',
+        color: theme.colors.text.inverse,
+        fontWeight: 'bold',
     },
-});
+}));
 
 export default RhythmAudioRecorder;

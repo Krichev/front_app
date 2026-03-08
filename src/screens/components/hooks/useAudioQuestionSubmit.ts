@@ -83,6 +83,9 @@ export const useAudioQuestionSubmit = (
                     minimumScorePercentage: formData.minimumScorePercentage,
                     rhythmBpm: formData.rhythmBpm ?? undefined,
                     rhythmTimeSignature: formData.rhythmTimeSignature || undefined,
+                    answerInputMode: formData.answerInputMode,
+                    allowReplay: formData.allowReplay,
+                    maxReplays: formData.maxReplays,
                 };
 
                 // Prepare reference audio file if present
@@ -213,6 +216,9 @@ export const getDefaultsForChallengeType = (
     const base = {
         audioChallengeType: type,
         minimumScorePercentage: 60,
+        answerInputMode: 'BOTH' as const,
+        allowReplay: true,
+        maxReplays: 3,
     };
 
     switch (type) {
