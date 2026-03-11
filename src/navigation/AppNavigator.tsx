@@ -52,6 +52,7 @@ import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
 import { useGetRelationshipsQuery } from '../entities/UserState/model/slice/relationshipApi';
 import { RelationshipStatus } from '../entities/QuizState/model/types/question.types';
 import RhythmChallengeScreen from '../screens/RhythmChallengeScreen';
+import GameHistoryScreen from '../screens/GameHistoryScreen';
 import { PenaltyDashboardScreen } from '../screens/PenaltyDashboardScreen';
 import { PenaltyProofScreen } from '../screens/PenaltyProofScreen';
 import VibrationQuizScreen from '../screens/VibrationQuizScreen';
@@ -120,6 +121,7 @@ export type RootStackParamList = {
         difficulty?: VibrationDifficulty;
         questionCount?: number;
     };
+    GameHistory: undefined;
     BrainRingGamePlay: {
         sessionId: string;
         userId: string;
@@ -389,6 +391,7 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                                 animation: 'fade',
                             }}
                         />
+                        <Stack.Screen name="GameHistory" component={GameHistoryScreen} />
                         <Stack.Screen name="Matchmaking" component={MatchmakingScreen} />
                         <Stack.Screen name="MatchLobby" component={MatchLobbyScreen} />
                         <Stack.Screen name="LiveMatch" component={LiveMatchScreen} options={{ headerShown: false }} />

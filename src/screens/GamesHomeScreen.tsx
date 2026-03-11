@@ -8,6 +8,7 @@ import {useTranslation} from 'react-i18next';
 import {RootState} from '../app/providers/StoreProvider/store';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {RootStackParamList} from '../navigation/AppNavigator';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 
 // Define navigation parameter type
 type GamesHomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -16,6 +17,7 @@ const GamesHomeScreen: React.FC = () => {
     const navigation = useNavigation<GamesHomeScreenNavigationProp>();
     const { user } = useSelector((state: RootState) => state.auth);
     const { t } = useTranslation();
+    const { theme } = useAppStyles();
 
     // Game options to display
     const gameOptions = [
@@ -149,16 +151,26 @@ const GamesHomeScreen: React.FC = () => {
                     {adminOptions.map(renderGameCard)}
                 </View>
 
-                {/* Recent Activity */}
-                <View style={styles.recentActivitySection}>
-                    <Text style={styles.sectionTitle}>{t('games.recentActivity.title')}</Text>
-                    {/* Display a message when no activity is available */}
-                    <View style={styles.emptyStateContainer}>
-                        <MaterialCommunityIcons name="gamepad-variant" size={60} color="#e0e0e0" />
-                        <Text style={styles.emptyStateText}>
-                            {t('games.recentActivity.noActivity')}
-                        </Text>
-                    </View>
+                {/* Game History */}
+                <View style={styles.historySection}>
+                    <Text style={styles.sectionTitle}>{t('games.gameHistory.title')}</Text>
+                    <TouchableOpacity
+                        style={styles.historyCard}
+                        onPress={() => navigation.navigate('GameHistory')}
+                    >
+                        <View style={styles.historyCardContent}>
+                            <View style={[styles.historyIconContainer, { backgroundColor: theme.colors.primary.main + '15' }]}>
+                                <MaterialCommunityIcons name="history" size={28} color={theme.colors.primary.main} />
+                            </View>
+                            <View style={styles.historyCardText}>
+                                <Text style={styles.historyCardTitle}>{t('games.gameHistory.title')}</Text>
+                                <Text style={styles.historyCardSubtitle} numberOfLines={1}>
+                                    {t('games.gameHistory.searchPlaceholder')}
+                                </Text>
+                            </View>
+                            <MaterialCommunityIcons name="chevron-right" size={24} color="#ccc" />
+                        </View>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -310,22 +322,44 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
     },
-    recentActivitySection: {
+    historySection: {
         marginBottom: 32,
     },
-    emptyStateContainer: {
+    historyCard: {
         backgroundColor: 'white',
         borderRadius: 12,
-        padding: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
+        padding: 16,
+        marginTop: 12,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
-    emptyStateText: {
-        textAlign: 'center',
-        color: '#888',
-        marginTop: 16,
+    historyCardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    historyIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    historyCardText: {
+        flex: 1,
+    },
+    historyCardTitle: {
         fontSize: 16,
-        lineHeight: 24,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 2,
+    },
+    historyCardSubtitle: {
+        fontSize: 13,
+        color: '#888',
     },
 });
 

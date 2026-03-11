@@ -5,7 +5,7 @@ import {
     Alert,
     FlatList,
     SafeAreaView,
-    StyleSheet,
+    ScrollView,
     Text,
     TouchableOpacity,
     View,
@@ -21,6 +21,8 @@ import {CompletedQuestCard} from '../components/CompletedQuestCard/CompletedQues
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
 import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
+import { createStyles } from '../shared/ui/theme';
+import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
 
 // Define the types for the navigation parameters
 type RootStackParamList = {
@@ -37,11 +39,15 @@ type MainTabParamList = {
 type ChallengesScreenRouteProp = RouteProp<MainTabParamList, 'Challenges'>;
 type ChallengesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Challenges'>;
 
+type SortOption = 'newest' | 'oldest' | 'titleAZ' | 'titleZA';
+
 const ChallengesScreen: React.FC = () => {
     const { t } = useTranslation();
     const route = useRoute<ChallengesScreenRouteProp>();
     const navigation = useNavigation<ChallengesScreenNavigationProp>();
     const {user} = useSelector((state: RootState) => state.auth);
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
 
     // If the screen was navigated to with an initial filter, use it
     const initialFilterType = route.params?.initialFilter || null;
@@ -50,6 +56,7 @@ const ChallengesScreen: React.FC = () => {
     const [showParticipating, setShowParticipating] = useState<boolean>(true);
     const [showCreated, setShowCreated] = useState<boolean>(false);
     const [showCompleted, setShowCompleted] = useState<boolean>(false);
+    const [sortBy, setSortBy] = useState<SortOption>('newest');
 
     // RTK Query call to fetch challenges
     const {
@@ -85,7 +92,7 @@ const ChallengesScreen: React.FC = () => {
     const filteredChallenges = useMemo(() => {
         if (!challenges) return [];
 
-        return challenges.filter(challenge => {
+        const filtered = challenges.filter(challenge => {
             // participants can be string[], string, or null - need to handle all cases
             const participants = Array.isArray(challenge.participants)
                 ? challenge.participants
@@ -107,7 +114,23 @@ const ChallengesScreen: React.FC = () => {
             }
             return false;
         });
-    }, [challenges, showParticipating, showCreated, user?.id]);
+
+        // Sort
+        return [...filtered].sort((a, b) => {
+            switch (sortBy) {
+                case 'newest':
+                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                case 'oldest':
+                    return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+                case 'titleAZ':
+                    return (a.title || '').localeCompare(b.title || '');
+                case 'titleZA':
+                    return (b.title || '').localeCompare(a.title || '');
+                default:
+                    return 0;
+            }
+        });
+    }, [challenges, showParticipating, showCreated, user?.id, sortBy]);
 
     const handleToggleFilter = (filter: 'participating' | 'created' | 'completed') => {
         if (filter === 'completed') {
@@ -219,16 +242,54 @@ const ChallengesScreen: React.FC = () => {
                 </View>
             </View>
 
+            {/* Sort Options */}
+            <View style={styles.sortContainer}>
+                <Text style={styles.sortLabel}>{t('challenges.sortLabel')}</Text>
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.sortChipsContainer}
+                >
+                    {([
+                        { key: 'newest' as SortOption, label: t('challenges.sortNewest'), icon: 'sort-calendar-descending' },
+                        { key: 'oldest' as SortOption, label: t('challenges.sortOldest'), icon: 'sort-calendar-ascending' },
+                        { key: 'titleAZ' as SortOption, label: t('challenges.sortTitleAZ'), icon: 'sort-alphabetical-ascending' },
+                        { key: 'titleZA' as SortOption, label: t('challenges.sortTitleZA'), icon: 'sort-alphabetical-descending' },
+                    ] as const).map(option => (
+                        <TouchableOpacity
+                            key={option.key}
+                            style={[
+                                styles.sortChip,
+                                sortBy === option.key && styles.sortChipActive,
+                            ]}
+                            onPress={() => setSortBy(option.key)}
+                        >
+                            <MaterialCommunityIcons
+                                name={option.icon as any}
+                                size={16}
+                                color={sortBy === option.key ? theme.colors.primary.main : theme.colors.text.secondary}
+                            />
+                            <Text style={[
+                                styles.sortChipText,
+                                sortBy === option.key && styles.sortChipTextActive,
+                            ]}>
+                                {option.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
             {/* Main content area */}
             <View style={styles.content}>
                 {isDisplayLoading ? (
                     <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#4CAF50"/>
+                        <ActivityIndicator size="large" color={theme.colors.primary.main}/>
                         <Text style={styles.loadingText}>{t('challenges.loading')}</Text>
                     </View>
                 ) : displayError ? (
                     <View style={styles.errorContainer}>
-                        <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336"/>
+                        <MaterialCommunityIcons name="alert-circle" size={48} color={theme.colors.error.main}/>
                         <Text style={styles.errorText}>{t('challenges.error')}</Text>
                         <TouchableOpacity style={styles.retryButton} onPress={() => handleRefetch()}>
                             <Text style={styles.retryButtonText}>{t('challenges.retry')}</Text>
@@ -239,7 +300,7 @@ const ChallengesScreen: React.FC = () => {
                         <MaterialCommunityIcons 
                             name={showCompleted ? "trophy" : "trophy-outline"} 
                             size={64} 
-                            color="#999"
+                            color={theme.colors.text.disabled}
                         />
                         <Text style={styles.emptyText}>
                             {showCompleted ? "No completed quests yet" : t('challenges.emptyTitle')}
@@ -288,68 +349,112 @@ const ChallengesScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#4CAF50',
+        padding: theme.spacing.lg,
+        backgroundColor: theme.colors.primary.main,
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: 'white',
+        fontSize: theme.typography.fontSize['2xl'],
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     refreshButton: {
-        padding: 8,
+        padding: theme.spacing.sm,
     },
     roleFiltersContainer: {
-        backgroundColor: 'white',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        backgroundColor: theme.colors.background.paper,
+        padding: theme.spacing.lg,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.border.light,
     },
     filterLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 12,
-        fontWeight: '500',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.md,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     checkboxRow: {
         flexDirection: 'row',
-        gap: 20,
+        flexWrap: 'wrap',
+        gap: theme.spacing.lg,
+        rowGap: theme.spacing.sm,
     },
     checkboxContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: theme.spacing.sm,
+        minHeight: 44,
     },
     checkbox: {
         width: 24,
         height: 24,
         borderWidth: 2,
-        borderColor: '#4CAF50',
-        borderRadius: 4,
+        borderColor: theme.colors.primary.main,
+        borderRadius: theme.layout.borderRadius.sm,
         justifyContent: 'center',
         alignItems: 'center',
     },
     checkboxChecked: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.primary.main,
     },
     checkboxLabel: {
-        fontSize: 16,
-        color: '#333',
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+    },
+    sortContainer: {
+        backgroundColor: theme.colors.background.paper,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.sm,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.border.light,
+    },
+    sortLabel: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
+        marginBottom: theme.spacing.sm,
+    },
+    sortChipsContainer: {
+        gap: theme.spacing.sm,
+        paddingRight: theme.spacing.lg,
+    },
+    sortChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.full,
+        backgroundColor: theme.colors.background.secondary,
+        gap: theme.spacing.xs,
+        minHeight: 44,
+    },
+    sortChipActive: {
+        backgroundColor: theme.colors.primary.light,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.primary.main,
+    },
+    sortChipText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
+    },
+    sortChipTextActive: {
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     content: {
         flex: 1,
     },
     listContent: {
-        padding: 16,
+        padding: theme.spacing.lg,
         paddingBottom: 80,
     },
     loadingContainer: {
@@ -358,51 +463,51 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#666',
+        marginTop: theme.spacing.lg,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.secondary,
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 32,
+        padding: theme.spacing['3xl'],
     },
     errorText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginTop: 16,
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
+        marginTop: theme.spacing.lg,
+        marginBottom: theme.spacing.sm,
     },
     retryButton: {
-        marginTop: 16,
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        marginTop: theme.spacing.lg,
+        backgroundColor: theme.colors.primary.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     retryButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
+        color: theme.colors.text.inverse,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 32,
+        padding: theme.spacing['3xl'],
     },
     emptyText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginTop: 16,
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
+        marginTop: theme.spacing.lg,
+        marginBottom: theme.spacing.sm,
     },
     emptySubtext: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
     },
     fab: {
@@ -411,8 +516,8 @@ const styles = StyleSheet.create({
         bottom: 20,
         width: 60,
         height: 60,
-        borderRadius: 30,
-        backgroundColor: '#4CAF50',
+        borderRadius: theme.layout.borderRadius.full,
+        backgroundColor: theme.colors.primary.main,
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 8,
@@ -421,6 +526,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4,
     },
-});
+}));
 
 export default ChallengesScreen;

@@ -16,7 +16,7 @@ export const LowTimeWarningBanner: React.FC<LowTimeWarningBannerProps> = ({
     thresholdMinutes = 15,
     reappearIntervalMinutes = 5
 }) => {
-    const { availableSeconds, isLocked } = useScreenTime();
+    const { availableSeconds, isLocked, isBudgetLoading } = useScreenTime();
     const { theme } = useTheme();
     const insets = useSafeAreaInsets();
     const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -26,6 +26,9 @@ export const LowTimeWarningBanner: React.FC<LowTimeWarningBannerProps> = ({
     const slideAnim = useRef(new Animated.Value(-100)).current;
 
     useEffect(() => {
+        // Don't flash while data is still loading
+        if (isBudgetLoading) return;
+
         // Don't show banner when user is not authenticated
         if (!isAuthenticated) {
             if (visible) hideBanner();
@@ -52,7 +55,7 @@ export const LowTimeWarningBanner: React.FC<LowTimeWarningBannerProps> = ({
             showBanner();
         }
 
-    }, [availableSeconds, isLocked, dismissedAt, isAuthenticated]);
+    }, [availableSeconds, isLocked, dismissedAt, isAuthenticated, isBudgetLoading]);
 
     const showBanner = () => {
         setVisible(true);

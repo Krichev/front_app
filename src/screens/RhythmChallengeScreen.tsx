@@ -1,13 +1,8 @@
-/**
- * @deprecated Use RhythmChallengeScreenV2 instead for enhanced features including 
- * audio recording support and improved UI.
- */
 // src/screens/RhythmChallengeScreen.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     SafeAreaView,
     TouchableOpacity,
     ActivityIndicator,
@@ -16,6 +11,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Video, { VideoRef } from 'react-native-video';
+import { useTranslation } from 'react-i18next';
 
 import { RhythmTapPad } from './components/RhythmTapPad';
 import { RhythmBeatIndicators } from './components/RhythmBeatIndicators';
@@ -30,6 +26,8 @@ import {
     RhythmScoringResult,
     BeatIndicator,
 } from '../types/rhythmChallenge.types';
+import { useAppStyles } from '../shared/ui/theme';
+import { createStyles } from '../shared/ui/theme';
 
 // ============================================================================
 // TYPES
@@ -49,6 +47,10 @@ type RhythmChallengeRouteProp = RouteProp<RootStackParamList, 'RhythmChallenge'>
 // ============================================================================
 
 export const RhythmChallengeScreen: React.FC = () => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
+    
     const navigation = useNavigation();
     const route = useRoute<RhythmChallengeRouteProp>();
     
@@ -116,8 +118,10 @@ export const RhythmChallengeScreen: React.FC = () => {
     // ============================================================================
     
     const handlePlayReference = useCallback(() => {
+        if (isAudioPlaying) return;
+
         if (!audioUrl) {
-            Alert.alert('Error', 'Reference audio not available');
+            Alert.alert(t('common.error'), t('challengeDetails.launcher.audioConfigMissing'));
             return;
         }
         
@@ -134,7 +138,7 @@ export const RhythmChallengeScreen: React.FC = () => {
                 }, time);
             });
         }
-    }, [audioUrl, rhythmPattern]);
+    }, [audioUrl, rhythmPattern, isAudioPlaying, t]);
     
     const handleAudioEnd = useCallback(() => {
         setIsAudioPlaying(false);
@@ -166,16 +170,16 @@ export const RhythmChallengeScreen: React.FC = () => {
         
         if (timestamps.length < 2) {
             Alert.alert(
-                'Not enough taps',
-                'Please tap at least 2 times to submit.',
-                [{ text: 'OK' }]
+                t('rhythmChallenge.notEnoughTaps'),
+                t('rhythmChallenge.notEnoughTapsMessage'),
+                [{ text: t('common.ok') }]
             );
             setPhase('READY');
             return;
         }
         
         if (!rhythmPattern) {
-            Alert.alert('Error', 'Rhythm pattern not available');
+            Alert.alert(t('common.error'), t('audioChallenge.config.errorPick'));
             setPhase('READY');
             return;
         }
@@ -195,11 +199,11 @@ export const RhythmChallengeScreen: React.FC = () => {
             setPhase('RESULTS');
         } catch (err: any) {
             console.error('Scoring error:', err);
-            setError(err.message || 'Failed to score rhythm');
+            setError(err.message || t('rhythmChallenge.errors.scoringFailed'));
             setPhase('READY');
-            Alert.alert('Error', 'Failed to score your rhythm. Please try again.');
+            Alert.alert(t('common.error'), t('rhythmChallenge.errors.scoringFailed'));
         }
-    }, [stopCapture, rhythmPattern, scoreRhythm, questionId, question]);
+    }, [stopCapture, rhythmPattern, scoreRhythm, questionId, question, t]);
     
     const handleRetry = useCallback(() => {
         resetCapture();
@@ -232,8 +236,8 @@ export const RhythmChallengeScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#4CAF50" />
-                    <Text style={styles.loadingText}>Loading challenge...</Text>
+                    <ActivityIndicator size="large" color={theme.colors.success.main} />
+                    <Text style={styles.loadingText}>{t('rhythmChallenge.loadingChallenge')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -243,8 +247,8 @@ export const RhythmChallengeScreen: React.FC = () => {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={48} color="#F44336" />
-                    <Text style={styles.errorText}>Question not found</Text>
+                    <MaterialCommunityIcons name="alert-circle" size={48} color={theme.colors.error.main} />
+                    <Text style={styles.errorText}>{t('rhythmChallenge.questionNotFound')}</Text>
                 </View>
             </SafeAreaView>
         );
@@ -255,11 +259,11 @@ export const RhythmChallengeScreen: React.FC = () => {
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+                    <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text.inverse} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Rhythm Challenge</Text>
+                <Text style={styles.headerTitle}>{t('rhythmChallenge.title')}</Text>
                 <View style={styles.attemptBadge}>
-                    <Text style={styles.attemptText}>Attempt {attemptCount}</Text>
+                    <Text style={styles.attemptText}>{t('rhythmChallenge.attempt', { count: attemptCount })}</Text>
                 </View>
             </View>
             
@@ -280,7 +284,11 @@ export const RhythmChallengeScreen: React.FC = () => {
                 <Text style={styles.questionText}>{question.question}</Text>
                 {rhythmPattern && (
                     <Text style={styles.patternInfo}>
-                        {rhythmPattern.totalBeats} beats • ~{rhythmPattern.estimatedBpm} BPM • {rhythmPattern.timeSignature}
+                        {t('rhythmChallenge.patternInfo', {
+                            beats: rhythmPattern.totalBeats,
+                            bpm: rhythmPattern.estimatedBpm,
+                            timeSignature: rhythmPattern.timeSignature
+                        })}
                     </Text>
                 )}
             </View>
@@ -294,26 +302,39 @@ export const RhythmChallengeScreen: React.FC = () => {
                         mode="playback"
                     />
                     
-                    <View style={styles.actionButtons}>
-                        <TouchableOpacity style={styles.listenButton} onPress={handlePlayReference}>
-                            <MaterialCommunityIcons name="play-circle" size={32} color="#fff" />
-                            <Text style={styles.listenButtonText}>
-                                Listen {listenCount > 0 ? `(${listenCount})` : ''}
+                    {listenCount === 0 ? (
+                        <TouchableOpacity 
+                            style={styles.listenHintButton} 
+                            onPress={handlePlayReference}
+                            activeOpacity={0.7}
+                            disabled={isAudioPlaying}
+                        >
+                            <MaterialCommunityIcons 
+                                name="play-circle-outline" 
+                                size={28} 
+                                color={theme.colors.text.inverse} 
+                            />
+                            <Text style={styles.listenHintButtonText}>
+                                {t('rhythmChallenge.listenToPatternFirst')}
                             </Text>
                         </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                            style={[styles.startButton, listenCount === 0 && styles.startButtonDisabled]}
-                            onPress={handleStartRecording}
-                            disabled={listenCount === 0}
-                        >
-                            <MaterialCommunityIcons name="gesture-tap" size={32} color="#fff" />
-                            <Text style={styles.startButtonText}>Start Tapping</Text>
-                        </TouchableOpacity>
-                    </View>
-                    
-                    {listenCount === 0 && (
-                        <Text style={styles.hintText}>Listen to the pattern first!</Text>
+                    ) : (
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity style={styles.listenButton} onPress={handlePlayReference} disabled={isAudioPlaying}>
+                                <MaterialCommunityIcons name="play-circle" size={32} color={theme.colors.text.inverse} />
+                                <Text style={styles.listenButtonText}>
+                                    {t('rhythmChallenge.listenCount', { count: listenCount })}
+                                </Text>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                style={styles.startButton}
+                                onPress={handleStartRecording}
+                            >
+                                <MaterialCommunityIcons name="gesture-tap" size={32} color={theme.colors.text.inverse} />
+                                <Text style={styles.startButtonText}>{t('rhythmChallenge.startTapping')}</Text>
+                            </TouchableOpacity>
+                        </View>
                     )}
                 </View>
             )}
@@ -327,8 +348,8 @@ export const RhythmChallengeScreen: React.FC = () => {
                     />
                     
                     <View style={styles.playingIndicator}>
-                        <MaterialCommunityIcons name="volume-high" size={48} color="#4CAF50" />
-                        <Text style={styles.playingText}>Playing pattern...</Text>
+                        <MaterialCommunityIcons name="volume-high" size={48} color={theme.colors.success.main} />
+                        <Text style={styles.playingText}>{t('rhythmChallenge.playingPattern')}</Text>
                     </View>
                 </View>
             )}
@@ -336,7 +357,7 @@ export const RhythmChallengeScreen: React.FC = () => {
             {phase === 'COUNTDOWN' && (
                 <View style={styles.countdownContainer}>
                     <Text style={styles.countdownText}>{countdownValue}</Text>
-                    <Text style={styles.countdownLabel}>Get ready!</Text>
+                    <Text style={styles.countdownLabel}>{t('rhythmChallenge.getReady')}</Text>
                 </View>
             )}
             
@@ -361,8 +382,8 @@ export const RhythmChallengeScreen: React.FC = () => {
                         </Text>
                         
                         <TouchableOpacity style={styles.stopButton} onPress={handleStopRecording}>
-                            <MaterialCommunityIcons name="stop" size={32} color="#fff" />
-                            <Text style={styles.stopButtonText}>Done</Text>
+                            <MaterialCommunityIcons name="stop" size={32} color={theme.colors.text.inverse} />
+                            <Text style={styles.stopButtonText}>{t('rhythmChallenge.done')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -370,8 +391,8 @@ export const RhythmChallengeScreen: React.FC = () => {
             
             {phase === 'PROCESSING' && (
                 <View style={styles.processingContainer}>
-                    <ActivityIndicator size="large" color="#4CAF50" />
-                    <Text style={styles.processingText}>Analyzing your rhythm...</Text>
+                    <ActivityIndicator size="large" color={theme.colors.success.main} />
+                    <Text style={styles.processingText}>{t('rhythmChallenge.processing')}</Text>
                 </View>
             )}
             
@@ -390,10 +411,10 @@ export const RhythmChallengeScreen: React.FC = () => {
 // STYLES
 // ============================================================================
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#121212',
+        backgroundColor: theme.colors.background.primary || theme.colors.neutral.gray[900],
     },
     loadingContainer: {
         flex: 1,
@@ -401,8 +422,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     loadingText: {
-        color: '#888',
-        marginTop: 16,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.lg,
         fontSize: 16,
     },
     errorContainer: {
@@ -411,100 +432,112 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     errorText: {
-        color: '#F44336',
-        marginTop: 16,
+        color: theme.colors.error.main,
+        marginTop: theme.spacing.lg,
         fontSize: 18,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: theme.spacing.lg,
         borderBottomWidth: 1,
-        borderBottomColor: '#333',
+        borderBottomColor: theme.colors.neutral.gray[800],
     },
     backButton: {
-        padding: 8,
+        padding: theme.spacing.sm,
     },
     headerTitle: {
         flex: 1,
         fontSize: 18,
         fontWeight: '600',
-        color: '#fff',
-        marginLeft: 8,
+        color: theme.colors.text.inverse,
+        marginLeft: theme.spacing.sm,
     },
     attemptBadge: {
-        backgroundColor: '#333',
-        paddingHorizontal: 12,
+        backgroundColor: theme.colors.neutral.gray[800],
+        paddingHorizontal: theme.spacing.md,
         paddingVertical: 4,
-        borderRadius: 12,
+        borderRadius: theme.layout.borderRadius.full,
     },
     attemptText: {
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontSize: 12,
     },
     questionContainer: {
-        padding: 20,
+        padding: theme.spacing.xl,
         alignItems: 'center',
     },
     questionText: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#fff',
+        color: theme.colors.text.inverse,
         textAlign: 'center',
     },
     patternInfo: {
         fontSize: 14,
-        color: '#888',
-        marginTop: 8,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.sm,
     },
     readyContainer: {
         flex: 1,
         justifyContent: 'center',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     actionButtons: {
         flexDirection: 'row',
         justifyContent: 'center',
-        marginTop: 32,
-        gap: 16,
+        marginTop: theme.spacing['3xl'],
+        gap: theme.spacing.lg,
     },
     listenButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#2196F3',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
+        backgroundColor: theme.colors.info.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     listenButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 18,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
     startButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 12,
-    },
-    startButtonDisabled: {
-        backgroundColor: '#333',
-        opacity: 0.5,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     startButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 18,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
-    hintText: {
-        textAlign: 'center',
-        color: '#FFC107',
-        marginTop: 16,
-        fontSize: 14,
+    listenHintButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.info.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
+        marginTop: theme.spacing.xl,
+        minHeight: 52,
+        elevation: 4,
+        shadowColor: theme.colors.info.main,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+    },
+    listenHintButtonText: {
+        color: theme.colors.text.inverse,
+        fontSize: 16,
+        fontWeight: '700',
+        marginLeft: theme.spacing.sm,
     },
     listeningContainer: {
         flex: 1,
@@ -513,12 +546,12 @@ const styles = StyleSheet.create({
     },
     playingIndicator: {
         alignItems: 'center',
-        marginTop: 32,
+        marginTop: theme.spacing['3xl'],
     },
     playingText: {
-        color: '#4CAF50',
+        color: theme.colors.success.main,
         fontSize: 18,
-        marginTop: 8,
+        marginTop: theme.spacing.sm,
     },
     countdownContainer: {
         flex: 1,
@@ -528,17 +561,17 @@ const styles = StyleSheet.create({
     countdownText: {
         fontSize: 120,
         fontWeight: 'bold',
-        color: '#4CAF50',
+        color: theme.colors.success.main,
     },
     countdownLabel: {
         fontSize: 24,
-        color: '#888',
-        marginTop: 16,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.lg,
     },
     recordingContainer: {
         flex: 1,
         justifyContent: 'space-between',
-        padding: 20,
+        padding: theme.spacing.xl,
     },
     recordingControls: {
         flexDirection: 'row',
@@ -547,22 +580,22 @@ const styles = StyleSheet.create({
     },
     durationText: {
         fontSize: 24,
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontFamily: 'monospace',
     },
     stopButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F44336',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.error.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     stopButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 18,
         fontWeight: '600',
-        marginLeft: 8,
+        marginLeft: theme.spacing.sm,
     },
     processingContainer: {
         flex: 1,
@@ -570,10 +603,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     processingText: {
-        color: '#888',
+        color: theme.colors.text.secondary,
         fontSize: 18,
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
     },
-});
+}));
 
 export default RhythmChallengeScreen;

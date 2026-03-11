@@ -1,17 +1,17 @@
-import React, { createContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
-import { AppState, AppStateStatus, Platform } from 'react-native';
+import React, {createContext, ReactNode, useCallback, useEffect, useRef, useState} from 'react';
+import {AppState, AppStateStatus, Platform} from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { 
-    useGetScreenTimeBudgetQuery, 
-    useSyncScreenTimeMutation,
+import {
     useGetMyLockConfigQuery,
+    useGetScreenTimeBudgetQuery,
+    useSyncScreenTimeMutation,
     useUseEmergencyBypassMutation
 } from '../../entities/WagerState/model/slice/wagerApi';
-import { ScreenTimeBudget, ScreenTimeStatus, SyncTimeRequest } from '../../entities/WagerState/model/types';
-import { screenTimeStorage } from '../../features/ScreenTime/utils/screenTimeStorage';
-import { useSelector } from 'react-redux';
-import { RootState } from '../../app/providers/StoreProvider/store';
-import { DeviceLockService, LockConfig } from '../../services/deviceLock/DeviceLockService';
+import {ScreenTimeBudget, ScreenTimeStatus, SyncTimeRequest} from '../../entities/WagerState/model/types';
+import {screenTimeStorage} from '../../features/ScreenTime/utils/screenTimeStorage';
+import {useSelector} from 'react-redux';
+import {RootState} from '../../app/providers/StoreProvider/store';
+import {DeviceLockService, LockConfig} from '../../services/deviceLock/DeviceLockService';
 
 export interface ScreenTimeContextValue {
     // State
@@ -23,6 +23,7 @@ export interface ScreenTimeContextValue {
     availableSeconds: number; // For live countdown
     isTracking: boolean;
     isScreenTimeEnabled: boolean;
+    isBudgetLoading: boolean;
     
     // Actions
     startTracking: () => void;
@@ -258,7 +259,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         };
 
         try {
-            console.log(`[ScreenTime] Syncing ${minutesToSync} minutes`);
+            // console.log(`[ScreenTime] Syncing ${minutesToSync} minutes`);
             await syncTime(request).unwrap();
             
             // If successful, reduce accumulated seconds by the amount synced
@@ -414,6 +415,7 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         availableSeconds,
         isTracking,
         isScreenTimeEnabled: budget?.screenTimeEnabled !== false,
+        isBudgetLoading: isBudgetLoading || isBudgetUninitialized,
         startTracking,
         pauseTracking,
         syncNow,

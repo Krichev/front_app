@@ -1,7 +1,9 @@
 // src/screens/components/ChallengeFilters.tsx
 import React from 'react';
-import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { createStyles } from '../../shared/ui/theme';
+import { useTranslation } from 'react-i18next';
 
 interface FilterOption {
     id: string;
@@ -19,8 +21,11 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
                                                                selectedType,
                                                                onSelectType
                                                            }) => {
+    const { t } = useTranslation();
+    const styles = themeStyles;
+
     const typeFilters: FilterOption[] = [
-        { id: 'ALL', label: 'All', icon: 'view-grid', color: '#607D8B' },
+        { id: 'ALL', label: t('common.all'), icon: 'view-grid', color: '#607D8B' },
         { id: 'QUEST', label: 'Quests', icon: 'trophy', color: '#FF9800' },
         { id: 'QUIZ', label: 'Quizzes', icon: 'help-circle', color: '#4CAF50' },
         { id: 'ACTIVITY_PARTNER', label: 'Activity', icon: 'account-group', color: '#2196F3' },
@@ -31,7 +36,7 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
     // Special filter just for WWW quizzes
     const wwwFilter: FilterOption = {
         id: 'WWW_QUIZ',
-        label: 'WWW_QUIZ',
+        label: 'WWW',
         icon: 'brain',
         color: '#4CAF50'
     };
@@ -99,55 +104,58 @@ const ChallengeFilters: React.FC<ChallengeFiltersProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.lg,
     },
     title: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginLeft: 16,
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginLeft: theme.spacing.lg,
+        marginBottom: theme.spacing.sm,
     },
     filtersContainer: {
-        paddingHorizontal: 16,
+        paddingHorizontal: theme.spacing.lg,
+        paddingRight: theme.spacing['3xl'],
     },
     filterButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 16,
-        marginRight: 8,
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.full,
+        marginRight: theme.spacing.sm,
+        backgroundColor: theme.colors.background.paper,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.light,
+        minHeight: 44,
     },
     filterText: {
-        fontSize: 14,
-        color: '#555',
-        marginLeft: 4,
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        marginLeft: theme.spacing.xs,
     },
     wwwFilter: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 16,
-        marginTop: 12,
-        marginHorizontal: 16,
-        backgroundColor: 'white',
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.full,
+        marginTop: theme.spacing.md,
+        marginHorizontal: theme.spacing.lg,
+        backgroundColor: theme.colors.background.paper,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.light,
         alignSelf: 'flex-start',
+        minHeight: 44,
     },
     wwwFilterText: {
-        fontSize: 14,
-        color: '#555',
-        marginLeft: 8,
-        fontWeight: '500',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        marginLeft: theme.spacing.sm,
+        fontWeight: theme.typography.fontWeight.medium,
     },
-});
+}));
 
 export default ChallengeFilters;
