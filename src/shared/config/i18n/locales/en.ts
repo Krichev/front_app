@@ -1412,12 +1412,12 @@ const en = {
             fitness: 'Fitness Tracker',
             activity: 'Activity Tracking',
         },
-        history: {
+        sessionHistory: {
             title: 'Session History',
-            sessionNum: 'Session #{{num}}',
-            noDuration: 'N/A',
-            minutes: '{{count}}m',
-            seconds: '{{count}}s',
+            sessionNumber: 'Session #{{number}}',
+            score: '{{correct}}/{{total}} ({{percentage}}%)',
+            durationFormat: '{{minutes}}m {{seconds}}s',
+            noDuration: '—',
         },
     },
     audioGamePlay: {
@@ -1734,6 +1734,17 @@ const en = {
             },
         },
     },
+  screenLock: {
+    title: 'Screen Time Expired',
+    budgetExhaustedReason: 'Your screen time has been used up. The device will unlock when the next period begins.',
+    penaltyReason: 'A penalty is active: {{reason}}',
+    settingsButton: 'Screen Time Settings',
+    notificationTitle: 'Screen Time Limit Active',
+    notificationMessage: '{{minutes}} minutes remaining',
+    permissionTitle: 'Permission Required',
+    permissionMessage: 'RhythmGame needs the "Draw over other apps" permission to enforce screen time limits.',
+    permissionButton: 'Grant Permission',
+  },
 };
 
 export default en;

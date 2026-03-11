@@ -50,29 +50,17 @@
             </intent-filter>
         </activity>
 
-        <!-- Device Lock Components -->
+        <!-- Screen Lock Components -->
         <service
-            android:name=".devicelock.DeviceLockService"
+            android:name=".screenlock.ScreenLockService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
         <receiver
-            android:name=".devicelock.DeviceAdminReceiver"
-            android:permission="android.permission.BIND_DEVICE_ADMIN"
-            android:exported="true">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
-            android:name=".devicelock.BootReceiver"
+            android:name=".screenlock.BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

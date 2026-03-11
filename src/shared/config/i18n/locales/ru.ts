@@ -1331,12 +1331,12 @@ const ru = {
             fitness: 'Фитнес-трекер',
             activity: 'Отслеживание активности',
         },
-        history: {
+        sessionHistory: {
             title: 'История сессий',
-            sessionNum: 'Сессия #{{num}}',
-            noDuration: 'Н/Д',
-            minutes: '{{count}}м',
-            seconds: '{{count}}с',
+            sessionNumber: 'Сессия #{{number}}',
+            score: '{{correct}}/{{total}} ({{percentage}}%)',
+            durationFormat: '{{minutes}}м {{seconds}}с',
+            noDuration: '—',
         },
     },
     audioGamePlay: {
@@ -1680,6 +1680,17 @@ const ru = {
             },
         },
     },
+  screenLock: {
+    title: 'Экранное время истекло',
+    budgetExhaustedReason: 'Ваше экранное время исчерпано. Устройство разблокируется, когда начнется следующий период.',
+    penaltyReason: 'Активен штраф: {{reason}}',
+    settingsButton: 'Настройки экранного времени',
+    notificationTitle: 'Ограничение времени активно',
+    notificationMessage: 'Осталось {{minutes}} минут',
+    permissionTitle: 'Требуется разрешение',
+    permissionMessage: 'RhythmGame требуется разрешение "Поверх других приложений" для контроля экранного времени.',
+    permissionButton: 'Дать разрешение',
+  },
 };
 
 export default ru;

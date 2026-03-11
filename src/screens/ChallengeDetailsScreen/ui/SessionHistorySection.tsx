@@ -1,37 +1,57 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
-import { List, Text, Divider } from 'react-native-paper';
+import { View } from 'react-native';
+import { List, Text, Divider, ActivityIndicator } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useGetSessionHistoryQuery } from '../../../entities/ChallengeState/model/slice/challengeApi';
-import { useTheme } from '../../../shared/ui/theme';
-import { FormatterService } from '../../../services/verification/ui/Services';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme';
 
 interface SessionHistorySectionProps {
   challengeId: string;
 }
 
 export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ challengeId }) => {
+  const [expanded, setExpanded] = useState(false);
   const { t } = useTranslation();
-  const { colors } = useTheme();
-  const [expanded, setExpanded] = useState(true);
-  
-  const { data: history, isLoading, error } = useGetSessionHistoryQuery({ 
+  const { theme } = useAppStyles();
+  const styles = themeStyles;
+
+  const { data: history, isLoading, error } = useGetSessionHistoryQuery({
     challengeId,
-    size: 10 
+    size: 10,
   });
 
   const getScoreIcon = (percentage: number) => {
-    if (percentage >= 80) return { name: 'check-circle', color: colors.success.main };
-    if (percentage >= 40) return { name: 'alert-circle', color: colors.warning.main };
-    return { name: 'close-circle', color: colors.error.main };
+    if (percentage >= 80) return { name: 'check-circle', color: theme.colors.success.main };
+    if (percentage >= 40) return { name: 'alert-circle', color: theme.colors.warning.main };
+    return { name: 'close-circle', color: theme.colors.error.main };
   };
 
-  if (isLoading) {
-    return <ActivityIndicator style={{ margin: 20 }} color={colors.primary.main} />;
-  }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
+  const formatDuration = (durationSeconds: number | null): string => {
+    if (durationSeconds == null || durationSeconds <= 0) {
+      return t('challengeDetails.sessionHistory.noDuration');
+    }
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+    return t('challengeDetails.sessionHistory.durationFormat', { minutes, seconds });
+  };
+
+  // Ensure history is an array before attempting to use it
   const sessions = Array.isArray(history) ? history : [];
+
+  if (isLoading) {
+    return <ActivityIndicator style={{ margin: 20 }} />;
+  }
 
   if (error || sessions.length === 0) {
     return null;
@@ -39,42 +59,43 @@ export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ ch
 
   return (
     <List.Accordion
-      title={t('challengeDetails.history.title')}
-      left={props => <List.Icon {...props} icon="history" color={colors.text.secondary} />}
+      title={t('challengeDetails.sessionHistory.title')}
+      left={props => <List.Icon {...props} icon="history" />}
       expanded={expanded}
       onPress={() => setExpanded(!expanded)}
-      style={[styles.accordion, { backgroundColor: colors.background.primary }]}
-      titleStyle={{ color: colors.text.primary }}
+      style={styles.accordion}
     >
-      <View style={[styles.container, { backgroundColor: colors.background.secondary }]}>
+      <View style={styles.container}>
         {sessions.map((session, index) => {
           const icon = getScoreIcon(session.scorePercentage);
 
           return (
             <View key={session.sessionId}>
               <View style={styles.sessionRow}>
-                <MaterialCommunityIcons name={icon.name as any} size={20} color={icon.color} />
+                <MaterialCommunityIcons
+                  name={icon.name as any}
+                  size={20}
+                  color={icon.color}
+                />
                 <View style={styles.sessionInfo}>
-                  <Text style={[styles.sessionTitle, { color: colors.text.primary }]}>
-                    {t('challengeDetails.history.sessionNum', { num: sessions.length - index })}
+                  <Text variant="bodyMedium" style={styles.sessionTitle}>
+                    {t('challengeDetails.sessionHistory.sessionNumber', {
+                      number: sessions.length - index,
+                    })}
                   </Text>
-                  <Text style={[styles.sessionMeta, { color: colors.text.secondary }]}>
-                    {FormatterService.formatDate(session.createdAt)} • {session.duration 
-                      ? t('challengeDetails.history.minutes', { count: Math.floor(session.duration / 60) }) + ' ' + 
-                        t('challengeDetails.history.seconds', { count: session.duration % 60 }) 
-                      : t('challengeDetails.history.noDuration')}
-                  </Text>
-                </View>
-                <View style={styles.scoreContainer}>
-                  <Text style={[styles.scoreText, { color: icon.color }]}>
-                    {session.correctAnswers}/{session.totalRounds}
-                  </Text>
-                  <Text style={[styles.percentageText, { color: colors.text.secondary }]}>
-                    ({session.scorePercentage.toFixed(0)}%)
+                  <Text variant="bodySmall" style={styles.sessionMeta}>
+                    {formatDate(session.createdAt)} • {formatDuration(session.duration)}
                   </Text>
                 </View>
+                <Text variant="bodyMedium" style={[styles.scoreText, { color: icon.color }]}>
+                  {t('challengeDetails.sessionHistory.score', {
+                    correct: session.correctAnswers,
+                    total: session.totalRounds,
+                    percentage: Math.round(session.scorePercentage),
+                  })}
+                </Text>
               </View>
-              {index < sessions.length - 1 && <Divider style={{ backgroundColor: colors.border.light }} />}
+              {index < sessions.length - 1 && <Divider style={styles.divider} />}
             </View>
           );
         })}
@@ -83,38 +104,37 @@ export const SessionHistorySection: React.FC<SessionHistorySectionProps> = ({ ch
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   accordion: {
-    marginTop: 8,
+    backgroundColor: theme.colors.background.primary,
+    marginTop: theme.spacing.sm,
   },
   container: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
   },
   sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.sm,
   },
   sessionInfo: {
     flex: 1,
-    marginLeft: 12,
   },
   sessionTitle: {
-    fontWeight: '700',
-    fontSize: 14,
+    color: theme.colors.text.primary,
+    fontWeight: '600' as const,
   },
   sessionMeta: {
-    fontSize: 12,
-  },
-  scoreContainer: {
-    alignItems: 'flex-end',
+    color: theme.colors.text.secondary,
+    marginTop: 2,
   },
   scoreText: {
-    fontWeight: '800',
-    fontSize: 16,
+    fontWeight: '600' as const,
+    fontSize: 13,
   },
-  percentageText: {
-    fontSize: 10,
+  divider: {
+    backgroundColor: theme.colors.divider,
   },
-});
+}));

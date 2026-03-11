@@ -19,7 +19,7 @@ class MainApplication : Application(), ReactApplication {
             PackageList(this).packages.apply {
               // Packages that cannot be autolinked yet can be added manually here, for example:
               // add(MyReactNativePackage())
-              add(com.rhythmgame.devicelock.DeviceLockPackage())
+              add(com.rhythmgame.screenlock.ScreenLockPackage())
               add(com.rhythmgame.apkinstaller.ApkInstallerPackage())
             }
 

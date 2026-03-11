@@ -33,6 +33,9 @@ import {ThemeProvider} from './src/shared/ui/theme/ThemeProvider';
 import { I18nProvider, useI18n } from './src/app/providers/I18nProvider';
 import { navigateToTabWithRef } from './src/utils/navigation';
 import { useAppUpdate, UpdateModal } from './src/features/AppUpdate';
+import { useDeviceScreenLock } from './src/features/ScreenTime/hooks/useDeviceScreenLock';
+import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const linking = {
     prefixes: ['challengerapp://', 'https://play.yourapp.com'],
@@ -49,6 +52,21 @@ const linking = {
 const AppContent: React.FC = () => {
     const { currentLanguage } = useI18n();
     const { showModal, checkForUpdate, ...updateProps } = useAppUpdate();
+    const { needsPermission, requestPermission } = useDeviceScreenLock();
+    const { t } = useTranslation();
+
+    React.useEffect(() => {
+        if (needsPermission) {
+            Alert.alert(
+                t('screenLock.permissionTitle'),
+                t('screenLock.permissionMessage'),
+                [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { text: t('screenLock.permissionButton'), onPress: requestPermission }
+                ]
+            );
+        }
+    }, [needsPermission, requestPermission, t]);
 
     React.useEffect(() => {
         // Delay update check to not block app startup
@@ -59,13 +77,6 @@ const AppContent: React.FC = () => {
     }, [checkForUpdate]);
 
     const handleViewPenalties = useCallback(() => {
-        // Navigate to penalties - the overlay might block interaction unless we handle this carefully.
-        // But since we are passing this callback, the overlay calls it on press.
-        // We rely on the overlay staying visible but maybe allowing the navigation transition underneath
-        // OR the overlay might momentarily hide or we might need to unlock?
-        // Actually the requirement is "Lock should be dismissible ONLY if time is restored".
-        // But we want to allow user to view penalties to UNLOCK the time.
-        // So we navigate to PenaltyDashboard.
         if (navigationRef.current?.isReady()) {
             navigationRef.current?.navigate('PenaltyDashboard');
         }
@@ -80,10 +91,6 @@ const AppContent: React.FC = () => {
             <ScreenTimeProvider>
                 <WWWGameProvider>
                     <AppNavigation key={currentLanguage} linking={linking} />
-                    <AppLockOverlay 
-                        onViewPenalties={handleViewPenalties}
-                        onOpenSettings={handleOpenSettings}
-                    />
                     <LowTimeWarningBanner />
                     <UpdateModal visible={showModal} {...updateProps} />
                 </WWWGameProvider>

@@ -11,7 +11,6 @@ import {ScreenTimeBudget, ScreenTimeStatus, SyncTimeRequest} from '../../entitie
 import {screenTimeStorage} from '../../features/ScreenTime/utils/screenTimeStorage';
 import {useSelector} from 'react-redux';
 import {RootState} from '../../app/providers/StoreProvider/store';
-import {DeviceLockService, LockConfig} from '../../services/deviceLock/DeviceLockService';
 
 export interface ScreenTimeContextValue {
     // State
@@ -100,7 +99,6 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
         if (isBudgetError) {
             setIsLocked(false);
             setIsInitialized(true);
-            if (Platform.OS === 'android') DeviceLockService.deactivateLock();
             return;
         }
 
@@ -111,29 +109,11 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             
             const isEnabled = budget.screenTimeEnabled !== false;
             const shouldLock = isEnabled && (budget.availableMinutes <= 0 || budget.lockedMinutes > 0);
-            const wasLocked = isLocked;
-            const isFirstLoad = isFirstBudgetLoadRef.current;
             
             setIsLocked(shouldLock);
             setIsInitialized(true);
             isFirstBudgetLoadRef.current = false; // Mark first load complete
             screenTimeStorage.saveLastLockState(shouldLock);
-            
-            // Only activate native lock on CHANGES, not on first load
-            if (shouldLock && !wasLocked && !isFirstLoad && Platform.OS === 'android' && lockConfig) {
-                const config: LockConfig = {
-                    lockType: lockConfig.escalationEnabled ? 'both' : 'overlay',
-                    resetTime: new Date(budget.lastResetDate).toISOString(), // Simplified
-                    lockReason: budget.availableMinutes <= 0 ? 'screen_time_expired' : 'penalty',
-                    allowEmergencyBypass: lockConfig.allowEmergencyBypass,
-                    maxEmergencyBypasses: lockConfig.maxEmergencyBypassesPerMonth,
-                    accountType: authUser?.childAccount ? 'child' : 'adult',
-                    escalateAfterDismissAttempts: lockConfig.escalationAfterAttempts
-                };
-                DeviceLockService.activateLock(config);
-            } else if (!shouldLock && wasLocked && Platform.OS === 'android') {
-                DeviceLockService.deactivateLock();
-            }
             
             setStatus({
                 isLocked: shouldLock,
@@ -182,48 +162,9 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
             // Clear stored data to prevent stale lock state on next login
             screenTimeStorage.clearAll();
 
-            // Deactivate native lock service
-            if (Platform.OS === 'android') {
-                DeviceLockService.deactivateLock();
-            }
-
             console.log('[ScreenTime] Reset state - user not authenticated');
         }
     }, [isAuthenticated]);
-
-    // Native Event Listeners
-    useEffect(() => {
-        if (Platform.OS !== 'android') return;
-
-        const unlockSub = DeviceLockService.onUnlockRequested(() => {
-            console.log('[ScreenTime] Unlock requested via native overlay');
-            // Logic to navigate to unlock request screen or show modal
-        });
-
-        const bypassSub = DeviceLockService.onEmergencyBypassUsed(async (data) => {
-            console.log('[ScreenTime] Emergency bypass used via native overlay', data);
-            try {
-                await triggerEmergencyBypass().unwrap();
-                if (!isBudgetUninitialized) {
-                    refreshBudget();
-                }
-            } catch (e) {
-                console.error('[ScreenTime] Failed to sync emergency bypass', e);
-            }
-        });
-
-        const attemptSub = DeviceLockService.onLockDismissAttempt(({ attemptCount }) => {
-            if (lockConfig?.escalationEnabled && attemptCount >= (lockConfig.escalationAfterAttempts || 3)) {
-                DeviceLockService.escalateToHardLock();
-            }
-        });
-
-        return () => {
-            unlockSub.remove();
-            bypassSub.remove();
-            attemptSub.remove();
-        };
-    }, [lockConfig, refreshBudget, triggerEmergencyBypass, isBudgetUninitialized]);
 
     // Format time helper
     const getFormattedTime = (seconds: number) => {
@@ -282,10 +223,6 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
         console.log(`[ScreenTime] Processing ${pending.length} pending syncs`);
         
-        // We can batch them or send one by one. Let's send one by one for simplicity.
-        // Or aggregate them? The API takes one request.
-        // Let's aggregate if possible, or just loop.
-        
         // Aggregating:
         let totalMinutes = 0;
         for (const p of pending) {
@@ -318,11 +255,6 @@ export const ScreenTimeProvider: React.FC<{children: ReactNode}> = ({children}) 
 
                 const now = Date.now();
                 const delta = now - lastTickTimeRef.current;
-                
-                // Only count if delta is reasonable (e.g. not waking from sleep with huge delta)
-                // Although for accurate tracking we might want to count it?
-                // But requirement says "Pause tracking when app goes to background".
-                // If the interval fires, we are likely in foreground.
                 
                 if (delta >= 1000) {
                     const secondsPassed = Math.floor(delta / 1000);
