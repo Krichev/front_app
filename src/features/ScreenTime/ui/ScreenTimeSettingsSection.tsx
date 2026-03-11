@@ -27,9 +27,11 @@ import { RootState } from '../../../app/providers/StoreProvider/store';
 export const ScreenTimeSettingsSection: React.FC = () => {
     const { t } = useTranslation();
     const { theme } = useTheme();
-    const { user: currentUser } = useSelector((state: RootState) => state.auth);
+    const { user: currentUser, isAuthenticated } = useSelector((state: RootState) => state.auth);
     
-    const { data: budget, isLoading: isLoadingBudget } = useGetScreenTimeBudgetQuery();
+    const { data: budget, isLoading: isLoadingBudget } = useGetScreenTimeBudgetQuery(undefined, {
+        skip: !isAuthenticated
+    });
     const [toggleSelf, { isLoading: isTogglingSelf }] = useToggleScreenTimeMutation();
     const [delegate, { isLoading: isDelegating }] = useDelegateScreenTimeControlMutation();
     const [release, { isLoading: isReleasing }] = useReleaseScreenTimeControlMutation();

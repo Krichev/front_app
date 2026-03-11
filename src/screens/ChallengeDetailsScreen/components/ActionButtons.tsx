@@ -52,7 +52,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 
             {canReplay && (
                 <TouchableOpacity
-                    style={[styles.button, styles.primaryButton, { backgroundColor: '#4CAF50', marginBottom: 12 }]}
+                    style={[styles.button, styles.successButton, { marginBottom: 12 }]}
                     onPress={onStartQuiz}
                     disabled={isStartingQuiz}
                 >
@@ -61,7 +61,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
                     ) : (
                         <>
                             <MaterialCommunityIcons name="refresh" size={24} color="white"/>
-                            <Text style={styles.buttonText}>Replay Quiz 🔄</Text>
+                            <Text style={styles.buttonText}>{t('challengeDetails.actions.replayQuiz')}</Text>
                         </>
                     )}
                 </TouchableOpacity>

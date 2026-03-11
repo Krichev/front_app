@@ -172,13 +172,17 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
         return null;
     }
 
+    // CRITICAL: Only show lock if it's actually initialized from API
+    // This prevents "flash" of lock screen from stale storage data on app open
+    const shouldShow = isLocked && isInitialized;
+
     const pendingPenalties = propPenalties || (penaltyData?.content?.map(p => ({
         id: p.id,
         description: p.description,
         minutesLocked: p.screenTimeMinutes || 30 // Default or from penalty
     })) || []);
     
-    if (!isLocked && !isUnlocking) {
+    if (!shouldShow && !isUnlocking) {
         return null;
     }
 
@@ -188,7 +192,7 @@ export const AppLockOverlay: React.FC<AppLockOverlayProps> = ({
     
     return (
         <Modal
-            visible={isLocked}
+            visible={shouldShow}
             transparent
             animationType="none" // We handle animation manually
             statusBarTranslucent

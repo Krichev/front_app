@@ -23,23 +23,44 @@ export const ChallengeInfoSection: React.FC<ChallengeInfoSectionProps> = ({
 }) => {
     const { t } = useTranslation();
 
+    const visibilityLabels: Record<string, string> = {
+        PUBLIC: t('challengeDetails.visibility.public'),
+        PRIVATE: t('challengeDetails.visibility.private'),
+        GROUP_ONLY: t('challengeDetails.visibility.groupOnly'),
+    };
+
+    const verificationLabels: Record<string, string> = {
+        PHOTO: t('challengeDetails.verification.photo'),
+        LOCATION: t('challengeDetails.verification.location'),
+        QUIZ: t('challengeDetails.verification.quiz'),
+        MANUAL: t('challengeDetails.verification.manual'),
+        FITNESS: t('challengeDetails.verification.fitness'),
+        ACTIVITY: t('challengeDetails.verification.activity'),
+    };
+
     return (
         <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('challengeDetails.info.title')}</Text>
+            
             <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('challengeDetails.info.created')}</Text>
                 <Text style={styles.infoValue}>{FormatterService.formatDate(createdAt)}</Text>
             </View>
+
             <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>{t('challengeDetails.info.visibility')}</Text>
-                <Text style={styles.infoValue}>{visibility}</Text>
+                <Text style={styles.infoValue}>
+                    {visibilityLabels[visibility] || visibility}
+                </Text>
             </View>
+
             {reward && (
                 <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>{t('challengeDetails.info.reward')}</Text>
                     <Text style={styles.infoValue}>{reward}</Text>
                 </View>
             )}
+
             {penalty && (
                 <View style={styles.infoRow}>
                     <Text style={styles.infoLabel}>{t('challengeDetails.info.penalty')}</Text>
@@ -54,7 +75,7 @@ export const ChallengeInfoSection: React.FC<ChallengeInfoSectionProps> = ({
                         {verificationMethods.map((method, index) => (
                             <View key={index} style={styles.verificationBadge}>
                                 <Text style={styles.verificationText}>
-                                    {method?.type ? method.type.charAt(0) + method.type.slice(1).toLowerCase() : t('challengeDetails.info.unknown')}
+                                    {method?.type ? (verificationLabels[method.type] || method.type) : t('challengeDetails.info.unknown')}
                                 </Text>
                             </View>
                         ))}

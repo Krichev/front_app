@@ -50,8 +50,9 @@ export const styles = createStyles((theme: Theme) => ({
     deleteHeaderButton: {
         padding: theme.spacing.xs,
         marginLeft: theme.spacing.xs,
-        backgroundColor: 'rgba(255, 59, 48, 0.8)',
+        backgroundColor: theme.colors.error.main,
         borderRadius: theme.layout.borderRadius.md,
+        opacity: 0.8,
     },
     title: {
         fontSize: theme.typography.fontSize['2xl'],
@@ -76,13 +77,16 @@ export const styles = createStyles((theme: Theme) => ({
         borderRadius: theme.layout.borderRadius.lg,
     },
     statusActive: {
-        backgroundColor: 'rgba(76, 175, 80, 0.7)',
+        backgroundColor: theme.colors.success.main,
+        opacity: 0.7,
     },
     statusCompleted: {
-        backgroundColor: 'rgba(33, 150, 243, 0.7)',
+        backgroundColor: theme.colors.info.main,
+        opacity: 0.7,
     },
     statusFailed: {
-        backgroundColor: 'rgba(244, 67, 54, 0.7)',
+        backgroundColor: theme.colors.error.main,
+        opacity: 0.7,
     },
     badgeText: {
         color: theme.colors.text.inverse,
@@ -114,17 +118,17 @@ export const styles = createStyles((theme: Theme) => ({
         lineHeight: 20,
     },
     debugContainer: {
-        backgroundColor: '#ffe6e6',
+        backgroundColor: theme.colors.error.background,
         borderRadius: theme.layout.borderRadius.md,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.md,
         borderWidth: 1,
-        borderColor: '#ffcccc',
+        borderColor: theme.colors.error.light,
     },
     debugTitle: {
         fontSize: theme.typography.fontSize.sm,
         fontWeight: theme.typography.fontWeight.bold,
-        color: '#cc0000',
+        color: theme.colors.error.dark,
         marginBottom: theme.spacing.xs,
     },
     debugText: {
@@ -171,14 +175,14 @@ export const styles = createStyles((theme: Theme) => ({
         gap: 6,
     },
     verificationBadge: {
-        backgroundColor: '#E3F2FD',
+        backgroundColor: theme.colors.info.background,
         paddingHorizontal: theme.spacing.sm,
         paddingVertical: 4,
         borderRadius: theme.layout.borderRadius.lg,
     },
     verificationText: {
         fontSize: theme.typography.fontSize.xs,
-        color: '#1976D2',
+        color: theme.colors.info.dark,
         fontWeight: theme.typography.fontWeight.medium,
     },
     creatorSection: {
@@ -251,7 +255,7 @@ export const styles = createStyles((theme: Theme) => ({
     },
     buttonDisabled: {
         opacity: 0.7,
-        backgroundColor: '#A0A0A0',
+        backgroundColor: theme.colors.neutral.gray[400],
     },
     primaryButton: {
         backgroundColor: theme.colors.primary.main,
@@ -280,7 +284,7 @@ export const styles = createStyles((theme: Theme) => ({
     audioRequirement: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff3e0',
+        backgroundColor: theme.colors.warning.background,
         padding: theme.spacing.md,
         borderRadius: theme.layout.borderRadius.md,
         marginTop: theme.spacing.md,

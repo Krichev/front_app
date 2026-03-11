@@ -138,19 +138,12 @@ const ChallengeDetailsScreen: React.FC = () => {
                 />
 
                 <View style={styles.content}>
-                    {challenge.description && (
-                        <DescriptionSection description={challenge.description} />
-                    )}
-
-                    <DebugSection
-                        userIsCreator={details.isCreator}
-                        hasUserJoined={details.hasUserJoined}
-                        participants={challenge.participants}
+                    <CreatorSection
+                        creatorId={challenge.creator_id}
+                        onPress={() => actions.navigateToCreatorProfile(challenge.creator_id)}
                     />
 
-                    {details.pendingWagerInvitation && (
-                        <WagerSection pendingWagerInvitation={details.pendingWagerInvitation} />
-                    )}
+                    <DescriptionSection description={challenge.description} />
 
                     <ChallengeInfoSection
                         createdAt={challenge.created_at}
@@ -161,17 +154,16 @@ const ChallengeDetailsScreen: React.FC = () => {
                         targetGroup={challenge.targetGroup}
                     />
 
-                    <CreatorSection
-                        creatorId={challenge.creator_id}
-                        onPress={() => actions.navigateToCreatorProfile(challenge.creator_id)}
-                    />
-
                     {details.isQuizType && details.quizConfig && (
                         <QuizConfigSection quizConfig={details.quizConfig} />
                     )}
 
                     {details.audioConfig && (
                         <AudioSection audioConfig={details.audioConfig} />
+                    )}
+
+                    {details.pendingWagerInvitation && (
+                        <WagerSection pendingWagerInvitation={details.pendingWagerInvitation} />
                     )}
 
                     {details.challenge.status === 'COMPLETED' && details.isQuizType && (
@@ -197,6 +189,14 @@ const ChallengeDetailsScreen: React.FC = () => {
                         }}
                         onShowInviteModal={() => setShowInviteModal(true)}
                     />
+
+                    {__DEV__ && (
+                        <DebugSection
+                            userIsCreator={details.isCreator}
+                            hasUserJoined={details.hasUserJoined}
+                            participants={challenge.participants}
+                        />
+                    )}
                 </View>
             </ScrollView>
 

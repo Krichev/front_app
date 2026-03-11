@@ -25,11 +25,19 @@ export const ChallengeHeader: React.FC<ChallengeHeaderProps> = ({
 }) => {
     const { t } = useTranslation();
 
+    const statusLabels: Record<string, string> = {
+        ACTIVE: t('challengeDetails.status.active'),
+        CANCELLED: t('challengeDetails.status.cancelled'),
+        COMPLETED: t('challengeDetails.status.completed'),
+        EXPIRED: t('challengeDetails.status.expired'),
+        FAILED: t('challengeDetails.status.failed'),
+    };
+
     return (
         <>
             {isCancelled && (
                 <View style={styles.cancelledBanner}>
-                    <MaterialCommunityIcons name="cancel" size={24} color="#fff" />
+                    <MaterialCommunityIcons name="cancel" size={24} color="white" />
                     <Text style={styles.cancelledBannerText}>
                         {t('challengeDetails.messages.cancelled')}
                     </Text>
@@ -42,7 +50,9 @@ export const ChallengeHeader: React.FC<ChallengeHeaderProps> = ({
 
                         <View style={styles.badgeContainer}>
                             <View style={styles.typeBadge}>
-                                <Text style={styles.badgeText}>{type}</Text>
+                                <Text style={styles.badgeText}>
+                                    {t(`challengeDetails.gameTypes.${type.toLowerCase()}`, { defaultValue: type })}
+                                </Text>
                             </View>
                             {status && (
                                 <View style={[
@@ -51,7 +61,9 @@ export const ChallengeHeader: React.FC<ChallengeHeaderProps> = ({
                                     status === 'COMPLETED' && styles.statusCompleted,
                                     status === 'FAILED' && styles.statusFailed,
                                 ]}>
-                                    <Text style={styles.badgeText}>{status}</Text>
+                                    <Text style={styles.badgeText}>
+                                        {statusLabels[status] || status}
+                                    </Text>
                                 </View>
                             )}
                         </View>

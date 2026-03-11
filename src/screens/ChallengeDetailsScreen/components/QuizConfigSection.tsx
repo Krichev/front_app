@@ -15,6 +15,21 @@ export const QuizConfigSection: React.FC<QuizConfigSectionProps> = ({
 
     if (!quizConfig) return null;
 
+    const gameTypeLabels: Record<string, string> = {
+        WWW: t('challengeDetails.gameTypes.www'),
+        BLITZ: t('challengeDetails.gameTypes.blitz'),
+        TRIVIA: t('challengeDetails.gameTypes.trivia'),
+        CUSTOM: t('challengeDetails.gameTypes.custom'),
+        AUDIO: t('challengeDetails.gameTypes.audio'),
+    };
+
+    const difficultyLabels: Record<string, string> = {
+        EASY: t('challengeDetails.difficulty.easy'),
+        MEDIUM: t('challengeDetails.difficulty.medium'),
+        HARD: t('challengeDetails.difficulty.hard'),
+        MIXED: t('challengeDetails.difficulty.mixed'),
+    };
+
     const isWWWQuiz = quizConfig.gameType === 'WWW';
 
     return (
@@ -22,15 +37,20 @@ export const QuizConfigSection: React.FC<QuizConfigSectionProps> = ({
             <Text style={styles.quizTitle}>{t('challengeDetails.quiz.title')}</Text>
 
             <View style={styles.quizDetails}>
-                {isWWWQuiz ? (
+                <View style={styles.quizRow}>
+                    <Text style={styles.quizLabel}>{t('challengeDetails.quiz.gameType')}</Text>
+                    <Text style={styles.quizValue}>
+                        {quizConfig.gameType ? (gameTypeLabels[quizConfig.gameType] || quizConfig.gameType) : t('challengeDetails.quiz.quiz')}
+                    </Text>
+                </View>
+
+                {isWWWQuiz && (
                     <>
                         <View style={styles.quizRow}>
-                            <Text style={styles.quizLabel}>{t('challengeDetails.quiz.gameType')}</Text>
-                            <Text style={styles.quizValue}>{quizConfig.gameType || t('challengeDetails.quiz.quiz')}</Text>
-                        </View>
-                        <View style={styles.quizRow}>
                             <Text style={styles.quizLabel}>{t('challengeDetails.quiz.difficulty')}</Text>
-                            <Text style={styles.quizValue}>{quizConfig.difficulty || t('challengeDetails.quiz.medium')}</Text>
+                            <Text style={styles.quizValue}>
+                                {quizConfig.difficulty ? (difficultyLabels[quizConfig.difficulty] || quizConfig.difficulty) : t('challengeDetails.quiz.medium')}
+                            </Text>
                         </View>
                         <View style={styles.quizRow}>
                             <Text style={styles.quizLabel}>{t('challengeDetails.quiz.rounds')}</Text>
@@ -47,11 +67,6 @@ export const QuizConfigSection: React.FC<QuizConfigSectionProps> = ({
                             </View>
                         )}
                     </>
-                ) : (
-                    <View style={styles.quizRow}>
-                        <Text style={styles.quizLabel}>{t('challengeDetails.quiz.gameType')}</Text>
-                        <Text style={styles.quizValue}>{quizConfig.gameType || t('challengeDetails.quiz.standardQuiz')}</Text>
-                    </View>
                 )}
             </View>
         </View>

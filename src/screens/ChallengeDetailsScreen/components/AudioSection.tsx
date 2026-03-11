@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { styles } from '../styles';
+import { useTheme } from '../../../shared/ui/theme';
 import { QuestAudioPlayer } from '../../../components/QuestAudioPlayer';
 
 interface AudioSectionProps {
@@ -13,6 +14,7 @@ export const AudioSection: React.FC<AudioSectionProps> = ({
     audioConfig,
 }) => {
     const { t } = useTranslation();
+    const { colors } = useTheme();
 
     if (!audioConfig) return null;
 
@@ -25,7 +27,7 @@ export const AudioSection: React.FC<AudioSectionProps> = ({
             />
             {audioConfig.minimumScorePercentage > 0 && (
                 <View style={styles.audioRequirement}>
-                    <MaterialCommunityIcons name="trophy" size={20} color="#FF9800" />
+                    <MaterialCommunityIcons name="trophy" size={20} color={colors.warning.main} />
                     <Text style={styles.audioRequirementText}>
                         {t('challengeDetails.audio.requirement', { percentage: audioConfig.minimumScorePercentage })}
                     </Text>
