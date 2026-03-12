@@ -10,6 +10,10 @@ interface AudioPlayerProps {
   segmentStart?: number;
   segmentEnd?: number;
   onPlaybackComplete?: () => void;
+  onLoad?: (data: any) => void;
+  onError?: (error: any) => void;
+  style?: any;
+  activeColor?: string;
 }
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
@@ -17,6 +21,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   segmentStart = 0,
   segmentEnd,
   onPlaybackComplete,
+  onLoad,
+  onError,
+  style,
+  activeColor = '#4CAF50',
 }) => {
   const videoRef = useRef<VideoRef>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -60,6 +68,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     if (videoRef.current) {
         videoRef.current.seek(segmentStart);
     }
+    onLoad?.(data);
   };
 
   const handleEnd = () => {
@@ -80,7 +89,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       {/* Hidden Video component for audio playback */}
       <Video
         ref={videoRef}
@@ -92,6 +101,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         onProgress={handleProgress}
         onLoad={handleLoad}
         onEnd={handleEnd}
+        onError={onError}
         playInBackground={false}
         playWhenInactive={false}
         ignoreSilentSwitch="ignore"
@@ -103,14 +113,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           <MaterialCommunityIcons
             name={isPlaying ? 'pause' : 'play'}
             size={32}
-            color="#4CAF50"
+            color={activeColor}
           />
         </TouchableOpacity>
 
         <View style={styles.progressContainer}>
           <Text style={styles.timeText}>{formatTime(currentTime - segmentStart)}</Text>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: activeColor }]} />
           </View>
           <Text style={styles.timeText}>{formatTime(effectiveEnd - segmentStart)}</Text>
         </View>

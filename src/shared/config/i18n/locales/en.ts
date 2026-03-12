@@ -187,8 +187,12 @@ const en = {
             topicLabel: 'Topic (Optional)',
             topicPlaceholder: 'Select or enter topic',
             additionalInfoLabel: 'Additional Info (Optional)',
-            additionalInfoPlaceholder: 'Sources, hints, or extra context',
+            additionalInfoPlaceholder: 'Sources, hints or context',
+            acceptSimilarAnswers: 'Accept Similar Answers',
+            acceptSimilarAnswersDesc: 'AI will accept synonyms and paraphrased answers as correct (e.g. "car" = "automobile")',
+            acceptSimilarAnswersAudioNote: 'Audio challenges use audio scoring instead of text matching',
             submit: 'Add Question',
+
             cancel: 'Cancel',
             errorTitle: 'Error',
             errorQuestion: 'Please enter a question',
@@ -670,10 +674,14 @@ const en = {
         questionPlaceholder: 'Enter your question here...', 
 
         answerLabel: 'Answer',
-        answerRequired: 'Answer *',
-        answerPlaceholder: 'Enter the answer...', 
+        answerRequired: 'Question *',
+        answerPlaceholder: 'Enter the answer...',
+        acceptSimilarAnswers: 'Accept Similar Answers',
+        acceptSimilarAnswersDesc: 'AI will accept synonyms and paraphrased answers as correct (e.g. "car" = "automobile")',
+        acceptSimilarAnswersAudioNote: 'Audio challenges use audio scoring instead of text matching',
 
         // Media
+
         selectMedia: 'Select Media',
         uploadImage: 'Upload Image',
         uploadVideo: 'Upload Video',
@@ -719,6 +727,7 @@ const en = {
         // Messages
         createSuccess: 'Audio question created successfully',
         createFailed: 'Failed to create audio question. Please try again.',
+        playbackError: 'Failed to play audio. The file might be corrupted or moved.',
         audioRequired: 'Reference audio is required for this challenge type',
         recordReferenceAudio: 'Record Reference Audio',
         answerMode: {
@@ -1737,6 +1746,10 @@ const en = {
             stopRecording: 'Stop Recording',
             recordAgain: 'Record Again',
             audioNotAvailable: 'Audio not available',
+            listenAgain: 'Listen Again',
+            replaysRemaining: '{{count}} replays left',
+            unlimitedReplays: 'Unlimited replays',
+            noReplaysLeft: 'No replays left',
             startTimer: 'Start',
             answerModeText: 'Type Answer',
             answerModeRecord: 'Record Answer',

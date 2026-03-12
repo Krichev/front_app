@@ -62,6 +62,9 @@ const CreateUserQuestionScreen: React.FC = () => {
         existingQuestion?.difficulty || 'MEDIUM'
     );
     const [topic, setTopic] = useState<string>(existingQuestion?.topic || '');
+    const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState<boolean>(
+        existingQuestion?.acceptSimilarAnswers ?? true
+    );
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(
         existingQuestion?.additionalInfoLocalized || (existingQuestion?.additionalInfo ? createLocalizedString(existingQuestion.additionalInfo, 'en') : EMPTY_LOCALIZED_STRING)
@@ -107,6 +110,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                     answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
+                    acceptSimilarAnswers,
                     additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
                     additionalInfoLocalized: additionalInfo,
                     visibility,
@@ -122,6 +126,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                     answerLocalized: answer,
                     difficulty,
                     topic: topic.trim() || undefined,
+                    acceptSimilarAnswers,
                     additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || undefined,
                     additionalInfoLocalized: additionalInfo,
                     visibility,
@@ -184,6 +189,32 @@ const CreateUserQuestionScreen: React.FC = () => {
                                 numberOfLines={3}
                                 required
                             />
+                        </View>
+
+                        {/* Accept Similar Answers Toggle */}
+                        <View style={styles.inputGroup}>
+                            <View style={styles.toggleRow}>
+                                <View style={styles.toggleInfo}>
+                                    <Text style={styles.label}>{t('createQuest.addQuestion.acceptSimilarAnswers')}</Text>
+                                    <Text style={styles.helperText}>
+                                        {t('createQuest.addQuestion.acceptSimilarAnswersDesc')}
+                                    </Text>
+                                </View>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.toggle,
+                                        acceptSimilarAnswers && styles.toggleActive
+                                    ]}
+                                    onPress={() => setAcceptSimilarAnswers(!acceptSimilarAnswers)}
+                                >
+                                    <View
+                                        style={[
+                                            styles.toggleThumb,
+                                            acceptSimilarAnswers && styles.toggleThumbActive
+                                        ]}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         {/* Difficulty Picker */}
@@ -338,6 +369,33 @@ const styles = StyleSheet.create({
     },
     textArea: {
         minHeight: 80,
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    toggleInfo: {
+        flex: 1,
+    },
+    toggle: {
+        width: 50,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#ddd',
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: '#4CAF50',
+    },
+    toggleThumb: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+    },
+    toggleThumbActive: {
+        alignSelf: 'flex-end',
     },
     pickerContainer: {
         backgroundColor: '#fff',

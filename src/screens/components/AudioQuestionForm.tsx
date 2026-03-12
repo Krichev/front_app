@@ -1,6 +1,6 @@
 // src/screens/components/AudioQuestionForm.tsx
 import React, {useCallback, useMemo, useState} from 'react';
-import {ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Picker} from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
@@ -14,6 +14,7 @@ import AnswerModeSelector from './AnswerModeSelector';
 import ReplaySettingsSection from './ReplaySettingsSection';
 import FileService, {ProcessedFileInfo} from '../../services/speech/FileService';
 import {AudioRecorderCard} from '../../components/AudioRecorder/AudioRecorderCard';
+import {AudioPlayer} from './AudioPlayer';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../shared/ui/theme';
 import {useTranslation} from 'react-i18next';
@@ -36,6 +37,7 @@ export interface AudioQuestionFormData {
     topic: string;
     topicId?: number;
     visibility: QuestionVisibility;
+    acceptSimilarAnswers: boolean;
     additionalInfo: LocalizedString;
 
     // Audio challenge specific
@@ -80,6 +82,7 @@ const DEFAULT_FORM_DATA: AudioQuestionFormData = {
     topic: '',
     topicId: undefined,
     visibility: QuestionVisibility.PRIVATE,
+    acceptSimilarAnswers: false,
     additionalInfo: EMPTY_LOCALIZED_STRING,
     audioChallengeType: null,
     referenceAudioFile: null,
@@ -121,6 +124,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [audioInputMode, setAudioInputMode] = useState<'upload' | 'record'>('record');
     const [errors, setErrors] = useState<Partial<Record<keyof AudioQuestionFormData, string>>>({});
+    const [isAudioLoading, setIsAudioLoading] = useState(false);
+    const [audioError, setAudioError] = useState(false);
 
     // ============================================================================
     // DERIVED STATE
@@ -199,6 +204,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     const handleAudioPick = useCallback(async () => {
         try {
             setIsUploading(true);
+            setAudioError(false);
+            setIsAudioLoading(true);
 
             const result = await DocumentPicker.pick({
                 type: [
@@ -216,6 +223,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
             const file = result[0];
             if (!file) {
+                setIsAudioLoading(false);
                 throw new Error(t('questionEditor.errorMedia'));
             }
 
@@ -236,6 +244,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             // Validate file
             const validation = FileService.validateFile(processedFile);
             if (!validation.isValid) {
+                setIsAudioLoading(false);
                 Alert.alert(t('questionEditor.invalidFile'), validation.error || t('questionEditor.validAudio'));
                 return;
             }
@@ -246,6 +255,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             setErrors(prev => ({...prev, referenceAudioFile: undefined}));
 
         } catch (error) {
+            setIsAudioLoading(false);
             if (!DocumentPicker.isCancel(error)) {
                 console.error('Audio pick error:', error);
                 Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
@@ -257,11 +267,14 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
     const handleRecordingComplete = useCallback(async (path: string) => {
         try {
+            setAudioError(false);
+            setIsAudioLoading(true);
             // Validate file size
             const stats = await RNFS.stat(path);
             console.log('Recording stats:', stats);
 
             if (stats.size === 0) {
+                setIsAudioLoading(false);
                 Alert.alert(t('userQuestions.errorTitle'), 'Recording failed: File is empty (0 bytes). Please check microphone permissions and try again.');
                 return;
             }
@@ -281,6 +294,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             updateField('referenceAudioFile', processedFile);
             setErrors(prev => ({...prev, referenceAudioFile: undefined}));
         } catch (error) {
+            setIsAudioLoading(false);
             console.error('Error processing recording:', error);
             Alert.alert(t('userQuestions.errorTitle'), 'Failed to process recording.');
         }
@@ -290,6 +304,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         updateField('referenceAudioFile', null);
         updateField('audioSegmentStart', 0);
         updateField('audioSegmentEnd', null);
+        setAudioError(false);
+        setIsAudioLoading(false);
     }, [updateField]);
 
     const validateForm = useCallback((): boolean => {
@@ -413,32 +429,63 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 )}
 
                 {formData.referenceAudioFile ? (
-                    <View style={styles.audioPreview}>
-                        <View style={styles.audioInfo}>
-                            <MaterialCommunityIcons name="music-circle" size={40} color={theme.colors.primary.main} />
-                            <View style={styles.audioDetails}>
-                                <Text style={styles.audioName} numberOfLines={1}>
-                                    {formData.referenceAudioFile.name}
-                                </Text>
-                                <Text style={styles.audioSize}>
-                                    {formData.referenceAudioFile.sizeFormatted || 'Unknown size'}
-                                </Text>
+                    <View style={styles.audioPreviewContainer}>
+                        <View style={styles.audioPreviewHeader}>
+                            <View style={styles.audioInfo}>
+                                <MaterialCommunityIcons name="music-circle" size={24} color={theme.colors.primary.main} />
+                                <View style={styles.audioDetails}>
+                                    <Text style={styles.audioName} numberOfLines={1} ellipsizeMode='middle'>
+                                        {formData.referenceAudioFile.name}
+                                    </Text>
+                                    <Text style={styles.audioSize}>
+                                        {formData.referenceAudioFile.sizeFormatted || 'Unknown size'}
+                                    </Text>
+                                </View>
                             </View>
-                        </View>
-                        <View style={styles.audioActions}>
                             <TouchableOpacity
-                                style={styles.audioActionButton}
-                                onPress={() => {/* TODO: Play audio preview */}}
-                            >
-                                <MaterialCommunityIcons name="play-circle" size={32} color={theme.colors.success.main} />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.audioActionButton}
+                                style={styles.audioRemoveButton}
                                 onPress={handleRemoveAudio}
+                                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
                             >
-                                <MaterialCommunityIcons name="close-circle" size={32} color={theme.colors.error.main} />
+                                <MaterialCommunityIcons name="close-circle" size={28} color={theme.colors.error.main} />
                             </TouchableOpacity>
                         </View>
+
+                        {audioError ? (
+                            <View style={styles.audioErrorContainer}>
+                                <MaterialCommunityIcons name="alert-circle-outline" size={24} color={theme.colors.error.main} />
+                                <Text style={styles.audioErrorText}>{t('audioQuestion.playbackError')}</Text>
+                                <TouchableOpacity 
+                                    style={styles.retryButton} 
+                                    onPress={() => {
+                                        setAudioError(false);
+                                        setIsAudioLoading(true);
+                                    }}
+                                >
+                                    <Text style={styles.retryText}>{t('common.retry')}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.playerWrapper}>
+                                {isAudioLoading && (
+                                    <View style={styles.playerLoading}>
+                                        <ActivityIndicator size="small" color={theme.colors.primary.main} />
+                                    </View>
+                                )}
+                                <AudioPlayer
+                                    audioUrl={formData.referenceAudioFile.uri}
+                                    segmentStart={formData.audioSegmentStart}
+                                    segmentEnd={formData.audioSegmentEnd ?? undefined}
+                                    onLoad={() => setIsAudioLoading(false)}
+                                    onError={() => {
+                                        setAudioError(true);
+                                        setIsAudioLoading(false);
+                                    }}
+                                    style={styles.themedPlayer}
+                                    activeColor={theme.colors.primary.main}
+                                />
+                            </View>
+                        )}
                     </View>
                 ) : (
                     <View style={styles.inputArea}>
@@ -864,6 +911,32 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                         </Text>
                     </View>
                 )}
+
+                {/* Accept Similar Answers Toggle */}
+                <View style={form.formGroup}>
+                    <View style={styles.toggleRow}>
+                        <View style={styles.toggleInfo}>
+                            <Text style={form.label}>{t('mediaQuestion.acceptSimilarAnswers')}</Text>
+                            <Text style={form.helperText}>
+                                {t('mediaQuestion.acceptSimilarAnswersAudioNote')}
+                            </Text>
+                        </View>
+                        <TouchableOpacity
+                            style={[
+                                styles.toggle,
+                                formData.acceptSimilarAnswers && styles.toggleActive
+                            ]}
+                            onPress={() => updateField('acceptSimilarAnswers', !formData.acceptSimilarAnswers)}
+                        >
+                            <View
+                                style={[
+                                    styles.toggleThumb,
+                                    formData.acceptSimilarAnswers && styles.toggleThumbActive
+                                ]}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
 
             {/* Audio Upload Section */}
@@ -1000,6 +1073,73 @@ const themeStyles = createStyles(theme => ({
     },
     audioActionButton: {
         padding: theme.spacing.xs,
+    },
+    audioPreviewContainer: {
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.sm,
+        borderWidth: 1,
+        borderColor: theme.colors.border.light,
+    },
+    audioPreviewHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.xs,
+    },
+    audioRemoveButton: {
+        padding: theme.spacing.xs,
+        minWidth: 44,
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playerWrapper: {
+        position: 'relative',
+    },
+    playerLoading: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        zIndex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: theme.layout.borderRadius.md,
+    },
+    themedPlayer: {
+        backgroundColor: 'transparent',
+        elevation: 0,
+        shadowOpacity: 0,
+        marginVertical: 0,
+        padding: 0,
+    },
+    audioErrorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.error.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        gap: theme.spacing.sm,
+    },
+    audioErrorText: {
+        flex: 1,
+        ...theme.typography.caption,
+        color: theme.colors.error.main,
+    },
+    retryButton: {
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        backgroundColor: theme.colors.error.main,
+        borderRadius: theme.layout.borderRadius.sm,
+    },
+    retryText: {
+        ...theme.typography.caption,
+        color: theme.colors.text.inverse,
+        fontWeight: '600',
     },
 
     // Segment picker styles
@@ -1193,6 +1333,33 @@ const themeStyles = createStyles(theme => ({
     },
     toggleCircleActive: {
         transform: [{translateX: 24}],
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    toggleInfo: {
+        flex: 1,
+    },
+    toggle: {
+        width: 52,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: theme.colors.neutral.gray[300],
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: theme.colors.success.main,
+    },
+    toggleThumb: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+    },
+    toggleThumbActive: {
+        alignSelf: 'flex-end',
     },
 }));
 

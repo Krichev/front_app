@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import {QuestionFormData} from '../hooks/useQuestionsManager';
 import FileService, {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {QuestionType} from "../../../services/wwwGame/questionService";
@@ -25,9 +25,14 @@ import {SelectableTopic} from '../../../entities/TopicState';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
 import {detectVideoPlatform, extractYouTubeVideoId, getYouTubeThumbnail,} from '../../../utils/youtubeUtils';
-import { LocalizedInput } from '../../../shared/ui/LocalizedInput';
-import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty } from '../../../shared/types/localized';
-import { useI18n } from '../../../app/providers/I18nProvider';
+import {LocalizedInput} from '../../../shared/ui/LocalizedInput';
+import {
+    EMPTY_LOCALIZED_STRING,
+    getLocalizedValue,
+    isLocalizedStringEmpty,
+    LocalizedString
+} from '../../../shared/types/localized';
+import {useI18n} from '../../../app/providers/I18nProvider';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -73,8 +78,47 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     const [answer, setAnswer] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
+    const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState(true);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
+
+    // ... media state ...
+    /**
+     * Determine question type based on selected media (IMPLICIT)
+     * Returns TEXT if no media selected
+     */
+    const getQuestionType = (): QuestionType => {
+        // Check for external video URL first
+        if (mediaInputMode === 'link' && externalVideoUrl.trim() && detectedPlatform) {
+            return 'VIDEO';
+        }
+
+        if (!selectedMedia) {
+            return 'TEXT';
+        }
+
+        // Detect from selected file type
+        if (selectedMedia.type.startsWith('image/')) {
+            return 'IMAGE';
+        } else if (selectedMedia.type.startsWith('video/')) {
+            return 'VIDEO';
+        } else if (selectedMedia.type.startsWith('audio/')) {
+            return 'AUDIO';
+        }
+
+        return 'TEXT';
+    };
+
+    const currentQuestionType = getQuestionType();
+
+    // Auto-toggle acceptSimilarAnswers based on question type
+    useEffect(() => {
+        if (currentQuestionType === 'AUDIO') {
+            setAcceptSimilarAnswers(false);
+        } else {
+            setAcceptSimilarAnswers(true);
+        }
+    }, [currentQuestionType]);
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
@@ -129,31 +173,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         }
     };
 
-    /**
-     * Determine question type based on selected media (IMPLICIT)
-     * Returns TEXT if no media selected
-     */
-    const getQuestionType = (): QuestionType => {
-        // Check for external video URL first
-        if (mediaInputMode === 'link' && externalVideoUrl.trim() && detectedPlatform) {
-            return 'VIDEO';
-        }
 
-        if (!selectedMedia) {
-            return 'TEXT';
-        }
-
-        // Detect from selected file type
-        if (selectedMedia.type.startsWith('image/')) {
-            return 'IMAGE';
-        } else if (selectedMedia.type.startsWith('video/')) {
-            return 'VIDEO';
-        } else if (selectedMedia.type.startsWith('audio/')) {
-            return 'AUDIO';
-        }
-
-        return 'TEXT';
-    };
 
     /**
      * Handle image picking from library
@@ -349,6 +369,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             topic: topic.trim(),
             additionalInfo: getLocalizedValue(additionalInfo, currentLanguage),
             additionalInfoLocalized: additionalInfo,
+            acceptSimilarAnswers,
             questionType,
             // CRITICAL: Pass the raw file info for the mutation to handle
             mediaFile: (mediaInputMode === 'upload' && selectedMedia) ? {
@@ -392,6 +413,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
         setAnswer(EMPTY_LOCALIZED_STRING);
         setDifficulty('MEDIUM');
         setTopic('');
+        setAcceptSimilarAnswers(true);
         setSelectedTopicId(undefined);
         setAdditionalInfo(EMPTY_LOCALIZED_STRING);
         setSelectedMedia(undefined);
@@ -796,6 +818,36 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                         />
                     </View>
 
+                    {/* Accept Similar Answers Toggle */}
+                    <View style={form.section}>
+                        <View style={styles.toggleRow}>
+                            <View style={styles.toggleInfo}>
+                                <Text style={form.sectionTitle}>
+                                    {t('mediaQuestion.acceptSimilarAnswers')}
+                                </Text>
+                                <Text style={styles.helperText}>
+                                    {getQuestionType() === 'AUDIO' 
+                                        ? t('mediaQuestion.acceptSimilarAnswersAudioNote') 
+                                        : t('mediaQuestion.acceptSimilarAnswersDesc')}
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                style={[
+                                    styles.toggle,
+                                    acceptSimilarAnswers && styles.toggleActive
+                                ]}
+                                onPress={() => setAcceptSimilarAnswers(!acceptSimilarAnswers)}
+                            >
+                                <View
+                                    style={[
+                                        styles.toggleThumb,
+                                        acceptSimilarAnswers && styles.toggleThumbActive
+                                    ]}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
                     {/* Difficulty Selector */}
                     <View style={form.section}>
                         <Text style={form.sectionTitle}>{t('createQuest.addQuestion.difficultyLabel')} *</Text>
@@ -1147,6 +1199,38 @@ const themeStyles = createStyles(theme => ({
         fontSize: 14,
         fontWeight: '600',
         color: '#007AFF',
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    toggleInfo: {
+        flex: 1,
+    },
+    helperText: {
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.xs,
+    },
+    toggle: {
+        width: 52,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: theme.colors.neutral.gray[300],
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: theme.colors.success.main,
+    },
+    toggleThumb: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+    },
+    toggleThumbActive: {
+        alignSelf: 'flex-end',
     },
 }));
 

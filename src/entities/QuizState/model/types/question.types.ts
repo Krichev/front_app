@@ -43,13 +43,13 @@ export interface CreateQuizQuestionRequest {
     answerVideoEndTime?: number;
     answerTextVerification?: string;
     timeLimitSeconds?: number;
+    acceptSimilarAnswers?: boolean;
 
     // New localized fields (optional for backward compatibility)
     questionLocalized?: LocalizedString;
     answerLocalized?: LocalizedString;
     additionalInfoLocalized?: LocalizedString;
-}
-
+    }
 export interface UpdateQuestionVisibilityRequest {
     visibility: QuestionVisibility;
     originalQuizId?: number;

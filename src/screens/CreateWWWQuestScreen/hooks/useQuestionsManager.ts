@@ -23,6 +23,7 @@ export interface CustomQuestion {
     answer: string;
     difficulty: APIDifficulty;
     topic?: string;
+    acceptSimilarAnswers?: boolean;
     additionalInfo?: string;
 }
 
@@ -32,6 +33,7 @@ export interface MultimediaQuestionData {
     answer: string;
     difficulty: APIDifficulty;
     topic?: string;
+    acceptSimilarAnswers?: boolean;
     additionalInfo?: string;
     questionType: QuestionType;
 }
@@ -44,6 +46,7 @@ export interface QuestionFormData {
     answer: string;
     difficulty: APIDifficulty;
     topic?: string;
+    acceptSimilarAnswers?: boolean;
     additionalInfo?: string;
     questionLocalized?: LocalizedString;
     answerLocalized?: LocalizedString;
@@ -254,6 +257,7 @@ export const useQuestionsManager = () => {
                 answerVideoStartTime: data.answerVideoStartTime,
                 answerVideoEndTime: data.answerVideoEndTime,
                 answerTextVerification: data.answerTextVerification,
+                acceptSimilarAnswers: data.acceptSimilarAnswers,
             };
 
             console.log('🚀 [useQuestionsManager] Calling createQuestion mutation');

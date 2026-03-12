@@ -39,6 +39,7 @@ export interface CreateQuestionRequest {
     answerVideoEndTime?: number;
     answerTextVerification?: string;
     timeLimitSeconds?: number;
+    acceptSimilarAnswers?: boolean;
 }
 
 /**
@@ -103,8 +104,14 @@ export interface QuizQuestion {
     /** JSON string with additional config */
     audioChallengeConfig?: string | null;
 
+    /** Whether user can replay the reference audio */
+    allowReplay?: boolean;
+    /** Maximum number of replays allowed (0 = unlimited) */
+    maxReplays?: number;
+
     /** Per-question time limit override in seconds. null = use session roundTimeSeconds */
     timeLimitSeconds?: number | null;
+    acceptSimilarAnswers: boolean;
 
     // User creation tracking
     isUserCreated: boolean;

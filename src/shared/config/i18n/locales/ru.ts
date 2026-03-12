@@ -181,6 +181,9 @@ const ru = {
             topicPlaceholder: 'Выберите или введите тему',
             additionalInfoLabel: 'Дополнительно (необязательно)',
             additionalInfoPlaceholder: 'Источники, подсказки или контекст',
+            acceptSimilarAnswers: 'Принимать похожие ответы',
+            acceptSimilarAnswersDesc: 'ИИ будет принимать синонимы и перефразированные ответы как правильные (напр. "машина" = "автомобиль")',
+            acceptSimilarAnswersAudioNote: 'Аудио-задания используют оценку звука вместо сравнения текста',
             submit: 'Добавить вопрос',
             cancel: 'Отмена',
             errorTitle: 'Ошибка',
@@ -635,6 +638,9 @@ const ru = {
         answerLabel: 'Ответ',
         answerRequired: 'Ответ *',
         answerPlaceholder: 'Введите ответ...',
+        acceptSimilarAnswers: 'Принимать похожие ответы',
+        acceptSimilarAnswersDesc: 'ИИ будет принимать синонимы и перефразированные ответы как правильные (напр. "машина" = "автомобиль")',
+        acceptSimilarAnswersAudioNote: 'Аудио-задания используют оценку звука вместо сравнения текста',
 
         selectMedia: 'Выбрать медиа',
         uploadImage: 'Загрузить изображение',
@@ -675,6 +681,7 @@ const ru = {
 
         createSuccess: 'Аудио вопрос успешно создан',
         createFailed: 'Не удалось создать аудио вопрос. Попробуйте снова.',
+        playbackError: 'Не удалось воспроизвести аудио. Файл может быть поврежден или перемещен.',
         audioRequired: 'Для этого типа челленджа требуется эталонное аудио',
         answerMode: {
             title: 'Режим ответа',
@@ -1683,6 +1690,10 @@ const ru = {
             stopRecording: 'Остановить запись',
             recordAgain: 'Записать снова',
             audioNotAvailable: 'Аудио недоступно',
+            listenAgain: 'Послушать снова',
+            replaysRemaining: 'Осталось повторов: {{count}}',
+            unlimitedReplays: 'Неограниченное количество повторов',
+            noReplaysLeft: 'Повторы закончились',
             startTimer: 'Начать',
             answerModeText: 'Написать ответ',
             answerModeRecord: 'Записать ответ',

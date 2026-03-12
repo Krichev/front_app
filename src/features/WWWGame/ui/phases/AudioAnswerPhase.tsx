@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Animated, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import {ActivityIndicator, Animated, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
@@ -7,6 +7,7 @@ import {phaseStyles} from './phases.styles';
 import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
 import {useAudioChallengeTimer} from '../../hooks/useAudioChallengeTimer';
 import {AudioResponseRecorder, ReferenceAudioSection} from '../../../../screens/components/audio';
+import {createStyles} from '../../../../shared/ui/theme';
 
 interface AudioAnswerPhaseProps {
   question: QuizQuestion;
@@ -38,11 +39,14 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
+  const localStyles = themeStyles;
 
   // Determine answer mode: question config takes precedence
   const answerMode = question.audioChallengeType ? 'record' : propAnswerMode;
 
-  const [hasPlayedAtleastOnce, setHasPlayedAtLeastOnce] = useState(false);
+  const [replaysUsed, setReplaysUsed] = useState(0);
+  const [replayKey, setReplayKey] = useState(0);
+  const [hasPlayedAtLeastOnce, setHasPlayedAtLeastOnce] = useState(false);
 
   const duration = question.timeLimitSeconds || gameSettings?.roundTimeSeconds || 60;
 
@@ -51,14 +55,34 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
     onAutoSubmit: onSubmit,
   });
 
+  // Replay settings
+  const allowReplay = question.allowReplay ?? true;
+  const maxReplaysAllowed = question.maxReplays ?? 3;
+
   // Start timer on mount
   useEffect(() => {
     timer.start();
   }, []);
 
   const handleAudioEnd = useCallback(() => {
-    setHasPlayedAtLeastOnce(true);
-  }, []);
+    if (!hasPlayedAtLeastOnce) {
+        setHasPlayedAtLeastOnce(true);
+    } else {
+        // Only increment replaysUsed if it's actually a replay
+        // The first play-through doesn't count towards maxReplays
+    }
+  }, [hasPlayedAtLeastOnce]);
+
+  const canReplay = useMemo(() => {
+      return allowReplay && (maxReplaysAllowed === 0 || replaysUsed < maxReplaysAllowed);
+  }, [allowReplay, maxReplaysAllowed, replaysUsed]);
+
+  const handleReplay = useCallback(() => {
+      if (canReplay) {
+          setReplaysUsed(prev => prev + 1);
+          setReplayKey(prev => prev + 1);
+      }
+  }, [canReplay]);
 
   const isSubmitDisabled = useMemo(() => {
     if (isSubmitting) return true;
@@ -102,11 +126,44 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
         {/* Audio Player Section */}
         <View style={localStyles.audioSection}>
           {hasAudio ? (
-            <ReferenceAudioSection 
-              question={question as any} 
-              onPlaybackComplete={handleAudioEnd}
-              title={t('wwwPhases.audioAnswer.listenToQuestion')}
-            />
+            <View>
+              <ReferenceAudioSection 
+                key={replayKey}
+                question={question as any} 
+                onPlaybackComplete={handleAudioEnd}
+                title={t('wwwPhases.audioAnswer.listenToQuestion')}
+              />
+              
+              {hasPlayedAtLeastOnce && (
+                  <View style={localStyles.replayContainer}>
+                      {canReplay ? (
+                          <TouchableOpacity 
+                            style={localStyles.replayButton}
+                            onPress={handleReplay}
+                          >
+                            <MaterialCommunityIcons name="replay" size={24} color={theme.colors.text.inverse} />
+                            <Text style={localStyles.replayButtonText}>
+                                {t('wwwPhases.audioAnswer.listenAgain')}
+                            </Text>
+                            <View style={localStyles.replayBadge}>
+                                <Text style={localStyles.replayBadgeText}>
+                                    {maxReplaysAllowed === 0 
+                                        ? t('wwwPhases.audioAnswer.unlimitedReplays')
+                                        : t('wwwPhases.audioAnswer.replaysRemaining', { count: maxReplaysAllowed - replaysUsed })}
+                                </Text>
+                            </View>
+                          </TouchableOpacity>
+                      ) : (
+                          <View style={localStyles.noReplaysContainer}>
+                              <MaterialCommunityIcons name="timer-off-outline" size={20} color={theme.colors.text.disabled} />
+                              <Text style={localStyles.noReplaysText}>
+                                  {t('wwwPhases.audioAnswer.noReplaysLeft')}
+                              </Text>
+                          </View>
+                      )}
+                  </View>
+              )}
+            </View>
           ) : (
             <View style={localStyles.fallbackContainer}>
               <MaterialCommunityIcons 
@@ -207,35 +264,79 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   );
 };
 
-const localStyles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   content: {
     flex: 1,
-    padding: 20,
+    padding: theme.spacing.lg,
   },
   questionText: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 20,
+    ...theme.typography.body.large,
+    fontWeight: theme.typography.fontWeight.semibold,
+    marginBottom: theme.spacing.lg,
     textAlign: 'center',
+    color: theme.colors.text.primary,
   },
   audioSection: {
     width: '100%',
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
   },
   fallbackContainer: {
     alignItems: 'center',
-    padding: 24,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    padding: theme.spacing.xl,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.layout.borderRadius.md,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: theme.colors.border.light,
     borderStyle: 'dashed',
   },
   fallbackText: {
-    marginTop: 10,
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '500',
+    marginTop: theme.spacing.sm,
+    color: theme.colors.text.disabled,
+    ...theme.typography.caption,
+    fontWeight: theme.typography.fontWeight.medium,
+  },
+  replayContainer: {
+      marginTop: theme.spacing.md,
+      alignItems: 'center',
+  },
+  replayButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.primary.main,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: theme.layout.borderRadius.full,
+      gap: theme.spacing.sm,
+      ...theme.shadows.small,
+      minHeight: 44,
+  },
+  replayButtonText: {
+      color: theme.colors.text.inverse,
+      ...theme.typography.button,
+      fontWeight: 'bold',
+  },
+  replayBadge: {
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 2,
+      borderRadius: theme.layout.borderRadius.sm,
+      marginLeft: theme.spacing.xs,
+  },
+  replayBadgeText: {
+      color: theme.colors.text.inverse,
+      fontSize: 10,
+      fontWeight: 'bold',
+  },
+  noReplaysContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.xs,
+      padding: theme.spacing.sm,
+  },
+  noReplaysText: {
+      color: theme.colors.text.disabled,
+      ...theme.typography.caption,
+      fontStyle: 'italic',
   },
   answerArea: {
     flex: 1,
@@ -245,36 +346,42 @@ const localStyles = StyleSheet.create({
     flex: 1,
   },
   recordTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 20,
+    ...theme.typography.body.medium,
+    fontWeight: theme.typography.fontWeight.semibold,
+    marginBottom: theme.spacing.lg,
+    color: theme.colors.text.primary,
   },
   reRecordButton: {
-    marginTop: 15,
-    padding: 10,
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   reRecordText: {
-    color: '#2196F3',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.primary.main,
+    ...theme.typography.button,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
   playerSelector: {
-    marginBottom: 15,
+    marginBottom: theme.spacing.md,
   },
   playersList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 5,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   playerChip: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#eee',
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.layout.borderRadius.full,
+    backgroundColor: theme.colors.background.secondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border.light,
   },
   playerChipText: {
-    fontSize: 13,
-    color: '#333',
+    ...theme.typography.caption,
+    color: theme.colors.text.primary,
   }
-});
+}));
+

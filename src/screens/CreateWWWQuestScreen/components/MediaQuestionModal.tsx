@@ -62,11 +62,22 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     const [answer, setAnswer] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
+    const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState(true);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
 
     // Media state
     const [selectedMedia, setSelectedMedia] = useState<ProcessedFileInfo | undefined>(undefined);
+
+    // Auto-toggle acceptSimilarAnswers based on question type
+    useEffect(() => {
+        const type = getQuestionType();
+        if (type === 'AUDIO') {
+            setAcceptSimilarAnswers(false);
+        } else if (type === 'TEXT' || type === 'IMAGE' || type === 'VIDEO') {
+            setAcceptSimilarAnswers(true);
+        }
+    }, [selectedMedia]);
     const [isSelectingMedia, setIsSelectingMedia] = useState(false);
     const [mediaSelectionType, setMediaSelectionType] = useState<'image' | 'video' | 'audio' | null>(null);
 
@@ -302,6 +313,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
         setAnswer(EMPTY_LOCALIZED_STRING);
         setDifficulty('MEDIUM');
         setTopic('');
+        setAcceptSimilarAnswers(true);
         setSelectedTopicId(undefined);
         setAdditionalInfo(EMPTY_LOCALIZED_STRING);
         setSelectedMedia(undefined);
@@ -506,6 +518,38 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                         />
                     </View>
 
+                    {/* Accept Similar Answers Toggle */}
+                    <View style={form.section}>
+                        <View style={styles.toggleRow}>
+                            <View style={styles.toggleInfo}>
+                                <Text style={form.sectionTitle}>
+                                    {getQuestionType() === 'AUDIO' 
+                                        ? t('mediaQuestion.acceptSimilarAnswers') 
+                                        : t('mediaQuestion.acceptSimilarAnswers')}
+                                </Text>
+                                <Text style={styles.helperText}>
+                                    {getQuestionType() === 'AUDIO' 
+                                        ? t('mediaQuestion.acceptSimilarAnswersAudioNote') 
+                                        : t('mediaQuestion.acceptSimilarAnswersDesc')}
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                style={[
+                                    styles.toggle,
+                                    acceptSimilarAnswers && styles.toggleActive
+                                ]}
+                                onPress={() => setAcceptSimilarAnswers(!acceptSimilarAnswers)}
+                            >
+                                <View
+                                    style={[
+                                        styles.toggleThumb,
+                                        acceptSimilarAnswers && styles.toggleThumbActive
+                                    ]}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
                     {/* Difficulty Selector */}
                     <View style={form.section}>
                         <Text style={form.sectionTitle}>{t('createQuest.addQuestion.difficultyLabel')} *</Text>
@@ -708,6 +752,38 @@ const themeStyles = createStyles(theme => ({
     },
     difficultyTextActive: {
         color: theme.colors.text.inverse,
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    toggleInfo: {
+        flex: 1,
+    },
+    helperText: {
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.xs,
+    },
+    toggle: {
+        width: 52,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: theme.colors.neutral.gray[300],
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: theme.colors.success.main,
+    },
+    toggleThumb: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+    },
+    toggleThumbActive: {
+        alignSelf: 'flex-end',
     },
 }));
 

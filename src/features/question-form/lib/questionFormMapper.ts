@@ -13,6 +13,7 @@ export function mapFormStateToPayload(params: {
     answer: LocalizedString;
     difficulty: DifficultyLevel;
     topic: string;
+    acceptSimilarAnswers: boolean;
     additionalInfo: LocalizedString;
     visibility: QuestionVisibility;
     questionType: QuestionType;
@@ -34,6 +35,7 @@ export function mapFormStateToPayload(params: {
         answer,
         difficulty,
         topic,
+        acceptSimilarAnswers,
         additionalInfo,
         visibility,
         questionType,
@@ -56,6 +58,7 @@ export function mapFormStateToPayload(params: {
         answer: getLocalizedValue(answer, currentLanguage) || '',
         difficulty,
         topic: topic.trim() || '',
+        acceptSimilarAnswers,
         additionalInfo: getLocalizedValue(additionalInfo, currentLanguage) || '',
         visibility,
         questionType,

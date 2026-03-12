@@ -47,6 +47,7 @@ export interface UserQuestion {
     difficulty: APIDifficulty;
     visibility: QuestionVisibility;
     topic?: string;
+    acceptSimilarAnswers?: boolean;
     additionalInfo?: string;
     additionalInfoLocalized?: import('../../shared/types/localized').LocalizedString;
     createdAt: string;

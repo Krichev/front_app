@@ -36,6 +36,7 @@
 - `minimumScorePercentage`: `number` (default `60`)
 - `rhythmBpm`: `number` (optional)
 - `rhythmTimeSignature`: `string` (optional)
+- `acceptSimilarAnswers`: `boolean` (default `true`, `false` for audio) — per-question AI answer matching
 
 #### Audio Submissions (through Challenger, not Karaoke)
 - `POST /quiz/sessions/{id}/rounds/{roundId}/audio-answer` — multipart FormData

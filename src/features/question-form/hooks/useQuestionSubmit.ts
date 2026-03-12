@@ -42,6 +42,7 @@ export function useQuestionSubmit({
             topic: questionData.topic,
             difficulty: questionData.difficulty,
             visibility: questionData.visibility,
+            acceptSimilarAnswers: questionData.acceptSimilarAnswers,
             additionalInfo: questionData.additionalInfo,
             audioSegmentStart: questionData.audioSegmentStart,
             audioSegmentEnd: questionData.audioSegmentEnd,
@@ -74,6 +75,7 @@ export function useQuestionSubmit({
         answer: LocalizedString;
         difficulty: DifficultyLevel;
         topic: string;
+        acceptSimilarAnswers: boolean;
         additionalInfo: LocalizedString;
         visibility: QuestionVisibility;
         questionType: QuestionType;
@@ -116,6 +118,7 @@ export function useQuestionSubmit({
                     answer: params.answer.en || params.answer.ru,
                     difficulty: params.difficulty,
                     topic: params.topic.trim() || undefined,
+                    acceptSimilarAnswers: params.acceptSimilarAnswers,
                     additionalInfo: params.additionalInfo.en || params.additionalInfo.ru || undefined,
                     visibility: params.visibility,
                 });

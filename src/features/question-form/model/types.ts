@@ -25,6 +25,7 @@ export interface QuestionFormData {
     answer: string;
     difficulty: 'EASY' | 'MEDIUM' | 'HARD';
     topic: string;
+    acceptSimilarAnswers?: boolean;
     additionalInfo: string;
     questionLocalized?: LocalizedString;
     answerLocalized?: LocalizedString;

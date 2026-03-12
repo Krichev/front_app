@@ -26,6 +26,9 @@ export function useQuestionForm({ existingQuestion, isEditing }: UseQuestionForm
         (existingQuestion?.difficulty as DifficultyLevel) || 'MEDIUM'
     );
     const [topic, setTopic] = useState(existingQuestion?.topic || '');
+    const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState<boolean>(
+        existingQuestion?.acceptSimilarAnswers ?? true
+    );
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState<LocalizedString>(
         existingQuestion?.additionalInfoLocalized || (existingQuestion?.additionalInfo ? createLocalizedString(existingQuestion.additionalInfo, 'en') : EMPTY_LOCALIZED_STRING)
@@ -51,6 +54,7 @@ export function useQuestionForm({ existingQuestion, isEditing }: UseQuestionForm
             answer,
             difficulty,
             topic,
+            acceptSimilarAnswers,
             selectedTopicId,
             additionalInfo,
             questionType,
@@ -61,6 +65,7 @@ export function useQuestionForm({ existingQuestion, isEditing }: UseQuestionForm
             setAnswer,
             setDifficulty,
             setTopic,
+            setAcceptSimilarAnswers,
             setSelectedTopicId,
             setAdditionalInfo,
             setQuestionType,

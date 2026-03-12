@@ -23,6 +23,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     const [answer, setAnswer] = useState('');
     const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
     const [topic, setTopic] = useState('');
+    const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState(true);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
     const [additionalInfo, setAdditionalInfo] = useState('');
 
@@ -52,6 +53,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
             answer: answer.trim(),
             difficulty,
             topic: topic.trim(),
+            acceptSimilarAnswers,
             additionalInfo: additionalInfo.trim(),
         });
 
@@ -60,6 +62,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         setAnswer('');
         setDifficulty('MEDIUM');
         setTopic('');
+        setAcceptSimilarAnswers(true);
         setSelectedTopicId(undefined);
         setAdditionalInfo('');
     };
@@ -69,6 +72,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         setAnswer('');
         setDifficulty('MEDIUM');
         setTopic('');
+        setAcceptSimilarAnswers(true);
         setSelectedTopicId(undefined);
         setAdditionalInfo('');
         onClose();
@@ -123,6 +127,32 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                                     multiline
                                     numberOfLines={3}
                                 />
+                            </View>
+
+                            {/* Accept Similar Answers Toggle */}
+                            <View style={styles.inputContainer}>
+                                <View style={styles.toggleRow}>
+                                    <View style={styles.toggleInfo}>
+                                        <Text style={styles.label}>{t('createQuest.addQuestion.acceptSimilarAnswers')}</Text>
+                                        <Text style={styles.helperText}>
+                                            {t('createQuest.addQuestion.acceptSimilarAnswersDesc')}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.toggle,
+                                            acceptSimilarAnswers && styles.toggleActive
+                                        ]}
+                                        onPress={() => setAcceptSimilarAnswers(!acceptSimilarAnswers)}
+                                    >
+                                        <View
+                                            style={[
+                                                styles.toggleThumb,
+                                                acceptSimilarAnswers && styles.toggleThumbActive
+                                            ]}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
 
                             <View style={styles.inputContainer}>
@@ -237,6 +267,38 @@ const styles = StyleSheet.create({
     textArea: {
         minHeight: 80,
         textAlignVertical: 'top',
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    toggleInfo: {
+        flex: 1,
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4,
+    },
+    toggle: {
+        width: 50,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#ddd',
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: '#4CAF50',
+    },
+    toggleThumb: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+    },
+    toggleThumbActive: {
+        alignSelf: 'flex-end',
     },
     difficultyContainer: {
         flexDirection: 'row',
