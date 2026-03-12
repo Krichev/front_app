@@ -1,32 +1,30 @@
 // src/screens/WWWGamePlayScreen.tsx - Orchestration Layer
-import React, { useEffect, useCallback, useRef, useState } from 'react';
-import { SafeAreaView, Alert, BackHandler } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { RouteProp } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {Alert, BackHandler, SafeAreaView} from 'react-native';
+import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-import { useWWWGameState } from '../features/WWWGame/hooks/useWWWGameState';
-import { useWWWGameController } from '../features/WWWGame/hooks/useWWWGameController';
-import { useReadingTime } from '../features/WWWGame/hooks/useReadingTime';
+import {useWWWGameState} from '../features/WWWGame/hooks/useWWWGameState';
+import {useWWWGameController} from '../features/WWWGame/hooks/useWWWGameController';
+import {useReadingTime} from '../features/WWWGame/hooks/useReadingTime';
 import {
-  WaitingPhase,
-  ReadingPhase,
-  MediaPlaybackPhase,
-  DiscussionPhase,
   AnswerPhase,
+  DiscussionPhase,
   FeedbackPhase,
+  MediaPlaybackPhase,
+  ReadingPhase,
+  WaitingPhase,
 } from '../features/WWWGame/ui/phases';
-import { AudioAnswerPhase } from './WWWGamePlayScreen/components/AudioAnswerPhase';
-import { AudioChallengeSubmission } from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
-import { useCountdownTimer } from '../shared/hooks/useCountdownTimer';
-import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
-import { RootStackParamList } from '../navigation/AppNavigator';
-import { ExitGameModal } from '../features/WWWGame/ui/components/ExitGameModal';
-import { WagerResultsOverlay } from '../features/Wager/ui/WagerResultsOverlay';
-import { useGetWagersByChallengeQuery } from '../entities/WagerState/model/slice/wagerApi';
-import { useWager } from '../features/Wager/hooks/useWager';
-import { Wager, WagerOutcome } from '../entities/WagerState/model/types';
-import { extractYouTubeVideoId } from '../utils/youtubeUtils';
+import {AudioChallengeScoringPhase} from './WWWGamePlayScreen/components/AudioChallengeScoringPhase';
+import {AudioChallengeSubmission} from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
+import {useCountdownTimer} from '../shared/hooks/useCountdownTimer';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {RootStackParamList} from '../navigation/AppNavigator';
+import {ExitGameModal} from '../features/WWWGame/ui/components/ExitGameModal';
+import {WagerResultsOverlay} from '../features/Wager/ui/WagerResultsOverlay';
+import {useGetWagersByChallengeQuery} from '../entities/WagerState/model/slice/wagerApi';
+import {useWager} from '../features/Wager/hooks/useWager';
+import {Wager, WagerOutcome} from '../entities/WagerState/model/types';
 
 type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
@@ -476,10 +474,10 @@ const WWWGamePlayScreen: React.FC = () => {
       case 'answer':
         if (!currentRound) { return null; }
 
-        // Handle Audio Challenges with the new AudioAnswerPhase
+        // Handle Audio Challenges with the specialized AudioChallengeScoringPhase
         if (currentRound.question.questionType === 'AUDIO' && currentRound.question.audioChallengeType) {
            return (
-             <AudioAnswerPhase
+             <AudioChallengeScoringPhase
                question={currentRound.question}
                onSubmissionComplete={handleAudioSubmissionComplete}
                onCancel={() => actions.timeUp()}

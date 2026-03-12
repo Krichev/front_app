@@ -3,6 +3,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import Video, {OnProgressData, VideoRef} from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import MediaUrlService from '../../services/media/MediaUrlService';
 
 interface AudioPlayerProps {
   audioUrl: string;
@@ -21,6 +22,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(segmentStart);
   const [duration, setDuration] = useState(0);
+
+  const mediaService = MediaUrlService.getInstance();
 
   const effectiveEnd = segmentEnd || duration;
   const progress = Math.max(0, Math.min(1, (currentTime - segmentStart) / (effectiveEnd - segmentStart || 1)));
@@ -81,7 +84,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       {/* Hidden Video component for audio playback */}
       <Video
         ref={videoRef}
-        source={{ uri: audioUrl }}
+        source={{ 
+            uri: audioUrl,
+            headers: mediaService.getAuthHeaders(),
+        }}
         paused={!isPlaying}
         onProgress={handleProgress}
         onLoad={handleLoad}

@@ -51,6 +51,8 @@ const en = {
         close: 'Close',
         goBack: 'Go Back',
         seconds: '{{count}}s',
+        hide: 'Hide',
+        showHint: 'Show Hint',
         localizedInput: {
             fillAtLeastOne: 'Please fill in at least one language',
             fillBothLanguages: 'Please fill in both languages',
@@ -1606,6 +1608,9 @@ const en = {
         timerStartsAfterListen: 'Timer starts when you begin recording',
         customTimeLimit: 'Custom Time Limit',
         customTimeLimitHint: 'Audio challenges typically need 60-180 seconds. Leave off to use quest default.',
+        prepareYourself: 'Prepare yourself! The timer will start when you begin recording.',
+        startRecordingPhase: 'Start Recording Phase',
+        backToListening: 'Back to Listening',
         types: {
             RHYTHM_CREATION: {
                 label: 'Create Rhythm',
@@ -1718,6 +1723,35 @@ const en = {
             finishGame: 'Finish Game',
             nextQuestion: 'Next Question',
         },
+        audioAnswer: {
+            title: 'Answer the Question',
+            listenToQuestion: 'Listen to the audio question',
+            replay: 'Replay Audio',
+            replaying: 'Playing...',
+            timeRemaining: '{{seconds}}s remaining',
+            answerPlaceholder: 'Type your answer...',
+            submitAnswer: 'Submit Answer',
+            submitting: 'Submitting...',
+            recordYourAnswer: 'Record Your Answer',
+            tapToRecord: 'Tap to start recording',
+            stopRecording: 'Stop Recording',
+            recordAgain: 'Record Again',
+            audioNotAvailable: 'Audio not available',
+            startTimer: 'Start',
+            answerModeText: 'Type Answer',
+            answerModeRecord: 'Record Answer',
+        },
+        answer: {
+            teamAnswer: 'Team Answer:',
+            whoIsAnswering: 'Who is answering?',
+            submitAnswer: 'Submit Answer',
+            submitting: 'Submitting...',
+            enterAnswer: "Enter your team's answer...",
+            stopRecordingAnswer: 'Stop Recording Answer',
+            recordVoiceAnswer: 'Record Voice Answer',
+            startTyping: 'Start typing to begin countdown...',
+            timeToComplete: 'Time to complete: {{seconds}}s',
+        },
     },
     tvDisplay: {
         connect: {
@@ -1742,7 +1776,7 @@ const en = {
     notificationTitle: 'Screen Time Limit Active',
     notificationMessage: '{{minutes}} minutes remaining',
     permissionTitle: 'Permission Required',
-    permissionMessage: 'RhythmGame needs the "Draw over other apps" permission to enforce screen time limits.',
+    permissionMessage: 'Screen Time is enabled on your account. To enforce screen time limits when your budget runs out, RhythmGame needs the "Draw over other apps" permission. This will only be used when Screen Time tracking is active.',
     permissionButton: 'Grant Permission',
   },
 };

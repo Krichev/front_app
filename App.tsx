@@ -55,8 +55,11 @@ const AppContent: React.FC = () => {
     const { needsPermission, requestPermission } = useDeviceScreenLock();
     const { t } = useTranslation();
 
+    const hasShownPermissionAlert = React.useRef(false);
+
     React.useEffect(() => {
-        if (needsPermission) {
+        if (needsPermission && !hasShownPermissionAlert.current) {
+            hasShownPermissionAlert.current = true;
             Alert.alert(
                 t('screenLock.permissionTitle'),
                 t('screenLock.permissionMessage'),
@@ -65,6 +68,10 @@ const AppContent: React.FC = () => {
                     { text: t('screenLock.permissionButton'), onPress: requestPermission }
                 ]
             );
+        }
+        // Reset the guard when permission is granted so it can fire again if revoked
+        if (!needsPermission) {
+            hasShownPermissionAlert.current = false;
         }
     }, [needsPermission, requestPermission, t]);
 

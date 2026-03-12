@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { RootState } from '../../../app/providers/StoreProvider/store';
@@ -22,18 +23,40 @@ export const useDeviceScreenLock = () => {
     isError: isPenaltiesError,
   } = useGetMyPenaltiesQuery({ status: 'IN_PROGRESS' }, { skip: !isAuthenticated });
 
+  const screenTimeEnabled = budget?.screenTimeEnabled === true;
+
+  // Check overlay permission — only when authenticated AND screen time is enabled
   useEffect(() => {
     const checkPermission = async () => {
-      if (ScreenLockModule) {
+      if (!ScreenLockModule) return;
+      const hasPermission = await ScreenLockModule.checkOverlayPermission();
+      setNeedsPermission(!hasPermission);
+    };
+
+    if (isAuthenticated && screenTimeEnabled) {
+      checkPermission();
+    } else {
+      // No need for permission if not authenticated or screen time is off
+      setNeedsPermission(false);
+    }
+  }, [isAuthenticated, screenTimeEnabled]);
+
+  // Re-check permission when app returns to foreground (user coming back from Settings)
+  useEffect(() => {
+    if (!isAuthenticated || !screenTimeEnabled) return;
+
+    const handleAppStateChange = async (nextState: AppStateStatus) => {
+      if (nextState === 'active' && ScreenLockModule) {
         const hasPermission = await ScreenLockModule.checkOverlayPermission();
         setNeedsPermission(!hasPermission);
       }
     };
-    if (isAuthenticated) {
-      checkPermission();
-    }
-  }, [isAuthenticated]);
 
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [isAuthenticated, screenTimeEnabled]);
+
+  // --- Lock activation logic (keep existing logic unchanged) ---
   useEffect(() => {
     if (!isAuthenticated || !ScreenLockModule) return;
     if (isBudgetLoading || isPenaltiesLoading || isBudgetError || isPenaltiesError) return;
@@ -70,11 +93,12 @@ export const useDeviceScreenLock = () => {
     }
   }, [budget, penaltiesData, isAuthenticated, isBudgetLoading, isPenaltiesLoading, isBudgetError, isPenaltiesError, i18n.language, t]);
 
-  const requestPermission = async () => {
+  // Stable reference — prevents re-triggering the Alert effect in AppContent
+  const requestPermission = useCallback(async () => {
     if (ScreenLockModule) {
       await ScreenLockModule.requestOverlayPermission();
     }
-  };
+  }, []);
 
   return {
     needsPermission,

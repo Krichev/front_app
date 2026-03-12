@@ -4,4 +4,5 @@ export * from './AnswerPhase';
 export * from './FeedbackPhase';
 export * from './ReadingPhase';
 export * from './MediaPlaybackPhase';
+export * from './AudioAnswerPhase';
 export * from './phases.styles';

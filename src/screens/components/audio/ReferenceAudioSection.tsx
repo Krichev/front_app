@@ -1,7 +1,9 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Text, View} from 'react-native';
 import {AudioPlayer} from '../AudioPlayer';
 import NetworkConfigManager from '../../../config/NetworkConfig';
+import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../../shared/ui/theme';
 
 interface ReferenceAudioSectionProps {
   audioUrl?: string;
@@ -9,7 +11,9 @@ interface ReferenceAudioSectionProps {
   segmentEnd?: number | null;
   title?: string;
   question?: {
+    id?: number | string;
     questionMediaUrl?: string;
+    questionMediaId?: string | number | null;
     audioSegmentStart?: number | null;
     audioSegmentEnd?: number | null;
     audioReferenceMediaId?: number | string | null;
@@ -27,13 +31,37 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   onPlaybackComplete,
   mini = false,
 }) => {
+  const {theme} = useAppStyles();
+  const styles = themeStyles;
   const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
   
-  const fallbackUrl = question?.audioReferenceMediaId 
-    ? `${API_BASE_URL}/media/audio/${question.audioReferenceMediaId}/playback-url`
-    : undefined;
+  // Resolution priority:
+  // 1. Explicit audioUrl prop
+  // 2. question.questionMediaUrl (direct stream URL)
+  // 3. question.audioReferenceMediaId (dedicated reference audio)
+  // 4. question.questionMediaId (media library ID)
+  // 5. question.id (question-specific media endpoint)
 
-  const effectiveUrl = audioUrl || question?.questionMediaUrl || fallbackUrl;
+  const getEffectiveUrl = () => {
+    if (audioUrl) return audioUrl;
+    if (question?.questionMediaUrl) return question.questionMediaUrl;
+    
+    if (question?.audioReferenceMediaId) {
+      return `${API_BASE_URL}/media/audio/${question.audioReferenceMediaId}/playback-url`;
+    }
+    
+    if (question?.questionMediaId) {
+      return `${API_BASE_URL}/media/stream/${question.questionMediaId}`;
+    }
+    
+    if (question?.id) {
+      return `${API_BASE_URL}/media/question/${question.id}/stream`;
+    }
+    
+    return undefined;
+  };
+
+  const effectiveUrl = getEffectiveUrl();
   const effectiveStart = (segmentStart ?? question?.audioSegmentStart) ?? 0;
   const effectiveEnd = (segmentEnd ?? question?.audioSegmentEnd) ?? undefined;
 
@@ -52,30 +80,32 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   container: {
-    marginBottom: 24,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    elevation: 1,
+    marginBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.layout.borderRadius.lg,
+    padding: theme.spacing.md,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 1,
+    shadowRadius: 4,
     width: '100%',
   },
   miniContainer: {
-    padding: 8,
-    marginBottom: 8,
-    backgroundColor: '#f9f9f9',
+    padding: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.background.tertiary,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
+    fontWeight: '700',
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.sm,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-});
+}));

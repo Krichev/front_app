@@ -16,7 +16,7 @@ import {useScoreRhythmTapsMutation} from '../../../entities/RhythmChallengeState
 import {AudioChallengeType} from '../../../types/audioChallenge.types';
 import {BeatIndicator, RhythmPatternDTO} from '../../../types/rhythmChallenge.types';
 
-interface AudioAnswerPhaseProps {
+interface AudioChallengeScoringPhaseProps {
     question: QuizQuestion;
     onSubmissionComplete: (submission: AudioChallengeSubmission) => void;
     onCancel: () => void;
@@ -25,7 +25,7 @@ interface AudioAnswerPhaseProps {
 
 type AudioSubPhase = 'ready' | 'listening' | 'performing' | 'processing' | 'completed';
 
-export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
+export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProps> = ({
                                                                       question,
                                                                       onSubmissionComplete,
                                                                       onCancel,

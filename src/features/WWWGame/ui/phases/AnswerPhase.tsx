@@ -1,11 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Animated } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import VoiceRecorder from '../../../../components/VoiceRecorder';
 import { AudioChallengePhase } from './AudioChallengePhase';
+import { AudioAnswerPhase } from './AudioAnswerPhase';
 import { useAnswerTimer } from '../../hooks/useAnswerTimer';
 
 interface AnswerPhaseProps {
@@ -35,6 +37,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   onAudioRecordingComplete,
   recordedAudio,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
   const [showHint, setShowHint] = useState(false);
@@ -65,7 +68,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     }
   };
 
-  if (isAudioChallenge || (isAnyAudioQuestion && onAudioRecordingComplete)) {
+  if (isAudioChallenge) {
     const timeLimit = question.timeLimitSeconds || gameSettings?.roundTimeSeconds || 120;
     return (
       <AudioChallengePhase
@@ -79,14 +82,31 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
     );
   }
 
+  if (isAnyAudioQuestion && question.questionMediaId) {
+    return (
+      <AudioAnswerPhase
+        question={question}
+        answer={answer}
+        onAnswerChange={onAnswerChange}
+        onSubmit={onSubmit}
+        isSubmitting={isSubmitting}
+        gameSettings={gameSettings}
+        onAudioRecordingComplete={onAudioRecordingComplete}
+        recordedAudio={recordedAudio}
+        player={player}
+        onPlayerChange={onPlayerChange}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Answer Timer Display */}
       <View style={styles.timerContainer}>
         <Text style={styles.timerText}>
           {timer.phase === 'typing'
-            ? `${timer.timeLeft} seconds to start typing`
-            : `${timer.timeLeft} seconds remaining`}
+            ? t('wwwPhases.answer.startTyping')
+            : t('wwwPhases.answer.timeToComplete', { seconds: timer.timeLeft })}
         </Text>
         <View style={styles.timerBar}>
           <Animated.View
@@ -104,7 +124,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         </View>
       </View>
 
-      <Text style={styles.title}>Submit Your Answer</Text>
+      <Text style={styles.title}>{t('wwwPhases.audioAnswer.title')}</Text>
       <Text style={styles.text}>{question.question}</Text>
 
       {question.additionalInfo && (
@@ -114,7 +134,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             onPress={() => setShowHint(!showHint)}
           >
             <Text style={{ color: theme.colors.info.main, fontWeight: theme.typography.fontWeight.medium }}>
-              {showHint ? 'Hide Hint' : 'Show Hint'}
+              {showHint ? t('common.hide') : t('common.showHint')}
             </Text>
           </TouchableOpacity>
           {showHint && (
@@ -137,7 +157,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
               color={theme.colors.text.inverse}
             />
             <Text style={{ color: theme.colors.text.inverse, ...theme.typography.body.medium, fontWeight: theme.typography.fontWeight.bold, marginLeft: theme.spacing.sm }}>
-              {isRecordingVoiceAnswer ? 'Stop Recording Answer' : 'Record Voice Answer'}
+              {isRecordingVoiceAnswer ? t('wwwPhases.answer.stopRecordingAnswer') : t('wwwPhases.answer.recordVoiceAnswer')}
             </Text>
           </TouchableOpacity>
 
@@ -152,7 +172,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
 
       {gameSettings?.players && gameSettings.players.length > 0 && (
         <View style={{ marginBottom: theme.spacing.lg }}>
-          <Text style={styles.label}>Who is answering?</Text>
+          <Text style={styles.label}>{t('wwwPhases.answer.whoIsAnswering')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', maxHeight: 50 }}>
             {gameSettings.players.map((p: string) => (
               <TouchableOpacity
@@ -170,12 +190,12 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       )}
 
       <View style={{ marginBottom: theme.spacing.lg }}>
-        <Text style={styles.label}>Team Answer:</Text>
+        <Text style={styles.label}>{t('wwwPhases.answer.teamAnswer')}</Text>
         <TextInput
           style={styles.input}
           value={answer}
           onChangeText={handleAnswerChange}
-          placeholder="Enter your team's answer..."
+          placeholder={t('wwwPhases.answer.enterAnswer')}
           multiline
           placeholderTextColor={theme.colors.text.disabled}
         />
@@ -187,7 +207,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         disabled={!answer.trim() || isSubmitting || timer.hasAutoSubmitted}
       >
         <Text style={styles.buttonText}>
-          {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+          {isSubmitting ? t('wwwPhases.answer.submitting') : t('wwwPhases.answer.submitAnswer')}
         </Text>
       </TouchableOpacity>
     </View>

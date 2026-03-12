@@ -138,19 +138,19 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
         {phase === 'ready' && (
            <View style={localStyles.phaseContainer}>
              <Text style={localStyles.instructionText}>
-               Prepare yourself! The timer will start when you begin recording.
+               {t('audioChallenge.prepareYourself')}
              </Text>
              <TouchableOpacity
                style={[styles.button, localStyles.largeButton]}
                onPress={handleStartRecordingPhase}
              >
-               <Text style={styles.buttonText}>START RECORDING PHASE</Text>
+               <Text style={styles.buttonText}>{t('audioChallenge.startRecordingPhase')}</Text>
              </TouchableOpacity>
              <TouchableOpacity 
                onPress={() => setPhase('listening')}
                style={{ marginTop: theme.spacing.md }}
              >
-               <Text style={{ color: theme.colors.primary.main }}>Back to Listening</Text>
+               <Text style={{ color: theme.colors.primary.main }}>{t('audioChallenge.backToListening')}</Text>
              </TouchableOpacity>
            </View>
         )}

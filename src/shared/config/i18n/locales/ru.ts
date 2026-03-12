@@ -51,6 +51,8 @@ const ru = {
         close: 'Закрыть',
         goBack: 'Назад',
         seconds: '{{count}} сек',
+        hide: 'Скрыть',
+        showHint: 'Показать подсказку',
         localizedInput: {
             fillAtLeastOne: 'Пожалуйста, заполните хотя бы один язык',
             fillBothLanguages: 'Пожалуйста, заполните оба языка',
@@ -1596,6 +1598,9 @@ const ru = {
             voice: 'Голос',
             needsAudio: 'Требуется аудио',
         },
+        prepareYourself: 'Приготовьтесь! Таймер начнёт отсчёт, когда вы начнёте запись.',
+        startRecordingPhase: 'Начать фазу записи',
+        backToListening: 'Назад к прослушиванию',
     },
     wwwGame: {
         // --- EXISTING (keep as-is) ---
@@ -1664,6 +1669,35 @@ const ru = {
             finishGame: 'Завершить игру',
             nextQuestion: 'Следующий вопрос',
         },
+        audioAnswer: {
+            title: 'Ответьте на вопрос',
+            listenToQuestion: 'Прослушайте аудио-вопрос',
+            replay: 'Прослушать ещё раз',
+            replaying: 'Воспроизведение...',
+            timeRemaining: '{{seconds}}с осталось',
+            answerPlaceholder: 'Введите ваш ответ...',
+            submitAnswer: 'Отправить ответ',
+            submitting: 'Отправка...',
+            recordYourAnswer: 'Запишите ваш ответ',
+            tapToRecord: 'Нажмите, чтобы начать запись',
+            stopRecording: 'Остановить запись',
+            recordAgain: 'Записать снова',
+            audioNotAvailable: 'Аудио недоступно',
+            startTimer: 'Начать',
+            answerModeText: 'Написать ответ',
+            answerModeRecord: 'Записать ответ',
+        },
+        answer: {
+            teamAnswer: 'Ответ команды:',
+            whoIsAnswering: 'Кто отвечает?',
+            submitAnswer: 'Отправить ответ',
+            submitting: 'Отправка...',
+            enterAnswer: 'Введите ответ вашей команды...',
+            stopRecordingAnswer: 'Остановить запись ответа',
+            recordVoiceAnswer: 'Записать голосовой ответ',
+            startTyping: 'Начните вводить текст для запуска таймера...',
+            timeToComplete: 'Время на ответ: {{seconds}}с',
+        },
     },
     tvDisplay: {
         connect: {
@@ -1688,8 +1722,8 @@ const ru = {
     notificationTitle: 'Ограничение времени активно',
     notificationMessage: 'Осталось {{minutes}} минут',
     permissionTitle: 'Требуется разрешение',
-    permissionMessage: 'RhythmGame требуется разрешение "Поверх других приложений" для контроля экранного времени.',
-    permissionButton: 'Дать разрешение',
+    permissionMessage: 'На вашем аккаунте включено Экранное время. Чтобы ограничить использование при исчерпании лимита, RhythmGame нужно разрешение «Поверх других приложений». Оно будет использоваться только при активном отслеживании экранного времени.',
+    permissionButton: 'Предоставить разрешение',
   },
 };
 
