@@ -242,15 +242,31 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                     )}
                 </View>
             ) : (
-                <AudioChallengeContainer
-                    question={{
-                        ...question,
-                        audioChallengeType: challengeType
-                    }}
-                    mode="record"
-                    onRecordingComplete={handleAudioRecordingComplete}
-                    disabled={isSubmitting}
-                />
+                subPhase === 'ready' ? (
+                    <View style={styles.readyContainer}>
+                        <AudioChallengeContainer
+                            question={{
+                                ...question,
+                                audioChallengeType: challengeType
+                            }}
+                            mode="preview"
+                        />
+                        <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming}>
+                            <MaterialCommunityIcons name="play-circle" size={48} color={theme.colors.success.main}/>
+                            <Text style={styles.startButtonText}>{t('common.start')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <AudioChallengeContainer
+                        question={{
+                            ...question,
+                            audioChallengeType: challengeType
+                        }}
+                        mode="record"
+                        onRecordingComplete={handleAudioRecordingComplete}
+                        disabled={isSubmitting}
+                    />
+                )
             )}
 
             {!isSubmitting && subPhase !== 'performing' && (
