@@ -1,20 +1,26 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {ActivityIndicator, Alert, Animated, Text, TouchableOpacity, View, Platform} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Video, {VideoRef} from 'react-native-video';
 import {useTranslation} from 'react-i18next';
 
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../../shared/ui/theme';
 import {QuizQuestion} from '../../../entities/QuizState/model/slice/quizApi';
 import {AudioChallengeSubmission} from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import {AudioChallengeContainer} from '../../components/audio/AudioChallengeContainer';
-import RhythmTapPad from '../../components/RhythmTapPad';
-import RhythmBeatIndicators from '../../components/RhythmBeatIndicators';
+import {RhythmTapPad} from '../../components/RhythmTapPad';
+import {RhythmBeatIndicators} from '../../components/RhythmBeatIndicators';
 import AudioChallengeScoreDisplay from '../../../components/AudioChallengeScoreDisplay';
 import {useAudioSubmissionPolling} from '../../../hooks/useAudioSubmissionPolling';
 import {useRhythmTapCapture} from '../../../hooks/useRhythmTapCapture';
 import {useScoreRhythmTapsMutation} from '../../../entities/RhythmChallengeState/model/slice/rhythmApi';
-import {AudioChallengeType} from '../../../types/audioChallenge.types';
-import {BeatIndicator, RhythmPatternDTO} from '../../../types/rhythmChallenge.types';
+import {AudioChallengeType, getAudioChallengeTypeInfo} from '../../../types/audioChallenge.types';
+import {BeatIndicator, RhythmPatternDTO, EnhancedRhythmScoringResult} from '../../../types/rhythmChallenge.types';
+import MediaUrlService from '../../../services/media/MediaUrlService';
+import {useBeatMatcher, ClientTimingScore} from '../../../hooks/useBeatMatcher';
+import {TwoPhaseResultsDisplay} from '../../components/TwoPhaseResultsDisplay';
+import {RhythmAudioRecorder} from '../../components/RhythmAudioRecorder';
 
 interface AudioChallengeScoringPhaseProps {
     question: QuizQuestion;
@@ -23,7 +29,7 @@ interface AudioChallengeScoringPhaseProps {
     isSubmitting: boolean;
 }
 
-type AudioSubPhase = 'ready' | 'listening' | 'performing' | 'processing' | 'completed';
+type AudioSubPhase = 'ready' | 'listening' | 'performing' | 'relisten' | 'processing' | 'results' | 'completed';
 
 export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProps> = ({
                                                                       question,
@@ -33,15 +39,63 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                                                                   }) => {
     const {t} = useTranslation();
     const {theme} = useAppStyles();
+    const styles = themeStyles;
 
     const [subPhase, setSubPhase] = useState<AudioSubPhase>('ready');
     const [localSubmission, setLocalSubmission] = useState<AudioChallengeSubmission | null>(null);
+    const [attemptCount, setAttemptCount] = useState(0);
+    
+    // Two-phase results state for in-game
+    const [clientTimingScore, setClientTimingScore] = useState<ClientTimingScore | null>(null);
+    const [serverResult, setServerResult] = useState<EnhancedRhythmScoringResult | null>(null);
+    const [isAnalyzingSound, setIsAnalyzingSound] = useState(false);
+
+    // ── Audio playback state (for RHYTHM_REPEAT listening) ──
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    const [firstPlayDone, setFirstPlayDone] = useState(false);
+    const [replaysUsed, setReplaysUsed] = useState(0);
+    const [currentBeatIndex, setCurrentBeatIndex] = useState(-1);
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const videoRef = useRef<VideoRef>(null);
+    const beatTimersRef = useRef<NodeJS.Timeout[]>([]);
 
     const challengeType = question.audioChallengeType as AudioChallengeType;
+    const challengeTypeInfo = getAudioChallengeTypeInfo(challengeType);
     const isRhythm = challengeType === AudioChallengeType.RHYTHM_CREATION ||
         challengeType === AudioChallengeType.RHYTHM_REPEAT;
+    
+    const inputMode = (question as any)?.answerInputMode === 'AUDIO' ? 'AUDIO' : 'TAP';
 
-    // Polling hook for audio recordings
+    // Question config for replay limits
+    const allowReplay = (question as any)?.allowReplay ?? true;
+    const maxReplaysAllowed = (question as any)?.maxReplays ?? 3;
+
+    // Resolve audio URL
+    const audioUrl = useMemo(() => {
+        if (!question?.questionMediaId) return null;
+        return MediaUrlService.getInstance().getMediaByIdUrl(question.questionMediaId);
+    }, [question?.questionMediaId]);
+
+    // Pulse animation during audio playback
+    useEffect(() => {
+        if (isAudioPlaying) {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(pulseAnim, { toValue: 1.2, duration: 600, useNativeDriver: true }),
+                    Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+                ])
+            ).start();
+        } else {
+            pulseAnim.setValue(1);
+        }
+    }, [isAudioPlaying, pulseAnim]);
+
+    // Cleanup beat timers
+    useEffect(() => {
+        return () => { beatTimersRef.current.forEach(clearTimeout); };
+    }, []);
+
+    // Polling hook for audio recordings (Phase B)
     const {
         submit: submitRecording,
         submission: polledSubmission,
@@ -51,23 +105,23 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
         error: pollingError
     } = useAudioSubmissionPolling({
         onComplete: (sub) => {
+            // Convert submission to EnhancedRhythmScoringResult
+            const result: EnhancedRhythmScoringResult = {
+                overallScore: sub.overallScore,
+                passed: sub.passed,
+                soundSimilarityEnabled: !!sub.soundSimilarityScore,
+                soundSimilarityScore: sub.soundSimilarityScore,
+                timingWeight: 0.7,
+                soundWeight: 0.3,
+                combinedScore: sub.overallScore,
+            };
+            setServerResult(result);
+            setIsAnalyzingSound(false);
+            
+            // Also update local submission for WWW flow
             setLocalSubmission(sub);
-            setSubPhase('completed');
         }
     });
-
-    // Rhythm hooks
-    const {
-        tapCount,
-        isCapturing,
-        startCapture,
-        stopCapture,
-        recordTap,
-        duration,
-        resetCapture
-    } = useRhythmTapCapture({maxDuration: 30000});
-
-    const [scoreRhythmTaps, {isLoading: isScoringTaps}] = useScoreRhythmTapsMutation();
 
     // Parse rhythm pattern if available
     const rhythmPattern: RhythmPatternDTO | null = useMemo(() => {
@@ -79,24 +133,105 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
         }
     }, [question.audioChallengeConfig]);
 
-    // Build beat indicators for rhythm challenges
-    const beatIndicators: BeatIndicator[] = useMemo(() => {
-        if (!rhythmPattern) return [];
-        return rhythmPattern.onsetTimesMs.map((time, index) => ({
-            index,
-            expectedTimeMs: time,
-            status: 'pending' as const,
-        }));
-    }, [rhythmPattern]);
+    // Beat matcher hook
+    const beatMatcher = useBeatMatcher({
+        referencePattern: rhythmPattern,
+        toleranceMs: 150
+    });
 
-    // Handle audio recording completion (for SOUND_MATCH, SINGING, or AUDIO-based RHYTHM)
+    // Rhythm hooks
+    const {
+        tapCount,
+        isCapturing,
+        startCapture,
+        stopCapture,
+        recordTap,
+        duration,
+        resetCapture
+    } = useRhythmTapCapture({
+        maxDuration: 30000,
+        onTapRecorded: (ts) => beatMatcher.matchOnset(ts)
+    });
+
+    const [scoreRhythmTaps, {isLoading: isScoringTaps}] = useScoreRhythmTapsMutation();
+
+    // ── Handlers ──
+
+    const canReplayNow = useCallback(() => {
+        return allowReplay && (maxReplaysAllowed === 0 || replaysUsed < maxReplaysAllowed);
+    }, [allowReplay, maxReplaysAllowed, replaysUsed]);
+
+    const handlePlayReference = useCallback((fromPerforming = false) => {
+        if (!audioUrl) {
+            Alert.alert(t('common.error'), t('challengeDetails.launcher.audioConfigMissing'));
+            return;
+        }
+        if (firstPlayDone && !canReplayNow()) {
+            Alert.alert(t('common.error'), t('rhythmChallenge.noReplaysLeft'));
+            return;
+        }
+        if (firstPlayDone) {
+            setReplaysUsed(prev => prev + 1);
+        }
+
+        // If called from performing phase, pause tapping first
+        if (fromPerforming && isCapturing) {
+            stopCapture();
+        }
+
+        setSubPhase(fromPerforming ? 'relisten' : 'listening');
+        setIsAudioPlaying(true);
+        setCurrentBeatIndex(-1);
+
+        // Animate beat indicators
+        if (rhythmPattern) {
+            beatTimersRef.current.forEach(clearTimeout);
+            beatTimersRef.current = [];
+            rhythmPattern.onsetTimesMs.forEach((time: number, index: number) => {
+                const timer = setTimeout(() => setCurrentBeatIndex(index), time);
+                beatTimersRef.current.push(timer);
+            });
+        }
+    }, [audioUrl, firstPlayDone, canReplayNow, isCapturing, stopCapture, rhythmPattern, t]);
+
+    const handleAudioEnd = useCallback(() => {
+        setIsAudioPlaying(false);
+        setCurrentBeatIndex(-1);
+        setFirstPlayDone(true);
+
+        // If we were re-listening during performing, go back to performing
+        if (subPhase === 'relisten') {
+            setSubPhase('performing');
+            if (inputMode === 'TAP') startCapture(); // resume tapping
+        } else {
+            setSubPhase('ready');
+        }
+    }, [subPhase, startCapture, inputMode]);
+
+    const handleRelistenFromPerforming = useCallback(() => {
+        handlePlayReference(true);
+    }, [handlePlayReference]);
+
+    // Handle audio recording completion
     const handleAudioRecordingComplete = useCallback(async (audioFile: { uri: string; name: string; type: string }) => {
-        setSubPhase('processing');
+        setIsAnalyzingSound(true);
         await submitRecording(question.id, audioFile);
     }, [question.id, submitRecording]);
+    
+    const handleAudioRecordingStop = useCallback(() => {
+        const finalBeats = beatMatcher.finalizeBeats();
+        const timingScore = beatMatcher.computeTimingScore(finalBeats, question.minimumScorePercentage || 60);
+        setClientTimingScore(timingScore);
+        setSubPhase('results');
+    }, [beatMatcher, question]);
 
     // Handle rhythm tap completion
     const handleStopTapping = useCallback(async () => {
+        // Phase A: Client-side score
+        const finalBeats = beatMatcher.finalizeBeats();
+        const timingScore = beatMatcher.computeTimingScore(finalBeats, question.minimumScorePercentage || 60);
+        setClientTimingScore(timingScore);
+        
         const timestamps = stopCapture();
 
         if (timestamps.length < 2) {
@@ -108,14 +243,10 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
             return;
         }
 
-        setSubPhase('processing');
+        setSubPhase('results');
 
+        // Phase B: Authoritative server score
         try {
-            // For MVP, we use the direct rhythm scoring API
-            // In a real flow, we might want to also "submit" this to the audio_submissions table
-            // but if we only have taps (no audio), the current backend expects an audio file.
-            // So we'll map the direct result to a partial AudioChallengeSubmission for display.
-
             const result = await scoreRhythmTaps({
                 questionId: question.id,
                 referencePattern: rhythmPattern!,
@@ -124,10 +255,20 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                 minimumScoreRequired: question.minimumScorePercentage || 60,
             }).unwrap();
 
-            const mockSubmission: AudioChallengeSubmission = {
-                id: Math.random(), // Temporary
+            const enhancedResult: EnhancedRhythmScoringResult = {
+                ...result,
+                soundSimilarityEnabled: false,
+                timingWeight: 1.0,
+                soundWeight: 0.0,
+                combinedScore: result.overallScore,
+            };
+            
+            setServerResult(enhancedResult);
+            
+            const finalSubmission: AudioChallengeSubmission = {
+                id: Math.random(),
                 questionId: question.id,
-                userId: 0, // Should be from auth
+                userId: 0,
                 processingStatus: 'COMPLETED',
                 processingProgress: 100,
                 overallScore: result.overallScore,
@@ -137,63 +278,102 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                 createdAt: new Date().toISOString(),
                 processedAt: new Date().toISOString(),
             };
-
-            setLocalSubmission(mockSubmission);
-            setSubPhase('completed');
+            setLocalSubmission(finalSubmission);
         } catch (err) {
             console.error('Rhythm scoring failed:', err);
-            Alert.alert('Error', 'Failed to score rhythm');
-            setSubPhase('ready');
+            const fallbackSubmission: AudioChallengeSubmission = {
+                id: Math.random(),
+                questionId: question.id,
+                userId: 0,
+                processingStatus: 'COMPLETED',
+                processingProgress: 100,
+                overallScore: timingScore.overallScore,
+                rhythmScore: timingScore.overallScore,
+                passed: timingScore.passed,
+                minimumScoreRequired: question.minimumScorePercentage || 60,
+                createdAt: new Date().toISOString(),
+                processedAt: new Date().toISOString(),
+            };
+            setLocalSubmission(fallbackSubmission);
         }
-    }, [stopCapture, t, scoreRhythmTaps, question.id, rhythmPattern, question.minimumScorePercentage]);
+    }, [beatMatcher, stopCapture, t, scoreRhythmTaps, question, rhythmPattern]);
 
     const handleStartPerforming = useCallback(() => {
-        if (isRhythm) {
-            setSubPhase('performing');
-            startCapture();
-        } else {
-            setSubPhase('performing');
+        if (isRhythm && challengeType === AudioChallengeType.RHYTHM_REPEAT && !firstPlayDone) {
+            handlePlayReference(false);
+            return;
         }
-    }, [isRhythm, startCapture]);
+        setSubPhase('performing');
+        if (isRhythm && inputMode === 'TAP') {
+            startCapture();
+        }
+        setAttemptCount(prev => prev + 1);
+    }, [isRhythm, challengeType, firstPlayDone, handlePlayReference, startCapture, inputMode]);
 
     const handleFinish = useCallback(() => {
         if (localSubmission) {
             onSubmissionComplete(localSubmission);
         }
     }, [localSubmission, onSubmissionComplete]);
-
-    // Auto-start listening for RHYTHM_REPEAT or SOUND_MATCH/SINGING if needed
-    useEffect(() => {
-        if (subPhase === 'ready' && challengeType === AudioChallengeType.RHYTHM_REPEAT) {
-            // We could auto-transition to listening here
-        }
-    }, [subPhase, challengeType]);
+    
+    const handleRetry = useCallback(() => {
+        resetCapture();
+        beatMatcher.resetBeats();
+        setClientTimingScore(null);
+        setServerResult(null);
+        setIsAnalyzingSound(false);
+        setSubPhase('ready');
+    }, [resetCapture, beatMatcher]);
 
     const isSubmitting = isExternalSubmitting || isInternalSubmitting || isPolling || isScoringTaps;
 
-    // RENDER PHASES
+    // ── Computed display values ──
+    const replayCount = maxReplaysAllowed === 0 ? null : maxReplaysAllowed - replaysUsed;
+    const replayLabel = maxReplaysAllowed === 0
+        ? t('rhythmChallenge.unlimitedReplays')
+        : t('rhythmChallenge.replaysLeft', { count: replayCount ?? 0 });
+
+    // ══════════════════════════════════════════════════════════════
+    // RENDER 
+    // ══════════════════════════════════════════════════════════════
+
+    if (subPhase === 'results' && clientTimingScore) {
+        return (
+            <View style={styles.container}>
+                <TwoPhaseResultsDisplay
+                    clientTimingScore={clientTimingScore}
+                    serverResult={serverResult}
+                    isAnalyzingSound={isAnalyzingSound}
+                    beatIndicators={beatMatcher.beatIndicators}
+                    onRetry={handleRetry}
+                    onContinue={handleFinish}
+                />
+            </View>
+        );
+    }
 
     if (subPhase === 'completed' && localSubmission) {
         return (
             <View style={styles.container}>
-                <AudioChallengeScoreDisplay submission={localSubmission}/>
-                <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
-                    <Text style={styles.finishButtonText}>{t('common.continue')}</Text>
+                <AudioChallengeScoreDisplay submission={localSubmission} />
+                <TouchableOpacity style={styles.primaryButton} onPress={handleFinish} activeOpacity={0.8}>
+                    <MaterialCommunityIcons name="arrow-right-circle" size={22} color={theme.colors.text.inverse} />
+                    <Text style={styles.primaryButtonText}>{t('common.continue')}</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
-    if (subPhase === 'processing') {
+    if (subPhase === 'processing' && !isRhythm) {
         return (
             <View style={[styles.container, styles.centered]}>
-                <ActivityIndicator size="large" color={theme.colors.primary.main}/>
-                <Text style={styles.processingText}>{t('audioGamePlay.processing')}</Text>
+                <ActivityIndicator size="large" color={theme.colors.success.main} />
+                <Text style={styles.statusText}>{t('audioGamePlay.processing')}</Text>
                 {pollingError && (
-                    <View style={styles.errorContainer}>
+                    <View style={styles.errorBox}>
                         <Text style={styles.errorText}>{pollingError}</Text>
-                        <TouchableOpacity style={styles.retryButton} onPress={() => setSubPhase('ready')}>
-                            <Text style={styles.retryButtonText}>{t('audioGamePlay.tryAgain')}</Text>
+                        <TouchableOpacity style={styles.outlineButton} onPress={() => setSubPhase('ready')}>
+                            <Text style={styles.outlineButtonText}>{t('audioGamePlay.tryAgain')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -203,65 +383,133 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>{question.question}</Text>
+            {/* ── Hidden Audio Player ── */}
+            {audioUrl && (challengeType === AudioChallengeType.RHYTHM_REPEAT) && (
+                <Video
+                    ref={videoRef}
+                    source={{ uri: audioUrl }}
+                    paused={!isAudioPlaying}
+                    onEnd={handleAudioEnd}
+                    onError={(e) => console.error('Audio playback error:', e)}
+                    style={{ height: 0, width: 0 }}
+                />
+            )}
 
+            {/* ── Compact Header ── */}
+            <View style={styles.compactHeader}>
+                <View style={styles.headerIconCircle}>
+                    <MaterialCommunityIcons
+                        name={challengeType === AudioChallengeType.RHYTHM_REPEAT ? 'repeat' : 'music-note-plus'}
+                        size={24}
+                        color={theme.colors.success.main}
+                    />
+                </View>
+                <View style={styles.headerTextBlock}>
+                    <Text style={styles.headerTitle}>
+                        {t(`audioChallenge.types.${challengeType}.label`)}
+                    </Text>
+                    {rhythmPattern && (
+                        <Text style={styles.patternMeta}>
+                            {t('rhythmChallenge.patternInfo', {
+                                beats: rhythmPattern.totalBeats,
+                                bpm: rhythmPattern.estimatedBpm,
+                                timeSignature: rhythmPattern.timeSignature,
+                            })}
+                        </Text>
+                    )}
+                </View>
+                {firstPlayDone && allowReplay && (
+                    <View style={styles.replayBadge}>
+                        <MaterialCommunityIcons name="replay" size={12} color={theme.colors.primary.main} />
+                        <Text style={styles.replayBadgeText}>{replayLabel}</Text>
+                    </View>
+                )}
+            </View>
+
+            {/* ── Phase Content ── */}
             {isRhythm ? (
-                <View style={styles.rhythmContainer}>
-                    {challengeType === AudioChallengeType.RHYTHM_REPEAT && (
-                        <RhythmBeatIndicators
-                            beats={beatIndicators}
-                            mode={subPhase === 'performing' ? 'recording' : 'playback'}
-                        />
+                <View style={styles.rhythmArea}>
+                    {subPhase === 'ready' && (
+                        <View style={styles.phaseCenter}>
+                            {challengeType === AudioChallengeType.RHYTHM_REPEAT && (
+                                <RhythmBeatIndicators beats={beatMatcher.beatIndicators} currentBeatIndex={-1} mode="playback" />
+                            )}
+
+                            {!firstPlayDone && challengeType === AudioChallengeType.RHYTHM_REPEAT ? (
+                                <>
+                                    <Text style={styles.instruction}>{t('audioGamePlay.rhythmListenFirst')}</Text>
+                                    <TouchableOpacity
+                                        style={styles.listenButton}
+                                        onPress={() => handlePlayReference(false)}
+                                        activeOpacity={0.8}
+                                        disabled={isAudioPlaying}
+                                    >
+                                        <MaterialCommunityIcons name="play-circle" size={36} color={theme.colors.text.inverse} />
+                                        <Text style={styles.listenButtonText}>{t('audioGamePlay.listenToPattern')}</Text>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <>
+                                    <Text style={styles.instruction}>
+                                        {challengeType === AudioChallengeType.RHYTHM_REPEAT ? t('audioGamePlay.readyToTap') : t('audioGamePlay.rhythmReady')}
+                                    </Text>
+                                    <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming} activeOpacity={0.8}>
+                                        <MaterialCommunityIcons name={inputMode === 'TAP' ? "gesture-tap" : "microphone"} size={40} color={theme.colors.text.inverse} />
+                                        <Text style={styles.startButtonText}>{t('common.start')}</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
                     )}
 
-                    {subPhase === 'ready' ? (
-                        <View style={styles.readyContainer}>
-                            <Text style={styles.instructionText}>
-                                {challengeType === AudioChallengeType.RHYTHM_REPEAT
-                                    ? t('audioGamePlay.rhythmListenFirst')
-                                    : t('audioGamePlay.rhythmReady')}
-                            </Text>
-                            <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming}>
-                                <MaterialCommunityIcons name="play-circle" size={48} color={theme.colors.success.main}/>
-                                <Text style={styles.startButtonText}>{t('common.start')}</Text>
-                            </TouchableOpacity>
+                    {(subPhase === 'listening' || subPhase === 'relisten') && (
+                        <View style={styles.phaseCenter}>
+                            {subPhase === 'relisten' && <Text style={styles.pausedHint}>{t('audioGamePlay.tappingPaused')}</Text>}
+                            <Animated.View style={[styles.pulseCircle, { transform: [{ scale: pulseAnim }] }]}>
+                                <MaterialCommunityIcons name="volume-high" size={64} color={theme.colors.success.main} />
+                            </Animated.View>
+                            <Text style={styles.playingLabel}>{t('rhythmChallenge.playingPattern')}</Text>
+                            <RhythmBeatIndicators beats={beatMatcher.beatIndicators} currentBeatIndex={currentBeatIndex} mode="playback" />
                         </View>
-                    ) : (
-                        <View style={styles.performingContainer}>
-                            <RhythmTapPad
-                                isActive={isCapturing}
-                                onTap={recordTap}
-                                tapCount={tapCount}
-                                totalExpectedTaps={rhythmPattern?.totalBeats}
+                    )}
+
+                    {subPhase === 'performing' && (
+                        inputMode === 'TAP' ? (
+                            <View style={styles.performingArea}>
+                                <RhythmBeatIndicators beats={beatMatcher.beatIndicators} mode="recording" />
+                                <RhythmTapPad isActive={isCapturing} onTap={recordTap} tapCount={tapCount} totalExpectedTaps={rhythmPattern?.totalBeats} />
+                                <View style={styles.performingActions}>
+                                    <TouchableOpacity style={styles.stopButton} onPress={handleStopTapping} activeOpacity={0.8}>
+                                        <MaterialCommunityIcons name="stop-circle" size={40} color={theme.colors.text.inverse} />
+                                        <Text style={styles.stopButtonText}>{t('common.done')}</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        ) : (
+                            <RhythmAudioRecorder
+                                isActive={true}
+                                onRecordingStart={() => {}}
+                                onRecordingStop={handleAudioRecordingStop}
+                                onRecordingComplete={handleAudioRecordingComplete}
+                                onRecordingCancel={() => setSubPhase('ready')}
+                                onOnsetDetected={(ts) => beatMatcher.matchOnset(ts)}
+                                onsetSensitivity={challengeTypeInfo?.onsetSensitivity}
                             />
-                            <TouchableOpacity style={styles.stopButton} onPress={handleStopTapping}>
-                                <MaterialCommunityIcons name="stop-circle" size={48} color={theme.colors.error.main}/>
-                                <Text style={styles.stopButtonText}>{t('common.done')}</Text>
-                            </TouchableOpacity>
-                        </View>
+                        )
                     )}
                 </View>
             ) : (
                 subPhase === 'ready' ? (
-                    <View style={styles.readyContainer}>
-                        <AudioChallengeContainer
-                            question={{
-                                ...question,
-                                audioChallengeType: challengeType
-                            }}
-                            mode="preview"
-                        />
-                        <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming}>
-                            <MaterialCommunityIcons name="play-circle" size={48} color={theme.colors.success.main}/>
+                    <View style={styles.phaseCenter}>
+                        <AudioChallengeContainer question={{ ...question, audioChallengeType: challengeType }} mode="preview" />
+                        <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming} activeOpacity={0.8}>
+                            <MaterialCommunityIcons name="play-circle" size={40} color={theme.colors.text.inverse} />
                             <Text style={styles.startButtonText}>{t('common.start')}</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <AudioChallengeContainer
-                        question={{
-                            ...question,
-                            audioChallengeType: challengeType
-                        }}
+                        question={{ ...question, audioChallengeType: challengeType }}
                         mode="record"
                         onRecordingComplete={handleAudioRecordingComplete}
                         disabled={isSubmitting}
@@ -269,110 +517,249 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                 )
             )}
 
-            {!isSubmitting && subPhase !== 'performing' && (
-                <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-                    <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+            {!isSubmitting && !['performing', 'listening', 'relisten'].includes(subPhase) && (
+                <TouchableOpacity style={styles.cancelLink} onPress={onCancel} activeOpacity={0.6}>
+                    <Text style={styles.cancelLinkText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
             )}
         </View>
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        padding: 20,
-        justifyContent: 'center',
+        backgroundColor: theme.colors.background.primary,
+        padding: theme.spacing.lg,
     },
     centered: {
         alignItems: 'center',
+        justifyContent: 'center',
     },
-    title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 30,
-        color: '#333',
+    compactHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.secondary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.lg,
+        marginBottom: theme.spacing.lg,
+        ...theme.shadows.small,
     },
-    instructionText: {
+    headerIconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: theme.colors.success.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: theme.spacing.md,
+    },
+    headerTextBlock: {
+        flex: 1,
+    },
+    headerTitle: {
         fontSize: 16,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+    },
+    patternMeta: {
+        fontSize: 12,
+        color: theme.colors.text.secondary,
+        marginTop: 2,
+    },
+    replayBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: theme.colors.info.background,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.layout.borderRadius.full,
+    },
+    replayBadgeText: {
+        fontSize: 11,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.primary.main,
+    },
+    rhythmArea: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    phaseCenter: {
+        alignItems: 'center',
+        gap: theme.spacing.lg,
+        paddingVertical: theme.spacing.xl,
+    },
+    instruction: {
+        fontSize: 17,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
-        marginBottom: 20,
-        color: '#666',
+        lineHeight: 24,
+        paddingHorizontal: theme.spacing.lg,
     },
-    processingText: {
-        marginTop: 20,
+    listenButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+        backgroundColor: theme.colors.success.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing.xl,
+        borderRadius: theme.layout.borderRadius.full,
+        ...theme.shadows.medium,
+        minHeight: 56,
+    },
+    listenButtonText: {
         fontSize: 18,
-        color: '#666',
-    },
-    rhythmContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    readyContainer: {
-        alignItems: 'center',
-    },
-    performingContainer: {
-        width: '100%',
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     startButton: {
         alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: theme.colors.success.main,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        ...theme.shadows.medium,
+        marginTop: theme.spacing.md,
     },
     startButtonText: {
-        marginTop: 10,
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#4CAF50',
+        fontSize: 14,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
+        marginTop: 4,
+    },
+    chipButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: theme.colors.info.background,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.full,
+        borderWidth: 1,
+        borderColor: theme.colors.primary.light,
+    },
+    chipButtonDisabled: {
+        borderColor: theme.colors.border.light,
+        backgroundColor: theme.colors.background.tertiary,
+    },
+    chipButtonText: {
+        fontSize: 14,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
+    },
+    chipButtonTextDisabled: {
+        color: theme.colors.text.disabled,
+    },
+    pulseCircle: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: theme.colors.success.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    playingLabel: {
+        fontSize: 16,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.success.main,
+    },
+    pausedHint: {
+        fontSize: 14,
+        color: theme.colors.warning.main,
+        fontWeight: theme.typography.fontWeight.medium,
+        textAlign: 'center',
+        paddingHorizontal: theme.spacing.lg,
+    },
+    performingArea: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+    },
+    performingActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: theme.spacing.xl,
+        marginTop: theme.spacing.lg,
+        width: '100%',
     },
     stopButton: {
         alignItems: 'center',
-        marginTop: 20,
+        justifyContent: 'center',
+        backgroundColor: theme.colors.error.main,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        ...theme.shadows.small,
     },
     stopButtonText: {
-        marginTop: 5,
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#F44336',
+        fontSize: 12,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
+        marginTop: 2,
     },
-    finishButton: {
-        backgroundColor: '#2196F3',
-        padding: 15,
-        borderRadius: 8,
+    primaryButton: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 30,
+        justifyContent: 'center',
+        gap: theme.spacing.sm,
+        backgroundColor: theme.colors.success.main,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing.xl,
+        borderRadius: theme.layout.borderRadius.lg,
+        marginTop: theme.spacing.xl,
+        ...theme.shadows.small,
+        minHeight: 52,
     },
-    finishButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: 'bold',
+    primaryButtonText: {
+        fontSize: 17,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
-    cancelButton: {
-        padding: 15,
+    outlineButton: {
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        borderWidth: 1,
+        borderColor: theme.colors.primary.main,
+        minHeight: 44,
         alignItems: 'center',
-        marginTop: 20,
+        justifyContent: 'center',
     },
-    cancelButtonText: {
-        color: '#666',
-        fontSize: 16,
+    outlineButtonText: {
+        fontSize: 15,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
-    errorContainer: {
-        marginTop: 20,
+    statusText: {
+        fontSize: 17,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.lg,
+    },
+    errorBox: {
+        marginTop: theme.spacing.lg,
         alignItems: 'center',
+        gap: theme.spacing.md,
     },
     errorText: {
-        color: '#F44336',
-        marginBottom: 10,
+        fontSize: 14,
+        color: theme.colors.error.main,
+        textAlign: 'center',
     },
-    retryButton: {
-        padding: 10,
-        backgroundColor: '#f0f0f0',
-        borderRadius: 5,
+    cancelLink: {
+        padding: theme.spacing.md,
+        alignItems: 'center',
+        marginTop: theme.spacing.md,
     },
-    retryButtonText: {
-        color: '#333',
-    }
-});
+    cancelLinkText: {
+        fontSize: 15,
+        color: theme.colors.text.secondary,
+    },
+}));
+
+export default AudioChallengeScoringPhase;

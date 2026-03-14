@@ -5,13 +5,12 @@ import { useDispatch } from 'react-redux';
 import {
     useCreateAudioQuestionMutation,
     CreateAudioQuestionRequest,
-    AudioChallengeType,
 } from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import { quizApi } from '../../../entities/QuizState/model/slice/quizApi';
-import {ProcessedFileInfo} from '../../../services/speech/FileService';
 import {AudioQuestionFormData} from '../AudioQuestionForm';
 import {getLocalizedValue, isLocalizedStringEmpty, createLocalizedString} from '../../../shared/types/localized';
 import { useI18n } from '../../../app/providers/I18nProvider';
+import { AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType } from '../../../types/audioChallenge.types';
 
 // ============================================================================
 // TYPES
@@ -56,9 +55,18 @@ export const useAudioQuestionSubmit = (
             try {
                 setError(null);
 
-                const questionText = getLocalizedValue(formData.question, currentLanguage);
-                const answerText = getLocalizedValue(formData.answer, currentLanguage);
+                let questionText = getLocalizedValue(formData.question, currentLanguage);
+                let answerText = getLocalizedValue(formData.answer, currentLanguage);
                 const additionalInfoText = getLocalizedValue(formData.additionalInfo, currentLanguage);
+
+                // Auto-fill if empty for audio challenges
+                if (!questionText.trim() && formData.audioChallengeType) {
+                    const typeLabel = AUDIO_CHALLENGE_TYPES_INFO[formData.audioChallengeType]?.label || 'Audio Challenge';
+                    questionText = `Complete the ${typeLabel}`;
+                }
+                if (!answerText?.trim() && formData.audioChallengeType) {
+                    answerText = "Audio Response";
+                }
 
                 // Validate required fields
                 if (!questionText.trim()) {
@@ -120,22 +128,22 @@ export const useAudioQuestionSubmit = (
                 // Call success callback
                 onSuccess?.(result.id);
             } catch (err) {
-                const error = err instanceof Error ? err : new Error(String(err));
-                console.error('❌ Failed to create audio question:', error);
+                const submitError = err instanceof Error ? err : new Error(String(err));
+                console.error('❌ Failed to create audio question:', submitError);
 
-                setError(error);
-                onError?.(error);
+                setError(submitError);
+                onError?.(submitError);
 
                 // Show user-friendly error message
                 Alert.alert(
                     'Error',
-                    error.message || 'Failed to create audio question. Please try again.'
+                    submitError.message || 'Failed to create audio question. Please try again.'
                 );
 
-                throw error;
+                throw submitError;
             }
         },
-        [createAudioQuestion, onSuccess, onError]
+        [createAudioQuestion, onSuccess, onError, currentLanguage, dispatch]
     );
 
     const resetError = useCallback(() => {
@@ -163,8 +171,8 @@ export const validateAudioQuestionForm = (
 ): {isValid: boolean; errors: Record<string, string>} => {
     const errors: Record<string, string> = {};
 
-    // Required fields
-    if (isLocalizedStringEmpty(formData.question)) {
+    // Required fields - only if NOT an audio challenge (or if they are the only fields)
+    if (isLocalizedStringEmpty(formData.question) && !formData.audioChallengeType) {
         errors.question = 'Question is required';
     }
 

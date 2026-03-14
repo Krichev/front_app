@@ -1,8 +1,10 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
-import {AudioChallengeType, AUDIO_CHALLENGE_TYPES_INFO} from '../../../types/audioChallenge.types';
+import {AudioChallengeType} from '../../../types/audioChallenge.types';
+import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../../shared/ui/theme';
 
 interface AudioChallengeHeaderProps {
   challengeType?: AudioChallengeType | null;
@@ -16,7 +18,8 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
   instructions,
 }) => {
   const { t } = useTranslation();
-  const typeInfo = challengeType ? AUDIO_CHALLENGE_TYPES_INFO[challengeType] : null;
+  const { theme } = useAppStyles();
+  const styles = themeStyles;
 
   return (
     <View style={styles.container}>
@@ -24,9 +27,9 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
       <View style={styles.headerRow}>
         <View style={styles.iconContainer}>
           <MaterialCommunityIcons 
-            name={typeInfo?.icon || 'microphone'} 
+            name={challengeType === 'RHYTHM_REPEAT' ? 'repeat' : 'music-note-plus'} 
             size={28} 
-            color="#4CAF50" 
+            color={theme.colors.success.main} 
           />
         </View>
         <View style={styles.textContainer}>
@@ -49,7 +52,7 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
       {/* Passing Score Badge */}
       {(minimumScorePercentage ?? 0) > 0 && (
         <View style={styles.scoreContainer}>
-          <MaterialCommunityIcons name="trophy-outline" size={16} color="#FF9800" />
+          <MaterialCommunityIcons name="trophy-outline" size={16} color={theme.colors.warning.main} />
           <Text style={styles.scoreText}>
             {t('audioChallenge.header.passScore', { percentage: minimumScorePercentage })}
           </Text>
@@ -59,72 +62,68 @@ export const AudioChallengeHeader: React.FC<AudioChallengeHeaderProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.layout.borderRadius.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.small,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   iconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.success.background,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: theme.spacing.lg,
   },
   textContainer: {
     flex: 1,
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
     marginBottom: 4,
   },
   description: {
     fontSize: 14,
-    color: '#666',
+    color: theme.colors.text.secondary,
   },
   instructionsContainer: {
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
+    backgroundColor: theme.colors.background.tertiary,
+    padding: theme.spacing.md,
+    borderRadius: theme.layout.borderRadius.md,
+    marginBottom: theme.spacing.md,
   },
   instructionsText: {
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.text.primary,
     lineHeight: 22,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: theme.typography.fontWeight.medium,
   },
   scoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF3E0',
+    backgroundColor: theme.colors.warning.background,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.layout.borderRadius.full,
     alignSelf: 'flex-start',
   },
   scoreText: {
     fontSize: 12,
-    color: '#F57C00',
-    fontWeight: '600',
+    color: theme.colors.warning.dark,
+    fontWeight: theme.typography.fontWeight.semibold,
     marginLeft: 6,
   },
-});
+}));

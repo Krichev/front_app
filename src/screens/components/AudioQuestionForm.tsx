@@ -1,6 +1,6 @@
 // src/screens/components/AudioQuestionForm.tsx
 import React, {useCallback, useMemo, useState} from 'react';
-import {ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View, StyleSheet} from 'react-native';
+import {ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {Picker} from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
@@ -19,7 +19,7 @@ import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../shared/ui/theme';
 import {useTranslation} from 'react-i18next';
 import { LocalizedInput } from '../../shared/ui/LocalizedInput';
-import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
+import { LocalizedString, EMPTY_LOCALIZED_STRING, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
 import { useI18n } from '../../app/providers/I18nProvider';
 import { safeRNFS as RNFS } from '../../shared/lib/fileSystem';
 
@@ -126,6 +126,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
     const [errors, setErrors] = useState<Partial<Record<keyof AudioQuestionFormData, string>>>({});
     const [isAudioLoading, setIsAudioLoading] = useState(false);
     const [audioError, setAudioError] = useState(false);
+
+    // Audio preview and trim state
+    const [audioDuration, setAudioDuration] = useState(0);
 
     // ============================================================================
     // DERIVED STATE
@@ -306,7 +309,16 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         updateField('audioSegmentEnd', null);
         setAudioError(false);
         setIsAudioLoading(false);
+        setAudioDuration(0);
+        setPlaybackPosition(0);
+        setIsPaused(true);
     }, [updateField]);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     const validateForm = useCallback((): boolean => {
         const newErrors: Partial<Record<keyof AudioQuestionFormData, string>> = {};
@@ -325,6 +337,14 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         // Segment time validation
         if (formData.audioSegmentEnd !== null && formData.audioSegmentStart >= formData.audioSegmentEnd) {
             newErrors.audioSegmentEnd = t('questionEditor.endTimeError');
+        }
+        if (audioDuration > 0) {
+            if (formData.audioSegmentStart >= audioDuration) {
+                newErrors.audioSegmentStart = t('audioQuestion.invalidStartTime');
+            }
+            if (formData.audioSegmentEnd !== null && formData.audioSegmentEnd > audioDuration) {
+                newErrors.audioSegmentEnd = t('audioQuestion.invalidEndTime');
+            }
         }
 
         // Score validation
@@ -347,7 +367,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
-    }, [formData, requiresReferenceAudio, showRhythmSettings, t]);
+    }, [formData, requiresReferenceAudio, showRhythmSettings, t, audioDuration]);
 
     const handleSubmit = useCallback(async () => {
         if (!validateForm()) {
@@ -476,7 +496,13 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                                     audioUrl={formData.referenceAudioFile.uri}
                                     segmentStart={formData.audioSegmentStart}
                                     segmentEnd={formData.audioSegmentEnd ?? undefined}
-                                    onLoad={() => setIsAudioLoading(false)}
+                                    onLoad={(data) => {
+                                        setIsAudioLoading(false);
+                                        setAudioDuration(data.duration);
+                                        if (formData.audioSegmentEnd === null) {
+                                            updateField('audioSegmentEnd', data.duration);
+                                        }
+                                    }}
                                     onError={() => {
                                         setAudioError(true);
                                         setIsAudioLoading(false);
@@ -522,47 +548,77 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 {/* Audio Segment Picker (moved from separate logic) */}
                 {formData.referenceAudioFile && showAudioSegmentTrim && (
                     <View style={styles.segmentSection}>
-                        <Text style={styles.subsectionTitle}>{t('audioQuestion.segmentLabel')} ({t('userQuestions.topicLabel').split(' ')[1]})</Text>
-                        <Text style={form.helperText}>
-                            Specify which portion of the audio to use for the challenge
-                        </Text>
-                        
-                        <View style={styles.segmentInputs}>
-                            <View style={styles.segmentInputGroup}>
-                                <Text style={form.label}>{t('audioQuestion.startTime')}</Text>
-                                <TextInput
-                                    style={styles.segmentInput}
-                                    value={String(formData.audioSegmentStart)}
-                                    onChangeText={(text) => {
-                                        const num = parseFloat(text) || 0;
-                                        updateField('audioSegmentStart', Math.max(0, num));
-                                    }}
-                                    keyboardType="numeric"
-                                    placeholder="0"
-                                    placeholderTextColor={theme.colors.text.disabled}
-                                />
-                            </View>
-                            <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.text.disabled} />
-                            <View style={styles.segmentInputGroup}>
-                                <Text style={form.label}>{t('audioQuestion.endTime')}</Text>
-                                <TextInput
-                                    style={styles.segmentInput}
-                                    value={formData.audioSegmentEnd !== null ? String(formData.audioSegmentEnd) : ''}
-                                    onChangeText={(text) => {
-                                        if (text === '') {
-                                            updateField('audioSegmentEnd', null);
-                                        } else {
-                                            const num = parseFloat(text);
-                                            updateField('audioSegmentEnd', isNaN(num) ? null : num);
-                                        }
-                                    }}
-                                    keyboardType="numeric"
-                                    placeholder="Full"
-                                    placeholderTextColor={theme.colors.text.disabled}
-                                />
-                            </View>
+                        <View style={form.sectionHeader}>
+                            <MaterialCommunityIcons name="content-cut" size={20} color={theme.colors.text.primary} />
+                            <Text style={form.sectionTitle}>{t('audioQuestion.trimAudio')}</Text>
                         </View>
+                        <Text style={form.helperText}>
+                            {t('audioQuestion.trimAudioDesc')}
+                        </Text>
 
+                        {audioDuration > 0 && (
+                            <View style={{marginTop: theme.spacing.md}}>
+                                {/* Start Time Slider */}
+                                <View style={styles.sliderContainer}>
+                                    <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
+                                        <Text style={form.label}>{t('audioQuestion.segmentStart')}</Text>
+                                        <Text style={styles.timeValue}>{formatTime(formData.audioSegmentStart)}</Text>
+                                    </View>
+                                    <Slider
+                                        style={styles.slider}
+                                        minimumValue={0}
+                                        maximumValue={audioDuration - 1}
+                                        value={formData.audioSegmentStart}
+                                        onValueChange={(val) => {
+                                            const rounded = Math.round(val * 10) / 10;
+                                            const safeStartTime = Math.min(rounded, (formData.audioSegmentEnd || audioDuration) - 1);
+                                            updateField('audioSegmentStart', safeStartTime);
+                                        }}
+                                        minimumTrackTintColor={theme.colors.primary.main}
+                                        maximumTrackTintColor={theme.colors.border.light}
+                                        thumbTintColor={theme.colors.primary.main}
+                                        step={0.1}
+                                    />
+                                </View>
+
+                                {/* End Time Slider */}
+                                <View style={styles.sliderContainer}>
+                                    <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4}}>
+                                        <Text style={form.label}>{t('audioQuestion.segmentEnd')}</Text>
+                                        <Text style={styles.timeValue}>{formatTime(formData.audioSegmentEnd || audioDuration)}</Text>
+                                    </View>
+                                    <Slider
+                                        style={styles.slider}
+                                        minimumValue={formData.audioSegmentStart + 1}
+                                        maximumValue={audioDuration}
+                                        value={formData.audioSegmentEnd || audioDuration}
+                                        onValueChange={(val) => {
+                                            const rounded = Math.round(val * 10) / 10;
+                                            const safeEndTime = Math.max(rounded, formData.audioSegmentStart + 1);
+                                            updateField('audioSegmentEnd', safeEndTime);
+                                        }}
+                                        minimumTrackTintColor={theme.colors.info.main}
+                                        maximumTrackTintColor={theme.colors.border.light}
+                                        thumbTintColor={theme.colors.info.main}
+                                        step={0.1}
+                                    />
+                                </View>
+
+                                {/* Segment Summary */}
+                                <View style={styles.summaryBox}>
+                                    <Text style={styles.summaryText}>
+                                        {t('audioQuestion.segmentDuration', {
+                                            duration: formatTime((formData.audioSegmentEnd || audioDuration) - formData.audioSegmentStart)
+                                        })}
+                                    </Text>
+                                    <Text style={styles.summarySubtext}>
+                                        {t('audioQuestion.totalDuration', {
+                                            duration: formatTime(audioDuration)
+                                        })}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
                         {errors.audioSegmentEnd && (
                             <Text style={form.errorText}>{errors.audioSegmentEnd}</Text>
                         )}
@@ -861,8 +917,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                     <Text style={form.errorText}>{errors.audioChallengeType}</Text>
                 )}
 
-                {/* Answer Mode Selector - Shown only for rhythm challenges */}
-                {showRhythmSettings && (
+                {/* Answer Mode Selector - Shown for all audio challenges */}
+                {formData.audioChallengeType !== null && (
                     <View style={{marginTop: theme.spacing.md}}>
                         <AnswerModeSelector
                             selectedMode={formData.answerInputMode}
@@ -873,27 +929,27 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                 )}
             </View>
 
-            {/* Question Text */}
-            <View style={form.section}>
-                <View style={form.formGroup}>
-                    <LocalizedInput
-                        label={t('audioQuestion.questionLabel')}
-                        value={formData.question}
-                        onChangeLocalized={(value) => updateField('question', value)}
-                        placeholder={{
-                            en: t('audioQuestion.questionPlaceholder'),
-                            ru: t('audioQuestion.questionPlaceholder'),
-                        }}
-                        multiline
-                        numberOfLines={3}
-                    />
-                    {errors.question && (
-                        <Text style={form.errorText}>{errors.question}</Text>
-                    )}
-                </View>
+            {/* Question Text - Hidden for all karaoke types */}
+            {formData.audioChallengeType === null && (
+                <View style={form.section}>
+                    <View style={form.formGroup}>
+                        <LocalizedInput
+                            label={t('audioQuestion.questionLabel')}
+                            value={formData.question}
+                            onChangeLocalized={(value) => updateField('question', value)}
+                            placeholder={{
+                                en: t('audioQuestion.questionPlaceholder'),
+                                ru: t('audioQuestion.questionPlaceholder'),
+                            }}
+                            multiline
+                            numberOfLines={3}
+                        />
+                        {errors.question && (
+                            <Text style={form.errorText}>{errors.question}</Text>
+                        )}
+                    </View>
 
-                {/* Answer/Description */}
-                {selectedTypeInfo?.requiresTextAnswer !== false && (
+                    {/* Answer/Description */}
                     <View style={form.formGroup}>
                         <LocalizedInput
                             label={t('userQuestions.answerLabel')}
@@ -910,34 +966,34 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             {t('audioQuestion.answerHelperText')}
                         </Text>
                     </View>
-                )}
 
-                {/* Accept Similar Answers Toggle */}
-                <View style={form.formGroup}>
-                    <View style={styles.toggleRow}>
-                        <View style={styles.toggleInfo}>
-                            <Text style={form.label}>{t('mediaQuestion.acceptSimilarAnswers')}</Text>
-                            <Text style={form.helperText}>
-                                {t('mediaQuestion.acceptSimilarAnswersAudioNote')}
-                            </Text>
-                        </View>
-                        <TouchableOpacity
-                            style={[
-                                styles.toggle,
-                                formData.acceptSimilarAnswers && styles.toggleActive
-                            ]}
-                            onPress={() => updateField('acceptSimilarAnswers', !formData.acceptSimilarAnswers)}
-                        >
-                            <View
+                    {/* Accept Similar Answers Toggle - Hidden when audio challenge type is set */}
+                    <View style={form.formGroup}>
+                        <View style={styles.toggleRow}>
+                            <View style={styles.toggleInfo}>
+                                <Text style={form.label}>{t('mediaQuestion.acceptSimilarAnswers')}</Text>
+                                <Text style={form.helperText}>
+                                    {t('mediaQuestion.acceptSimilarAnswersAudioNote')}
+                                </Text>
+                            </View>
+                            <TouchableOpacity
                                 style={[
-                                    styles.toggleThumb,
-                                    formData.acceptSimilarAnswers && styles.toggleThumbActive
+                                    styles.toggle,
+                                    formData.acceptSimilarAnswers && styles.toggleActive
                                 ]}
-                            />
-                        </TouchableOpacity>
+                                onPress={() => updateField('acceptSimilarAnswers', !formData.acceptSimilarAnswers)}
+                            >
+                                <View
+                                    style={[
+                                        styles.toggleThumb,
+                                        formData.acceptSimilarAnswers && styles.toggleThumbActive
+                                    ]}
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
-            </View>
+            )}
 
             {/* Audio Upload Section */}
             {renderAudioUploadSection()}
@@ -1168,11 +1224,32 @@ const themeStyles = createStyles(theme => ({
         borderColor: theme.colors.border.light,
         color: theme.colors.text.primary,
     },
+    timeValue: {
+        ...theme.typography.body.medium,
+        fontWeight: '600',
+        color: theme.colors.text.primary,
+    },
+    summaryBox: {
+        backgroundColor: theme.colors.info.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.sm,
+        borderWidth: 1,
+        borderColor: theme.colors.info.main,
+    },
+    summaryText: {
+        ...theme.typography.body.small,
+        fontWeight: '600',
+        color: theme.colors.info.main,
+        marginBottom: 2,
+    },
+    summarySubtext: {
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
+    },
 
     // Slider styles
     sliderContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
         marginBottom: theme.spacing.md,
     },
     slider: {

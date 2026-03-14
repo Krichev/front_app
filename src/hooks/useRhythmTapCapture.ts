@@ -6,6 +6,7 @@ interface UseRhythmTapCaptureOptions {
     maxDuration?: number; // milliseconds
     maxTaps?: number;
     minTapInterval?: number; // debounce in milliseconds
+    onTapRecorded?: (relativeTimeMs: number) => void;
 }
 
 interface UseRhythmTapCaptureReturn {
@@ -30,6 +31,7 @@ export const useRhythmTapCapture = (
         maxDuration = 30000, // 30 seconds default
         maxTaps = 100,
         minTapInterval = 50, // 50ms debounce
+        onTapRecorded,
     } = options;
     
     const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
@@ -118,8 +120,11 @@ export const useRhythmTapCapture = (
         
         setTapTimestamps(prev => [...prev, relativeTime]);
         
+        // Trigger real-time callback for beat matching
+        onTapRecorded?.(relativeTime);
+        
         console.log(`👆 Tap ${tapTimestamps.length + 1}: ${relativeTime.toFixed(1)}ms`);
-    }, [isCapturing, tapTimestamps.length, maxTaps, minTapInterval]);
+    }, [isCapturing, tapTimestamps.length, maxTaps, minTapInterval, onTapRecorded]);
     
     const resetCapture = useCallback(() => {
         console.log('🔄 Resetting tap capture');

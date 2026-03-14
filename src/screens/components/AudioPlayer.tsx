@@ -1,8 +1,9 @@
 // src/screens/components/AudioPlayer.tsx
-import React, {useEffect, useRef, useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useRef, useState, useCallback} from 'react';
+import {StyleSheet, Text, TouchableOpacity, View, ActivityIndicator} from 'react-native';
 import Video, {OnProgressData, VideoRef} from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Slider from '@react-native-community/slider';
 import MediaUrlService from '../../services/media/MediaUrlService';
 
 interface AudioPlayerProps {
@@ -30,43 +31,53 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(segmentStart);
   const [duration, setDuration] = useState(0);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const mediaService = MediaUrlService.getInstance();
 
   const effectiveEnd = segmentEnd || duration;
-  const progress = Math.max(0, Math.min(1, (currentTime - segmentStart) / (effectiveEnd - segmentStart || 1)));
 
   useEffect(() => {
     // Seek to start time initially
-    if (videoRef.current) {
-        videoRef.current.seek(segmentStart);
-    }
-  }, [segmentStart]);
-
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleProgress = (data: OnProgressData) => {
-    setCurrentTime(data.currentTime);
-    
-    // Handle segment looping or stopping
-    if (segmentEnd && data.currentTime >= segmentEnd) {
-      setIsPlaying(false);
-      if (videoRef.current) {
+    if (videoRef.current && !isSeeking) {
         videoRef.current.seek(segmentStart);
         setCurrentTime(segmentStart);
-      }
-      if (onPlaybackComplete) {
-        onPlaybackComplete();
-      }
     }
-  };
+  }, [segmentStart, isSeeking]);
+
+  const handlePlayPause = useCallback(() => {
+    // If we're at the end of the segment, restart from the beginning when playing
+    if (!isPlaying && segmentEnd && currentTime >= segmentEnd - 0.1) {
+        videoRef.current?.seek(segmentStart);
+        setCurrentTime(segmentStart);
+    }
+    setIsPlaying(!isPlaying);
+  }, [isPlaying, segmentEnd, currentTime, segmentStart]);
+
+  const handleProgress = useCallback((data: OnProgressData) => {
+    if (!isSeeking) {
+        setCurrentTime(data.currentTime);
+        
+        // Handle segment stopping
+        if (segmentEnd && data.currentTime >= segmentEnd) {
+          setIsPlaying(false);
+          videoRef.current?.seek(segmentStart);
+          setCurrentTime(segmentStart);
+          
+          if (onPlaybackComplete) {
+            onPlaybackComplete();
+          }
+        }
+    }
+  }, [isSeeking, segmentEnd, segmentStart, onPlaybackComplete]);
 
   const handleLoad = (data: any) => {
     setDuration(data.duration);
+    setIsLoading(false);
     if (videoRef.current) {
         videoRef.current.seek(segmentStart);
+        setCurrentTime(segmentStart);
     }
     onLoad?.(data);
   };
@@ -82,9 +93,19 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   };
 
+  const handleSlidingStart = useCallback(() => {
+    setIsSeeking(true);
+  }, []);
+
+  const handleSlidingComplete = useCallback((value: number) => {
+    setIsSeeking(false);
+    videoRef.current?.seek(value);
+    setCurrentTime(value);
+  }, []);
+
   const formatTime = (timeInSeconds: number) => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = Math.floor(timeInSeconds % 60);
+    const minutes = Math.floor(Math.max(0, timeInSeconds) / 60);
+    const seconds = Math.floor(Math.max(0, timeInSeconds) % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
@@ -109,20 +130,42 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       />
 
       <View style={styles.controls}>
-        <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-          <MaterialCommunityIcons
-            name={isPlaying ? 'pause' : 'play'}
-            size={32}
-            color={activeColor}
-          />
+        <TouchableOpacity 
+            onPress={handlePlayPause} 
+            style={styles.playButton}
+            disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="small" color={activeColor} />
+          ) : (
+            <MaterialCommunityIcons
+                name={isPlaying ? 'pause-circle' : 'play-circle'}
+                size={42}
+                color={activeColor}
+            />
+          )}
         </TouchableOpacity>
 
         <View style={styles.progressContainer}>
-          <Text style={styles.timeText}>{formatTime(currentTime - segmentStart)}</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: activeColor }]} />
+          <View style={styles.timeInfo}>
+            <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
+            <View style={{flex: 1}} />
+            <Text style={styles.timeText}>{formatTime(effectiveEnd)}</Text>
           </View>
-          <Text style={styles.timeText}>{formatTime(effectiveEnd - segmentStart)}</Text>
+          
+          <Slider
+            style={styles.slider}
+            minimumValue={segmentStart}
+            maximumValue={effectiveEnd || 1}
+            value={currentTime}
+            onSlidingStart={handleSlidingStart}
+            onSlidingComplete={handleSlidingComplete}
+            onValueChange={(val) => isSeeking && setCurrentTime(val)}
+            minimumTrackTintColor={activeColor}
+            maximumTrackTintColor="#E0E0E0"
+            thumbTintColor={activeColor}
+            disabled={isLoading}
+          />
         </View>
       </View>
     </View>
@@ -131,44 +174,37 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginVertical: 8,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
+    backgroundColor: 'transparent',
+    paddingVertical: 8,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   playButton: {
-    marginRight: 12,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   progressContainer: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  timeInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    paddingHorizontal: 4,
+    marginBottom: -4,
   },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#4CAF50',
+  slider: {
+    width: '100%',
+    height: 40,
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
-    width: 35,
-    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
 });
+

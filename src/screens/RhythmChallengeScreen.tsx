@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
-    ScrollView,
     Animated,
     Platform,
 } from 'react-native';
@@ -19,21 +18,22 @@ import { useTranslation } from 'react-i18next';
 import { RhythmTapPad } from './components/RhythmTapPad';
 import { RhythmAudioRecorder } from './components/RhythmAudioRecorder';
 import { RhythmBeatIndicators } from './components/RhythmBeatIndicators';
-import { EnhancedScoringResults } from './components/EnhancedScoringResults';
+import { TwoPhaseResultsDisplay } from './components/TwoPhaseResultsDisplay';
 import { SoundSimilarityToggle } from './components/SoundSimilarityToggle';
 import { useRhythmTapCapture } from '../hooks/useRhythmTapCapture';
+import { useBeatMatcher, ClientTimingScore } from '../hooks/useBeatMatcher';
 import { 
     useScoreRhythmTapsMutation, 
     useScoreRhythmAudioMutation 
 } from '../entities/RhythmChallengeState/model/slice/rhythmApi';
 import { useGetAudioQuestionQuery } from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
+import { getAudioChallengeTypeInfo } from '../types/audioChallenge.types';
 import MediaUrlService from '../services/media/MediaUrlService';
 import {
     RhythmChallengePhase,
     RhythmInputMode,
     RhythmPatternDTO,
     EnhancedRhythmScoringResult,
-    BeatIndicator,
 } from '../types/rhythmChallenge.types';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
@@ -60,21 +60,31 @@ export const RhythmChallengeScreen: React.FC = () => {
     const navigation = useNavigation();
     const route = useRoute<RhythmChallengeRouteProp>();
     
-    // Safely access params
     const questionId = route.params?.questionId;
     const onComplete = route.params?.onComplete;
 
     const {theme} = useAppStyles();
     const styles = themeStyles;
     
-    // API hooks
     const { data: question, isLoading: questionLoading } = useGetAudioQuestionQuery(questionId as number);
     const [scoreRhythmTaps] = useScoreRhythmTapsMutation();
     const [scoreRhythmAudio] = useScoreRhythmAudioMutation();
     
-    // Tap capture hook
+    const rhythmPattern: RhythmPatternDTO | null = React.useMemo(() => {
+        if (!question?.audioChallengeConfig) return null;
+        try {
+            return JSON.parse(question.audioChallengeConfig);
+        } catch {
+            return null;
+        }
+    }, [question]);
+
+    const beatMatcher = useBeatMatcher({ 
+        referencePattern: rhythmPattern, 
+        toleranceMs: 150 
+    });
+    
     const {
-        tapTimestamps,
         isCapturing,
         startCapture,
         stopCapture,
@@ -82,9 +92,11 @@ export const RhythmChallengeScreen: React.FC = () => {
         resetCapture,
         tapCount,
         duration,
-    } = useRhythmTapCapture({ maxDuration: 30000 });
+    } = useRhythmTapCapture({ 
+        maxDuration: 30000,
+        onTapRecorded: (relativeTime) => beatMatcher.matchOnset(relativeTime)
+    });
     
-    // State
     const [phase, setPhase] = useState<RhythmChallengePhase>('READY');
     const [inputMode, setInputMode] = useState<RhythmInputMode>('TAP');
     const [enableSoundSimilarity, setEnableSoundSimilarity] = useState(false);
@@ -93,25 +105,27 @@ export const RhythmChallengeScreen: React.FC = () => {
     const [replaysUsed, setReplaysUsed] = useState(0);
     const [firstPlayDone, setFirstPlayDone] = useState(false);
     const [attemptCount, setAttemptCount] = useState(0);
-    const [scoringResult, setScoringResult] = useState<EnhancedRhythmScoringResult | null>(null);
+    
+    const [clientTimingScore, setClientTimingScore] = useState<ClientTimingScore | null>(null);
+    const [serverResult, setServerResult] = useState<EnhancedRhythmScoringResult | null>(null);
+    const [isAnalyzingSound, setIsAnalyzingSound] = useState(false);
+    
     const [error, setError] = useState<string | null>(null);
     const [currentBeatIndex, setCurrentBeatIndex] = useState(-1);
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     
-    // Animated values
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const fadeAnim = useRef(new Animated.Value(1)).current;
     
-    // Refs
     const videoRef = useRef<VideoRef>(null);
     const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     
-    // Derived configuration
+    const audioChallengeType = question?.audioChallengeType;
+    const challengeTypeInfo = audioChallengeType ? getAudioChallengeTypeInfo(audioChallengeType) : null;
     const answerInputMode = (question as any)?.answerInputMode || 'BOTH';
     const allowReplay = (question as any)?.allowReplay ?? true;
     const maxReplaysAllowed = (question as any)?.maxReplays ?? 3;
     
-    // Set initial input mode based on question
     useEffect(() => {
         if (question) {
             if (answerInputMode === 'TAP') setInputMode('TAP');
@@ -119,7 +133,6 @@ export const RhythmChallengeScreen: React.FC = () => {
         }
     }, [question, answerInputMode]);
 
-    // Handle pulse animation during listening
     useEffect(() => {
         if (isAudioPlaying) {
             Animated.loop(
@@ -141,7 +154,6 @@ export const RhythmChallengeScreen: React.FC = () => {
         }
     }, [isAudioPlaying, pulseAnim]);
 
-    // Phase transition animation
     useEffect(() => {
         fadeAnim.setValue(0);
         Animated.timing(fadeAnim, {
@@ -151,35 +163,10 @@ export const RhythmChallengeScreen: React.FC = () => {
         }).start();
     }, [phase, fadeAnim]);
     
-    // Parse rhythm pattern from question config
-    const rhythmPattern: RhythmPatternDTO | null = React.useMemo(() => {
-        if (!question?.audioChallengeConfig) return null;
-        try {
-            return JSON.parse(question.audioChallengeConfig);
-        } catch {
-            return null;
-        }
-    }, [question]);
-    
-    // Build beat indicators
-    const beatIndicators: BeatIndicator[] = React.useMemo(() => {
-        if (!rhythmPattern) return [];
-        return rhythmPattern.onsetTimesMs.map((time, index) => ({
-            index,
-            expectedTimeMs: time,
-            status: 'pending' as const,
-        }));
-    }, [rhythmPattern]);
-    
-    // Get audio URL
     const audioUrl = React.useMemo(() => {
         if (!question?.questionMediaId) return null;
         return MediaUrlService.getInstance().getMediaByIdUrl(question.questionMediaId);
     }, [question]);
-    
-    // ============================================================================
-    // HANDLERS
-    // ============================================================================
     
     const handlePlayReference = useCallback(() => {
         if (!audioUrl) {
@@ -187,7 +174,6 @@ export const RhythmChallengeScreen: React.FC = () => {
             return;
         }
 
-        // Check if replay is allowed
         const isReplay = firstPlayDone;
         const canReplay = !isReplay || (allowReplay && (maxReplaysAllowed === 0 || replaysUsed < maxReplaysAllowed));
 
@@ -204,7 +190,6 @@ export const RhythmChallengeScreen: React.FC = () => {
             setReplaysUsed(prev => prev + 1);
         }
         
-        // Start beat indicator animation
         if (rhythmPattern) {
             rhythmPattern.onsetTimesMs.forEach((time, index) => {
                 setTimeout(() => {
@@ -226,7 +211,6 @@ export const RhythmChallengeScreen: React.FC = () => {
             setPhase('COUNTDOWN');
             setCountdownValue(3);
             
-            // Countdown timer
             let count = 3;
             countdownTimerRef.current = setInterval(() => {
                 count -= 1;
@@ -240,13 +224,16 @@ export const RhythmChallengeScreen: React.FC = () => {
                 }
             }, 1000);
         } else {
-            // Audio recording component handles countdown internally
-            setPhase('RECORDING'); // Just transition, component handles the rest
+            setPhase('RECORDING');
             setAttemptCount(prev => prev + 1);
         }
     }, [inputMode, startCapture]);
     
     const handleStopTapRecording = useCallback(async () => {
+        const finalBeats = beatMatcher.finalizeBeats();
+        const timingScore = beatMatcher.computeTimingScore(finalBeats, question?.minimumScorePercentage || 60);
+        setClientTimingScore(timingScore);
+        
         const timestamps = stopCapture();
         
         if (timestamps.length < 2) {
@@ -265,7 +252,7 @@ export const RhythmChallengeScreen: React.FC = () => {
             return;
         }
         
-        setPhase('PROCESSING');
+        setPhase('RESULTS');
         
         try {
             const result = await scoreRhythmTaps({
@@ -276,7 +263,6 @@ export const RhythmChallengeScreen: React.FC = () => {
                 minimumScoreRequired: question?.minimumScorePercentage || 60,
             }).unwrap();
             
-            // Cast to Enhanced type (tap mode has basic result)
             const enhancedResult: EnhancedRhythmScoringResult = {
                 ...result,
                 soundSimilarityEnabled: false,
@@ -285,55 +271,44 @@ export const RhythmChallengeScreen: React.FC = () => {
                 combinedScore: result.overallScore,
             };
             
-            setScoringResult(enhancedResult);
-            setPhase('RESULTS');
+            setServerResult(enhancedResult);
         } catch (err: any) {
-            console.error('Scoring error:', err);
-            setError(err.message || t('rhythmChallenge.errors.scoringFailed'));
-            setPhase('READY');
-            Alert.alert(t('common.error'), t('rhythmChallenge.errors.scoringFailed'));
+            console.warn('🎯 [TwoPhase] Server TAP scoring failed, using client score:', err);
         }
-    }, [stopCapture, rhythmPattern, scoreRhythmTaps, questionId, question, t]);
+    }, [beatMatcher, stopCapture, rhythmPattern, scoreRhythmTaps, questionId, question, t]);
     
     const handleAudioRecordingComplete = useCallback(async (audioFile: {uri: string; name: string; type: string}) => {
-        setPhase('PROCESSING');
         setError(null);
+        setIsAnalyzingSound(true);
         
         try {
-            // Validate file exists and has content
-            // On Android, verify file:// URI is correct (already handled in recorder, but double check)
             const validatedUri = Platform.OS === 'android' 
                 ? (audioFile.uri.startsWith('file://') ? audioFile.uri : 'file://' + audioFile.uri)
                 : audioFile.uri;
             
-            console.log('📤 Uploading rhythm audio:', validatedUri);
+            console.log('📤 [TwoPhase] Uploading rhythm audio for Phase B analysis:', validatedUri);
 
             const result = await scoreRhythmAudio({
                 questionId,
                 audioFile: { ...audioFile, uri: validatedUri },
-                enableSoundSimilarity,
+                enableSoundSimilarity: true,
                 toleranceMs: 150,
             }).unwrap();
             
-            setScoringResult(result);
-            setPhase('RESULTS');
+            setServerResult(result);
+            setIsAnalyzingSound(false);
         } catch (err: any) {
-            console.error('Audio scoring error:', err);
-            
-            let errorMessage = t('rhythmChallenge.errors.scoringFailed');
-            if (err.status === 413) {
-                errorMessage = t('rhythmChallenge.errors.fileTooLarge');
-            } else if (err.status === 400) {
-                errorMessage = t('rhythmChallenge.errors.invalidAudio');
-            } else if (!err.status) {
-                errorMessage = t('rhythmChallenge.errors.networkError');
-            }
-            
-            setError(errorMessage);
-            Alert.alert(t('common.error'), errorMessage);
-            setPhase('READY');
+            console.error('📊 [TwoPhase] Server audio scoring failed:', err);
+            setIsAnalyzingSound(false);
         }
-    }, [questionId, enableSoundSimilarity, scoreRhythmAudio, t]);
+    }, [questionId, scoreRhythmAudio, t]);
+
+    const handleAudioRecordingStop = useCallback(() => {
+        const finalBeats = beatMatcher.finalizeBeats();
+        const timingScore = beatMatcher.computeTimingScore(finalBeats, question?.minimumScorePercentage || 60);
+        setClientTimingScore(timingScore);
+        setPhase('RESULTS');
+    }, [beatMatcher, question]);
     
     const handleRecordingCancel = useCallback(() => {
         setPhase('READY');
@@ -341,22 +316,26 @@ export const RhythmChallengeScreen: React.FC = () => {
     
     const handleRetry = useCallback(() => {
         resetCapture();
-        setScoringResult(null);
+        beatMatcher.resetBeats();
+        setClientTimingScore(null);
+        setServerResult(null);
+        setIsAnalyzingSound(false);
         setError(null);
         setPhase('READY');
-    }, [resetCapture]);
+    }, [resetCapture, beatMatcher]);
     
     const handleContinue = useCallback(() => {
-        if (onComplete && scoringResult) {
-            const finalScore = scoringResult.soundSimilarityEnabled 
-                ? scoringResult.combinedScore 
-                : scoringResult.overallScore;
-            onComplete(scoringResult.passed, finalScore);
+        const finalPassed = serverResult?.passed ?? clientTimingScore?.passed ?? false;
+        const finalScore = serverResult 
+            ? (serverResult.soundSimilarityEnabled ? serverResult.combinedScore : serverResult.overallScore)
+            : (clientTimingScore?.overallScore ?? 0);
+            
+        if (onComplete) {
+            onComplete(finalPassed, finalScore);
         }
         navigation.goBack();
-    }, [navigation, onComplete, scoringResult]);
+    }, [navigation, onComplete, serverResult, clientTimingScore]);
     
-    // Cleanup on unmount
     useEffect(() => {
         return () => {
             if (countdownTimerRef.current) {
@@ -364,10 +343,6 @@ export const RhythmChallengeScreen: React.FC = () => {
             }
         };
     }, []);
-    
-    // ============================================================================
-    // RENDER HELPERS
-    // ============================================================================
     
     const renderModeSelector = () => (
         <View style={styles.modeSelectorContainer}>
@@ -403,10 +378,6 @@ export const RhythmChallengeScreen: React.FC = () => {
         </View>
     );
     
-    // ============================================================================
-    // RENDER
-    // ============================================================================
-    
     if (questionLoading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -431,7 +402,6 @@ export const RhythmChallengeScreen: React.FC = () => {
     
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text.inverse} />
@@ -447,7 +417,6 @@ export const RhythmChallengeScreen: React.FC = () => {
                 </View>
             </View>
             
-            {/* Hidden Audio Player */}
             {audioUrl && (
                 <Video
                     ref={videoRef}
@@ -460,7 +429,6 @@ export const RhythmChallengeScreen: React.FC = () => {
             )}
             
             <Animated.View style={[styles.scrollContent, {opacity: fadeAnim}]}>
-                {/* Question Text */}
                 <View style={styles.questionContainer}>
                     <Text style={styles.questionText}>{question.question}</Text>
                     {rhythmPattern && (
@@ -473,7 +441,6 @@ export const RhythmChallengeScreen: React.FC = () => {
                     )}
                 </View>
                 
-                {/* Phase-specific Content */}
                 {phase === 'READY' && (
                     <View style={styles.readyContainer}>
                         {answerInputMode === 'BOTH' && renderModeSelector()}
@@ -490,7 +457,7 @@ export const RhythmChallengeScreen: React.FC = () => {
                         
                         <View style={styles.indicatorsWrapper}>
                             <RhythmBeatIndicators
-                                beats={beatIndicators}
+                                beats={beatMatcher.beatIndicators}
                                 currentBeatIndex={-1}
                                 mode="playback"
                             />
@@ -575,7 +542,7 @@ export const RhythmChallengeScreen: React.FC = () => {
 
                         <View style={styles.indicatorsWrapperFixed}>
                             <RhythmBeatIndicators
-                                beats={beatIndicators}
+                                beats={beatMatcher.beatIndicators}
                                 currentBeatIndex={currentBeatIndex}
                                 mode="playback"
                             />
@@ -596,7 +563,7 @@ export const RhythmChallengeScreen: React.FC = () => {
                             <View style={styles.recordingContainer}>
                                 <View style={styles.indicatorsWrapper}>
                                     <RhythmBeatIndicators
-                                        beats={beatIndicators}
+                                        beats={beatMatcher.beatIndicators}
                                         currentBeatIndex={-1}
                                         mode="recording"
                                     />
@@ -639,8 +606,11 @@ export const RhythmChallengeScreen: React.FC = () => {
                         <RhythmAudioRecorder
                             isActive={true}
                             onRecordingStart={() => {}}
+                            onRecordingStop={handleAudioRecordingStop}
                             onRecordingComplete={handleAudioRecordingComplete}
                             onRecordingCancel={handleRecordingCancel}
+                            onOnsetDetected={(ts) => beatMatcher.matchOnset(ts)}
+                            onsetSensitivity={challengeTypeInfo?.onsetSensitivity}
                             maxDuration={30}
                             countdownSeconds={3}
                         />
@@ -654,9 +624,12 @@ export const RhythmChallengeScreen: React.FC = () => {
                     </View>
                 )}
                 
-                {phase === 'RESULTS' && scoringResult && (
-                    <EnhancedScoringResults
-                        result={scoringResult}
+                {phase === 'RESULTS' && clientTimingScore && (
+                    <TwoPhaseResultsDisplay
+                        clientTimingScore={clientTimingScore}
+                        serverResult={serverResult}
+                        isAnalyzingSound={isAnalyzingSound}
+                        beatIndicators={beatMatcher.beatIndicators}
                         onRetry={handleRetry}
                         onContinue={handleContinue}
                     />
@@ -665,10 +638,6 @@ export const RhythmChallengeScreen: React.FC = () => {
         </SafeAreaView>
     );
 };
-
-// ============================================================================
-// STYLES
-// ============================================================================
 
 const themeStyles = createStyles(theme => ({
     container: {

@@ -48,16 +48,20 @@ const HomeScreen: React.FC = () => {
     const wwwQuizzes = React.useMemo(() => {
         if (!quizChallenges) return [];
 
-        return quizChallenges.filter(challenge => {
-            try {
-                if (!challenge.quizConfig) return false;
-                const config = JSON.parse(challenge.quizConfig);
-                return config && config.gameType === 'WWW';
-            } catch (error) {
-                console.error('Error parsing quiz config:', error);
-                return false;
-            }
-        });
+        return [...quizChallenges]
+            .filter(challenge => {
+                try {
+                    if (!challenge.quizConfig) return false;
+                    const config = JSON.parse(challenge.quizConfig);
+                    return config && config.gameType === 'WWW';
+                } catch (error) {
+                    console.error('Error parsing quiz config:', error);
+                    return false;
+                }
+            })
+            .sort((a, b) =>
+                new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            );
     }, [quizChallenges]);
 
     // Define the menu item type to reference tab screens

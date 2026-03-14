@@ -16,12 +16,16 @@ import { useTranslation } from 'react-i18next';
 import { safeRNFS as RNFS, isRNFSAvailable } from '../../shared/lib/fileSystem';
 import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../shared/ui/theme';
+import { useOnsetDetector } from '../../hooks/useOnsetDetector';
 
 interface RhythmAudioRecorderProps {
     isActive: boolean;
     onRecordingStart: () => void;
+    onRecordingStop?: () => void;
     onRecordingComplete: (audioFile: { uri: string; name: string; type: string }) => void;
     onRecordingCancel: () => void;
+    onOnsetDetected?: (timestampMs: number) => void;
+    onsetSensitivity?: 'percussive' | 'tonal';
     maxDuration?: number;
     countdownSeconds?: number;
 }
@@ -31,8 +35,11 @@ type RecordingPhase = 'IDLE' | 'COUNTDOWN' | 'RECORDING' | 'PROCESSING';
 export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     isActive,
     onRecordingStart,
+    onRecordingStop,
     onRecordingComplete,
     onRecordingCancel,
+    onOnsetDetected,
+    onsetSensitivity = 'percussive',
     maxDuration = 30,
     countdownSeconds = 3,
 }) => {
@@ -49,6 +56,14 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
     const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
     const audioFilePath = useRef<string>('');
+
+    // Initialize onset detector
+    const detector = useOnsetDetector({
+        sensitivity: onsetSensitivity,
+        onOnsetDetected: (ts) => onOnsetDetected?.(ts),
+        sampleRate: 44100,
+        bufferLatencyMs: 70, // Estimated buffer latency
+    });
     
     // Request permissions on mount
     useEffect(() => {
@@ -131,6 +146,13 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
     const startCountdown = useCallback(() => {
         setPhase('COUNTDOWN');
         setCountdown(countdownSeconds);
+
+        // Start AudioRecord early for noise floor calibration during countdown
+        console.log('🎤 [RhythmAudioRecorder] Starting AudioRecord for calibration');
+        AudioRecord.start();
+        AudioRecord.on('data', (data) => {
+            detector.calibrateNoiseFloor(data);
+        });
         
         countdownTimerRef.current = setInterval(() => {
             setCountdown(prev => {
@@ -142,13 +164,19 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
                 return prev - 1;
             });
         }, 1000);
-    }, [countdownSeconds]);
+    }, [countdownSeconds, detector]);
     
     const startRecording = useCallback(() => {
         setPhase('RECORDING');
         setDuration(0);
         
-        AudioRecord.start();
+        // Switch AudioRecord listener from calibration to onset detection
+        console.log('🎤 [RhythmAudioRecorder] Switching to onset detection');
+        detector.startDetection();
+        AudioRecord.on('data', (data) => {
+            detector.processAudioChunk(data);
+        });
+
         onRecordingStart();
         
         durationTimerRef.current = setInterval(() => {
@@ -160,17 +188,23 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
                 return prev + 1;
             });
         }, 1000);
-    }, [maxDuration, onRecordingStart]);
+    }, [maxDuration, onRecordingStart, detector]);
     
     const stopRecording = useCallback(async () => {
         setPhase('PROCESSING');
         
+        // Immediate sync callback for UI to finalize client-side scores
+        onRecordingStop?.();
+        detector.stopDetection();
+
         if (durationTimerRef.current) {
             clearInterval(durationTimerRef.current);
         }
         
         try {
             const filePath = await AudioRecord.stop();
+            // Remove the on('data') listener to avoid processing after stop
+            AudioRecord.on('data', () => {});
             
             if (duration < 1) {
                 Alert.alert(t('common.error'), t('rhythmChallenge.errors.recordingTooShort'));
@@ -209,7 +243,7 @@ export const RhythmAudioRecorder: React.FC<RhythmAudioRecorderProps> = ({
             Alert.alert(t('common.error'), t('rhythmChallenge.errors.recordingFailed'));
             setPhase('IDLE');
         }
-    }, [onRecordingComplete, duration, t]);
+    }, [onRecordingComplete, onRecordingStop, duration, t, detector]);
     
     const cancelRecording = useCallback(() => {
         cleanup();

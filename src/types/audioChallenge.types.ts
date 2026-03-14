@@ -41,6 +41,9 @@ export interface AudioChallengeTypeInfo {
     showAudioSegmentTrim: boolean;
     requiresTextAnswer?: boolean;
     
+    // Onset detection configuration
+    onsetSensitivity: 'percussive' | 'tonal';
+    
     // Contextual help text
     rhythmSettingsHint?: string;
 }
@@ -64,6 +67,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showClassificationSection: true,
         showAudioSegmentTrim: false,
         requiresTextAnswer: false,
+        onsetSensitivity: 'percussive',
         rhythmSettingsHint: 'Set the target tempo for rhythm creation',
     },
     RHYTHM_REPEAT: {
@@ -80,6 +84,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showClassificationSection: false,
         showAudioSegmentTrim: true,
         requiresTextAnswer: false,
+        onsetSensitivity: 'percussive',
         rhythmSettingsHint: 'Rhythm pattern is extracted from your reference audio',
     },
     SOUND_MATCH: {
@@ -96,6 +101,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showClassificationSection: false,
         showAudioSegmentTrim: true,
         requiresTextAnswer: false,
+        onsetSensitivity: 'tonal',
     },
     SINGING: {
         type: 'SINGING',
@@ -111,6 +117,7 @@ export const AUDIO_CHALLENGE_TYPES_INFO: Record<AudioChallengeType, AudioChallen
         showClassificationSection: true,
         showAudioSegmentTrim: true,
         requiresTextAnswer: false,
+        onsetSensitivity: 'tonal',
         rhythmSettingsHint: 'Optional: Set BPM as a visual guide for the singer',
     },
 };
