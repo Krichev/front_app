@@ -53,6 +53,8 @@ const en = {
         seconds: '{{count}}s',
         hide: 'Hide',
         showHint: 'Show Hint',
+        continue: 'Continue',
+        failed: 'Failed',
         localizedInput: {
             fillAtLeastOne: 'Please fill in at least one language',
             fillBothLanguages: 'Please fill in both languages',
@@ -432,6 +434,97 @@ const en = {
         sortOldest: 'Oldest',
         sortTitleAZ: 'A → Z',
         sortTitleZA: 'Z → A',
+        completed: 'Completed',
+        emptyCompleted: 'No completed quests yet',
+        emptyCompletedHint: 'Complete your first quest to see it here!',
+    },
+    challengeCard: {
+        visibility: {
+            private: 'Private',
+        },
+        payment: {
+            free: 'FREE',
+        },
+        description: {
+            empty: 'No description provided',
+        },
+        metadata: {
+            type: 'Type',
+            participants: 'Participants',
+            frequency: 'Frequency',
+        },
+        prize: {
+            label: 'Prize',
+            pool: 'Prize Pool',
+        },
+        creator: {
+            createdBy: 'Created by {{username}}',
+            yourChallenge: 'Your Challenge',
+        },
+        currency: {
+            pts: '{{amount}} pts',
+        },
+    },
+    quizChallengeCard: {
+        type: {
+            www: 'What? Where? When?',
+            quiz: 'Quiz',
+        },
+        badge: {
+            questions: '{{count}} Questions',
+            team: 'Team',
+        },
+        creator: 'Creator',
+        reward: 'Reward: {{reward}}',
+        status: {
+            active: 'ACTIVE',
+            completed: 'COMPLETED',
+            failed: 'FAILED',
+            open: 'OPEN',
+            in_progress: 'IN PROGRESS',
+        },
+    },
+    challengeSearch: {
+        title: 'Search Challenges',
+        searchPlaceholder: 'Search by title or description...',
+        filterAll: 'All',
+        filterFree: 'Free',
+        filterPaid: 'Paid',
+        filterPrivate: 'Private',
+        resultsCount: '{{count}} challenge found',
+        resultsCount_plural: '{{count}} challenges found',
+        emptyTitle: 'No challenges found',
+        emptyWithQuery: 'No challenges match "{{query}}"',
+        emptyDefault: 'Try searching for something else',
+        loading: 'Searching challenges...',
+        error: 'Failed to load challenges',
+        retry: 'Retry',
+        filters: {
+            all: 'All',
+            free: 'Free',
+            paid: 'Paid',
+            private: 'Private',
+        },
+        results: {
+            count: '{{count}} challenge found',
+            count_plural: '{{count}} challenges found',
+        },
+        empty: {
+            title: 'No challenges found',
+            withQuery: 'No challenges match "{{query}}"',
+            noQuery: 'Try searching for something else',
+        },
+    },
+    challengeSearchCard: {
+        quizFallback: 'Quiz Challenge',
+        challengeFallback: 'Challenge',
+    },
+    completedQuestCard: {
+        typeBadge: 'QUIZ',
+        bestScore: 'Best Score',
+        played: 'Played {{count}} times',
+        lastPlayed: 'Last: {{date}}',
+        never: 'Never',
     },
     search: {
         placeholder: 'Search users, quizzes, challenges...', 

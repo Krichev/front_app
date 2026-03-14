@@ -53,6 +53,8 @@ const ru = {
         seconds: '{{count}} сек',
         hide: 'Скрыть',
         showHint: 'Показать подсказку',
+        continue: 'Продолжить',
+        failed: 'Не удалось',
         localizedInput: {
             fillAtLeastOne: 'Пожалуйста, заполните хотя бы один язык',
             fillBothLanguages: 'Пожалуйста, заполните оба языка',
@@ -404,6 +406,97 @@ const ru = {
         sortOldest: 'Старые',
         sortTitleAZ: 'А → Я',
         sortTitleZA: 'Я → А',
+        completed: 'Завершённые',
+        emptyCompleted: 'Нет завершённых квестов',
+        emptyCompletedHint: 'Завершите свой первый квест, чтобы увидеть его здесь!',
+    },
+    challengeCard: {
+        visibility: {
+            private: 'Приватный',
+        },
+        payment: {
+            free: 'БЕСПЛАТНО',
+        },
+        description: {
+            empty: 'Описание отсутствует',
+        },
+        metadata: {
+            type: 'Тип',
+            participants: 'Участники',
+            frequency: 'Частота',
+        },
+        prize: {
+            label: 'Приз',
+            pool: 'Призовой фонд',
+        },
+        creator: {
+            createdBy: 'Создано: {{username}}',
+            yourChallenge: 'Ваш квест',
+        },
+        currency: {
+            pts: '{{amount}} очк.',
+        },
+    },
+    quizChallengeCard: {
+        type: {
+            www: 'Что? Где? Когда?',
+            quiz: 'Викторина',
+        },
+        badge: {
+            questions: '{{count}} вопросов',
+            team: 'Команда',
+        },
+        creator: 'Создатель',
+        reward: 'Награда: {{reward}}',
+        status: {
+            active: 'АКТИВЕН',
+            completed: 'ЗАВЕРШЁН',
+            failed: 'ПРОВАЛЕН',
+            open: 'ОТКРЫТ',
+            in_progress: 'В ПРОЦЕССЕ',
+        },
+    },
+    challengeSearch: {
+        title: 'Поиск соревнований',
+        searchPlaceholder: 'Поиск по названию или описанию...',
+        filterAll: 'Все',
+        filterFree: 'Бесплатные',
+        filterPaid: 'Платные',
+        filterPrivate: 'Приватные',
+        resultsCount: '{{count}} соревнование найдено',
+        resultsCount_plural: '{{count}} соревнований найдено',
+        emptyTitle: 'Соревнования не найдены',
+        emptyWithQuery: 'Нет соревнований по запросу "{{query}}"',
+        emptyDefault: 'Попробуйте другой запрос',
+        loading: 'Поиск соревнований...',
+        error: 'Не удалось загрузить соревнования',
+        retry: 'Повторить',
+        filters: {
+            all: 'Все',
+            free: 'Бесплатные',
+            paid: 'Платные',
+            private: 'Приватные',
+        },
+        results: {
+            count: '{{count}} соревнование найдено',
+            count_plural: '{{count}} соревнований найдено',
+        },
+        empty: {
+            title: 'Ничего не найдено',
+            withQuery: 'Нет соревнований по запросу "{{query}}"',
+            noQuery: 'Попробуйте другой поиск',
+        },
+    },
+    challengeSearchCard: {
+        quizFallback: 'Квест-викторина',
+        challengeFallback: 'Соревнование',
+    },
+    completedQuestCard: {
+        typeBadge: 'КВЕСТ',
+        bestScore: 'Лучший результат',
+        played: 'Сыграно {{count}} раз',
+        lastPlayed: 'Последняя: {{date}}',
+        never: 'Никогда',
     },
     search: {
         placeholder: 'Поиск пользователей, викторин, соревнований...', 

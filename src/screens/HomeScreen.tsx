@@ -4,15 +4,15 @@ import {ActivityIndicator, FlatList, SafeAreaView, Text, TouchableOpacity, View}
 import {useDispatch, useSelector} from 'react-redux';
 import {CompositeNavigationProp, useNavigation} from '@react-navigation/native';
 import {useTranslation} from 'react-i18next';
-import {RootState} from "../app/providers/StoreProvider/store.ts";
-import {logout} from "../entities/AuthState/model/slice/authSlice.ts";
+import {RootState} from "../app/providers/StoreProvider/store";
+import {logout} from "../entities/AuthState/model/slice/authSlice";
 import {BottomTabNavigationProp} from "@react-navigation/bottom-tabs";
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {MainTabParamList, RootStackParamList} from "../navigation/AppNavigator.tsx";
+import {MainTabParamList, RootStackParamList} from "../navigation/AppNavigator";
 import {useGetChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard.tsx";
-import KeychainService from "../services/auth/KeychainService.ts";
+import QuizChallengeCard from "../entities/ChallengeState/ui/QuizChallengeCard";
+import KeychainService from "../services/auth/KeychainService";
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
 import {ScreenTimeCountdown} from '../features/ScreenTime/ui/ScreenTimeCountdown';
@@ -41,7 +41,9 @@ const HomeScreen: React.FC = () => {
     // Query for quiz challenges specifically
     const {data: quizChallenges, isLoading: loadingQuizzes} = useGetChallengesQuery({
         type: 'QUIZ',
-        limit: 5
+        limit: 10,
+        sort: 'newest',
+        page: 0,
     });
 
     // Filter for WWW quizzes with proper type checking

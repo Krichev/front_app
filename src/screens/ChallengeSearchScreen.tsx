@@ -1,267 +1,330 @@
 // src/screens/ChallengeSearchScreen.tsx
 import React, {useState} from 'react';
-import {ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View,} from 'react-native';
-import {useSearchChallengesQuery} from '../entities/ChallengeState/model/slice/challengeApi';
-import {ChallengeCard} from '../components/ChallengeCard/ChallengeCard';
-import {ApiChallenge} from '../entities/ChallengeState/model/types/challenge.types';
-import { useSafeRefetch } from '../shared/hooks/useSafeRefetch';
+import {
+    ActivityIndicator,
+    FlatList,
+    SafeAreaView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import {useTranslation} from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useSearchChallengesQuery} from "../entities/ChallengeState/model/slice/challengeApi";
+import {useSafeRefetch} from "../shared/hooks/useSafeRefetch";
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme/createStyles';
+import QuizChallengeCard from '../entities/ChallengeState/ui/QuizChallengeCard';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 
-interface ChallengeSearchScreenProps {
-    navigation: any;
-}
+type RootStackParamList = {
+    ChallengeDetails: { challengeId: string };
+};
 
-export const ChallengeSearchScreen: React.FC<ChallengeSearchScreenProps> = ({ navigation }) => {
+type ChallengeSearchNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+const ChallengeSearchScreen: React.FC = () => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
+    const navigation = useNavigation<ChallengeSearchNavigationProp>();
+
     const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState<'all' | 'free' | 'paid' | 'private'>('all');
-    const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [filter, setFilter] = useState<'ALL' | 'FREE' | 'PAID' | 'PRIVATE'>('ALL');
 
-    // Debounce search query
-    React.useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedQuery(searchQuery);
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, [searchQuery]);
-
-    const { 
-        data: challenges, 
-        isLoading, 
-        error, 
+    const {
+        data: challenges,
+        isLoading,
+        error,
         refetch: refetchRaw,
         isUninitialized
-    } = useSearchChallengesQuery(
-        { q: debouncedQuery || 'fitness', page: 0, size: 50 },
-        { skip: !debouncedQuery && activeFilter === 'all' }
-    );
+    } = useSearchChallengesQuery({
+        q: searchQuery,
+        limit: 50
+    });
 
     const refetch = useSafeRefetch(refetchRaw, isUninitialized);
 
-    const filterChallenges = (challenges: ApiChallenge[] | undefined) => {
-        if (!challenges) return [];
+    const filteredChallenges = (challenges || []).filter(challenge => {
+        if (filter === 'ALL') return true;
+        if (filter === 'FREE') return challenge.paymentType === 'FREE' || !challenge.hasEntryFee;
+        if (filter === 'PAID') return challenge.paymentType === 'ENTRY_FEE' || challenge.hasEntryFee;
+        if (filter === 'PRIVATE') return challenge.visibility === 'PRIVATE';
+        return true;
+    });
 
-        switch (activeFilter) {
-            case 'free':
-                return challenges.filter(c => !c.hasEntryFee || c.paymentType === 'FREE');
-            case 'paid':
-                return challenges.filter(c => c.hasEntryFee);
-            case 'private':
-                return challenges.filter(c => c.visibility === 'PRIVATE');
-            default:
-                return challenges;
-        }
+    const handleChallengePress = (challengeId: string) => {
+        navigation.navigate('ChallengeDetails', {challengeId});
     };
 
-    const filteredChallenges = filterChallenges(challenges);
-
-    const handleChallengePress = (challenge: ApiChallenge) => {
-        navigation.navigate('ChallengeDetails', { challengeId: challenge.id });
-    };
-
-    const renderFilterButton = (
-        label: string,
-        filter: 'all' | 'free' | 'paid' | 'private',
-        emoji?: string
-    ) => (
-        <TouchableOpacity
-            style={[styles.filterButton, activeFilter === filter && styles.activeFilterButton]}
-            onPress={() => setActiveFilter(filter)}
-        >
-            <Text style={[styles.filterText, activeFilter === filter && styles.activeFilterText]}>
-                {emoji && `${emoji} `}{label}
-            </Text>
-        </TouchableOpacity>
-    );
-
-    return (
-        <View style={styles.container}>
-            {/* Search Header */}
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Search Challenges</Text>
+    const renderHeader = () => (
+        <View style={styles.headerContainer}>
+            <Text style={styles.title}>{t('challengeSearch.title')}</Text>
+            
+            <View style={styles.searchBarContainer}>
+                <MaterialCommunityIcons 
+                    name="magnify" 
+                    size={20} 
+                    color={theme.colors.text.disabled} 
+                    style={styles.searchIcon}
+                />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Search by title or description..."
+                    placeholder={t('challengeSearch.placeholder')}
+                    placeholderTextColor={theme.colors.text.disabled}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
-                    placeholderTextColor="#999"
+                    autoCapitalize="none"
                 />
-            </View>
-
-            {/* Filter Buttons */}
-            <View style={styles.filterContainer}>
-                {renderFilterButton('All', 'all')}
-                {renderFilterButton('Free', 'free', '🆓')}
-                {renderFilterButton('Paid', 'paid', '💰')}
-                {renderFilterButton('Private', 'private', '🔒')}
-            </View>
-
-            {/* Results Count */}
-            {filteredChallenges.length > 0 && (
-                <View style={styles.resultsCount}>
-                    <Text style={styles.resultsCountText}>
-                        {filteredChallenges.length} challenge{filteredChallenges.length !== 1 ? 's' : ''} found
-                    </Text>
-                </View>
-            )}
-
-            {/* Challenge List */}
-            {isLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#2196F3" />
-                    <Text style={styles.loadingText}>Searching challenges...</Text>
-                </View>
-            ) : error ? (
-                <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Failed to load challenges</Text>
-                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-                        <Text style={styles.retryButtonText}>Retry</Text>
+                {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                        <MaterialCommunityIcons 
+                            name="close-circle" 
+                            size={20} 
+                            color={theme.colors.text.disabled} 
+                        />
                     </TouchableOpacity>
-                </View>
-            ) : filteredChallenges.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyEmoji}>🔍</Text>
-                    <Text style={styles.emptyTitle}>No challenges found</Text>
-                    <Text style={styles.emptyDescription}>
-                        {searchQuery
-                            ? `No challenges match "${searchQuery}"`
-                            : 'Try searching for something else'}
+                )}
+            </View>
+
+            <View style={styles.filterContainer}>
+                <TouchableOpacity
+                    style={[styles.filterButton, filter === 'ALL' && styles.filterButtonActive]}
+                    onPress={() => setFilter('ALL')}
+                >
+                    <Text style={[styles.filterButtonText, filter === 'ALL' && styles.filterButtonTextActive]}>
+                        {t('challengeSearch.filters.all')}
                     </Text>
-                </View>
-            ) : (
-                <FlatList
-                    data={filteredChallenges}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <ChallengeCard challenge={item} onPress={() => handleChallengePress(item)} />
-                    )}
-                    contentContainerStyle={styles.listContainer}
-                    showsVerticalScrollIndicator={false}
-                    refreshing={isLoading}
-                    onRefresh={refetch}
-                />
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                    style={[styles.filterButton, filter === 'FREE' && styles.filterButtonActive]}
+                    onPress={() => setFilter('FREE')}
+                >
+                    <MaterialCommunityIcons 
+                        name="gift-outline" 
+                        size={16} 
+                        color={filter === 'FREE' ? theme.colors.text.inverse : theme.colors.text.secondary} 
+                    />
+                    <Text style={[styles.filterButtonText, filter === 'FREE' && styles.filterButtonTextActive]}>
+                        {t('challengeSearch.filters.free')}
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.filterButton, filter === 'PAID' && styles.filterButtonActive]}
+                    onPress={() => setFilter('PAID')}
+                >
+                    <MaterialCommunityIcons 
+                        name="cash" 
+                        size={16} 
+                        color={filter === 'PAID' ? theme.colors.text.inverse : theme.colors.text.secondary} 
+                    />
+                    <Text style={[styles.filterButtonText, filter === 'PAID' && styles.filterButtonTextActive]}>
+                        {t('challengeSearch.filters.paid')}
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.filterButton, filter === 'PRIVATE' && styles.filterButtonActive]}
+                    onPress={() => setFilter('PRIVATE')}
+                >
+                    <MaterialCommunityIcons 
+                        name="lock" 
+                        size={16} 
+                        color={filter === 'PRIVATE' ? theme.colors.text.inverse : theme.colors.text.secondary} 
+                    />
+                    <Text style={[styles.filterButtonText, filter === 'PRIVATE' && styles.filterButtonTextActive]}>
+                        {t('challengeSearch.filters.private')}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
+            {filteredChallenges.length > 0 && !isLoading && (
+                <Text style={styles.resultsCount}>
+                    {t('challengeSearch.results.count', { count: filteredChallenges.length })}
+                </Text>
             )}
         </View>
     );
+
+    const renderEmpty = () => {
+        if (isLoading) {
+            return (
+                <View style={styles.centerContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary.main} />
+                    <Text style={styles.loadingText}>{t('challengeSearch.loading')}</Text>
+                </View>
+            );
+        }
+
+        if (error) {
+            return (
+                <View style={styles.centerContainer}>
+                    <MaterialCommunityIcons name="alert-circle-outline" size={64} color={theme.colors.error.main} />
+                    <Text style={styles.errorText}>{t('challengeSearch.error')}</Text>
+                    <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+                        <Text style={styles.retryButtonText}>{t('challengeSearch.retry')}</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        return (
+            <View style={styles.centerContainer}>
+                <MaterialCommunityIcons name="magnify" size={64} color={theme.colors.text.disabled} />
+                <Text style={styles.emptyTitle}>{t('challengeSearch.empty.title')}</Text>
+                <Text style={styles.emptyDescription}>
+                    {searchQuery 
+                        ? t('challengeSearch.empty.withQuery', { query: searchQuery })
+                        : t('challengeSearch.empty.noQuery')}
+                </Text>
+            </View>
+        );
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <FlatList
+                data={filteredChallenges}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({item}) => (
+                    <QuizChallengeCard
+                        challenge={item}
+                        onPress={() => handleChallengePress(item.id.toString())}
+                    />
+                )}
+                ListHeaderComponent={renderHeader}
+                ListEmptyComponent={renderEmpty}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+            />
+        </SafeAreaView>
+    );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
-    header: {
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        paddingTop: 48,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+    headerContainer: {
+        paddingHorizontal: theme.spacing.lg,
+        paddingTop: theme.spacing['3xl'],
+        paddingBottom: theme.spacing.md,
+        backgroundColor: theme.colors.background.primary,
+        borderBottomLeftRadius: theme.layout.borderRadius.lg,
+        borderBottomRightRadius: theme.layout.borderRadius.lg,
+        ...theme.shadows.small,
     },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1a1a1a',
-        marginBottom: 12,
+    title: {
+        fontSize: theme.typography.fontSize['2xl'],
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.lg,
+    },
+    searchBarContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.full,
+        paddingHorizontal: theme.spacing.md,
+        height: 48,
+        marginBottom: theme.spacing.lg,
+        borderWidth: 1,
+        borderColor: theme.colors.border.light,
+    },
+    searchIcon: {
+        marginRight: theme.spacing.sm,
     },
     searchInput: {
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        padding: 12,
-        fontSize: 16,
-        color: '#1a1a1a',
+        flex: 1,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+        paddingVertical: 0,
     },
     filterContainer: {
         flexDirection: 'row',
-        padding: 16,
-        gap: 8,
-        backgroundColor: '#FFFFFF',
+        flexWrap: 'wrap',
+        gap: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
     },
     filterButton: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f5f5f5',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.full,
+        backgroundColor: theme.colors.background.secondary,
         borderWidth: 1,
-        borderColor: '#e0e0e0',
+        borderColor: theme.colors.border.light,
+        minHeight: 44,
+        gap: theme.spacing.xs,
     },
-    activeFilterButton: {
-        backgroundColor: '#2196F3',
-        borderColor: '#2196F3',
+    filterButtonActive: {
+        backgroundColor: theme.colors.primary.main,
+        borderColor: theme.colors.primary.main,
     },
-    filterText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#666',
+    filterButtonText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
+        fontWeight: theme.typography.fontWeight.medium,
     },
-    activeFilterText: {
-        color: '#FFFFFF',
+    filterButtonTextActive: {
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     resultsCount: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.xs,
     },
-    resultsCountText: {
-        fontSize: 13,
-        color: '#666',
+    listContent: {
+        paddingBottom: theme.spacing['2xl'],
     },
-    listContainer: {
-        padding: 16,
-    },
-    loadingContainer: {
+    centerContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
+        paddingTop: 100,
+        paddingHorizontal: theme.spacing['3xl'],
     },
     loadingText: {
-        marginTop: 12,
-        fontSize: 14,
-        color: '#666',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        marginTop: theme.spacing.md,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.secondary,
     },
     errorText: {
-        fontSize: 16,
-        color: '#f44336',
-        marginBottom: 16,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+        textAlign: 'center',
+        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
     },
     retryButton: {
-        backgroundColor: '#2196F3',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.primary.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     retryButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '600',
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
-    },
-    emptyEmoji: {
-        fontSize: 64,
-        marginBottom: 16,
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     emptyTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#1a1a1a',
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.xl,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
     },
     emptyDescription: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
         textAlign: 'center',
     },
-});
+}));
+
+export default ChallengeSearchScreen;

@@ -183,6 +183,7 @@ export interface GetChallengesParams {
     targetGroup?: string;
     participant_id?: string | undefined;
     excludeCancelled?: boolean;
+    sort?: string;
 }
 
 // ============================================================================
@@ -470,6 +471,8 @@ export const hasAccessToChallenge = (
     return false;
 };
 
+import i18n from 'i18next';
+
 /**
  * Helper function to format challenge date
  */
@@ -477,7 +480,8 @@ export const formatChallengeDate = (dateString?: string): string => {
     if (!dateString) return 'N/A';
 
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US';
+    return date.toLocaleDateString(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'

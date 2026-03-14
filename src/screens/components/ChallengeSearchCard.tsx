@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { ApiChallenge } from '../../entities/ChallengeState/model/types';
 import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../shared/ui/theme/createStyles';
@@ -21,6 +22,7 @@ export interface ChallengeSearchCardProps {
  * Component to display a challenge or quiz in search results
  */
 export const ChallengeSearchCard: React.FC<ChallengeSearchCardProps> = React.memo(({ challenge, isQuiz, onPress }) => {
+    const { t } = useTranslation();
     const { theme } = useAppStyles();
     const styles = themeStyles;
 
@@ -39,7 +41,7 @@ export const ChallengeSearchCard: React.FC<ChallengeSearchCardProps> = React.mem
             <View style={styles.cardContent}>
                 <Text style={styles.cardTitle} numberOfLines={1}>{challenge.title}</Text>
                 <Text style={styles.cardSubtitle} numberOfLines={1}>
-                    {challenge.description || (isQuiz ? 'Quiz Challenge' : 'Challenge')}
+                    {challenge.description || (isQuiz ? t('challengeSearchCard.quizFallback') : t('challengeSearchCard.challengeFallback'))}
                 </Text>
             </View>
             <MaterialCommunityIcons 

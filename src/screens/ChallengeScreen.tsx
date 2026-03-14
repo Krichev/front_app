@@ -237,7 +237,7 @@ const ChallengesScreen: React.FC = () => {
                                 <MaterialCommunityIcons name="check" size={16} color="white" />
                             )}
                         </View>
-                        <Text style={styles.checkboxLabel}>Completed ✓</Text>
+                        <Text style={styles.checkboxLabel}>{t('challenges.completed')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -303,11 +303,11 @@ const ChallengesScreen: React.FC = () => {
                             color={theme.colors.text.disabled}
                         />
                         <Text style={styles.emptyText}>
-                            {showCompleted ? "No completed quests yet" : t('challenges.emptyTitle')}
+                            {showCompleted ? t('challenges.emptyCompleted') : t('challenges.emptyTitle')}
                         </Text>
                         <Text style={styles.emptySubtext}>
                             {showCompleted 
-                                ? "Complete your first quest to see it here!"
+                                ? t('challenges.emptyCompletedHint')
                                 : (showParticipating && !showCreated
                                     ? t('challenges.emptyJoined')
                                     : !showParticipating && showCreated
@@ -392,6 +392,7 @@ const themeStyles = createStyles(theme => ({
         alignItems: 'center',
         gap: theme.spacing.sm,
         minHeight: 44,
+        flexShrink: 1,
     },
     checkbox: {
         width: 24,
@@ -406,8 +407,9 @@ const themeStyles = createStyles(theme => ({
         backgroundColor: theme.colors.primary.main,
     },
     checkboxLabel: {
-        fontSize: theme.typography.fontSize.base,
+        fontSize: theme.typography.fontSize.sm,
         color: theme.colors.text.primary,
+        flexShrink: 1,
     },
     sortContainer: {
         backgroundColor: theme.colors.background.paper,

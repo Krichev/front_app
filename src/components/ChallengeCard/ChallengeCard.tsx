@@ -1,7 +1,10 @@
 // src/components/ChallengeCard/ChallengeCard.tsx
 import React from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Text, TouchableOpacity, View} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {ApiChallenge, CurrencyType, PaymentType} from '../../entities/ChallengeState/model/types/challenge.types';
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../shared/ui/theme/createStyles';
 
 interface ChallengeCardProps {
     challenge: ApiChallenge;
@@ -9,10 +12,13 @@ interface ChallengeCardProps {
 }
 
 export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
 
     const formatCurrency = (amount: number, currency: CurrencyType) => {
         if (currency === CurrencyType.POINTS) {
-            return `${amount.toLocaleString()} pts`;
+            return t('challengeCard.currency.pts', { amount: amount.toLocaleString() });
         }
 
         const symbols: Record<string, string> = {
@@ -28,14 +34,22 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
 
     const getVisibilityBadge = () => {
         if (challenge.visibility === 'PRIVATE') {
-            return <View style={styles.privateBadge}><Text style={styles.badgeText}>🔒 Private</Text></View>;
+            return (
+                <View style={styles.privateBadge}>
+                    <Text style={styles.badgeText}>🔒 {t('challengeCard.visibility.private')}</Text>
+                </View>
+            );
         }
         return null;
     };
 
     const getPaymentBadge = () => {
         if (challenge.paymentType === PaymentType.FREE || !challenge.hasEntryFee) {
-            return <View style={styles.freeBadge}><Text style={styles.freeBadgeText}>FREE</Text></View>;
+            return (
+                <View style={styles.freeBadge}>
+                    <Text style={styles.freeBadgeText}>{t('challengeCard.payment.free')}</Text>
+                </View>
+            );
         }
 
         if (challenge.hasEntryFee && challenge.entryFeeAmount) {
@@ -65,21 +79,21 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
             </View>
 
             <Text style={styles.description} numberOfLines={2}>
-                {challenge.description || 'No description provided'}
+                {challenge.description || t('challengeCard.description.empty')}
             </Text>
 
             <View style={styles.metadata}>
                 <View style={styles.metadataItem}>
-                    <Text style={styles.metadataLabel}>Type:</Text>
+                    <Text style={styles.metadataLabel}>{t('challengeCard.metadata.type')}:</Text>
                     <Text style={styles.metadataValue}>{challenge.type}</Text>
                 </View>
                 <View style={styles.metadataItem}>
-                    <Text style={styles.metadataLabel}>Participants:</Text>
+                    <Text style={styles.metadataLabel}>{t('challengeCard.metadata.participants')}:</Text>
                     <Text style={styles.metadataValue}>{challenge.participantCount || 0}</Text>
                 </View>
                 {challenge.frequency && (
                     <View style={styles.metadataItem}>
-                        <Text style={styles.metadataLabel}>Frequency:</Text>
+                        <Text style={styles.metadataLabel}>{t('challengeCard.metadata.frequency')}:</Text>
                         <Text style={styles.metadataValue}>{challenge.frequency}</Text>
                     </View>
                 )}
@@ -87,7 +101,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
 
             {challenge.hasPrize && challenge.prizeAmount && (
                 <View style={styles.prizeContainer}>
-                    <Text style={styles.prizeLabel}>🏆 Prize:</Text>
+                    <Text style={styles.prizeLabel}>🏆 {t('challengeCard.prize.label')}:</Text>
                     <Text style={styles.prizeAmount}>
                         {formatCurrency(challenge.prizeAmount, challenge.prizeCurrency!)}
                     </Text>
@@ -96,7 +110,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
 
             {challenge.prizePool && challenge.prizePool > 0 && (
                 <View style={styles.prizePoolContainer}>
-                    <Text style={styles.prizePoolLabel}>💰 Prize Pool:</Text>
+                    <Text style={styles.prizePoolLabel}>💰 {t('challengeCard.prize.pool')}:</Text>
                     <Text style={styles.prizePoolAmount}>
                         {formatCurrency(challenge.prizePool, challenge.prizeCurrency || CurrencyType.USD)}
                     </Text>
@@ -104,10 +118,12 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
             )}
 
             <View style={styles.footer}>
-                <Text style={styles.creator}>Created by {challenge.creatorUsername}</Text>
+                <Text style={styles.creator}>
+                    {t('challengeCard.creator.createdBy', { username: challenge.creatorUsername })}
+                </Text>
                 {challenge.userIsCreator && (
                     <View style={styles.creatorBadge}>
-                        <Text style={styles.creatorBadgeText}>Your Challenge</Text>
+                        <Text style={styles.creatorBadgeText}>{t('challengeCard.creator.yourChallenge')}</Text>
                     </View>
                 )}
             </View>
@@ -115,13 +131,13 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.lg,
+        marginBottom: theme.spacing.md,
+        shadowColor: theme.colors.text.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -131,7 +147,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     titleContainer: {
         flex: 1,
@@ -139,139 +155,139 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     title: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1a1a1a',
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
         flex: 1,
-        marginRight: 8,
+        marginRight: theme.spacing.sm,
     },
     badges: {
         flexDirection: 'row',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     privateBadge: {
-        backgroundColor: '#757575',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 8,
-        marginLeft: 8,
+        backgroundColor: theme.colors.text.disabled,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginLeft: theme.spacing.sm,
     },
     badgeText: {
-        fontSize: 11,
-        color: '#FFFFFF',
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.inverse,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     freeBadge: {
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
     },
     freeBadgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#FFFFFF',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     paidBadge: {
-        backgroundColor: '#FF5722',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: theme.colors.error.main,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.md,
     },
     pointsBadge: {
-        backgroundColor: '#FFD700',
+        backgroundColor: theme.colors.warning.main,
     },
     paidBadgeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        color: '#FFFFFF',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
     },
     description: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 12,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.secondary,
+        marginBottom: theme.spacing.lg,
         lineHeight: 20,
     },
     metadata: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 12,
-        marginBottom: 12,
+        gap: theme.spacing.md,
+        marginBottom: theme.spacing.lg,
     },
     metadataItem: {
         flexDirection: 'row',
         alignItems: 'center',
     },
     metadataLabel: {
-        fontSize: 12,
-        color: '#999',
-        marginRight: 4,
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.disabled,
+        marginRight: theme.spacing.xs,
     },
     metadataValue: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     prizeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E8F5E9',
-        padding: 8,
-        borderRadius: 8,
-        marginBottom: 8,
+        backgroundColor: theme.colors.success.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginBottom: theme.spacing.sm,
     },
     prizeLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#2E7D32',
-        marginRight: 8,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.success.dark,
+        marginRight: theme.spacing.md,
     },
     prizeAmount: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#1B5E20',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.success.main,
     },
     prizePoolContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF3E0',
-        padding: 8,
-        borderRadius: 8,
-        marginBottom: 8,
+        backgroundColor: theme.colors.warning.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginBottom: theme.spacing.sm,
     },
     prizePoolLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#E65100',
-        marginRight: 8,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.warning.dark,
+        marginRight: theme.spacing.md,
     },
     prizePoolAmount: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#BF360C',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.warning.main,
     },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 8,
-        paddingTop: 8,
-        borderTopWidth: 1,
-        borderTopColor: '#f0f0f0',
+        marginTop: theme.spacing.sm,
+        paddingTop: theme.spacing.sm,
+        borderTopWidth: theme.layout.borderWidth.thin,
+        borderTopColor: theme.colors.border.light,
     },
     creator: {
-        fontSize: 12,
-        color: '#999',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.disabled,
     },
     creatorBadge: {
-        backgroundColor: '#E3F2FD',
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 8,
+        backgroundColor: theme.colors.primary.light,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.sm,
     },
     creatorBadgeText: {
-        fontSize: 11,
-        fontWeight: '600',
-        color: '#1976D2',
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
-});
+}));

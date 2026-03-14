@@ -1,26 +1,35 @@
 // src/entities/ChallengeState/ui/QuizChallengeCard.tsx
 import React from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from 'react-i18next';
 import {FormatterService} from '../../../services/verification/ui/Services';
 import {ApiChallenge} from "../model/slice/challengeApi";
 import {isWWWQuiz, parseQuizConfig} from "../model/types";
+import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../../shared/ui/theme/createStyles';
 
 interface QuizChallengeCardProps {
     challenge: ApiChallenge;
     onPress: () => void;
 }
 
-// Define valid challenge status types
-type ChallengeStatus = 'active' | 'completed' | 'failed' | 'open' | 'in_progress';
-
 const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPress }) => {
-    const navigation = useNavigation();
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
 
     // Parse quiz configuration using our new helper function
     const quizConfig = parseQuizConfig(challenge.quizConfig);
     const isWWW = isWWWQuiz(quizConfig);
+
+    const statusLabels: Record<string, string> = {
+        active: t('quizChallengeCard.status.active'),
+        completed: t('quizChallengeCard.status.completed'),
+        failed: t('quizChallengeCard.status.failed'),
+        open: t('quizChallengeCard.status.open'),
+        in_progress: t('quizChallengeCard.status.in_progress'),
+    };
 
     const getQuizIcon = () => {
         if (isWWW) {
@@ -31,9 +40,9 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
 
     const getQuizTypeLabel = () => {
         if (isWWW) {
-            return 'What? Where? When?';
+            return t('quizChallengeCard.type.www');
         }
-        return 'Quiz';
+        return t('quizChallengeCard.type.quiz');
     };
 
     const renderQuizDetails = () => {
@@ -49,13 +58,15 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
 
                 {isWWW && quizConfig.roundCount && (
                     <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{quizConfig.roundCount} Questions</Text>
+                        <Text style={styles.badgeText}>
+                            {t('quizChallengeCard.badge.questions', { count: quizConfig.roundCount })}
+                        </Text>
                     </View>
                 )}
 
                 {isWWW && quizConfig.teamBased && (
                     <View style={styles.badge}>
-                        <Text style={styles.badgeText}>Team</Text>
+                        <Text style={styles.badgeText}>{t('quizChallengeCard.badge.team')}</Text>
                     </View>
                 )}
             </View>
@@ -66,7 +77,6 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
     const getStatusStyle = () => {
         const normalizedStatus = challenge.status.toLowerCase();
 
-        // Use specific status checks instead of dynamic property access
         switch (normalizedStatus) {
             case 'active':
                 return styles.status_active;
@@ -79,7 +89,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
             case 'in_progress':
                 return styles.status_in_progress;
             default:
-                return {}; // Default empty style
+                return {};
         }
     };
 
@@ -87,8 +97,8 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
         if (challenge.userIsCreator) {
             return (
                 <View style={styles.creatorBadge}>
-                    <MaterialCommunityIcons name="crown" size={12} color="#FFD700" />
-                    <Text style={styles.creatorBadgeText}>Creator</Text>
+                    <MaterialCommunityIcons name="crown" size={12} color={theme.colors.warning.main} />
+                    <Text style={styles.creatorBadgeText}>{t('quizChallengeCard.creator')}</Text>
                 </View>
             );
         }
@@ -101,19 +111,14 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
                 <MaterialCommunityIcons
                     name={getQuizIcon()}
                     size={28}
-                    color="#4CAF50"
+                    color={theme.colors.success.main}
                 />
             </View>
 
             <View style={styles.content}>
                 <View style={styles.titleRow}>
                     <Text style={styles.title}>{challenge.title}</Text>
-                    {challenge.userIsCreator && (
-                        <View style={styles.creatorBadge}>
-                            <MaterialCommunityIcons name="crown" size={12} color="#FFD700" />
-                            <Text style={styles.creatorBadgeText}>Creator</Text>
-                        </View>
-                    )}
+                    {renderCreatorBadge()}
                 </View>
 
                 <View style={styles.typeContainer}>
@@ -127,11 +132,15 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
 
                 <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, getStatusStyle()]}>
-                        <Text style={styles.statusText}>{challenge.status.toUpperCase()}</Text>
+                        <Text style={styles.statusText}>
+                            {(statusLabels[challenge.status.toLowerCase()] || challenge.status).toUpperCase()}
+                        </Text>
                     </View>
 
                     {challenge.reward && (
-                        <Text style={styles.rewards}>Reward: {challenge.reward}</Text>
+                        <Text style={styles.rewards}>
+                            {t('quizChallengeCard.reward', { reward: challenge.reward })}
+                        </Text>
                     )}
                 </View>
             </View>
@@ -139,15 +148,15 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flexDirection: 'row',
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
+        backgroundColor: theme.colors.background.primary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.lg,
+        marginBottom: theme.spacing.md,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: theme.colors.text.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -156,50 +165,50 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#E8F5E9',
+        backgroundColor: theme.colors.success.background,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: theme.spacing.lg,
     },
     content: {
         flex: 1,
     },
     title: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 4,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.xs,
     },
     typeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     typeLabel: {
-        fontSize: 14,
-        color: '#4CAF50',
-        fontWeight: '500',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.success.main,
+        fontWeight: theme.typography.fontWeight.medium,
     },
     date: {
-        fontSize: 12,
-        color: '#888',
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.disabled,
     },
     quizDetails: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: 8,
+        marginBottom: theme.spacing.sm,
     },
     badge: {
-        backgroundColor: '#f0f0f0',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        marginRight: 8,
-        marginBottom: 4,
+        backgroundColor: theme.colors.background.secondary,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginRight: theme.spacing.sm,
+        marginBottom: theme.spacing.xs,
     },
     badgeText: {
-        fontSize: 12,
-        color: '#555',
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.secondary,
     },
     statusContainer: {
         flexDirection: 'row',
@@ -207,36 +216,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        backgroundColor: '#f0f0f0',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.sm,
+        backgroundColor: theme.colors.background.secondary,
     },
     status_active: {
-        backgroundColor: '#E8F5E9',
+        backgroundColor: theme.colors.success.background,
     },
     status_completed: {
-        backgroundColor: '#E3F2FD',
+        backgroundColor: theme.colors.primary.background,
     },
     status_failed: {
-        backgroundColor: '#FFEBEE',
+        backgroundColor: theme.colors.error.background,
     },
     status_open: {
-        backgroundColor: '#E8F5E9', // Same as active
+        backgroundColor: theme.colors.success.background,
     },
     status_in_progress: {
-        backgroundColor: '#FFF9C4', // Yellow-ish for in progress
+        backgroundColor: theme.colors.warning.background,
     },
     statusText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        color: '#555',
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.secondary,
     },
     rewards: {
-        fontSize: 12,
-        color: '#555',
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.secondary,
     },
-
     titleRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -245,17 +253,17 @@ const styles = StyleSheet.create({
     creatorBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF9C4',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: theme.colors.warning.background,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     creatorBadgeText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#FF9800',
-        marginLeft: 4,
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.warning.main,
+        marginLeft: theme.spacing.xs,
     },
-});
+}));
 
 export default QuizChallengeCard;

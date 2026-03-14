@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card, Text, ProgressBar, useTheme, Badge } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import { CompletedChallenge } from '../../entities/ChallengeState/model/types';
 
 interface CompletedQuestCardProps {
@@ -14,38 +15,40 @@ export const CompletedQuestCard: React.FC<CompletedQuestCardProps> = ({
   onPress,
 }) => {
   const theme = useTheme();
+  const { t, i18n } = useTranslation();
   
   const scorePercentage = challenge.bestScorePercentage || 0;
   const progress = scorePercentage / 100;
   
   const getScoreColor = () => {
-    if (scorePercentage >= 80) return '#4CAF50'; // Success
-    if (scorePercentage >= 40) return '#FF9800'; // Warning
-    return '#F44336'; // Error
+    if (scorePercentage >= 80) return theme.colors.primary; // Success
+    if (scorePercentage >= 40) return theme.colors.tertiary; // Warning/Accent
+    return theme.colors.error; // Error
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Never';
+    if (!dateString) return t('completedQuestCard.never');
     const date = new Date(dateString);
-    return date.toLocaleDateString();
+    const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US';
+    return date.toLocaleDateString(locale);
   };
 
   return (
-    <Card style={styles.card} onPress={onPress}>
+    <Card style={[styles.card, { backgroundColor: theme.colors.surface }]} onPress={onPress}>
       <Card.Content>
         <View style={styles.header}>
           <View style={styles.titleContainer}>
-            <Text variant="titleMedium" numberOfLines={1} style={styles.title}>
+            <Text variant="titleMedium" numberOfLines={1} style={[styles.title, { color: theme.colors.onSurface }]}>
               {challenge.title}
             </Text>
-            <Badge style={styles.typeBadge} size={20}>QUIZ</Badge>
+            <Badge style={styles.typeBadge} size={20}>{t('completedQuestCard.typeBadge')}</Badge>
           </View>
-          <MaterialCommunityIcons name="trophy" size={24} color="#FFD700" />
+          <MaterialCommunityIcons name="trophy" size={24} color={theme.colors.secondary} />
         </View>
 
         <View style={styles.scoreSection}>
           <View style={styles.scoreHeader}>
-            <Text variant="bodyMedium">Best Score</Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>{t('completedQuestCard.bestScore')}</Text>
             <Text variant="bodyLarge" style={[styles.scoreText, { color: getScoreColor() }]}>
               {challenge.bestScore || 0}/{challenge.totalRounds || 10} ({scorePercentage.toFixed(0)}%)
             </Text>
@@ -57,17 +60,17 @@ export const CompletedQuestCard: React.FC<CompletedQuestCardProps> = ({
           />
         </View>
 
-        <View style={styles.statsRow}>
+        <View style={[styles.statsRow, { borderTopColor: theme.colors.outlineVariant }]}>
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="play-circle-outline" size={16} color={theme.colors.onSurfaceVariant} />
-            <Text variant="bodySmall" style={styles.statText}>
-              Played {challenge.sessionCount} times
+            <Text variant="bodySmall" style={[styles.statText, { color: theme.colors.onSurfaceVariant }]}>
+              {t('completedQuestCard.played', { count: challenge.sessionCount })}
             </Text>
           </View>
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.onSurfaceVariant} />
-            <Text variant="bodySmall" style={styles.statText}>
-              Last: {formatDate(challenge.lastPlayedAt)}
+            <Text variant="bodySmall" style={[styles.statText, { color: theme.colors.onSurfaceVariant }]}>
+              {t('completedQuestCard.lastPlayed', { date: formatDate(challenge.lastPlayedAt) })}
             </Text>
           </View>
         </View>
@@ -81,7 +84,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginHorizontal: 16,
     elevation: 2,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -124,7 +126,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
     paddingTop: 8,
   },
   statItem: {
@@ -133,6 +134,5 @@ const styles = StyleSheet.create({
   },
   statText: {
     marginLeft: 4,
-    color: '#666',
   },
 });
