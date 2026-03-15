@@ -465,6 +465,7 @@ const en = {
             pts: '{{amount}} pts',
         },
     },
+
     quizChallengeCard: {
         type: {
             www: 'What? Where? When?',
@@ -482,23 +483,15 @@ const en = {
             failed: 'FAILED',
             open: 'OPEN',
             in_progress: 'IN PROGRESS',
+            cancelled: 'CANCELLED',
+            expired: 'EXPIRED',
+            draft: 'DRAFT',
         },
     },
+
     challengeSearch: {
         title: 'Search Challenges',
-        searchPlaceholder: 'Search by title or description...',
-        filterAll: 'All',
-        filterFree: 'Free',
-        filterPaid: 'Paid',
-        filterPrivate: 'Private',
-        resultsCount: '{{count}} challenge found',
-        resultsCount_plural: '{{count}} challenges found',
-        emptyTitle: 'No challenges found',
-        emptyWithQuery: 'No challenges match "{{query}}"',
-        emptyDefault: 'Try searching for something else',
-        loading: 'Searching challenges...',
-        error: 'Failed to load challenges',
-        retry: 'Retry',
+        placeholder: 'Search by title or description...',
         filters: {
             all: 'All',
             free: 'Free',
@@ -506,25 +499,30 @@ const en = {
             private: 'Private',
         },
         results: {
-            count: '{{count}} challenge found',
-            count_plural: '{{count}} challenges found',
+            count_one: '{{count}} challenge found',
+            count_other: '{{count}} challenges found',
         },
+        loading: 'Searching challenges...',
+        error: 'Failed to load challenges',
+        retry: 'Retry',
         empty: {
             title: 'No challenges found',
             withQuery: 'No challenges match "{{query}}"',
             noQuery: 'Try searching for something else',
         },
     },
-    challengeSearchCard: {
-        quizFallback: 'Quiz Challenge',
-        challengeFallback: 'Challenge',
-    },
+
     completedQuestCard: {
         typeBadge: 'QUIZ',
         bestScore: 'Best Score',
         played: 'Played {{count}} times',
         lastPlayed: 'Last: {{date}}',
         never: 'Never',
+    },
+
+    challengeSearchCard: {
+        quizFallback: 'Quiz Challenge',
+        challengeFallback: 'Challenge',
     },
     search: {
         placeholder: 'Search users, quizzes, challenges...', 
@@ -1519,11 +1517,17 @@ const en = {
             groupOnly: 'Group Only',
         },
         gameTypes: {
-            www: 'Who Wants to Win',
+            www: 'What? Where? When?',
             blitz: 'Blitz',
             trivia: 'Trivia',
             custom: 'Custom',
             audio: 'Audio Challenge',
+            quiz: 'Quiz',
+            quest: 'Quest',
+            activity_partner: 'Activity Partner',
+            fitness_tracking: 'Fitness Tracking',
+            habit_building: 'Habit Building',
+            puzzle: 'Puzzle',
         },
         difficulty: {
             easy: 'Easy',

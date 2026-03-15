@@ -21,6 +21,8 @@ export const QuizConfigSection: React.FC<QuizConfigSectionProps> = ({
         TRIVIA: t('challengeDetails.gameTypes.trivia'),
         CUSTOM: t('challengeDetails.gameTypes.custom'),
         AUDIO: t('challengeDetails.gameTypes.audio'),
+        QUIZ: t('challengeDetails.gameTypes.quiz'),
+        PUZZLE: t('challengeDetails.gameTypes.puzzle'),
     };
 
     const difficultyLabels: Record<string, string> = {

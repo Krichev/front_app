@@ -23,12 +23,9 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
     const quizConfig = parseQuizConfig(challenge.quizConfig);
     const isWWW = isWWWQuiz(quizConfig);
 
-    const statusLabels: Record<string, string> = {
-        active: t('quizChallengeCard.status.active'),
-        completed: t('quizChallengeCard.status.completed'),
-        failed: t('quizChallengeCard.status.failed'),
-        open: t('quizChallengeCard.status.open'),
-        in_progress: t('quizChallengeCard.status.in_progress'),
+    const getStatusLabel = (status: string): string => {
+        const key = status.toLowerCase().replace(/\s+/g, '_');
+        return t(`quizChallengeCard.status.${key}`, { defaultValue: status.toUpperCase() });
     };
 
     const getQuizIcon = () => {
@@ -133,7 +130,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
                 <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, getStatusStyle()]}>
                         <Text style={styles.statusText}>
-                            {(statusLabels[challenge.status.toLowerCase()] || challenge.status).toUpperCase()}
+                            {getStatusLabel(challenge.status)}
                         </Text>
                     </View>
 
