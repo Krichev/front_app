@@ -1,9 +1,8 @@
 // src/screens/PuzzleGamePlayScreen.tsx
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
     View, 
     Text, 
-    StyleSheet, 
     SafeAreaView, 
     ActivityIndicator,
     TouchableOpacity,
@@ -16,17 +15,20 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../shared/ui/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { usePuzzleGameState } from '../features/PuzzleGame/hooks/usePuzzleGameState';
 import { usePuzzleDragDrop } from '../features/PuzzleGame/hooks/usePuzzleDragDrop';
 import { PuzzleBoard } from '../features/PuzzleGame/ui/PuzzleBoard';
 import { PieceTray } from '../features/PuzzleGame/ui/PieceTray';
 import { calculateGridSizing } from '../features/PuzzleGame/model/puzzleUtils';
+import { useDimensions } from '../shared/hooks/useDimensions';
 
 type PuzzleGamePlayRouteProp = RouteProp<RootStackParamList, 'PuzzleGamePlay'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PuzzleGamePlay'>;
 
 const PuzzleGamePlayScreen: React.FC = () => {
+    const { width: screenWidth, height: screenHeight } = useDimensions();
     const navigation = useNavigation<NavigationProp>();
     const route = useRoute<PuzzleGamePlayRouteProp>();
     
@@ -37,7 +39,7 @@ const PuzzleGamePlayScreen: React.FC = () => {
     const gridCols = route.params?.gridCols;
     const timeLimitSeconds = route.params?.timeLimitSeconds;
     
-    const { screen, theme, text, form } = useAppStyles();
+    const { screen, theme, text: textStyles, form } = useAppStyles();
 
     const [boardLayout, setBoardLayout] = useState<any>(null);
     const [isAnswerModalVisible, setIsAnswerModalVisible] = useState(false);
@@ -52,7 +54,6 @@ const PuzzleGamePlayScreen: React.FC = () => {
         submitAnswer,
         syncBoardState,
         startGame,
-        game
     } = usePuzzleGameState({
         puzzleGameId,
         gameMode,
@@ -60,7 +61,7 @@ const PuzzleGamePlayScreen: React.FC = () => {
     });
 
     const { cellWidth, cellHeight } = useMemo(() => 
-        calculateGridSizing(gridRows, gridCols), [gridRows, gridCols]);
+        calculateGridSizing(gridRows, gridCols, screenWidth, screenHeight), [gridRows, gridCols, screenWidth, screenHeight]);
 
     const {
         pieceStates,
@@ -89,8 +90,8 @@ const PuzzleGamePlayScreen: React.FC = () => {
     if (isLoading || phase === 'LOADING') {
         return (
             <View style={[screen.container, styles.centered]}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={[styles.loadingText, { color: theme.colors.text }]}>Preparing your puzzle...</Text>
+                <ActivityIndicator size="large" color={theme.colors.primary.main} />
+                <Text style={[styles.loadingText, { color: theme.colors.text.primary }]}>Preparing your puzzle...</Text>
             </View>
         );
     }
@@ -100,31 +101,31 @@ const PuzzleGamePlayScreen: React.FC = () => {
             {/* Header / HUD */}
             <View style={styles.hud}>
                 <View style={styles.timerContainer}>
-                    <MaterialCommunityIcons name="clock-outline" size={20} color={theme.colors.text} />
-                    <Text style={[styles.timerText, { color: theme.colors.text }]}>
+                    <MaterialCommunityIcons name="clock-outline" size={20} color={theme.colors.text.primary} />
+                    <Text style={[styles.timerText, { color: theme.colors.text.primary }]}>
                         {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                     </Text>
                 </View>
                 
                 <View style={styles.progressContainer}>
-                    <Text style={[styles.progressText, { color: theme.colors.text }]}>
+                    <Text style={[styles.progressText, { color: theme.colors.text.primary }]}>
                         {Math.round(completionPercentage)}% Complete
                     </Text>
                 </View>
 
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialCommunityIcons name="exit-to-app" size={24} color={theme.colors.text} />
+                    <MaterialCommunityIcons name="exit-to-app" size={24} color={theme.colors.text.primary} />
                 </TouchableOpacity>
             </View>
 
             {phase === 'WAITING_FOR_START' ? (
                 <View style={styles.lobbyContainer}>
-                    <Text style={[text.h2, { color: theme.colors.text }]}>Waiting Room</Text>
-                    <Text style={[styles.lobbySub, { color: theme.colors.textSecondary }]}>
+                    <Text style={[textStyles.h2, { color: theme.colors.text.primary }]}>Waiting Room</Text>
+                    <Text style={[styles.lobbySub, { color: theme.colors.text.secondary }]}>
                         Pieces are ready!
                     </Text>
                     <TouchableOpacity 
-                        style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+                        style={[styles.primaryButton, { backgroundColor: theme.colors.primary.main }]}
                         onPress={startGame}
                     >
                         <Text style={styles.buttonText}>Start Game</Text>
@@ -152,10 +153,10 @@ const PuzzleGamePlayScreen: React.FC = () => {
                     )}
 
                     <TouchableOpacity 
-                        style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+                        style={[styles.fab, { backgroundColor: theme.colors.primary.main }]}
                         onPress={() => setIsAnswerModalVisible(true)}
                     >
-                        <MaterialCommunityIcons name="lightbulb-on" size={32} color="#FFF" />
+                        <MaterialCommunityIcons name="lightbulb-on" size={32} color={theme.colors.neutral.white} />
                     </TouchableOpacity>
                 </View>
             )}
@@ -170,25 +171,25 @@ const PuzzleGamePlayScreen: React.FC = () => {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={styles.modalOverlay}
                 >
-                    <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.colors.background.paper }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>What's in the picture?</Text>
+                            <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>What's in the picture?</Text>
                             <TouchableOpacity onPress={() => setIsAnswerModalVisible(false)}>
-                                <MaterialCommunityIcons name="close" size={24} color={theme.colors.text} />
+                                <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.primary} />
                             </TouchableOpacity>
                         </View>
                         
                         <TextInput
-                            style={[form.input, { color: theme.colors.text, marginVertical: 20 }]}
+                            style={[form.input, { color: theme.colors.text.primary, marginVertical: 20 }]}
                             value={answerText}
                             onChangeText={setAnswerText}
                             placeholder="Type your guess here..."
-                            placeholderTextColor={theme.colors.textSecondary}
+                            placeholderTextColor={theme.colors.text.secondary}
                             autoFocus
                         />
 
                         <TouchableOpacity 
-                            style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+                            style={[styles.primaryButton, { backgroundColor: theme.colors.primary.main }]}
                             onPress={handleSubmit}
                         >
                             <Text style={styles.buttonText}>Submit Answer</Text>
@@ -200,7 +201,7 @@ const PuzzleGamePlayScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles((theme) => ({
     centered: {
         justifyContent: 'center',
         alignItems: 'center',
@@ -213,13 +214,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: theme.spacing.md,
         height: 60,
     },
     timerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: theme.colors.background.secondary,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     buttonText: {
-        color: '#FFF',
+        color: theme.colors.neutral.white,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -274,14 +275,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         elevation: 5,
-        shadowColor: '#000',
+        shadowColor: theme.colors.neutral.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: theme.colors.overlay.medium,
         justifyContent: 'flex-end',
     },
     modalContent: {
@@ -299,6 +300,6 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: 'bold',
     }
-});
+}));
 
 export default PuzzleGamePlayScreen;

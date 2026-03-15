@@ -49,9 +49,9 @@ export const usePuzzleGameState = ({
     const [startMutation] = useStartPuzzleGameMutation();
     const [updateBoardMutation] = useUpdateBoardStateMutation();
 
-    const { timeLeft, startTimer, stopTimer, resetTimer } = useCountdownTimer({
-        initialTime: timeLimitSeconds || 0,
-        onTimeUp: () => {
+    const { timeLeft, start: startTimer, pause: stopTimer, reset: resetTimer } = useCountdownTimer({
+        duration: timeLimitSeconds || 0,
+        onComplete: () => {
             if (phase === 'PLAYING') {
                 // Handle time up
             }

@@ -1,5 +1,5 @@
 // src/shared/ui/Modal/Modal.tsx
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Animated,
   BackHandler,
@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme';
 import { PortalCustom } from '../Portal/Portal.tsx';
-import { createModalStyles, styles as fallbackStyles } from './Modal.style';
+import { createModalStyles, createFallbackStyles } from './Modal.style';
+import { useDimensions } from '../../hooks/useDimensions';
 
 const ANIMATION_DELAY = 300;
 
@@ -34,13 +35,17 @@ export const Modal: React.FC<ModalProps> = ({
   showCloseButton = true,
   scrollable = true,
 }) => {
+  const { height } = useDimensions();
   const { theme, mode } = useTheme();
   const [visible, setVisible] = useState(isOpen);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   // Create theme-aware styles, fallback to static styles if theme unavailable
-  const styles = theme ? createModalStyles(theme) : fallbackStyles;
+  const styles = useMemo(() => 
+    theme ? createModalStyles(theme, height) : createFallbackStyles(height),
+    [theme, height]
+  );
   const themeMode = mode || 'light';
 
   useEffect(() => {

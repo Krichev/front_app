@@ -10,7 +10,7 @@ interface UseRhythmTapCaptureOptions {
 }
 
 interface UseRhythmTapCaptureReturn {
-    tapTimestamps: number[];
+    tapTimestamps: React.MutableRefObject<number[]>;
     isCapturing: boolean;
     startCapture: () => void;
     stopCapture: () => number[];
@@ -34,11 +34,12 @@ export const useRhythmTapCapture = (
         onTapRecorded,
     } = options;
     
-    const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
+    const [tapCount, setTapCount] = useState(0);
     const [isCapturing, setIsCapturing] = useState(false);
     const [duration, setDuration] = useState(0);
     
     const startTimeRef = useRef<number | null>(null);
+    const tapTimestamps = useRef<number[]>([]);
     const lastTapTimeRef = useRef<number>(0);
     const durationTimerRef = useRef<NodeJS.Timeout | null>(null);
     const maxDurationTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,7 +48,8 @@ export const useRhythmTapCapture = (
         console.log('🎵 Starting tap capture');
         
         // Reset state
-        setTapTimestamps([]);
+        tapTimestamps.current = [];
+        setTapCount(0);
         setDuration(0);
         startTimeRef.current = null;
         lastTapTimeRef.current = 0;
@@ -83,14 +85,14 @@ export const useRhythmTapCapture = (
         }
         
         // Return normalized timestamps (first tap = 0)
-        const normalizedTimestamps = tapTimestamps.length > 0
-            ? tapTimestamps.map(t => t - tapTimestamps[0])
+        const normalizedTimestamps = tapTimestamps.current.length > 0
+            ? tapTimestamps.current.map(t => t - tapTimestamps.current[0])
             : [];
         
         console.log(`📊 Captured ${normalizedTimestamps.length} taps:`, normalizedTimestamps);
         
         return normalizedTimestamps;
-    }, [tapTimestamps]);
+    }, []);
     
     const recordTap = useCallback(() => {
         if (!isCapturing) return;
@@ -110,7 +112,7 @@ export const useRhythmTapCapture = (
         }
         
         // Max taps check
-        if (tapTimestamps.length >= maxTaps) {
+        if (tapTimestamps.current.length >= maxTaps) {
             console.log('📈 Max taps reached');
             return;
         }
@@ -118,18 +120,20 @@ export const useRhythmTapCapture = (
         lastTapTimeRef.current = now;
         const relativeTime = now - startTimeRef.current;
         
-        setTapTimestamps(prev => [...prev, relativeTime]);
+        tapTimestamps.current.push(relativeTime);
+        setTapCount(tapTimestamps.current.length);
         
         // Trigger real-time callback for beat matching
         onTapRecorded?.(relativeTime);
         
-        console.log(`👆 Tap ${tapTimestamps.length + 1}: ${relativeTime.toFixed(1)}ms`);
-    }, [isCapturing, tapTimestamps.length, maxTaps, minTapInterval, onTapRecorded]);
+        console.log(`👆 Tap ${tapTimestamps.current.length}: ${relativeTime.toFixed(1)}ms`);
+    }, [isCapturing, maxTaps, minTapInterval, onTapRecorded]);
     
     const resetCapture = useCallback(() => {
         console.log('🔄 Resetting tap capture');
         
-        setTapTimestamps([]);
+        tapTimestamps.current = [];
+        setTapCount(0);
         setDuration(0);
         setIsCapturing(false);
         startTimeRef.current = null;
@@ -152,7 +156,7 @@ export const useRhythmTapCapture = (
         recordTap,
         resetCapture,
         duration,
-        tapCount: tapTimestamps.length,
+        tapCount,
         tapTimestamps,
     };
 };

@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     Modal,
     FlatList,
-    StyleSheet,
     ActivityIndicator,
     Alert,
 } from 'react-native';
@@ -20,7 +19,7 @@ import {
 } from '../../../entities/TopicState/model/slice/topicApi';
 import { useLazyTopicTree } from './hooks/useLazyTopicTree';
 import TopicTreeItem from './TopicTreeItem';
-import TopicBreadcrumb from './TopicBreadcrumb';
+import { useTheme, createStyles } from '../theme';
 import CreateTopicModal from './CreateTopicModal';
 
 interface TopicTreeSelectorProps {
@@ -46,6 +45,7 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
     required = false,
     error,
 }) => {
+    const { theme } = useTheme();
     const [modalVisible, setModalVisible] = useState(false);
     const [createModalVisible, setCreateModalVisible] = useState(false);
 
@@ -167,14 +167,14 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
                                 onPress={handleClearSelection}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                             >
-                                <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+                                <MaterialCommunityIcons name="close-circle" size={20} color={theme.colors.text.disabled} />
                             </TouchableOpacity>
                         </>
                     ) : (
                         <Text style={styles.placeholder}>{placeholder}</Text>
                     )}
                 </View>
-                <MaterialCommunityIcons name="chevron-down" size={24} color="#999" />
+                <MaterialCommunityIcons name="chevron-down" size={24} color={theme.colors.text.disabled} />
             </TouchableOpacity>
 
             {/* Error message */}
@@ -191,7 +191,7 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
                     {/* Modal header */}
                     <View style={styles.modalHeader}>
                         <TouchableOpacity onPress={() => setModalVisible(false)}>
-                            <MaterialCommunityIcons name="close" size={24} color="#007AFF" />
+                            <MaterialCommunityIcons name="close" size={24} color={theme.colors.primary.main} />
                         </TouchableOpacity>
                         <Text style={styles.modalTitle}>Select Topic</Text>
                         <View style={styles.headerSpacer} />
@@ -199,17 +199,17 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
 
                     {/* Search bar */}
                     <View style={styles.searchContainer}>
-                        <MaterialCommunityIcons name="magnify" size={20} color="#999" />
+                        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.text.disabled} />
                         <TextInput
                             style={styles.searchInput}
                             placeholder="Search topics..."
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                             value={searchTerm}
                             onChangeText={setSearchTerm}
                         />
                         {searchTerm.length > 0 && (
                             <TouchableOpacity onPress={() => setSearchTerm('')}>
-                                <MaterialCommunityIcons name="close-circle" size={20} color="#999" />
+                                <MaterialCommunityIcons name="close-circle" size={20} color={theme.colors.text.disabled} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -217,19 +217,19 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
                     {/* Topic tree */}
                     {isLoadingRoots || isLoadingSelectable ? (
                         <View style={styles.loadingContainer}>
-                            <ActivityIndicator size="large" color="#007AFF" />
+                            <ActivityIndicator size="large" color={theme.colors.primary.main} />
                             <Text style={styles.loadingText}>Loading topics...</Text>
                         </View>
                     ) : flattenedTopics.length === 0 ? (
                         <View style={styles.emptyContainer}>
-                            <MaterialCommunityIcons name="file-tree-outline" size={48} color="#CCC" />
+                            <MaterialCommunityIcons name="file-tree-outline" size={48} color={theme.colors.neutral.gray[300]} />
                             <Text style={styles.emptyText}>No topics found</Text>
                             {allowCreate && (
                                 <TouchableOpacity
                                     style={styles.createButton}
                                     onPress={() => setCreateModalVisible(true)}
                                 >
-                                    <MaterialCommunityIcons name="plus-circle" size={20} color="#007AFF" />
+                                    <MaterialCommunityIcons name="plus-circle" size={20} color={theme.colors.neutral.white} />
                                     <Text style={styles.createButtonText}>Create Topic</Text>
                                 </TouchableOpacity>
                             )}
@@ -249,7 +249,7 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
                             style={styles.createTopicButton}
                             onPress={() => setCreateModalVisible(true)}
                         >
-                            <MaterialCommunityIcons name="plus-circle" size={24} color="#007AFF" />
+                            <MaterialCommunityIcons name="plus-circle" size={24} color={theme.colors.primary.main} />
                             <Text style={styles.createTopicButtonText}>Create New Topic</Text>
                         </TouchableOpacity>
                     )}
@@ -267,32 +267,32 @@ const TopicTreeSelector: React.FC<TopicTreeSelectorProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles(theme => ({
     container: {
         marginBottom: 16,
     },
     label: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#000',
+        color: theme.colors.text.primary,
         marginBottom: 8,
     },
     required: {
-        color: '#FF3B30',
+        color: theme.colors.error.main,
     },
     selector: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: theme.colors.background.secondary,
         borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderColor: theme.colors.border.light,
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 12,
     },
     selectorError: {
-        borderColor: '#FF3B30',
+        borderColor: theme.colors.error.main,
     },
     selectorContent: {
         flex: 1,
@@ -303,20 +303,20 @@ const styles = StyleSheet.create({
     selectedText: {
         flex: 1,
         fontSize: 15,
-        color: '#000',
+        color: theme.colors.text.primary,
     },
     placeholder: {
         fontSize: 15,
-        color: '#999',
+        color: theme.colors.text.disabled,
     },
     errorText: {
         fontSize: 13,
-        color: '#FF3B30',
+        color: theme.colors.error.main,
         marginTop: 4,
     },
     modalContainer: {
         flex: 1,
-        backgroundColor: '#F5F5F5',
+        backgroundColor: theme.colors.background.tertiary,
     },
     modalHeader: {
         flexDirection: 'row',
@@ -324,14 +324,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: '#FFF',
+        backgroundColor: theme.colors.background.primary,
         borderBottomWidth: 1,
-        borderBottomColor: '#E5E5E5',
+        borderBottomColor: theme.colors.border.light,
     },
     modalTitle: {
         fontSize: 17,
         fontWeight: '600',
-        color: '#000',
+        color: theme.colors.text.primary,
     },
     headerSpacer: {
         width: 24,
@@ -339,19 +339,19 @@ const styles = StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF',
+        backgroundColor: theme.colors.background.primary,
         margin: 16,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#E5E5E5',
+        borderColor: theme.colors.border.light,
         gap: 8,
     },
     searchInput: {
         flex: 1,
         fontSize: 15,
-        color: '#000',
+        color: theme.colors.text.primary,
         paddingVertical: 4,
     },
     list: {
@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     },
     loadingText: {
         fontSize: 15,
-        color: '#666',
+        color: theme.colors.text.secondary,
     },
     emptyContainer: {
         flex: 1,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontSize: 16,
-        color: '#999',
+        color: theme.colors.text.disabled,
         textAlign: 'center',
     },
     createButton: {
@@ -384,30 +384,30 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 12,
-        backgroundColor: '#007AFF',
+        backgroundColor: theme.colors.primary.main,
         borderRadius: 8,
         gap: 8,
     },
     createButtonText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#FFF',
+        color: theme.colors.neutral.white,
     },
     createTopicButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FFF',
+        backgroundColor: theme.colors.background.primary,
         paddingVertical: 16,
         borderTopWidth: 1,
-        borderTopColor: '#E5E5E5',
+        borderTopColor: theme.colors.border.light,
         gap: 8,
     },
     createTopicButtonText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#007AFF',
+        color: theme.colors.primary.main,
     },
-});
+}));
 
 export default TopicTreeSelector;

@@ -1,10 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import React, { useEffect, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Wager, WagerOutcome } from '../../../entities/WagerState/model/types';
 import { useTheme } from '../../../shared/ui/theme';
 import { Button } from '../../../shared/ui/Button/Button';
-
-const { width, height } = Dimensions.get('window');
+import { useDimensions } from '../../../shared/hooks/useDimensions';
 
 interface WagerResultsOverlayProps {
     wager: Wager;
@@ -14,8 +13,11 @@ interface WagerResultsOverlayProps {
 
 export const WagerResultsOverlay: React.FC<WagerResultsOverlayProps> = ({ wager, outcome, onClose }) => {
     const { theme } = useTheme();
+    const { width } = useDimensions();
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    const styles = useMemo(() => createStyles(theme, width), [theme, width]);
 
     useEffect(() => {
         Animated.parallel([
@@ -34,7 +36,6 @@ export const WagerResultsOverlay: React.FC<WagerResultsOverlayProps> = ({ wager,
     }, []);
 
     const isDraw = outcome.settlementType === 'DRAW_REFUND';
-    const isWinner = !!outcome.winnerId;
 
     return (
         <View style={styles.overlay}>
@@ -90,7 +91,7 @@ export const WagerResultsOverlay: React.FC<WagerResultsOverlayProps> = ({ wager,
     );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, width: number) => StyleSheet.create({
     overlay: {
         position: 'absolute',
         top: 0,
@@ -165,3 +166,4 @@ const styles = StyleSheet.create({
         marginTop: 8,
     }
 });
+

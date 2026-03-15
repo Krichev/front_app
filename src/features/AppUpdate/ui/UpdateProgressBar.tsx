@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { DownloadProgress, formatFileSize } from '../../../entities/AppUpdate';
-import { useTheme } from '../../../shared/ui/theme';
+import { useTheme, createStyles } from '../../../shared/ui/theme';
 
 interface UpdateProgressBarProps {
     progress: DownloadProgress | null;
@@ -10,7 +10,7 @@ interface UpdateProgressBarProps {
 
 export const UpdateProgressBar: React.FC<UpdateProgressBarProps> = ({ progress }) => {
     const { t } = useTranslation();
-    const theme = useTheme();
+    const { colors } = useTheme();
     const animatedWidth = useRef(new Animated.Value(0)).current;
 
     const percentage = progress?.percentage || 0;
@@ -32,18 +32,18 @@ export const UpdateProgressBar: React.FC<UpdateProgressBarProps> = ({ progress }
 
     return (
         <View style={styles.container}>
-            <View style={[styles.progressBackground, { backgroundColor: theme.colors.surfaceVariant }]}>
+            <View style={[styles.progressBackground, { backgroundColor: colors.background.secondary }]}>
                 <Animated.View
                     style={[
                         styles.progressBar,
                         {
                             width: widthInterpolate,
-                            backgroundColor: theme.colors.primary,
+                            backgroundColor: colors.primary.main,
                         },
                     ]}
                 />
             </View>
-            <Text style={[styles.progressText, { color: theme.colors.onSurfaceVariant }]}>
+            <Text style={[styles.progressText, { color: colors.text.secondary }]}>
                 {t('appUpdate.downloadProgress', {
                     percentage,
                     downloaded,
@@ -54,14 +54,14 @@ export const UpdateProgressBar: React.FC<UpdateProgressBarProps> = ({ progress }
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles((theme) => ({
     container: {
         width: '100%',
-        marginVertical: 15,
+        marginVertical: theme.spacing.md,
     },
     progressBackground: {
         height: 10,
-        borderRadius: 5,
+        borderRadius: theme.layout.borderRadius.full,
         overflow: 'hidden',
         width: '100%',
     },
@@ -69,8 +69,9 @@ const styles = StyleSheet.create({
         height: '100%',
     },
     progressText: {
-        marginTop: 8,
-        fontSize: 12,
+        marginTop: theme.spacing.xs,
+        fontSize: theme.typography.fontSize.xs,
         textAlign: 'center',
     },
-});
+}));
+

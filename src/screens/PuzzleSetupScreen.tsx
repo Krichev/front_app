@@ -3,7 +3,6 @@ import React, { useState, useCallback } from 'react';
 import { 
     View, 
     Text, 
-    StyleSheet, 
     SafeAreaView, 
     TouchableOpacity, 
     ScrollView, 
@@ -16,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../shared/ui/theme';
 import { useUploadMediaMutation } from '../entities/MediaState/model/slice/mediaApi';
 import { useCreatePuzzleGameMutation, useGeneratePuzzlePiecesMutation } from '../entities/PuzzleState/model/slice/puzzleApi';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -103,9 +103,9 @@ const PuzzleSetupScreen: React.FC = () => {
         <SafeAreaView style={screen.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialCommunityIcons name="close" size={28} color={theme.colors.text} />
+                    <MaterialCommunityIcons name="close" size={28} color={theme.colors.text.primary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Puzzle Setup</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Puzzle Setup</Text>
                 <View style={{ width: 28 }} />
             </View>
 
@@ -113,68 +113,68 @@ const PuzzleSetupScreen: React.FC = () => {
                 <TouchableOpacity style={styles.imagePicker} onPress={handleSelectImage}>
                     {imageUri ? (
                         <View style={styles.imagePlaceholder}>
-                            <MaterialCommunityIcons name="image-check" size={48} color={theme.colors.primary} />
-                            <Text style={{ color: theme.colors.primary }}>Image Selected</Text>
+                            <MaterialCommunityIcons name="image-check" size={48} color={theme.colors.primary.main} />
+                            <Text style={{ color: theme.colors.primary.main }}>Image Selected</Text>
                         </View>
                     ) : (
                         <View style={styles.imagePlaceholder}>
-                            <MaterialCommunityIcons name="image-plus" size={48} color={theme.colors.textSecondary} />
-                            <Text style={{ color: theme.colors.textSecondary }}>Select Source Image</Text>
+                            <MaterialCommunityIcons name="image-plus" size={48} color={theme.colors.text.secondary} />
+                            <Text style={{ color: theme.colors.text.secondary }}>Select Source Image</Text>
                         </View>
                     )}
                 </TouchableOpacity>
 
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Game Mode</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>Game Mode</Text>
                     <View style={styles.row}>
                         <TouchableOpacity 
-                            style={[styles.modeButton, gameMode === 'INDIVIDUAL' && { backgroundColor: theme.colors.primary }]}
+                            style={[styles.modeButton, gameMode === 'INDIVIDUAL' && { backgroundColor: theme.colors.primary.main }]}
                             onPress={() => setGameMode('INDIVIDUAL')}
                         >
-                            <Text style={[styles.modeButtonText, gameMode === 'INDIVIDUAL' && { color: '#FFF' }]}>Individual</Text>
+                            <Text style={[styles.modeButtonText, gameMode === 'INDIVIDUAL' && { color: theme.colors.neutral.white }]}>Individual</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
-                            style={[styles.modeButton, gameMode === 'SHARED' && { backgroundColor: theme.colors.primary }]}
+                            style={[styles.modeButton, gameMode === 'SHARED' && { backgroundColor: theme.colors.primary.main }]}
                             onPress={() => setGameMode('SHARED')}
                         >
-                            <Text style={[styles.modeButtonText, gameMode === 'SHARED' && { color: '#FFF' }]}>Team Shared</Text>
+                            <Text style={[styles.modeButtonText, gameMode === 'SHARED' && { color: theme.colors.neutral.white }]}>Team Shared</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Grid Size ({gridSize}x{gridSize})</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>Grid Size ({gridSize}x{gridSize})</Text>
                     <View style={styles.row}>
                         {[2, 3, 4, 5].map(size => (
                             <TouchableOpacity 
                                 key={size}
-                                style={[styles.sizeButton, gridSize === size && { borderColor: theme.colors.primary, borderWidth: 2 }]}
+                                style={[styles.sizeButton, gridSize === size && { borderColor: theme.colors.primary.main, borderWidth: 2 }]}
                                 onPress={() => setGridSize(size)}
                             >
-                                <Text style={{ color: theme.colors.text }}>{size}x{size}</Text>
+                                <Text style={{ color: theme.colors.text.primary }}>{size}x{size}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
                 </View>
 
                 <View style={styles.section}>
-                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Correct Answer</Text>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text.primary }]}>Correct Answer</Text>
                     <TextInput
-                        style={[form.input, { color: theme.colors.text }]}
+                        style={[form.input, { color: theme.colors.text.primary }]}
                         value={answer}
                         onChangeText={setAnswer}
                         placeholder="What should they guess?"
-                        placeholderTextColor={theme.colors.textSecondary}
+                        placeholderTextColor={theme.colors.text.secondary}
                     />
                 </View>
 
                 <TouchableOpacity 
-                    style={[styles.createButton, { backgroundColor: theme.colors.primary }]}
+                    style={[styles.createButton, { backgroundColor: theme.colors.primary.main }]}
                     onPress={handleCreate}
                     disabled={isCreating}
                 >
                     {isCreating ? (
-                        <ActivityIndicator color="#FFF" />
+                        <ActivityIndicator color={theme.colors.neutral.white} />
                     ) : (
                         <Text style={styles.createButtonText}>Create & Generate Puzzle</Text>
                     )}
@@ -184,12 +184,12 @@ const PuzzleSetupScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles((theme) => ({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: theme.spacing.md,
         height: 56,
     },
     headerTitle: {
@@ -197,15 +197,15 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     scrollContent: {
-        padding: 16,
+        padding: theme.spacing.md,
     },
     imagePicker: {
         height: 200,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        borderRadius: 12,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.lg,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: 'rgba(0,0,0,0.2)',
+        borderColor: theme.colors.border.main,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 24,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: theme.colors.background.secondary,
         marginRight: 12,
     },
     modeButtonText: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 8,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -253,10 +253,10 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     createButtonText: {
-        color: '#FFF',
+        color: theme.colors.neutral.white,
         fontSize: 16,
         fontWeight: 'bold',
     }
-});
+}));
 
 export default PuzzleSetupScreen;

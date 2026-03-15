@@ -1,4 +1,5 @@
 // src/shared/ui/theme/spacing.ts
+import { moderateScale } from '../../lib/responsive';
 import type {Layout, Spacing} from './types';
 
 // Base spacing unit (4px)
@@ -14,6 +15,22 @@ export const spacing: Spacing = {
     '3xl': base * 8, // 32
     '4xl': base * 10, // 40
     '5xl': base * 12, // 48
+};
+
+/**
+ * Returns spacing values run through moderateScale
+ * Note: Use this only when explicit responsive spacing is needed
+ */
+export const scaledSpacing: Spacing = {
+    xs: moderateScale(spacing.xs),
+    sm: moderateScale(spacing.sm),
+    md: moderateScale(spacing.md),
+    lg: moderateScale(spacing.lg),
+    xl: moderateScale(spacing.xl),
+    '2xl': moderateScale(spacing['2xl']),
+    '3xl': moderateScale(spacing['3xl']),
+    '4xl': moderateScale(spacing['4xl']),
+    '5xl': moderateScale(spacing['5xl']),
 };
 
 export const layout: Layout = {

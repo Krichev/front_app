@@ -3,7 +3,6 @@ import {
     ActivityIndicator,
     Animated,
     BackHandler,
-    Dimensions,
     Image,
     LayoutChangeEvent,
     Modal,
@@ -11,7 +10,6 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    useWindowDimensions,
     View,
     ViewStyle,
 } from 'react-native';
@@ -38,6 +36,8 @@ interface YouTubePlayerProps {
     style?: ViewStyle;
 }
 
+import { useDimensions } from '../shared/hooks/useDimensions';
+
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          videoId,
                                                          startTime = 0,
@@ -57,6 +57,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                      }) => {
     const { t } = useTranslation();
     const playerRef = useRef<YoutubeIframeRef>(null);
+    const { width: screenWidth, height: screenHeight } = useDimensions();
 
     const [playing, setPlaying] = useState(autoPlay);
     const [isReady, setIsReady] = useState(false);
@@ -79,7 +80,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const currentTimeRef = useRef(startTime);
     const wasPlayingRef = useRef(false);
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
-    const { width: screenWidth, height: screenHeight } = useWindowDimensions();
     const overlayOpacity = useRef(new Animated.Value(1)).current;
 
     const playerWidth = isFullscreen ? screenWidth : containerWidth;
@@ -199,13 +199,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     }, [isFullscreen, screenWidth, screenHeight, isReady, restoreState]);
 
     useEffect(() => {
-        const sub = Dimensions.addEventListener('change', ({ window }) => {
-            setOrientation(window.width > window.height ? 'landscape' : 'portrait');
-        });
-        return () => sub.remove();
-    }, []);
-
-    useEffect(() => {
         if (!isFullscreen) return;
         const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
             toggleFullscreen();
@@ -220,10 +213,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         return () => StatusBar.setHidden(false, 'fade');
     }, [isFullscreen, onFullscreenChange]);
 
-    const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(() => {
-        const { width, height } = Dimensions.get('window');
-        return width > height ? 'landscape' : 'portrait';
-    });
+    const [orientation, setOrientation] = useState<'portrait' | 'landscape'>(
+        screenWidth > screenHeight ? 'landscape' : 'portrait'
+    );
+
+    useEffect(() => {
+        setOrientation(screenWidth > screenHeight ? 'landscape' : 'portrait');
+    }, [screenWidth, screenHeight]);
 
     const handleLayout = (e: LayoutChangeEvent) => {
         const { width, height } = e.nativeEvent.layout;

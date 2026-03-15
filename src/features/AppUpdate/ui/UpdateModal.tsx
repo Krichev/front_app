@@ -5,14 +5,12 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    StyleSheet,
     ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { AppVersionCheckResponse, UpdateStatus, DownloadProgress, formatFileSize } from '../../../entities/AppUpdate';
-import { useTheme } from '../../../shared/ui/theme';
-import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles, useTheme } from '../../../shared/ui/theme';
 import { UpdateProgressBar } from './UpdateProgressBar';
 
 interface UpdateModalProps {
@@ -41,7 +39,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     retryAction,
 }) => {
     const { t } = useTranslation();
-    const { theme } = useAppStyles();
+    const { colors } = useTheme();
 
     if (!updateInfo && status !== 'checking') return null;
 
@@ -52,8 +50,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         if (status === 'checking') {
             return (
                 <View style={styles.centerContent}>
-                    <ActivityIndicator size="large" color={theme.colors.primary} />
-                    <Text style={[styles.statusText, { color: theme.colors.onSurface }]}>
+                    <ActivityIndicator size="large" color={colors.primary.main} />
+                    <Text style={[styles.statusText, { color: colors.text.primary }]}>
                         {t('appUpdate.checking')}
                     </Text>
                 </View>
@@ -66,29 +64,29 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                     <MaterialCommunityIcons
                         name="cellphone-arrow-down"
                         size={48}
-                        color={theme.colors.primary}
+                        color={colors.primary.main}
                     />
-                    <Text style={[styles.title, { color: theme.colors.onSurface }]}>
+                    <Text style={[styles.title, { color: colors.text.primary }]}>
                         {isForced ? t('appUpdate.forceUpdateTitle') : t('appUpdate.updateAvailable')}
                     </Text>
                 </View>
 
                 <View style={styles.versionInfo}>
-                    <Text style={[styles.versionText, { color: theme.colors.onSurface }]}>
+                    <Text style={[styles.versionText, { color: colors.text.primary }]}>
                         {t('appUpdate.newVersion', { version: updateInfo?.latestVersion })}
                     </Text>
-                    <Text style={[styles.currentVersionText, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text style={[styles.currentVersionText, { color: colors.text.secondary }]}>
                         {t('appUpdate.currentVersion', { version: currentVersion })}
                     </Text>
                 </View>
 
                 {updateInfo?.releaseNotes && (
                     <View style={styles.notesContainer}>
-                        <Text style={[styles.notesTitle, { color: theme.colors.onSurface }]}>
+                        <Text style={[styles.notesTitle, { color: colors.text.primary }]}>
                             {t('appUpdate.releaseNotes')}
                         </Text>
                         <ScrollView style={styles.notesScroll} nestedScrollEnabled>
-                            <Text style={[styles.notesText, { color: theme.colors.onSurfaceVariant }]}>
+                            <Text style={[styles.notesText, { color: colors.text.secondary }]}>
                                 {updateInfo.releaseNotes}
                             </Text>
                         </ScrollView>
@@ -96,7 +94,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                 )}
 
                 {updateInfo?.fileSizeBytes && (
-                    <Text style={[styles.fileSize, { color: theme.colors.onSurfaceVariant }]}>
+                    <Text style={[styles.fileSize, { color: colors.text.secondary }]}>
                         {formatFileSize(updateInfo.fileSizeBytes)}
                     </Text>
                 )}
@@ -105,7 +103,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
 
                 {error && (
                     <View style={styles.errorContainer}>
-                        <Text style={[styles.errorText, { color: theme.colors.error }]}>{error}</Text>
+                        <Text style={[styles.errorText, { color: colors.error.main }]}>{error}</Text>
                     </View>
                 )}
 
@@ -125,13 +123,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                             style={[styles.button, styles.secondaryButton]}
                             onPress={dismissUpdate}
                         >
-                            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+                            <Text style={[styles.buttonText, { color: colors.primary.main }]}>
                                 {t('appUpdate.later')}
                             </Text>
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
-                        style={[styles.button, styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+                        style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary.main }]}
                         onPress={downloadUpdate}
                     >
                         <Text style={styles.primaryButtonText}>{t('appUpdate.updateNow')}</Text>
@@ -143,7 +141,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         if (status === 'downloaded') {
             return (
                 <TouchableOpacity
-                    style={[styles.button, styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+                    style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary.main }]}
                     onPress={installUpdate}
                 >
                     <Text style={styles.primaryButtonText}>{t('appUpdate.install')}</Text>
@@ -159,13 +157,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
                             style={[styles.button, styles.secondaryButton]}
                             onPress={dismissUpdate}
                         >
-                            <Text style={[styles.buttonText, { color: theme.colors.primary }]}>
+                            <Text style={[styles.buttonText, { color: colors.primary.main }]}>
                                 {t('appUpdate.later')}
                             </Text>
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
-                        style={[styles.button, styles.primaryButton, { backgroundColor: theme.colors.primary }]}
+                        style={[styles.button, styles.primaryButton, { backgroundColor: colors.primary.main }]}
                         onPress={retryAction}
                     >
                         <Text style={styles.primaryButtonText}>{t('appUpdate.retry')}</Text>
@@ -177,8 +175,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         if (status === 'installing') {
             return (
                 <View style={styles.loadingButton}>
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={[styles.loadingText, { color: theme.colors.primary }]}>
+                    <ActivityIndicator size="small" color={colors.primary.main} />
+                    <Text style={[styles.loadingText, { color: colors.primary.main }]}>
                         {t('appUpdate.installing')}
                     </Text>
                 </View>
@@ -196,7 +194,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             onRequestClose={canDismiss ? dismissUpdate : undefined}
         >
             <View style={styles.overlay}>
-                <View style={[styles.modalContainer, { backgroundColor: theme.colors.surface }]}>
+                <View style={[styles.modalContainer, { backgroundColor: colors.background.paper }]}>
                     {renderContent()}
                 </View>
             </View>
@@ -204,10 +202,10 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles((theme) => ({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: theme.colors.overlay.medium,
         justifyContent: 'center',
         alignItems: 'center',
         padding: 20,
@@ -215,84 +213,84 @@ const styles = StyleSheet.create({
     modalContainer: {
         width: '100%',
         maxWidth: 400,
-        borderRadius: 16,
-        padding: 24,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.xl,
         elevation: 5,
-        shadowColor: '#000',
+        shadowColor: theme.colors.neutral.black,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
     },
     centerContent: {
         alignItems: 'center',
-        padding: 20,
+        padding: theme.spacing.lg,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: theme.spacing.lg,
     },
     title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        marginTop: 12,
+        fontSize: theme.typography.fontSize.xl,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginTop: theme.spacing.md,
         textAlign: 'center',
     },
     versionInfo: {
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: theme.spacing.lg,
     },
     versionText: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     currentVersionText: {
-        fontSize: 14,
-        marginTop: 4,
+        fontSize: theme.typography.fontSize.sm,
+        marginTop: theme.spacing.xs,
     },
     notesContainer: {
         maxHeight: 200,
-        marginBottom: 15,
+        marginBottom: theme.spacing.md,
     },
     notesTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.sm,
     },
     notesScroll: {
-        backgroundColor: 'rgba(0,0,0,0.03)',
-        borderRadius: 8,
-        padding: 12,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
     },
     notesText: {
-        fontSize: 14,
+        fontSize: theme.typography.fontSize.sm,
         lineHeight: 20,
     },
     fileSize: {
-        fontSize: 12,
+        fontSize: theme.typography.fontSize.xs,
         textAlign: 'right',
-        marginBottom: 10,
+        marginBottom: theme.spacing.sm,
     },
     statusText: {
-        marginTop: 12,
-        fontSize: 16,
+        marginTop: theme.spacing.md,
+        fontSize: theme.typography.fontSize.base,
     },
     errorContainer: {
-        marginBottom: 15,
+        marginBottom: theme.spacing.md,
     },
     errorText: {
-        fontSize: 14,
+        fontSize: theme.typography.fontSize.sm,
         textAlign: 'center',
     },
     actions: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
-        marginTop: 10,
+        marginTop: theme.spacing.sm,
     },
     button: {
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        marginLeft: 10,
+        paddingVertical: theme.spacing.sm,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginLeft: theme.spacing.sm,
         minWidth: 100,
         alignItems: 'center',
     },
@@ -303,22 +301,23 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     buttonText: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     primaryButtonText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     loadingButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 10,
+        padding: theme.spacing.sm,
     },
     loadingText: {
-        marginLeft: 8,
-        fontSize: 14,
-        fontWeight: '600',
+        marginLeft: theme.spacing.sm,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
-});
+}));
+

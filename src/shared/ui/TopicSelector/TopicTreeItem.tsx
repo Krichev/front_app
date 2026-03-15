@@ -4,12 +4,12 @@ import {
     View,
     Text,
     TouchableOpacity,
-    StyleSheet,
     ActivityIndicator,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Topic } from '../../../entities/TopicState/model/types/topic.types';
 import ValidationStatusBadge from '../ValidationStatusBadge/ValidationStatusBadge';
+import { useTheme, createStyles } from '../theme';
 
 interface TopicTreeItemProps {
     topic: Topic & { level: number; isExpanded: boolean; isLoading: boolean };
@@ -26,6 +26,7 @@ const TopicTreeItem: React.FC<TopicTreeItemProps> = ({
     onToggleExpand,
     hasChildren,
 }) => {
+    const { theme } = useTheme();
     const indentWidth = topic.level * 20;
 
     return (
@@ -44,12 +45,12 @@ const TopicTreeItem: React.FC<TopicTreeItemProps> = ({
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                     {topic.isLoading ? (
-                        <ActivityIndicator size="small" color="#007AFF" />
+                        <ActivityIndicator size="small" color={theme.colors.primary.main} />
                     ) : (
                         <MaterialCommunityIcons
                             name={topic.isExpanded ? 'chevron-down' : 'chevron-right'}
                             size={20}
-                            color="#666"
+                            color={theme.colors.text.secondary}
                         />
                     )}
                 </TouchableOpacity>
@@ -79,25 +80,25 @@ const TopicTreeItem: React.FC<TopicTreeItemProps> = ({
 
                 {/* Selection checkmark */}
                 {isSelected && (
-                    <MaterialCommunityIcons name="check-circle" size={20} color="#007AFF" />
+                    <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.primary.main} />
                 )}
             </TouchableOpacity>
         </View>
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles(theme => ({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 8,
         paddingRight: 16,
-        backgroundColor: '#FFF',
+        backgroundColor: theme.colors.background.primary,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: theme.colors.divider,
     },
     selectedContainer: {
-        backgroundColor: '#F0F8FF',
+        backgroundColor: theme.colors.info.background,
     },
     chevronButton: {
         padding: 4,
@@ -120,17 +121,17 @@ const styles = StyleSheet.create({
     },
     topicName: {
         fontSize: 15,
-        color: '#000',
+        color: theme.colors.text.primary,
         fontWeight: '500',
     },
     selectedText: {
-        color: '#007AFF',
+        color: theme.colors.primary.main,
         fontWeight: '600',
     },
     questionCount: {
         fontSize: 13,
-        color: '#999',
+        color: theme.colors.text.disabled,
     },
-});
+}));
 
 export default TopicTreeItem;

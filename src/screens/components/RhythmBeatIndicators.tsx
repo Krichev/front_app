@@ -1,10 +1,11 @@
 // src/screens/components/RhythmBeatIndicators.tsx
 import React, { useRef, useEffect } from 'react';
-import { View, Text, Animated, Dimensions } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { BeatIndicator } from '../../types/rhythmChallenge.types';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../shared/ui/theme';
+import { useDimensions } from '../../shared/hooks/useDimensions';
 
 interface RhythmBeatIndicatorsProps {
     beats: BeatIndicator[];
@@ -22,9 +23,9 @@ export const RhythmBeatIndicators: React.FC<RhythmBeatIndicatorsProps> = ({
     mode,
 }) => {
     const {theme} = useAppStyles();
+    const { width: screenWidth } = useDimensions();
     const styles = themeStyles;
     
-    const screenWidth = Dimensions.get('window').width;
     const beatSize = Math.min(40, (screenWidth - 40) / Math.max(beats.length, 1) - 8);
     
     return (

@@ -2,6 +2,31 @@
 import {Platform} from 'react-native';
 import {colors} from './colors';
 import type {FontWeightValue, Typography} from './types';
+import { responsiveFontSize } from '../../lib/responsive';
+
+/**
+ * Returns typography with scaled font sizes for headings
+ */
+export const getScaledTypography = (): Typography => ({
+    ...typography,
+    fontSize: {
+        ...typography.fontSize,
+        '3xl': responsiveFontSize(typography.fontSize['3xl']),
+        '4xl': responsiveFontSize(typography.fontSize['4xl']),
+        '5xl': responsiveFontSize(typography.fontSize['5xl']),
+    },
+    heading: {
+        ...typography.heading,
+        h1: {
+            ...typography.heading.h1,
+            fontSize: responsiveFontSize(typography.heading.h1.fontSize),
+        },
+        h2: {
+            ...typography.heading.h2,
+            fontSize: responsiveFontSize(typography.heading.h2.fontSize),
+        },
+    },
+});
 
 const fontFamily = Platform.select({
     ios: {

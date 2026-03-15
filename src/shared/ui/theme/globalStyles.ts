@@ -4,6 +4,10 @@ import {spacing} from './spacing';
 import {colors} from './colors.ts';
 import {typography} from './typography';
 import type {Style, UtilityStyles} from './types';
+import {moderateScale} from '../../lib/responsive';
+
+// NOTE: For responsive scaling, use moderateScale() in your components 
+// for sizes, padding, and margins.
 
 // Utility styles
 export const utilities: UtilityStyles = {
@@ -83,6 +87,11 @@ export const utilities: UtilityStyles = {
         square100: { width: 100, height: 100 },
         square150: { width: 150, height: 150 },
         square200: { width: 200, height: 200 },
+        // Scaled variants
+        square50Scaled: { width: moderateScale(50), height: moderateScale(50) },
+        square100Scaled: { width: moderateScale(100), height: moderateScale(100) },
+        square150Scaled: { width: moderateScale(150), height: moderateScale(150) },
+        square200Scaled: { width: moderateScale(200), height: moderateScale(200) },
     },
 };
 

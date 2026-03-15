@@ -3,18 +3,16 @@ import React from 'react';
 import { 
     View, 
     Text, 
-    StyleSheet, 
     SafeAreaView, 
     FlatList,
-    Image,
     TouchableOpacity,
     ActivityIndicator
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@reduxjs/toolkit/query/react'; // This was a mistake in my thought, should be @react-navigation/native
-import { useNavigation as useNav, useRoute as useRou } from '@react-navigation/native';
+import { useNavigation as useNav, useRoute as useRou, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../shared/ui/theme';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { useGetPuzzleGameQuery, useGetPuzzleResultsQuery } from '../entities/PuzzleState/model/slice/puzzleApi';
 
@@ -25,7 +23,7 @@ const PuzzleResultsScreen: React.FC = () => {
     const navigation = useNav<NavigationProp>();
     const route = useRou<PuzzleResultsRouteProp>();
     const { puzzleGameId } = route.params;
-    const { screen, theme, text, card } = useAppStyles();
+    const { screen, theme, card } = useAppStyles();
 
     const { data: gameData, isLoading: isGameLoading } = useGetPuzzleGameQuery(puzzleGameId);
     const { data: results = [], isLoading: isResultsLoading } = useGetPuzzleResultsQuery(puzzleGameId);
@@ -36,14 +34,14 @@ const PuzzleResultsScreen: React.FC = () => {
                 <Text style={styles.rankText}>{index + 1}</Text>
             </View>
             <View style={styles.participantInfo}>
-                <Text style={[styles.username, { color: theme.colors.text }]}>{item.username}</Text>
-                <Text style={[styles.stats, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.username, { color: theme.colors.text.primary }]}>{item.username}</Text>
+                <Text style={[styles.stats, { color: theme.colors.text.secondary }]}>
                     {item.piecesPlacedCorrectly} pieces • {item.totalMoves} moves
                 </Text>
             </View>
             <View style={styles.scoreContainer}>
-                <Text style={[styles.score, { color: theme.colors.primary }]}>{item.score}</Text>
-                <Text style={[styles.time, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.score, { color: theme.colors.primary.main }]}>{item.score}</Text>
+                <Text style={[styles.time, { color: theme.colors.text.secondary }]}>
                     {item.completionTimeMs ? `${(item.completionTimeMs / 1000).toFixed(1)}s` : 'DNF'}
                 </Text>
             </View>
@@ -53,7 +51,7 @@ const PuzzleResultsScreen: React.FC = () => {
     if (isGameLoading || isResultsLoading) {
         return (
             <View style={[screen.container, styles.centered]}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <ActivityIndicator size="large" color={theme.colors.primary.main} />
             </View>
         );
     }
@@ -61,9 +59,9 @@ const PuzzleResultsScreen: React.FC = () => {
     return (
         <SafeAreaView style={screen.container}>
             <View style={styles.header}>
-                <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Puzzle Results</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text.primary }]}>Puzzle Results</Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Home' })}>
-                    <MaterialCommunityIcons name="home" size={28} color={theme.colors.text} />
+                    <MaterialCommunityIcons name="home" size={28} color={theme.colors.text.primary} />
                 </TouchableOpacity>
             </View>
 
@@ -75,16 +73,16 @@ const PuzzleResultsScreen: React.FC = () => {
                     <View style={styles.listHeader}>
                         <View style={styles.imageContainer}>
                             {/* In a real app we'd show the source image here */}
-                            <MaterialCommunityIcons name="image-filter-hdr" size={80} color={theme.colors.primary} />
-                            <Text style={[styles.revealText, { color: theme.colors.text }]}>Image Revealed!</Text>
+                            <MaterialCommunityIcons name="image-filter-hdr" size={80} color={theme.colors.primary.main} />
+                            <Text style={[styles.revealText, { color: theme.colors.text.primary }]}>Image Revealed!</Text>
                         </View>
                         
                         <View style={styles.answerBox}>
-                            <Text style={[styles.answerLabel, { color: theme.colors.textSecondary }]}>The answer was:</Text>
-                            <Text style={[styles.answerValue, { color: theme.colors.primary }]}>{gameData?.game.answer}</Text>
+                            <Text style={[styles.answerLabel, { color: theme.colors.text.secondary }]}>The answer was:</Text>
+                            <Text style={[styles.answerValue, { color: theme.colors.primary.main }]}>{gameData?.game.answer}</Text>
                         </View>
 
-                        <Text style={[styles.leaderboardTitle, { color: theme.colors.text }]}>Leaderboard</Text>
+                        <Text style={[styles.leaderboardTitle, { color: theme.colors.text.primary }]}>Leaderboard</Text>
                     </View>
                 }
                 contentContainerStyle={styles.listContent}
@@ -93,7 +91,7 @@ const PuzzleResultsScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const styles = createStyles((theme) => ({
     centered: {
         justifyContent: 'center',
         alignItems: 'center',
@@ -102,7 +100,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
+        paddingHorizontal: theme.spacing.md,
         height: 56,
     },
     headerTitle: {
@@ -110,7 +108,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     listContent: {
-        padding: 16,
+        padding: theme.spacing.md,
     },
     listHeader: {
         alignItems: 'center',
@@ -119,8 +117,8 @@ const styles = StyleSheet.create({
     imageContainer: {
         width: '100%',
         height: 200,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        borderRadius: 16,
+        backgroundColor: theme.colors.background.secondary,
+        borderRadius: theme.layout.borderRadius.lg,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
@@ -160,7 +158,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: 'rgba(0,0,0,0.05)',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -189,6 +187,6 @@ const styles = StyleSheet.create({
     time: {
         fontSize: 12,
     }
-});
+}));
 
 export default PuzzleResultsScreen;

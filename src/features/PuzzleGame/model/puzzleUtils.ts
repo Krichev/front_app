@@ -1,12 +1,12 @@
 // src/features/PuzzleGame/model/puzzleUtils.ts
-import { Dimensions, LayoutRectangle } from 'react-native';
+import { LayoutRectangle } from 'react-native';
 import { PuzzlePieceDTO, PuzzlePieceState, PuzzleGameMode } from '../../../entities/PuzzleState/model/types';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export const calculateGridSizing = (
     gridRows: number,
     gridCols: number,
+    screenWidth: number,
+    screenHeight: number,
     sourceImageWidth: number = 1000,
     sourceImageHeight: number = 1000,
     padding: number = 16

@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionMediaViewer.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     View,
     StyleSheet,
@@ -7,7 +7,6 @@ import {
     Modal,
     TouchableOpacity,
     SafeAreaView,
-    Dimensions,
     ViewStyle
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -15,8 +14,8 @@ import { MediaType } from '../../../services/wwwGame/questionService';
 import AuthenticatedImage from '../../../components/AuthenticatedImage';
 import AuthenticatedVideo from '../../../components/AuthenticatedVideo';
 import AuthenticatedAudio from '../../../components/AuthenticatedAudio';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+import { useDimensions } from '../../../shared/hooks/useDimensions';
+import { useTheme } from '../../../shared/ui/theme';
 
 interface QuestionMediaViewerProps {
     questionId: number;
@@ -51,13 +50,17 @@ const QuestionMediaViewer: React.FC<QuestionMediaViewerProps> = ({
     height = 200,
 }) => {
     const [showFullscreen, setShowFullscreen] = useState(false);
+    const { width: screenWidth, height: screenHeight } = useDimensions();
+    const { theme } = useTheme();
+
+    const styles = useMemo(() => createStyles(theme, screenWidth, screenHeight), [theme, screenWidth, screenHeight]);
 
     // No question ID means no media to show
     if (!questionId) {
         console.warn('QuestionMediaViewer: No questionId provided');
         return (
             <View style={[styles.container, styles.errorContainer, style, { height: compact ? 80 : height }]}>
-                <MaterialCommunityIcons name="image-off" size={24} color="#999" />
+                <MaterialCommunityIcons name="image-off" size={24} color={theme.colors.text.disabled} />
                 <Text style={styles.errorText}>No media available</Text>
             </View>
         );
@@ -86,7 +89,7 @@ const QuestionMediaViewer: React.FC<QuestionMediaViewerProps> = ({
                     style={styles.closeButton}
                     onPress={() => setShowFullscreen(false)}
                 >
-                    <MaterialCommunityIcons name="close" size={28} color="#fff" />
+                    <MaterialCommunityIcons name="close" size={28} color={theme.colors.neutral.white} />
                 </TouchableOpacity>
 
                 <View style={styles.fullscreenContent}>
@@ -124,7 +127,7 @@ const QuestionMediaViewer: React.FC<QuestionMediaViewerProps> = ({
                 <MaterialCommunityIcons
                     name={getMediaIcon()}
                     size={20}
-                    color="#007AFF"
+                    color={theme.colors.primary.main}
                 />
                 {enableFullscreen && renderFullscreenModal()}
             </TouchableOpacity>
@@ -151,7 +154,7 @@ const QuestionMediaViewer: React.FC<QuestionMediaViewerProps> = ({
 
                         {enableFullscreen && (
                             <View style={styles.fullscreenHint}>
-                                <MaterialCommunityIcons name="fullscreen" size={20} color="#fff" />
+                                <MaterialCommunityIcons name="fullscreen" size={20} color={theme.colors.neutral.white} />
                             </View>
                         )}
                     </TouchableOpacity>
@@ -211,14 +214,14 @@ const QuestionMediaViewer: React.FC<QuestionMediaViewerProps> = ({
         default:
             return (
                 <View style={[styles.container, styles.errorContainer, style, { height }]}>
-                    <MaterialCommunityIcons name="file-question" size={32} color="#999" />
+                    <MaterialCommunityIcons name="file-question" size={32} color={theme.colors.text.disabled} />
                     <Text style={styles.errorText}>Unknown media type</Text>
                 </View>
             );
     }
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme: any, screenWidth: number, screenHeight: number) => StyleSheet.create({
     container: {
         width: '100%',
         borderRadius: 8,
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#E3F2FD',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -236,15 +239,15 @@ const styles = StyleSheet.create({
         width: '100%',
         borderRadius: 8,
         overflow: 'hidden',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background.tertiary,
     },
     errorContainer: {
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     errorText: {
-        color: '#999',
+        color: theme.colors.text.disabled,
         marginTop: 8,
         fontSize: 14,
     },
@@ -268,7 +271,7 @@ const styles = StyleSheet.create({
     // Fullscreen modal styles
     fullscreenContainer: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: theme.colors.neutral.black,
     },
     closeButton: {
         position: 'absolute',
