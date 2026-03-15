@@ -146,7 +146,6 @@ export const useRhythmTapCapture = (
     }, []);
     
     return {
-        tapTimestamps,
         isCapturing,
         startCapture,
         stopCapture,
@@ -154,6 +153,7 @@ export const useRhythmTapCapture = (
         resetCapture,
         duration,
         tapCount: tapTimestamps.length,
+        tapTimestamps,
     };
 };
 

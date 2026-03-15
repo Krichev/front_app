@@ -1,4 +1,8 @@
 // src/screens/RhythmChallengeScreen.tsx
+/**
+ * @deprecated Use RhythmChallengeScreenV2 instead for a unified listen+answer experience.
+ * This component is kept for backward compatibility but is no longer the main entry point.
+ */
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     View,

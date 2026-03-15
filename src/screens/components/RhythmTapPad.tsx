@@ -3,12 +3,13 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     Pressable,
     Animated,
     Vibration,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
+import { useAppStyles, createStyles } from '../../shared/ui/theme';
 
 interface RhythmTapPadProps {
     isActive: boolean;
@@ -29,6 +30,9 @@ export const RhythmTapPad: React.FC<RhythmTapPadProps> = ({
     totalExpectedTaps,
     showHint = true,
 }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const rippleAnim = useRef(new Animated.Value(0)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -132,7 +136,7 @@ export const RhythmTapPad: React.FC<RhythmTapPadProps> = ({
                     <MaterialCommunityIcons
                         name={isActive ? 'gesture-tap' : 'gesture-tap-hold'}
                         size={80}
-                        color={isActive ? '#fff' : '#666'}
+                        color={isActive ? theme.colors.text.inverse : theme.colors.text.disabled}
                     />
                     
                     {/* Tap count */}
@@ -141,13 +145,13 @@ export const RhythmTapPad: React.FC<RhythmTapPadProps> = ({
                             {tapCount}
                             {totalExpectedTaps ? ` / ${totalExpectedTaps}` : ''}
                         </Text>
-                        <Text style={styles.tapCountLabel}>taps</Text>
+                        <Text style={styles.tapCountLabel}>{t('rhythmChallenge.tapsLabel')}</Text>
                     </View>
                     
                     {/* Hint text */}
                     {showHint && isActive && (
                         <Text style={styles.hintText}>
-                            Tap to the rhythm!
+                            {t('rhythmChallenge.tapTheRhythm')}
                         </Text>
                     )}
                 </Animated.View>
@@ -156,36 +160,32 @@ export const RhythmTapPad: React.FC<RhythmTapPadProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
+        width: '100%',
+        padding: theme.spacing.md,
     },
     pressableContainer: {
         width: '100%',
-        aspectRatio: 1,
-        maxWidth: 300,
-        maxHeight: 300,
+        minHeight: 120,
     },
     tapPad: {
         flex: 1,
-        borderRadius: 150,
+        borderRadius: theme.layout.borderRadius.lg,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
     },
     tapPadActive: {
-        backgroundColor: '#4CAF50',
-        shadowColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
+        shadowColor: theme.colors.success.main,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.4,
         shadowRadius: 10,
         elevation: 8,
     },
     tapPadInactive: {
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.neutral.gray[700],
         opacity: 0.5,
     },
     ripple: {
@@ -196,24 +196,26 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
     },
     tapCountContainer: {
-        marginTop: 16,
+        marginTop: theme.spacing.md,
         alignItems: 'center',
     },
     tapCountText: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#fff',
+        color: theme.colors.text.inverse,
     },
     tapCountLabel: {
         fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
+        color: theme.colors.text.inverse,
+        opacity: 0.8,
     },
     hintText: {
-        marginTop: 12,
+        marginTop: theme.spacing.sm,
         fontSize: 16,
-        color: 'rgba(255, 255, 255, 0.9)',
+        color: theme.colors.text.inverse,
+        opacity: 0.9,
         fontStyle: 'italic',
     },
-});
+}));
 
 export default RhythmTapPad;
