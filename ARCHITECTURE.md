@@ -3,15 +3,29 @@
 ### Section 1: System Overview
 "Challenger Mobile App — React Native (TypeScript) client for the Challenger quiz/challenge platform"
 - Communicates with: Challenger Backend (REST + WebSocket), MinIO (presigned URL media)
-- Does NOT talk to Karaoke Backend directly — all audio scoring goes through Challenger
+- Rhythm scoring (taps/onsets): Calls Karaoke Backend DIRECTLY for low-latency feedback via `rhythmApi`.
+- Other audio scoring: Goes through Challenger Backend (proxied to Karaoke).
 
-### Section 2: Backend API Base URL
+### Section 2: Backend API Base URLs
 - Configured via `NetworkConfigManager` singleton
-- Dev: `http://<dev-machine-ip>:8080`
-- Prod: `https://challenge-app.net/api` (or direct `http://<VPS_IP>:8081`)
-- All API calls go through RTK Query with `createBaseQueryWithAuth` (auto-attaches JWT, handles refresh)
+- Challenger API: `http://<dev-ip>:8080` (dev), `https://challenge-app.net/api` (prod)
+- Karaoke API: `http://<dev-ip>:8083` (dev), `https://challenge-app.net/karaoke` (prod)
+- All API calls go through RTK Query with `createBaseQueryWithAuth` (auto-attaches JWT).
 
 ### Section 3: Key API Contracts
+
+#### Rhythm Scoring (direct to Karaoke via rhythmApi)
+- `POST /rhythm/score` (taps) & `POST /rhythm/score-audio-file` (onsets)
+- Request: `{ referencePattern, userOnsetTimesMs, difficulty, minimumScorePercentage }`
+- Difficulty: `'EASY' | 'MEDIUM' | 'HARD'`
+- Minimum Score: `0-100` (default `60`)
+- Response: `RhythmScoringResult` with `toleranceTiers`, `scoringModel: "TIERED_V1"`, `okBeats`.
+
+#### Client-side Preview Scoring (`useBeatMatcher` hook)
+- Approximates tiered scoring for real-time visual feedback:
+  - Base Tiers (EASY/MEDIUM/HARD): `[150,250,400]`, `[100,200,300]`, `[80,150,250]` ms
+  - Multiplier: `1 - (minScore - 50) / 200` (clamped `0.75` to `1.2`)
+  - Adjusted Tiers: `base * multiplier` (Perfect, Good, OK)
 
 #### Authentication
 - `POST /auth/signup` → `{ username, email, password }`
@@ -70,6 +84,7 @@
 | Service        | Dev Port | Prod Port |
 |----------------|----------|-----------|
 | Challenger API | 8080     | 8081      |
+| Karaoke API    | 8083     | 8084      |
 | WebSocket      | 8080     | 8081      |
 
 ### Section 6: Frontend Architecture Patterns

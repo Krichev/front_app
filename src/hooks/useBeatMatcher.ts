@@ -17,8 +17,33 @@ export interface ClientTimingScore {
 
 interface UseBeatMatcherOptions {
   referencePattern: RhythmPatternDTO | null;
-  toleranceMs?: number;     // default 150
+  difficulty?: string;
+  minimumScorePercentage?: number;
+  toleranceMs?: number;     // legacy flat tolerance
 }
+
+/**
+ * Mirror of Karaoke tiered scoring thresholds
+ */
+export const computeClientTiers = (difficulty: string = 'MEDIUM', minimumScorePercentage: number = 60) => {
+  // Base tiers: EASY [150, 250, 400], MEDIUM [100, 200, 300], HARD [80, 150, 250]
+  const baseTiers: Record<string, number[]> = {
+    'EASY': [150, 250, 400],
+    'MEDIUM': [100, 200, 300],
+    'HARD': [80, 150, 250]
+  };
+
+  const tiers = baseTiers[difficulty] || baseTiers['MEDIUM'];
+  
+  // Multiplier: 1 - (minimumScorePercentage - 50) / 200, clamped to [0.75, 1.2]
+  const multiplier = Math.max(0.75, Math.min(1.2, 1 - (minimumScorePercentage - 50) / 200));
+  
+  return {
+    perfectMs: tiers[0] * multiplier,
+    goodMs: tiers[1] * multiplier,
+    okMs: tiers[2] * multiplier
+  };
+};
 
 interface UseBeatMatcherReturn {
   beatIndicators: BeatIndicator[];
@@ -33,7 +58,20 @@ interface UseBeatMatcherReturn {
  * Shared between TAP and AUDIO input modes for real-time visual feedback.
  */
 export const useBeatMatcher = (options: UseBeatMatcherOptions): UseBeatMatcherReturn => {
-  const { referencePattern, toleranceMs = 150 } = options;
+  const { referencePattern, difficulty, minimumScorePercentage = 60, toleranceMs } = options;
+
+  const tiers = useMemo(() => {
+    if (difficulty) {
+      return computeClientTiers(difficulty, minimumScorePercentage);
+    }
+    // Fallback to legacy toleranceMs or default
+    const flatTol = toleranceMs || 150;
+    return {
+      perfectMs: flatTol * 0.5,
+      goodMs: flatTol * 0.8,
+      okMs: flatTol
+    };
+  }, [difficulty, minimumScorePercentage, toleranceMs]);
 
   const initialBeats = useMemo(() => {
     if (!referencePattern) return [];
@@ -83,18 +121,34 @@ export const useBeatMatcher = (options: UseBeatMatcherOptions): UseBeatMatcherRe
 
       let status: BeatIndicator['status'];
       let score: number;
+      let tier: BeatIndicator['tier'];
 
-      // Determine hit/early/late status based on tolerance
-      if (absError <= toleranceMs) {
+      // Determine tiered status
+      if (absError <= tiers.perfectMs) {
         status = 'hit';
-        // Linear scoring from 100 at 0ms error to 0 at toleranceMs error
-        score = Math.max(0, 100 - (absError / toleranceMs * 100));
-      } else if (error < 0) {
-        status = 'early';
-        score = 0;
+        tier = 'PERFECT';
+        // 90-100 range
+        score = 100 - (absError / tiers.perfectMs * 10);
+      } else if (absError <= tiers.goodMs) {
+        status = 'hit';
+        tier = 'GOOD';
+        // 70-90 range
+        const progress = (absError - tiers.perfectMs) / (tiers.goodMs - tiers.perfectMs);
+        score = 90 - (progress * 20);
+      } else if (absError <= tiers.okMs) {
+        status = 'hit';
+        tier = 'OK';
+        // 30-70 range
+        const progress = (absError - tiers.goodMs) / (tiers.okMs - tiers.goodMs);
+        score = 70 - (progress * 40);
       } else {
-        status = 'late';
-        score = 0;
+        tier = 'MISS';
+        score = Math.max(0, 30 - (absError / (tiers.okMs * 2) * 30));
+        if (error < 0) {
+          status = 'early';
+        } else {
+          status = 'late';
+        }
       }
 
       const updatedBeats = [...prev];
@@ -104,12 +158,13 @@ export const useBeatMatcher = (options: UseBeatMatcherOptions): UseBeatMatcherRe
         error,
         score,
         status,
+        tier,
       };
 
-      console.log(`🎯 [BeatMatcher] Match: Beat ${nearestIndex}, Error: ${Math.round(error)}ms, Status: ${status}, Score: ${Math.round(score)}`);
+      console.log(`🎯 [BeatMatcher] Match: Beat ${nearestIndex}, Error: ${Math.round(error)}ms, Status: ${status}, Tier: ${tier}, Score: ${Math.round(score)}`);
       return updatedBeats;
     });
-  }, [toleranceMs]);
+  }, [tiers]);
 
   /**
    * Marks all remaining 'pending' beats as 'missed' when recording stops.
@@ -118,23 +173,17 @@ export const useBeatMatcher = (options: UseBeatMatcherOptions): UseBeatMatcherRe
   const finalizeBeats = useCallback(() => {
     const final = beatIndicators.map(beat => 
       beat.status === 'pending' 
-        ? { ...beat, status: 'missed' as const, score: 0 } 
+        ? { ...beat, status: 'missed' as const, tier: 'MISS' as const, score: 0 } 
         : beat
     );
     setBeatIndicators(final);
-    console.log('🎯 [BeatMatcher] Finalized beats summary:', {
-      hits: final.filter(b => b.status === 'hit').length,
-      missed: final.filter(b => b.status === 'missed').length,
-      early: final.filter(b => b.status === 'early').length,
-      late: final.filter(b => b.status === 'late').length,
-    });
     return final;
   }, [beatIndicators]);
 
   /**
    * Computes comprehensive timing statistics from the beat indicators.
    */
-  const computeTimingScore = useCallback((finalIndicators?: BeatIndicator[], minimumScorePercentage: number = 60): ClientTimingScore => {
+  const computeTimingScore = useCallback((finalIndicators?: BeatIndicator[], minScorePct: number = 60): ClientTimingScore => {
     const beats = finalIndicators || beatIndicators;
     
     const perBeatScores = beats.map(b => b.score ?? 0);
@@ -144,9 +193,10 @@ export const useBeatMatcher = (options: UseBeatMatcherOptions): UseBeatMatcherRe
     const attemptedBeats = beats.filter(b => b.status !== 'pending' && b.status !== 'missed');
     const absoluteErrorsMs = attemptedBeats.map(b => Math.abs(b.error ?? 0));
     
-    const perfectBeats = perBeatScores.filter(s => s >= 90).length;
-    const goodBeats = perBeatScores.filter(s => s >= 50 && s < 90).length;
-    const missedBeats = beats.filter(b => b.status === 'missed' || b.status === 'pending').length;
+    const perfectBeats = beats.filter(b => b.tier === 'PERFECT').length;
+    const goodBeats = beats.filter(b => b.tier === 'GOOD').length;
+    const okBeats = beats.filter(b => b.tier === 'OK').length;
+    const missedBeats = beats.filter(b => b.tier === 'MISS' || b.status === 'missed' || b.status === 'pending').length;
 
     const averageErrorMs = absoluteErrorsMs.length > 0 
       ? absoluteErrorsMs.reduce((a, b) => a + b, 0) / absoluteErrorsMs.length 
@@ -178,7 +228,7 @@ export const useBeatMatcher = (options: UseBeatMatcherOptions): UseBeatMatcherRe
       averageErrorMs,
       maxErrorMs,
       consistencyScore,
-      passed: overallScore >= minimumScorePercentage
+      passed: overallScore >= minScorePct
     };
   }, [beatIndicators]);
 

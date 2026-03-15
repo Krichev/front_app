@@ -713,6 +713,8 @@ export interface AudioChallengeSubmission {
     passed?: boolean;
     minimumScoreRequired: number;
     detailedMetrics?: string;
+    scoringModel?: string;
+    okBeats?: number;
     createdAt: string;
     processedAt?: string;
 }

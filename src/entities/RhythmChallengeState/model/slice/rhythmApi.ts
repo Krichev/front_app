@@ -68,8 +68,10 @@ export const rhythmApi = createApi({
                 body: {
                     referencePattern: request.referencePattern,
                     userOnsetTimesMs: request.userOnsetTimesMs,
+                    difficulty: request.difficulty,
+                    minimumScorePercentage: request.minimumScorePercentage,
+                    // Keep for backward compat if needed by server
                     toleranceMs: request.toleranceMs,
-                    minimumScoreRequired: request.minimumScoreRequired,
                 },
             }),
             invalidatesTags: ['RhythmScore'],
@@ -83,7 +85,7 @@ export const rhythmApi = createApi({
             EnhancedRhythmScoringResult,
             ScoreRhythmAudioRequest
         >({
-            query: ({ questionId, audioFile, enableSoundSimilarity, toleranceMs = 150 }) => {
+            query: ({ questionId, audioFile, enableSoundSimilarity, difficulty, minimumScorePercentage }) => {
                 const formData = new FormData();
                 
                 let fileUri = audioFile.uri;
@@ -100,7 +102,7 @@ export const rhythmApi = createApi({
                 } as any);
                 
                 return {
-                    url: `/rhythm/score-audio-file?questionId=${questionId}&enableSoundSimilarity=${enableSoundSimilarity}&toleranceMs=${toleranceMs}`,
+                    url: `/rhythm/score-audio-file?questionId=${questionId}&enableSoundSimilarity=${enableSoundSimilarity}&difficulty=${difficulty}&minimumScorePercentage=${minimumScorePercentage}`,
                     method: 'POST',
                     body: formData,
                 };

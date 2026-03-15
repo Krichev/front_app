@@ -76,7 +76,8 @@ export const RhythmChallengeScreen: React.FC = () => {
 
     const beatMatcher = useBeatMatcher({ 
         referencePattern: rhythmPattern, 
-        toleranceMs: 150 
+        difficulty: question?.difficulty || 'MEDIUM',
+        minimumScorePercentage: question?.minimumScorePercentage || 60,
     });
     
     const {
@@ -235,8 +236,8 @@ export const RhythmChallengeScreen: React.FC = () => {
                 questionId,
                 referencePattern: rhythmPattern!,
                 userOnsetTimesMs: timestamps,
-                toleranceMs: 150,
-                minimumScoreRequired: question?.minimumScorePercentage || 60,
+                difficulty: question?.difficulty || 'MEDIUM',
+                minimumScorePercentage: question?.minimumScorePercentage || 60,
             }).unwrap();
             
             setScoringResult({
@@ -266,7 +267,8 @@ export const RhythmChallengeScreen: React.FC = () => {
                 questionId,
                 audioFile: { ...audioFile, uri: validatedUri },
                 enableSoundSimilarity: enableSoundSimilarity,
-                toleranceMs: 150,
+                difficulty: question?.difficulty || 'MEDIUM',
+                minimumScorePercentage: question?.minimumScorePercentage || 60,
             }).unwrap();
             
             setScoringResult(result);
@@ -534,7 +536,8 @@ export const RhythmChallengeScreen: React.FC = () => {
                                 referencePattern={rhythmPattern}
                                 userTapTimesMs={tapTimestamps?.current || []}
                                 isRecording={isCapturing}
-                                toleranceMs={150}
+                                difficulty={question?.difficulty || 'MEDIUM'}
+                                minimumScorePercentage={question?.minimumScorePercentage || 60}
                             />
                         )}
 

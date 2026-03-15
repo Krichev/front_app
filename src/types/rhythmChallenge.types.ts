@@ -35,6 +35,28 @@ export interface RhythmScoringResult {
     feedback: string;
     passed: boolean;
     minimumScoreRequired: number | null;
+    
+    // New tiered scoring fields
+    toleranceTiers?: ToleranceTiers | null;
+    perBeatTiers?: ScoringTier[];
+    scoringModel?: 'TIERED_V1' | 'FLAT';
+    okBeats?: number;
+}
+
+/**
+ * Scoring tiers for a single beat
+ */
+export type ScoringTier = 'PERFECT' | 'GOOD' | 'OK' | 'MISS';
+
+/**
+ * Tolerance thresholds used for tiered scoring
+ */
+export interface ToleranceTiers {
+    perfectMs: number;
+    goodMs: number;
+    okMs: number;
+    difficulty: string;
+    minimumScorePercentage: number;
 }
 
 /**
@@ -44,8 +66,10 @@ export interface ScoreRhythmTapsRequest {
     questionId: number;
     referencePattern: RhythmPatternDTO;
     userOnsetTimesMs: number[];
-    toleranceMs?: number;
-    minimumScoreRequired?: number;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    minimumScorePercentage: number;
+    toleranceMs?: number; // Deprecated
+    minimumScoreRequired?: number; // Legacy
 }
 
 /**
@@ -100,6 +124,7 @@ export interface BeatIndicator {
     error?: number;
     score?: number;
     status: 'pending' | 'hit' | 'missed' | 'early' | 'late';
+    tier?: ScoringTier;
 }
 
 /**
@@ -150,7 +175,9 @@ export interface ScoreRhythmAudioRequest {
         type: string;
     };
     enableSoundSimilarity: boolean;
-    toleranceMs?: number;
+    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    minimumScorePercentage: number;
+    toleranceMs?: number; // Deprecated
 }
 
 /**

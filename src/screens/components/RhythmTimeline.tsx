@@ -3,12 +3,15 @@ import { View, Text, Animated, LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useAppStyles, createStyles } from '../../shared/ui/theme';
 import { RhythmPatternDTO } from '../../types/rhythmChallenge.types';
+import { computeClientTiers } from '../../hooks/useBeatMatcher';
 
 interface RhythmTimelineProps {
     referencePattern: RhythmPatternDTO;
     userTapTimesMs: number[];
     isRecording: boolean;
-    toleranceMs?: number;
+    difficulty?: string;
+    minimumScorePercentage?: number;
+    toleranceMs?: number; // legacy
 }
 
 const TimelineTick: React.FC<{ 
@@ -49,7 +52,9 @@ export const RhythmTimeline: React.FC<RhythmTimelineProps> = ({
     referencePattern,
     userTapTimesMs,
     isRecording,
-    toleranceMs = 150,
+    difficulty = 'MEDIUM',
+    minimumScorePercentage = 60,
+    toleranceMs,
 }) => {
     const { t } = useTranslation();
     const { theme } = useAppStyles();
@@ -60,6 +65,18 @@ export const RhythmTimeline: React.FC<RhythmTimelineProps> = ({
     const onLaneLayout = (e: LayoutChangeEvent) => {
         setLaneWidth(e.nativeEvent.layout.width);
     };
+
+    const tiers = useMemo(() => {
+        if (difficulty) {
+            return computeClientTiers(difficulty, minimumScorePercentage);
+        }
+        const flatTol = toleranceMs || 150;
+        return {
+            perfectMs: flatTol * 0.4,
+            goodMs: flatTol * 0.7,
+            okMs: flatTol
+        };
+    }, [difficulty, minimumScorePercentage, toleranceMs]);
 
     // Calculate timeline total duration: last onset + 20% padding
     const totalDurationMs = useMemo(() => {
@@ -76,9 +93,10 @@ export const RhythmTimeline: React.FC<RhythmTimelineProps> = ({
             if (error < minError) minError = error;
         }
         
-        if (minError <= toleranceMs * 0.4) return theme.colors.success.main;  // on time
-        if (minError <= toleranceMs) return theme.colors.warning.main;        // slightly off
-        return theme.colors.error.main;                                        // missed
+        if (minError <= tiers.perfectMs) return theme.colors.success.main;    // PERFECT
+        if (minError <= tiers.goodMs) return theme.colors.warning.main;      // GOOD
+        if (minError <= tiers.okMs) return theme.colors.info.main;           // OK
+        return theme.colors.error.main;                                      // MISS
     };
 
     const getPosition = (timeMs: number) => {

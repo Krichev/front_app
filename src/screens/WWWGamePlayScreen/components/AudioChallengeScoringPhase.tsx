@@ -147,11 +147,11 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
     }, [question.audioChallengeConfig]);
 
     // Beat matcher hook
-    const beatMatcher = useBeatMatcher({
-        referencePattern: rhythmPattern,
-        toleranceMs: 150
+    const beatMatcher = useBeatMatcher({ 
+        referencePattern: rhythmPattern, 
+        difficulty: question?.difficulty || 'MEDIUM',
+        minimumScorePercentage: question?.minimumScorePercentage || 60,
     });
-
     // Rhythm hooks
     const {
         tapCount,
@@ -264,8 +264,8 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                 questionId: question.id,
                 referencePattern: rhythmPattern!,
                 userOnsetTimesMs: timestamps,
-                toleranceMs: 150,
-                minimumScoreRequired: question.minimumScorePercentage || 60,
+                difficulty: question.difficulty || 'MEDIUM',
+                minimumScorePercentage: question.minimumScorePercentage || 60,
             }).unwrap();
 
             const enhancedResult: EnhancedRhythmScoringResult = {
