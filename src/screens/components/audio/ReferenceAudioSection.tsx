@@ -20,6 +20,7 @@ interface ReferenceAudioSectionProps {
   };
   onPlaybackComplete?: () => void;
   mini?: boolean;
+  autoPlay?: boolean;
 }
 
 export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
@@ -30,6 +31,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   question,
   onPlaybackComplete,
   mini = false,
+  autoPlay = false,
 }) => {
   const {theme} = useAppStyles();
   const styles = themeStyles;
@@ -75,6 +77,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
         segmentStart={effectiveStart}
         segmentEnd={effectiveEnd}
         onPlaybackComplete={onPlaybackComplete}
+        autoPlay={autoPlay}
       />
     </View>
   );
@@ -87,7 +90,7 @@ const themeStyles = createStyles(theme => ({
     borderRadius: theme.layout.borderRadius.lg,
     padding: theme.spacing.md,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: theme.colors.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

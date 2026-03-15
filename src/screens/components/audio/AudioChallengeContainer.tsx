@@ -16,6 +16,7 @@ interface AudioChallengeContainerProps {
   };
   mode: 'preview' | 'record';
   onRecordingComplete?: (audioFile: { uri: string; name: string; type: string }) => void;
+  onPlaybackComplete?: () => void;
   disabled?: boolean; // For when submitting
 }
 
@@ -23,12 +24,16 @@ export const AudioChallengeContainer: React.FC<AudioChallengeContainerProps> = (
   question,
   mode,
   onRecordingComplete,
+  onPlaybackComplete,
   disabled = false,
 }) => {
   return (
     <View style={styles.container}>
       {/* Header and Reference Audio */}
-      <AudioChallengePreview question={question} />
+      <AudioChallengePreview 
+        question={question} 
+        onPlaybackComplete={onPlaybackComplete}
+      />
 
       {/* Recorder - Only in record mode */}
       {mode === 'record' && onRecordingComplete && (

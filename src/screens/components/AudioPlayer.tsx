@@ -15,6 +15,7 @@ interface AudioPlayerProps {
   onError?: (error: any) => void;
   style?: any;
   activeColor?: string;
+  autoPlay?: boolean;
 }
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
@@ -26,9 +27,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   onError,
   style,
   activeColor = '#4CAF50',
+  autoPlay = false,
 }) => {
   const videoRef = useRef<VideoRef>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [currentTime, setCurrentTime] = useState(segmentStart);
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);

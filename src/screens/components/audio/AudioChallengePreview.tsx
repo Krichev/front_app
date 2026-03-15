@@ -15,10 +15,12 @@ interface AudioChallengePreviewProps {
     minimumScorePercentage?: number | null;
     additionalInfo?: string;
   };
+  onPlaybackComplete?: () => void;
 }
 
 export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
   question,
+  onPlaybackComplete,
 }) => {
   const styles = themeStyles;
 
@@ -35,6 +37,7 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
         segmentStart={question.audioSegmentStart ?? undefined}
         segmentEnd={question.audioSegmentEnd ?? undefined}
         title="Reference Audio"
+        onPlaybackComplete={onPlaybackComplete}
       />
     </View>
   );

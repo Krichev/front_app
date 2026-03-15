@@ -1088,6 +1088,9 @@ const ru = {
         readyToTap: 'Готовы нажимать? Начинайте, когда готовы!',
         relistenDuringTap: 'Прослушать еще раз',
         tappingPaused: 'Пауза — прослушайте еще раз, затем продолжайте',
+        relisten: 'Послушать ещё раз',
+        answerDisabledWhilePlaying: 'Ответ разблокируется после прослушивания',
+        listenToQuestionFirst: 'Сначала прослушайте вопрос',
     },
     games: {
         title: 'Игры',

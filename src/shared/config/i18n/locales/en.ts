@@ -1607,6 +1607,9 @@ const en = {
         readyToTap: 'Ready to tap? Start when you\'re ready!',
         relistenDuringTap: 'Re-listen',
         tappingPaused: 'Paused — listen again, then continue',
+        relisten: 'Listen Again',
+        answerDisabledWhilePlaying: 'Answer will unlock after listening',
+        listenToQuestionFirst: 'Listen to the question first',
     },
     games: {
         title: 'Games',
