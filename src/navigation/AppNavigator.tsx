@@ -51,7 +51,7 @@ import {QuizQuestion} from "../entities/QuizState/model/slice/quizApi.ts";
 import CreateAudioQuestionScreen from '../screens/CreateAudioQuestionScreen';
 import { useGetRelationshipsQuery } from '../entities/UserState/model/slice/relationshipApi';
 import { RelationshipStatus } from '../entities/QuizState/model/types/question.types';
-import RhythmChallengeScreenV2 from '../screens/RhythmChallengeScreenV2';
+import RhythmChallengeScreen from '../screens/RhythmChallengeScreen';
 import GameHistoryScreen from '../screens/GameHistoryScreen';
 import { PenaltyDashboardScreen } from '../screens/PenaltyDashboardScreen';
 import { PenaltyProofScreen } from '../screens/PenaltyProofScreen';
@@ -377,7 +377,7 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                         />
                         <Stack.Screen 
                             name="RhythmChallenge"
-                            component={RhythmChallengeScreenV2}                            options={{
+                            component={RhythmChallengeScreen}                            options={{
                                 headerShown: false,
                                 animation: 'slide_from_right',
                             }}
