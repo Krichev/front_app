@@ -9,17 +9,18 @@ import {
     Animated,
     Platform,
     ScrollView,
+    Pressable,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Video, { VideoRef } from 'react-native-video';
 import { useTranslation } from 'react-i18next';
 
-import { RhythmTapPad } from './components/RhythmTapPad';
 import { RhythmAudioRecorder } from './components/RhythmAudioRecorder';
 import { RhythmTimeline } from './components/RhythmTimeline';
-import { RhythmListenZone } from './components/RhythmListenZone';
-import { TwoPhaseResultsDisplay } from './components/TwoPhaseResultsDisplay';
+import { RhythmBeatIndicators } from './components/RhythmBeatIndicators';
+import { EnhancedScoringResults } from './components/EnhancedScoringResults';
+import { SoundSimilarityToggle } from './components/SoundSimilarityToggle';
 import { useRhythmTapCapture } from '../hooks/useRhythmTapCapture';
 import { useBeatMatcher, ClientTimingScore } from '../hooks/useBeatMatcher';
 import { 
@@ -99,12 +100,22 @@ export const RhythmChallengeScreen: React.FC = () => {
     const [clientTimingScore, setClientTimingScore] = useState<ClientTimingScore | null>(null);
     const [serverResult, setServerResult] = useState<EnhancedRhythmScoringResult | null>(null);
     const [isAnalyzingSound, setIsAnalyzingSound] = useState(false);
+    const [enableSoundSimilarity, setEnableSoundSimilarity] = useState(true);
     
     const [currentBeatIndex, setCurrentBeatIndex] = useState(-1);
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     
     const videoRef = useRef<VideoRef>(null);
     const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+        }).start();
+    }, [fadeAnim]);
     
     const answerInputMode = (question as any)?.answerInputMode || 'BOTH';
     const allowReplay = (question as any)?.allowReplay ?? true;
@@ -158,7 +169,7 @@ export const RhythmChallengeScreen: React.FC = () => {
         setFirstPlayDone(true);
     }, []);
     
-    const handleStartTask = useCallback(() => {
+    const handleStartRecording = useCallback(() => {
         setPhase('COUNTDOWN');
         setCountdownValue(3);
         
@@ -195,7 +206,7 @@ export const RhythmChallengeScreen: React.FC = () => {
             return;
         }
         
-        setPhase('RESULTS');
+        setPhase('PROCESSING');
         
         try {
             const result = await scoreRhythmTaps({
@@ -213,14 +224,16 @@ export const RhythmChallengeScreen: React.FC = () => {
                 soundWeight: 0.0,
                 combinedScore: result.overallScore,
             });
+            setPhase('RESULTS');
         } catch (err) {
             console.warn('🎯 Server TAP scoring failed, using client score:', err);
+            setPhase('RESULTS');
         }
     }, [beatMatcher, stopCapture, rhythmPattern, scoreRhythmTaps, questionId, question, t]);
     
     const handleAudioRecordingComplete = useCallback(async (audioFile: {uri: string; name: string; type: string}) => {
         setIsAnalyzingSound(true);
-        setPhase('RESULTS');
+        setPhase('PROCESSING');
         
         try {
             const validatedUri = Platform.OS === 'android' 
@@ -230,23 +243,24 @@ export const RhythmChallengeScreen: React.FC = () => {
             const result = await scoreRhythmAudio({
                 questionId,
                 audioFile: { ...audioFile, uri: validatedUri },
-                enableSoundSimilarity: true,
+                enableSoundSimilarity: enableSoundSimilarity,
                 toleranceMs: 150,
             }).unwrap();
             
             setServerResult(result);
+            setPhase('RESULTS');
         } catch (err) {
             console.error('📊 Server audio scoring failed:', err);
+            setPhase('RESULTS');
         } finally {
             setIsAnalyzingSound(false);
         }
-    }, [questionId, scoreRhythmAudio]);
+    }, [questionId, scoreRhythmAudio, enableSoundSimilarity]);
 
-    const handleAudioRecordingStop = useCallback(() => {
-        const finalBeats = beatMatcher.finalizeBeats();
-        const timingScore = beatMatcher.computeTimingScore(finalBeats, question?.minimumScorePercentage || 60);
-        setClientTimingScore(timingScore);
-    }, [beatMatcher, question]);
+    const handleRecordingCancel = useCallback(() => {
+        setPhase('READY');
+        resetCapture();
+    }, [resetCapture]);
     
     const handleRetry = useCallback(() => {
         resetCapture();
@@ -301,6 +315,27 @@ export const RhythmChallengeScreen: React.FC = () => {
             </SafeAreaView>
         );
     }
+
+    const renderModeSelector = () => (
+        <View style={styles.modeToggle}>
+            <TouchableOpacity 
+                style={[styles.modeOption, inputMode === 'TAP' && styles.modeOptionActive]}
+                onPress={() => setInputMode('TAP')}
+            >
+                <Text style={[styles.modeOptionText, inputMode === 'TAP' && styles.modeOptionTextActive]}>
+                    {t('rhythmChallenge.tapMode')}
+                </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+                style={[styles.modeOption, inputMode === 'AUDIO' && styles.modeOptionActive]}
+                onPress={() => setInputMode('AUDIO')}
+            >
+                <Text style={[styles.modeOptionText, inputMode === 'AUDIO' && styles.modeOptionTextActive]}>
+                    {t('rhythmChallenge.clapMode')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
     
     return (
         <SafeAreaView style={styles.container}>
@@ -327,126 +362,201 @@ export const RhythmChallengeScreen: React.FC = () => {
             )}
             
             <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-                <View style={styles.listenSection}>
-                    <RhythmListenZone
-                        rhythmPattern={rhythmPattern}
-                        isPlaying={isAudioPlaying}
-                        currentBeatIndex={currentBeatIndex}
-                        onPlay={handlePlayReference}
-                        firstPlayDone={firstPlayDone}
-                        allowReplay={allowReplay}
-                        replaysUsed={replaysUsed}
-                        maxReplays={maxReplaysAllowed}
-                    />
-                </View>
-
-                {phase === 'RESULTS' ? (
-                    <View style={styles.resultsWrapper}>
-                        {clientTimingScore && (
-                            <TwoPhaseResultsDisplay
-                                clientTimingScore={clientTimingScore}
-                                serverResult={serverResult}
-                                isAnalyzingSound={isAnalyzingSound}
-                                beatIndicators={beatMatcher.beatIndicators}
-                                onRetry={handleRetry}
-                                onContinue={handleContinue}
+                <Animated.View style={{ opacity: fadeAnim, flex: 1 }}>
+                    {/* ── LISTEN ZONE (always visible except PROCESSING/RESULTS) ── */}
+                    {phase !== 'PROCESSING' && phase !== 'RESULTS' && (
+                        <View style={styles.listenZone}>
+                            {/* Beat dots animation */}
+                            <RhythmBeatIndicators
+                                beats={beatMatcher.beatIndicators}
+                                currentBeatIndex={isAudioPlaying ? currentBeatIndex : -1}
+                                mode="playback"
                             />
-                        )}
-                    </View>
-                ) : (
-                    <View style={styles.interactiveSection}>
-                        {answerInputMode === 'BOTH' && phase === 'READY' && (
-                            <View style={styles.modeToggle}>
-                                <TouchableOpacity 
-                                    style={[styles.modeOption, inputMode === 'TAP' && styles.modeOptionActive]}
-                                    onPress={() => setInputMode('TAP')}
+                            
+                            {/* Pattern info badge */}
+                            {rhythmPattern && (
+                                <View style={styles.patternInfoBadge}>
+                                    <MaterialCommunityIcons name="music-note" size={14} color={theme.colors.text.secondary} />
+                                    <Text style={styles.patternInfo}>
+                                        {t('rhythmChallenge.patternInfo', {
+                                            beats: rhythmPattern.onsetTimesMs.length,
+                                            bpm: Math.round(rhythmPattern.bpm),
+                                            timeSignature: `${rhythmPattern.beatsPerMeasure}/${rhythmPattern.beatValue}`
+                                        })}
+                                    </Text>
+                                </View>
+                            )}
+                            
+                            {/* Listen / Replay button */}
+                            <View style={styles.listenButtonRow}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.listenButton,
+                                        isAudioPlaying && styles.listenButtonPlaying,
+                                        (!allowReplay && firstPlayDone) && styles.listenButtonDisabled,
+                                    ]}
+                                    onPress={handlePlayReference}
+                                    disabled={isAudioPlaying || (!allowReplay && firstPlayDone)}
                                 >
-                                    <Text style={[styles.modeOptionText, inputMode === 'TAP' && styles.modeOptionTextActive]}>
-                                        {t('rhythmChallenge.modeSelector.tap')}
+                                    <MaterialCommunityIcons
+                                        name={isAudioPlaying ? "volume-high" : (firstPlayDone ? "replay" : "play-circle")}
+                                        size={24}
+                                        color={theme.colors.text.inverse}
+                                    />
+                                    <Text style={styles.listenButtonText}>
+                                        {isAudioPlaying
+                                            ? t('rhythmChallenge.playingPattern')
+                                            : firstPlayDone
+                                                ? t('rhythmChallenge.listenAgain')
+                                                : t('rhythmChallenge.listen')}
                                     </Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity 
-                                    style={[styles.modeOption, inputMode === 'AUDIO' && styles.modeOptionActive]}
-                                    onPress={() => setInputMode('AUDIO')}
-                                >
-                                    <Text style={[styles.modeOptionText, inputMode === 'AUDIO' && styles.modeOptionTextActive]}>
-                                        {t('rhythmChallenge.modeSelector.audio')}
+                                
+                                {firstPlayDone && allowReplay && (
+                                    <Text style={styles.replayInfo}>
+                                        {maxReplaysAllowed === 0
+                                            ? t('rhythmChallenge.unlimitedReplays')
+                                            : t('rhythmChallenge.replaysLeft', { count: maxReplaysAllowed - replaysUsed })}
                                     </Text>
+                                )}
+                            </View>
+                        </View>
+                    )}
+                    
+                    {/* ── MODE TOGGLE (only in READY, only if BOTH) ── */}
+                    {phase === 'READY' && answerInputMode === 'BOTH' && renderModeSelector()}
+                    
+                    {/* ── SOUND SIMILARITY TOGGLE (READY + AUDIO mode) ── */}
+                    {phase === 'READY' && inputMode === 'AUDIO' && (
+                        <SoundSimilarityToggle
+                            enabled={enableSoundSimilarity}
+                            onToggle={setEnableSoundSimilarity}
+                            timingWeight={0.7}
+                            soundWeight={0.3}
+                            showWeights={true}
+                        />
+                    )}
+                    
+                    {/* ── ANSWER ZONE ── */}
+                    
+                    {/* Before first listen: hint */}
+                    {phase === 'READY' && !firstPlayDone && (
+                        <View style={styles.hintContainer}>
+                            <MaterialCommunityIcons name="information-outline" size={48} color={theme.colors.info.main} />
+                            <Text style={styles.hintText}>{t('rhythmChallenge.listenFirst')}</Text>
+                        </View>
+                    )}
+                    
+                    {/* After first listen: Start button */}
+                    {phase === 'READY' && firstPlayDone && (
+                        <View style={styles.startContainer}>
+                            <TouchableOpacity
+                                style={styles.startButton}
+                                onPress={handleStartRecording}
+                            >
+                                <MaterialCommunityIcons
+                                    name={inputMode === 'TAP' ? "gesture-tap" : "microphone"}
+                                    size={32}
+                                    color={theme.colors.text.inverse}
+                                />
+                                <Text style={styles.startButtonText}>
+                                    {inputMode === 'TAP' ? t('rhythmChallenge.startTapping') : t('rhythmChallenge.startRecording')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    
+                    {/* Countdown — contained, not full-screen */}
+                    {phase === 'COUNTDOWN' && (
+                        <View style={styles.countdownContainer}>
+                            <Text style={styles.countdownText}>{countdownValue}</Text>
+                            <Text style={styles.countdownLabel}>{t('rhythmChallenge.getReady')}</Text>
+                        </View>
+                    )}
+                    
+                    {/* TAP RECORDING — dual timeline + tap zone */}
+                    {phase === 'RECORDING' && inputMode === 'TAP' && (
+                        <View style={styles.recordingContainer}>
+                            {/* Dual-lane timeline */}
+                            <RhythmTimeline
+                                referencePattern={rhythmPattern!}
+                                userTapTimesMs={tapTimestamps}
+                                isRecording={isCapturing}
+                                toleranceMs={150}
+                            />
+                            
+                            {/* Tap progress */}
+                            <Text style={styles.tapProgressText}>
+                                {t('rhythmChallenge.tapsProgress', {
+                                    current: tapCount,
+                                    total: rhythmPattern?.onsetTimesMs.length || '?',
+                                })}
+                            </Text>
+                            
+                            {/* Big tap target */}
+                            <Pressable
+                                onPress={() => { if (isCapturing) recordTap(); }}
+                                style={({pressed}) => [
+                                    styles.tapZone,
+                                    pressed && styles.tapZonePressed,
+                                ]}
+                            >
+                                <MaterialCommunityIcons
+                                    name="gesture-tap"
+                                    size={48}
+                                    color={theme.colors.text.inverse}
+                                />
+                                <Text style={styles.tapZoneText}>{t('rhythmChallenge.tapTheRhythm')}</Text>
+                            </Pressable>
+                            
+                            {/* Recording controls */}
+                            <View style={styles.recordingControls}>
+                                <View style={styles.timerContainer}>
+                                    <MaterialCommunityIcons name="clock-outline" size={20} color={theme.colors.text.secondary} />
+                                    <Text style={styles.durationText}>
+                                        {(duration / 1000).toFixed(1)}s
+                                    </Text>
+                                </View>
+                                
+                                <TouchableOpacity style={styles.stopButton} onPress={handleStopTapRecording}>
+                                    <MaterialCommunityIcons name="check-circle" size={28} color={theme.colors.text.inverse} />
+                                    <Text style={styles.stopButtonText}>{t('rhythmChallenge.done')}</Text>
                                 </TouchableOpacity>
                             </View>
-                        )}
-
-                        <View style={styles.phaseContent}>
-                            {phase === 'READY' && (
-                                <View style={styles.readyPhase}>
-                                    {firstPlayDone ? (
-                                        <TouchableOpacity style={styles.primaryActionBtn} onPress={handleStartTask}>
-                                            <MaterialCommunityIcons 
-                                                name={inputMode === 'TAP' ? "gesture-tap" : "microphone"} 
-                                                size={28} 
-                                                color={theme.colors.text.inverse} 
-                                            />
-                                            <Text style={styles.primaryActionBtnText}>
-                                                {inputMode === 'TAP' ? t('rhythmChallenge.startTapping') : t('rhythmChallenge.startRecording')}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ) : (
-                                        <View style={styles.listenHint}>
-                                            <MaterialCommunityIcons name="arrow-up" size={32} color={theme.colors.warning.main} />
-                                            <Text style={styles.listenHintText}>{t('rhythmChallenge.listenFirst')}</Text>
-                                        </View>
-                                    )}
-                                </View>
-                            )}
-
-                            {phase === 'COUNTDOWN' && (
-                                <View style={styles.countdownPhase}>
-                                    <Text style={styles.countdownNumber}>{countdownValue}</Text>
-                                    <Text style={styles.countdownLabel}>{t('rhythmChallenge.getReady')}</Text>
-                                </View>
-                            )}
-
-                            {phase === 'RECORDING' && (
-                                <View style={styles.recordingPhase}>
-                                    {inputMode === 'TAP' ? (
-                                        <>
-                                            <RhythmTimeline
-                                                referencePattern={rhythmPattern!}
-                                                userTapTimesMs={tapTimestamps}
-                                                isRecording={true}
-                                                totalDurationMs={rhythmPattern?.originalDurationMs || 5000}
-                                            />
-                                            <RhythmTapPad
-                                                isActive={true}
-                                                onTap={recordTap}
-                                                tapCount={tapCount}
-                                                totalExpectedTaps={rhythmPattern?.onsetTimesMs.length}
-                                            />
-                                            <View style={styles.recordingActions}>
-                                                <View style={styles.timerZone}>
-                                                    <Text style={styles.timerText}>{(duration / 1000).toFixed(1)}s</Text>
-                                                </View>
-                                                <TouchableOpacity style={styles.doneBtn} onPress={handleStopTapRecording}>
-                                                    <Text style={styles.doneBtnText}>{t('common.done')}</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        </>
-                                    ) : (
-                                        <RhythmAudioRecorder
-                                            isActive={true}
-                                            onRecordingStart={() => {}}
-                                            onRecordingStop={handleAudioRecordingStop}
-                                            onRecordingComplete={handleAudioRecordingComplete}
-                                            onRecordingCancel={() => setPhase('READY')}
-                                            onOnsetDetected={(ts) => beatMatcher.matchOnset(ts)}
-                                            maxDuration={30}
-                                        />
-                                    )}
-                                </View>
-                            )}
                         </View>
-                    </View>
-                )}
+                    )}
+                    
+                    {/* AUDIO RECORDING */}
+                    {(phase === 'COUNTDOWN' || phase === 'RECORDING' || (phase === 'PROCESSING' && inputMode === 'AUDIO')) && inputMode === 'AUDIO' && (
+                        <View style={styles.audioRecorderContainer}>
+                            <RhythmAudioRecorder
+                                isActive={true}
+                                onRecordingStart={() => {}}
+                                onRecordingComplete={handleAudioRecordingComplete}
+                                onRecordingCancel={handleRecordingCancel}
+                                maxDuration={30}
+                                countdownSeconds={3}
+                            />
+                        </View>
+                    )}
+                    
+                    {/* PROCESSING */}
+                    {phase === 'PROCESSING' && inputMode === 'TAP' && (
+                        <View style={styles.processingContainer}>
+                            <ActivityIndicator size="large" color={theme.colors.primary.main} />
+                            <Text style={styles.processingText}>{t('rhythmChallenge.processing')}</Text>
+                        </View>
+                    )}
+                    
+                    {/* RESULTS */}
+                    {phase === 'RESULTS' && (serverResult || clientTimingScore) && (
+                        <EnhancedScoringResults
+                            result={serverResult || (clientTimingScore as any)}
+                            onRetry={handleRetry}
+                            onContinue={handleContinue}
+                        />
+                    )}
+                </Animated.View>
             </ScrollView>
         </SafeAreaView>
     );
@@ -483,115 +593,8 @@ const themeStyles = createStyles(theme => ({
         fontWeight: 'bold',
     },
     scrollContent: {
-        padding: theme.spacing.md,
         flexGrow: 1,
-    },
-    listenSection: {
-        marginBottom: theme.spacing.lg,
-    },
-    interactiveSection: {
-        flex: 1,
-    },
-    modeToggle: {
-        flexDirection: 'row',
-        backgroundColor: theme.colors.neutral.gray[800],
-        borderRadius: theme.layout.borderRadius.full,
-        padding: 4,
-        marginBottom: theme.spacing.lg,
-    },
-    modeOption: {
-        flex: 1,
-        paddingVertical: 8,
-        alignItems: 'center',
-        borderRadius: theme.layout.borderRadius.full,
-    },
-    modeOptionActive: {
-        backgroundColor: theme.colors.primary.main,
-    },
-    modeOptionText: {
-        color: theme.colors.text.secondary,
-        fontWeight: '600',
-    },
-    modeOptionTextActive: {
-        color: theme.colors.text.inverse,
-    },
-    phaseContent: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    readyPhase: {
-        alignItems: 'center',
-        paddingVertical: theme.spacing['2xl'],
-    },
-    primaryActionBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.colors.success.main,
-        paddingHorizontal: theme.spacing['2xl'],
-        paddingVertical: theme.spacing.lg,
-        borderRadius: theme.layout.borderRadius.lg,
-        elevation: 4,
-    },
-    primaryActionBtnText: {
-        color: theme.colors.text.inverse,
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginLeft: theme.spacing.sm,
-    },
-    listenHint: {
-        alignItems: 'center',
-    },
-    listenHintText: {
-        color: theme.colors.text.secondary,
-        marginTop: theme.spacing.sm,
-        fontSize: 16,
-    },
-    countdownPhase: {
-        alignItems: 'center',
-    },
-    countdownNumber: {
-        fontSize: 120,
-        fontWeight: 'bold',
-        color: theme.colors.primary.main,
-    },
-    countdownLabel: {
-        fontSize: 24,
-        color: theme.colors.text.secondary,
-        marginTop: -10,
-    },
-    recordingPhase: {
-        flex: 1,
-    },
-    recordingActions: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: theme.spacing.md,
-    },
-    timerZone: {
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: 4,
-        borderRadius: theme.layout.borderRadius.sm,
-    },
-    timerText: {
-        color: theme.colors.text.inverse,
-        fontSize: 18,
-        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    },
-    doneBtn: {
-        backgroundColor: theme.colors.error.main,
-        paddingHorizontal: theme.spacing.xl,
-        paddingVertical: theme.spacing.sm,
-        borderRadius: theme.layout.borderRadius.md,
-    },
-    doneBtnText: {
-        color: theme.colors.text.inverse,
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    resultsWrapper: {
-        flex: 1,
+        paddingBottom: theme.spacing.xl,
     },
     centerContainer: {
         flex: 1,
@@ -618,6 +621,222 @@ const themeStyles = createStyles(theme => ({
     backBtnText: {
         color: theme.colors.text.inverse,
         fontWeight: 'bold',
+    },
+    listenZone: {
+        padding: theme.spacing.lg,
+        backgroundColor: theme.colors.neutral.gray[800],
+        borderRadius: theme.layout.borderRadius.lg,
+        margin: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+    },
+    patternInfoBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 4,
+        borderRadius: theme.layout.borderRadius.sm,
+        alignSelf: 'flex-start',
+        marginTop: theme.spacing.md,
+    },
+    patternInfo: {
+        fontSize: 12,
+        color: theme.colors.text.secondary,
+        marginLeft: 4,
+    },
+    listenButtonRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: theme.spacing.md,
+    },
+    listenButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.primary.main,
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.pill,
+    },
+    listenButtonPlaying: {
+        backgroundColor: theme.colors.success.main,
+    },
+    listenButtonDisabled: {
+        backgroundColor: theme.colors.neutral.gray[600],
+        opacity: 0.5,
+    },
+    listenButtonText: {
+        color: theme.colors.text.inverse,
+        fontWeight: 'bold',
+        marginLeft: 8,
+    },
+    replayInfo: {
+        fontSize: 12,
+        color: theme.colors.text.secondary,
+        fontStyle: 'italic',
+    },
+    modeToggle: {
+        flexDirection: 'row',
+        backgroundColor: theme.colors.neutral.gray[800],
+        borderRadius: theme.layout.borderRadius.full,
+        padding: 4,
+        marginHorizontal: theme.spacing.md,
+        marginVertical: theme.spacing.sm,
+    },
+    modeOption: {
+        flex: 1,
+        paddingVertical: 8,
+        alignItems: 'center',
+        borderRadius: theme.layout.borderRadius.full,
+    },
+    modeOptionActive: {
+        backgroundColor: theme.colors.primary.main,
+    },
+    modeOptionText: {
+        color: theme.colors.text.secondary,
+        fontWeight: '600',
+    },
+    modeOptionTextActive: {
+        color: theme.colors.text.inverse,
+    },
+    hintContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing['3xl'],
+    },
+    hintText: {
+        color: theme.colors.text.secondary,
+        fontSize: 18,
+        textAlign: 'center',
+        marginTop: theme.spacing.md,
+        fontStyle: 'italic',
+    },
+    startContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        padding: theme.spacing.xl,
+        alignItems: 'center',
+        paddingVertical: theme.spacing['3xl'],
+    },
+    startButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing['2xl'],
+        paddingVertical: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    startButtonText: {
+        color: theme.colors.text.inverse,
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginLeft: theme.spacing.md,
+    },
+    countdownContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: theme.spacing['3xl'],
+    },
+    countdownText: {
+        fontSize: 100,
+        fontWeight: 'bold',
+        color: theme.colors.primary.main,
+    },
+    countdownLabel: {
+        fontSize: 24,
+        color: theme.colors.text.secondary,
+        marginTop: -10,
+    },
+    recordingContainer: {
+        padding: theme.spacing.md,
+    },
+    tapProgressText: {
+        textAlign: 'right',
+        color: theme.colors.text.secondary,
+        fontSize: 14,
+        fontWeight: '600',
+        marginTop: theme.spacing.sm,
+    },
+    tapZone: {
+        backgroundColor: theme.colors.success.main,
+        borderRadius: theme.layout.borderRadius.lg,
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: 160,
+        marginTop: theme.spacing.lg,
+        elevation: 8,
+        shadowColor: theme.colors.success.main,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+    },
+    tapZonePressed: {
+        backgroundColor: theme.colors.success.dark || theme.colors.success.main,
+        transform: [{ scale: 0.98 }],
+        elevation: 2,
+    },
+    tapZoneText: {
+        color: theme.colors.text.inverse,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginTop: theme.spacing.sm,
+    },
+    recordingControls: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: theme.spacing.xl,
+    },
+    timerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: 6,
+        borderRadius: theme.layout.borderRadius.sm,
+    },
+    durationText: {
+        color: theme.colors.text.inverse,
+        fontSize: 18,
+        fontWeight: '600',
+        marginLeft: 6,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
+    stopButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.error.main,
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.md,
+    },
+    stopButtonText: {
+        color: theme.colors.text.inverse,
+        fontWeight: 'bold',
+        fontSize: 16,
+        marginLeft: 6,
+    },
+    audioRecorderContainer: {
+        flex: 1,
+        padding: theme.spacing.md,
+    },
+    processingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: theme.spacing['3xl'],
+    },
+    processingText: {
+        marginTop: theme.spacing.md,
+        color: theme.colors.text.secondary,
+        fontSize: 16,
     },
 }));
 
