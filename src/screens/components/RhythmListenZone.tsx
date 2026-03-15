@@ -1,9 +1,10 @@
+// src/screens/components/RhythmListenZone.tsx
 import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useAppStyles, createStyles } from '../../shared/ui/theme';
-import { RhythmPatternDTO } from '../../types/rhythmChallenge.types';
+import { RhythmPatternDTO, BeatIndicator } from '../../types/rhythmChallenge.types';
 import RhythmBeatIndicators from './RhythmBeatIndicators';
 
 interface RhythmListenZoneProps {
@@ -34,15 +35,25 @@ export const RhythmListenZone: React.FC<RhythmListenZoneProps> = ({
     const replaysRemaining = maxReplays > 0 ? maxReplays - replaysUsed : Infinity;
     const canReplay = allowReplay && (maxReplays === 0 || replaysRemaining > 0);
 
+    // Mock beat indicators for display
+    const beatIndicators: BeatIndicator[] = React.useMemo(() => {
+        if (!rhythmPattern) return [];
+        return rhythmPattern.onsetTimesMs.map((time, index) => ({
+            index,
+            expectedTimeMs: time,
+            status: 'pending',
+        }));
+    }, [rhythmPattern]);
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.badge}>
                     <Text style={styles.badgeText}>
                         {rhythmPattern ? t('rhythmChallenge.patternInfo', {
-                            beats: rhythmPattern.beatsPerMeasure * (rhythmPattern.onsetTimesMs.length / rhythmPattern.beatsPerMeasure), // Approximate
-                            bpm: Math.round(rhythmPattern.bpm),
-                            timeSignature: `${rhythmPattern.beatsPerMeasure}/${rhythmPattern.beatValue}`
+                            beats: rhythmPattern.totalBeats,
+                            bpm: Math.round(rhythmPattern.estimatedBpm),
+                            timeSignature: rhythmPattern.timeSignature
                         }) : '---'}
                     </Text>
                 </View>
@@ -58,9 +69,9 @@ export const RhythmListenZone: React.FC<RhythmListenZoneProps> = ({
 
             <View style={styles.visualizerZone}>
                 <RhythmBeatIndicators
-                    totalBeats={rhythmPattern?.onsetTimesMs.length || 0}
-                    activeBeatIndex={currentBeatIndex}
-                    isPlaying={isPlaying}
+                    beats={beatIndicators}
+                    currentBeatIndex={currentBeatIndex}
+                    mode="playback"
                 />
             </View>
 
@@ -98,15 +109,11 @@ export const RhythmListenZone: React.FC<RhythmListenZoneProps> = ({
 const themeStyles = createStyles(theme => ({
     container: {
         width: '100%',
-        backgroundColor: theme.colors.neutral.gray[800],
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: theme.layout.borderRadius.lg,
         padding: theme.spacing.lg,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        ...theme.shadows.medium,
     },
     header: {
         width: '100%',
@@ -132,7 +139,6 @@ const themeStyles = createStyles(theme => ({
     },
     visualizerZone: {
         width: '100%',
-        height: 60,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: theme.spacing.lg,
@@ -144,7 +150,7 @@ const themeStyles = createStyles(theme => ({
         backgroundColor: theme.colors.primary.main,
         paddingHorizontal: theme.spacing.xl,
         paddingVertical: theme.spacing.md,
-        borderRadius: theme.layout.borderRadius.pill,
+        borderRadius: theme.layout.borderRadius.lg, // Changed from pill to lg
         minWidth: 160,
     },
     playButtonDisabled: {

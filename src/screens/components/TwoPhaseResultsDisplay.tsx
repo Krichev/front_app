@@ -269,7 +269,7 @@ const themeStyles = createStyles(theme => ({
     statsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        backgroundColor: theme.colors.neutral.gray[800],
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: theme.layout.borderRadius.lg,
         padding: theme.spacing.md,
     },
@@ -290,7 +290,7 @@ const themeStyles = createStyles(theme => ({
         color: theme.colors.text.secondary,
     },
     soundSection: {
-        backgroundColor: theme.colors.neutral.gray[800],
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: theme.layout.borderRadius.lg,
         padding: theme.spacing.lg,
         gap: theme.spacing.md,

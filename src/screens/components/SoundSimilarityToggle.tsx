@@ -1,7 +1,10 @@
 // src/screens/components/SoundSimilarityToggle.tsx
 import React from 'react';
-import {StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
+import {Switch, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
+import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../shared/ui/theme';
 
 interface SoundSimilarityToggleProps {
     enabled: boolean;
@@ -26,6 +29,10 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
     showWeights = false,
     disabled = false,
 }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = toggleStyles;
+
     return (
         <View style={[styles.container, disabled && styles.disabled]}>
             {/* Main Toggle */}
@@ -36,18 +43,18 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
             >
                 <View style={styles.iconContainer}>
                     <MaterialCommunityIcons
-                        name={enabled ? 'equalizer' : 'equalizer'}
+                        name="equalizer"
                         size={24}
-                        color={enabled ? '#4CAF50' : '#666'}
+                        color={enabled ? theme.colors.success.main : theme.colors.text.disabled}
                     />
                 </View>
                 
                 <View style={styles.textContainer}>
-                    <Text style={styles.title}>Sound Similarity</Text>
+                    <Text style={styles.title}>{t('rhythmChallenge.soundSimilarity.title')}</Text>
                     <Text style={styles.description}>
                         {enabled
-                            ? 'Evaluate both timing AND sound quality'
-                            : 'Evaluate timing only'
+                            ? t('rhythmChallenge.soundSimilarity.enabledDesc')
+                            : t('rhythmChallenge.soundSimilarity.disabledDesc')
                         }
                     </Text>
                 </View>
@@ -56,18 +63,17 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
                     value={enabled}
                     onValueChange={onToggle}
                     disabled={disabled}
-                    trackColor={{ false: '#333', true: '#81C784' }}
-                    thumbColor={enabled ? '#4CAF50' : '#888'}
+                    trackColor={{ false: theme.colors.neutral.gray[700], true: theme.colors.success.light }}
+                    thumbColor={enabled ? theme.colors.success.main : theme.colors.text.disabled}
                 />
             </TouchableOpacity>
             
             {/* Explanation */}
             {enabled && (
                 <View style={styles.explanationContainer}>
-                    <MaterialCommunityIcons name="information-outline" size={16} color="#888" />
+                    <MaterialCommunityIcons name="information-outline" size={16} color={theme.colors.text.secondary} />
                     <Text style={styles.explanationText}>
-                        Your claps will be analyzed for clarity, brightness, and consistency.
-                        Try to match the sound quality of the reference pattern.
+                        {t('rhythmChallenge.soundSimilarity.explanation')}
                     </Text>
                 </View>
             )}
@@ -76,16 +82,16 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
             {enabled && showWeights && (
                 <View style={styles.weightsContainer}>
                     <View style={styles.weightItem}>
-                        <MaterialCommunityIcons name="timer-outline" size={20} color="#2196F3" />
-                        <Text style={styles.weightLabel}>Timing</Text>
+                        <MaterialCommunityIcons name="timer-outline" size={20} color={theme.colors.info.main} />
+                        <Text style={styles.weightLabel}>{t('rhythmChallenge.soundSimilarity.timing')}</Text>
                         <Text style={styles.weightValue}>{Math.round(timingWeight * 100)}%</Text>
                     </View>
                     
                     <View style={styles.weightDivider} />
                     
                     <View style={styles.weightItem}>
-                        <MaterialCommunityIcons name="equalizer" size={20} color="#9C27B0" />
-                        <Text style={styles.weightLabel}>Sound</Text>
+                        <MaterialCommunityIcons name="equalizer" size={20} color={theme.colors.secondary?.main || theme.colors.primary.main} />
+                        <Text style={styles.weightLabel}>{t('rhythmChallenge.soundSimilarity.sound')}</Text>
                         <Text style={styles.weightValue}>{Math.round(soundWeight * 100)}%</Text>
                     </View>
                 </View>
@@ -94,12 +100,11 @@ export const SoundSimilarityToggle: React.FC<SoundSimilarityToggleProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const toggleStyles = createStyles(theme => ({
     container: {
-        backgroundColor: '#1a1a1a',
-        borderRadius: 12,
-        padding: 16,
-        marginVertical: 8,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        marginVertical: theme.spacing.sm,
     },
     disabled: {
         opacity: 0.5,
@@ -112,7 +117,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#252525',
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -121,27 +126,27 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#fff',
+        ...theme.typography.body.medium,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.inverse,
     },
     description: {
-        fontSize: 13,
-        color: '#888',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     explanationContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#252525',
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 12,
+        backgroundColor: theme.colors.background.secondary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.md,
     },
     explanationText: {
         flex: 1,
-        fontSize: 12,
-        color: '#888',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
         marginLeft: 8,
         lineHeight: 18,
     },
@@ -149,31 +154,31 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 16,
-        paddingTop: 16,
+        marginTop: theme.spacing.lg,
+        paddingTop: theme.spacing.lg,
         borderTopWidth: 1,
-        borderTopColor: '#333',
+        borderTopColor: theme.colors.neutral.gray[700],
     },
     weightItem: {
         alignItems: 'center',
         flex: 1,
     },
     weightLabel: {
-        fontSize: 12,
-        color: '#888',
+        ...theme.typography.caption,
+        color: theme.colors.text.secondary,
         marginTop: 4,
     },
     weightValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#fff',
+        ...theme.typography.heading.h5,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.inverse,
         marginTop: 2,
     },
     weightDivider: {
         width: 1,
         height: 40,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.neutral.gray[700],
     },
-});
+}));
 
 export default SoundSimilarityToggle;

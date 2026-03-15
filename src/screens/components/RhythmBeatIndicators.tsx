@@ -1,6 +1,7 @@
 // src/screens/components/RhythmBeatIndicators.tsx
 import React, { useRef, useEffect } from 'react';
 import { View, Text, Animated } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { BeatIndicator } from '../../types/rhythmChallenge.types';
 import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
@@ -22,6 +23,7 @@ export const RhythmBeatIndicators: React.FC<RhythmBeatIndicatorsProps> = ({
     currentBeatIndex = -1,
     mode,
 }) => {
+    const { t } = useTranslation();
     const {theme} = useAppStyles();
     const { width: screenWidth } = useDimensions();
     const styles = themeStyles;
@@ -30,12 +32,6 @@ export const RhythmBeatIndicators: React.FC<RhythmBeatIndicatorsProps> = ({
     
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>
-                {mode === 'playback' && 'Listen to the pattern'}
-                {mode === 'recording' && 'Tap along!'}
-                {mode === 'results' && 'Your timing'}
-            </Text>
-            
             <View style={styles.beatsContainer}>
                 {beats.map((beat, index) => (
                     <BeatDot
@@ -50,10 +46,10 @@ export const RhythmBeatIndicators: React.FC<RhythmBeatIndicatorsProps> = ({
             
             {mode === 'results' && (
                 <View style={styles.legendContainer}>
-                    <LegendItem color={theme.colors.success.main} label="Perfect" />
-                    <LegendItem color={theme.colors.success.light} label="Good" />
-                    <LegendItem color={theme.colors.warning.light} label="Early/Late" />
-                    <LegendItem color={theme.colors.error.main} label="Missed" />
+                    <LegendItem color={theme.colors.success.main} label={t('rhythmChallenge.results.perfect')} />
+                    <LegendItem color={theme.colors.success.light} label={t('rhythmChallenge.results.good')} />
+                    <LegendItem color={theme.colors.warning.light} label={t('rhythmChallenge.results.earlyLate')} />
+                    <LegendItem color={theme.colors.error.main} label={t('rhythmChallenge.results.missed')} />
                 </View>
             )}
         </View>
@@ -163,16 +159,7 @@ const LegendItem: React.FC<LegendItemProps> = ({ color, label }) => {
 const themeStyles = createStyles(theme => ({
     container: {
         padding: theme.spacing.lg,
-        backgroundColor: theme.colors.neutral.gray[900], // Dark background for game elements
         borderRadius: theme.layout.borderRadius.lg,
-        margin: theme.spacing.lg,
-    },
-    title: {
-        ...theme.typography.heading.h6,
-        fontWeight: theme.typography.fontWeight.semibold,
-        color: theme.colors.text.inverse,
-        textAlign: 'center',
-        marginBottom: theme.spacing.lg,
     },
     beatsContainer: {
         flexDirection: 'row',

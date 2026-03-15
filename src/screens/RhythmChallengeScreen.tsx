@@ -605,7 +605,7 @@ export const RhythmChallengeScreen: React.FC = () => {
 const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.neutral.gray[900],
+        backgroundColor: theme.colors.background.primary,
     },
 
     // ── Header ──
@@ -613,7 +613,7 @@ const themeStyles = createStyles(theme => ({
         flexDirection: 'row',
         alignItems: 'center',
         padding: theme.spacing.lg,
-        backgroundColor: theme.colors.neutral.gray[800],
+        backgroundColor: theme.colors.background.secondary,
         ...theme.shadows.medium,
     },
     backButton: {
@@ -725,7 +725,7 @@ const themeStyles = createStyles(theme => ({
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 2,
-        borderColor: theme.colors.neutral.gray[900],
+        borderColor: theme.colors.background.primary,
     },
     replayBadgeText: {
         color: 'white',
@@ -773,7 +773,7 @@ const themeStyles = createStyles(theme => ({
     // ── Mode selector (keep existing pattern) ──
     modeSelectorContainer: {
         flexDirection: 'row',
-        backgroundColor: theme.colors.neutral.gray[800],
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: theme.layout.borderRadius.lg,
         padding: 4,
         marginHorizontal: theme.spacing.md,

@@ -127,7 +127,7 @@ export const RhythmTimeline: React.FC<RhythmTimelineProps> = ({
 
 const themeStyles = createStyles(theme => ({
     container: {
-        backgroundColor: theme.colors.neutral.gray[800],
+        backgroundColor: theme.colors.background.secondary,
         padding: theme.spacing.md,
         borderRadius: theme.layout.borderRadius.lg,
         width: '100%',

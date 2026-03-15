@@ -107,13 +107,26 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
         onComplete: (sub) => {
             // Convert submission to EnhancedRhythmScoringResult
             const result: EnhancedRhythmScoringResult = {
-                overallScore: sub.overallScore,
-                passed: sub.passed,
-                soundSimilarityEnabled: !!sub.soundSimilarityScore,
-                soundSimilarityScore: sub.soundSimilarityScore,
-                timingWeight: 0.7,
-                soundWeight: 0.3,
-                combinedScore: sub.overallScore,
+                // Required RhythmScoringResult fields — use submission data with safe defaults
+                overallScore: sub.overallScore ?? 0,
+                passed: sub.passed ?? false,
+                minimumScoreRequired: sub.minimumScoreRequired ?? null,
+                perBeatScores: [],
+                timingErrorsMs: [],
+                absoluteErrorsMs: [],
+                perfectBeats: 0,
+                goodBeats: 0,
+                missedBeats: 0,
+                averageErrorMs: 0,
+                maxErrorMs: 0,
+                consistencyScore: 0,
+                feedback: sub.passed ? 'Passed' : 'Did not pass',
+                // Enhanced fields
+                soundSimilarityEnabled: false,
+                soundSimilarityScore: undefined,
+                timingWeight: 1.0,
+                soundWeight: 0.0,
+                combinedScore: sub.overallScore ?? 0,
             };
             setServerResult(result);
             setIsAnalyzingSound(false);
@@ -453,9 +466,11 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                                     <Text style={styles.instruction}>
                                         {challengeType === AudioChallengeType.RHYTHM_REPEAT ? t('audioGamePlay.readyToTap') : t('audioGamePlay.rhythmReady')}
                                     </Text>
-                                    <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming} activeOpacity={0.8}>
-                                        <MaterialCommunityIcons name={inputMode === 'TAP' ? "gesture-tap" : "microphone"} size={40} color={theme.colors.text.inverse} />
-                                        <Text style={styles.startButtonText}>{t('common.start')}</Text>
+                                    <TouchableOpacity style={styles.playButton} onPress={handleStartPerforming} activeOpacity={0.8}>
+                                        <View style={styles.playButtonCircle}>
+                                            <MaterialCommunityIcons name="play" size={48} color="#FFFFFF" />
+                                        </View>
+                                        <Text style={styles.playButtonLabel}>{t('common.start')}</Text>
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -480,8 +495,10 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                                 <RhythmTapPad isActive={isCapturing} onTap={recordTap} tapCount={tapCount} totalExpectedTaps={rhythmPattern?.totalBeats} />
                                 <View style={styles.performingActions}>
                                     <TouchableOpacity style={styles.stopButton} onPress={handleStopTapping} activeOpacity={0.8}>
-                                        <MaterialCommunityIcons name="stop-circle" size={40} color={theme.colors.text.inverse} />
-                                        <Text style={styles.stopButtonText}>{t('common.done')}</Text>
+                                        <View style={styles.stopButtonCircle}>
+                                            <MaterialCommunityIcons name="stop" size={48} color="#FFFFFF" />
+                                        </View>
+                                        <Text style={styles.stopButtonLabel}>{t('common.done')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -502,9 +519,11 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                 subPhase === 'ready' ? (
                     <View style={styles.phaseCenter}>
                         <AudioChallengeContainer question={{ ...question, audioChallengeType: challengeType }} mode="preview" />
-                        <TouchableOpacity style={styles.startButton} onPress={handleStartPerforming} activeOpacity={0.8}>
-                            <MaterialCommunityIcons name="play-circle" size={40} color={theme.colors.text.inverse} />
-                            <Text style={styles.startButtonText}>{t('common.start')}</Text>
+                        <TouchableOpacity style={styles.playButton} onPress={handleStartPerforming} activeOpacity={0.8}>
+                            <View style={styles.playButtonCircle}>
+                                <MaterialCommunityIcons name="play" size={48} color="#FFFFFF" />
+                            </View>
+                            <Text style={styles.playButtonLabel}>{t('common.start')}</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
@@ -614,21 +633,24 @@ const themeStyles = createStyles(theme => ({
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.inverse,
     },
-    startButton: {
+    playButton: {
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: theme.colors.success.main,
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        ...theme.shadows.medium,
-        marginTop: theme.spacing.md,
     },
-    startButtonText: {
-        fontSize: 14,
-        fontWeight: theme.typography.fontWeight.bold,
-        color: theme.colors.text.inverse,
-        marginTop: 4,
+    playButtonCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: theme.colors.primary.main,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...theme.shadows.medium,
+    },
+    playButtonLabel: {
+        marginTop: 12,
+        fontSize: 16,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     chipButton: {
         flexDirection: 'row',
@@ -690,17 +712,21 @@ const themeStyles = createStyles(theme => ({
     stopButton: {
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: theme.colors.error.main,
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        ...theme.shadows.small,
     },
-    stopButtonText: {
-        fontSize: 12,
-        fontWeight: theme.typography.fontWeight.bold,
-        color: theme.colors.text.inverse,
-        marginTop: 2,
+    stopButtonCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: theme.colors.error.main,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...theme.shadows.medium,
+    },
+    stopButtonLabel: {
+        marginTop: 12,
+        fontSize: 16,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
     primaryButton: {
         flexDirection: 'row',

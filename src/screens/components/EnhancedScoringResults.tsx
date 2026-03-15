@@ -1,9 +1,12 @@
 // src/screens/components/EnhancedScoringResults.tsx
 import React from 'react';
-import {ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ScrollView, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import {EnhancedRhythmScoringResult, SoundComparisonDetail} from '../../types/rhythmChallenge.types';
 import {SoundQualityBadge} from './SoundQualityBadge';
+import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../shared/ui/theme';
 
 interface EnhancedScoringResultsProps {
     result: EnhancedRhythmScoringResult;
@@ -19,11 +22,15 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
     onRetry,
     onContinue,
 }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = scoringStyles;
+
     const getScoreColor = (score: number) => {
-        if (score >= 90) return '#4CAF50';
-        if (score >= 70) return '#8BC34A';
-        if (score >= 50) return '#FFC107';
-        return '#F44336';
+        if (score >= 90) return theme.colors.success.main;
+        if (score >= 70) return theme.colors.success.light;
+        if (score >= 50) return theme.colors.warning.main;
+        return theme.colors.error.main;
     };
     
     const showSoundDetails = result.soundSimilarityEnabled && result.soundDetails;
@@ -37,7 +44,7 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
                     {Math.round(displayScore)}
                 </Text>
                 <Text style={styles.scoreLabel}>
-                    {result.soundSimilarityEnabled ? 'Combined' : 'Score'}
+                    {result.soundSimilarityEnabled ? t('rhythmChallenge.results.combined') : t('rhythmChallenge.results.score')}
                 </Text>
             </View>
             
@@ -46,10 +53,10 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
                 <MaterialCommunityIcons
                     name={result.passed ? 'check-circle' : 'alert-circle'}
                     size={20}
-                    color="#fff"
+                    color={theme.colors.text.inverse}
                 />
                 <Text style={styles.statusText}>
-                    {result.passed ? 'PASSED!' : 'TRY AGAIN'}
+                    {result.passed ? t('rhythmChallenge.results.passed') : t('rhythmChallenge.results.tryAgain')}
                 </Text>
             </View>
             
@@ -59,14 +66,14 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
             {/* Score Breakdown (when sound similarity enabled) */}
             {result.soundSimilarityEnabled && (
                 <View style={styles.breakdownContainer}>
-                    <Text style={styles.sectionTitle}>Score Breakdown</Text>
+                    <Text style={styles.sectionTitle}>{t('rhythmChallenge.results.scoreBreakdown')}</Text>
                     
                     <View style={styles.breakdownRow}>
                         {/* Timing Score */}
                         <View style={styles.breakdownItem}>
-                            <MaterialCommunityIcons name="timer-outline" size={28} color="#2196F3" />
+                            <MaterialCommunityIcons name="timer-outline" size={28} color={theme.colors.info.main} />
                             <Text style={styles.breakdownValue}>{Math.round(result.overallScore)}</Text>
-                            <Text style={styles.breakdownLabel}>Timing</Text>
+                            <Text style={styles.breakdownLabel}>{t('rhythmChallenge.results.timing')}</Text>
                             <Text style={styles.breakdownWeight}>
                                 ({Math.round(result.timingWeight * 100)}%)
                             </Text>
@@ -78,13 +85,13 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
                         
                         {/* Sound Score */}
                         <View style={styles.breakdownItem}>
-                            <MaterialCommunityIcons name="equalizer" size={28} color="#9C27B0" />
+                            <MaterialCommunityIcons name="equalizer" size={28} color={theme.colors.secondary?.main || theme.colors.primary.main} />
                             <Text style={styles.breakdownValue}>
                                 {result.soundSimilarityScore !== undefined 
                                     ? Math.round(result.soundSimilarityScore) 
                                     : '-'}
                             </Text>
-                            <Text style={styles.breakdownLabel}>Sound</Text>
+                            <Text style={styles.breakdownLabel}>{t('rhythmChallenge.results.sound')}</Text>
                             <Text style={styles.breakdownWeight}>
                                 ({Math.round(result.soundWeight * 100)}%)
                             </Text>
@@ -96,11 +103,11 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
                         
                         {/* Combined Score */}
                         <View style={styles.breakdownItem}>
-                            <MaterialCommunityIcons name="star" size={28} color="#4CAF50" />
+                            <MaterialCommunityIcons name="star" size={28} color={theme.colors.success.main} />
                             <Text style={[styles.breakdownValue, styles.combinedValue]}>
                                 {Math.round(result.combinedScore)}
                             </Text>
-                            <Text style={styles.breakdownLabel}>Combined</Text>
+                            <Text style={styles.breakdownLabel}>{t('rhythmChallenge.results.combined')}</Text>
                         </View>
                     </View>
                 </View>
@@ -108,19 +115,19 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
             
             {/* Timing Stats */}
             <View style={styles.statsContainer}>
-                <Text style={styles.sectionTitle}>Timing Performance</Text>
+                <Text style={styles.sectionTitle}>{t('rhythmChallenge.results.timingPerformance')}</Text>
                 <View style={styles.statsGrid}>
-                    <StatItem icon="check-bold" value={result.perfectBeats} label="Perfect" color="#4CAF50" />
-                    <StatItem icon="thumb-up" value={result.goodBeats} label="Good" color="#8BC34A" />
-                    <StatItem icon="close" value={result.missedBeats} label="Missed" color="#F44336" />
-                    <StatItem icon="timer-outline" value={`${Math.round(result.averageErrorMs)}ms`} label="Avg Error" color="#2196F3" />
+                    <StatItem icon="check-bold" value={result.perfectBeats} label={t('rhythmChallenge.results.perfect')} color={theme.colors.success.main} />
+                    <StatItem icon="thumb-up" value={result.goodBeats} label={t('rhythmChallenge.results.good')} color={theme.colors.success.light} />
+                    <StatItem icon="close" value={result.missedBeats} label={t('rhythmChallenge.results.missed')} color={theme.colors.error.main} />
+                    <StatItem icon="timer-outline" value={`${Math.round(result.averageErrorMs)}ms`} label={t('rhythmChallenge.results.avgError')} color={theme.colors.info.main} />
                 </View>
             </View>
             
             {/* Sound Quality Details */}
             {showSoundDetails && result.soundDetails && (
                 <View style={styles.soundDetailsContainer}>
-                    <Text style={styles.sectionTitle}>Sound Quality per Beat</Text>
+                    <Text style={styles.sectionTitle}>{t('rhythmChallenge.results.soundQualityPerBeat')}</Text>
                     
                     {result.soundFeedback && (
                         <Text style={styles.soundFeedback}>{result.soundFeedback}</Text>
@@ -137,14 +144,14 @@ export const EnhancedScoringResults: React.FC<EnhancedScoringResultsProps> = ({
             {/* Action Buttons */}
             <View style={styles.buttonContainer}>
                 <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
-                    <MaterialCommunityIcons name="refresh" size={24} color="#fff" />
-                    <Text style={styles.retryButtonText}>Try Again</Text>
+                    <MaterialCommunityIcons name="refresh" size={24} color={theme.colors.text.inverse} />
+                    <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
                 </TouchableOpacity>
                 
                 {result.passed && (
                     <TouchableOpacity style={styles.continueButton} onPress={onContinue}>
-                        <Text style={styles.continueButtonText}>Continue</Text>
-                        <MaterialCommunityIcons name="arrow-right" size={24} color="#fff" />
+                        <Text style={styles.continueButtonText}>{t('rhythmChallenge.results.continue')}</Text>
+                        <MaterialCommunityIcons name="arrow-right" size={24} color={theme.colors.text.inverse} />
                     </TouchableOpacity>
                 )}
             </View>
@@ -159,29 +166,36 @@ interface StatItemProps {
     color: string;
 }
 
-const StatItem: React.FC<StatItemProps> = ({ icon, value, label, color }) => (
-    <View style={styles.statItem}>
-        <MaterialCommunityIcons name={icon} size={24} color={color} />
-        <Text style={[styles.statValue, { color }]}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-    </View>
-);
+const StatItem: React.FC<StatItemProps> = ({ icon, value, label, color }) => {
+    const styles = scoringStyles;
+    return (
+        <View style={styles.statItem}>
+            <MaterialCommunityIcons name={icon} size={24} color={color} />
+            <Text style={[styles.statValue, { color }]}>{value}</Text>
+            <Text style={styles.statLabel}>{label}</Text>
+        </View>
+    );
+};
 
 interface BeatSoundDetailProps {
     detail: SoundComparisonDetail;
 }
 
 const BeatSoundDetail: React.FC<BeatSoundDetailProps> = ({ detail }) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = scoringStyles;
+
     const getScoreColor = (score: number) => {
-        if (score >= 80) return '#4CAF50';
-        if (score >= 60) return '#FFC107';
-        return '#F44336';
+        if (score >= 80) return theme.colors.success.main;
+        if (score >= 60) return theme.colors.warning.main;
+        return theme.colors.error.main;
     };
     
     return (
         <View style={styles.beatDetailItem}>
             <View style={styles.beatHeader}>
-                <Text style={styles.beatNumber}>Beat {detail.beatIndex + 1}</Text>
+                <Text style={styles.beatNumber}>{t('rhythmChallenge.results.beat', { number: detail.beatIndex + 1 })}</Text>
                 <Text style={[styles.beatScore, { color: getScoreColor(detail.overallSoundScore) }]}>
                     {Math.round(detail.overallSoundScore)}
                 </Text>
@@ -189,7 +203,7 @@ const BeatSoundDetail: React.FC<BeatSoundDetailProps> = ({ detail }) => {
             
             <View style={styles.beatContent}>
                 <View style={styles.qualityRow}>
-                    <Text style={styles.qualityLabel}>Your sound:</Text>
+                    <Text style={styles.qualityLabel}>{t('rhythmChallenge.results.yourSound')}</Text>
                     {detail.userQuality && (
                         <SoundQualityBadge quality={detail.userQuality} size="small" />
                     )}
@@ -201,9 +215,9 @@ const BeatSoundDetail: React.FC<BeatSoundDetailProps> = ({ detail }) => {
                 
                 {/* Mini progress bars */}
                 <View style={styles.metricsRow}>
-                    <MiniMetric label="Timbre" value={detail.mfccSimilarity} />
-                    <MiniMetric label="Brightness" value={detail.brightnessMatch} />
-                    <MiniMetric label="Energy" value={detail.energyMatch} />
+                    <MiniMetric label={t('rhythmChallenge.results.timbre')} value={detail.mfccSimilarity} />
+                    <MiniMetric label={t('rhythmChallenge.results.brightness')} value={detail.brightnessMatch} />
+                    <MiniMetric label={t('rhythmChallenge.results.energy')} value={detail.energyMatch} />
                 </View>
             </View>
         </View>
@@ -215,16 +229,20 @@ interface MiniMetricProps {
     value: number;
 }
 
-const MiniMetric: React.FC<MiniMetricProps> = ({ label, value }) => (
-    <View style={styles.miniMetric}>
-        <Text style={styles.miniMetricLabel}>{label}</Text>
-        <View style={styles.miniMetricBar}>
-            <View style={[styles.miniMetricFill, { width: `${value}%` }]} />
+const MiniMetric: React.FC<MiniMetricProps> = ({ label, value }) => {
+    const { theme } = useAppStyles();
+    const styles = scoringStyles;
+    return (
+        <View style={styles.miniMetric}>
+            <Text style={styles.miniMetricLabel}>{label}</Text>
+            <View style={styles.miniMetricBar}>
+                <View style={[styles.miniMetricFill, { width: `${value}%`, backgroundColor: theme.colors.success.main }]} />
+            </View>
         </View>
-    </View>
-);
+    );
+};
 
-const styles = StyleSheet.create({
+const scoringStyles = createStyles(theme => ({
     container: {
         flex: 1,
     },
@@ -239,7 +257,7 @@ const styles = StyleSheet.create({
         borderWidth: 6,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: theme.colors.background.secondary,
     },
     scoreValue: {
         fontSize: 48,
@@ -247,7 +265,7 @@ const styles = StyleSheet.create({
     },
     scoreLabel: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     statusBadge: {
         flexDirection: 'row',
@@ -258,27 +276,27 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     passedBadge: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     failedBadge: {
-        backgroundColor: '#F44336',
+        backgroundColor: theme.colors.error.main,
     },
     statusText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontWeight: 'bold',
         fontSize: 16,
         marginLeft: 8,
     },
     feedback: {
         fontSize: 16,
-        color: '#fff',
+        color: theme.colors.text.primary,
         textAlign: 'center',
         marginTop: 12,
         marginBottom: 24,
     },
     breakdownContainer: {
         width: '100%',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
@@ -286,7 +304,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: theme.colors.text.primary,
         marginBottom: 16,
     },
     breakdownRow: {
@@ -301,35 +319,35 @@ const styles = StyleSheet.create({
     breakdownValue: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#fff',
+        color: theme.colors.text.primary,
         marginTop: 4,
     },
     combinedValue: {
-        color: '#4CAF50',
+        color: theme.colors.success.main,
     },
     breakdownLabel: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     breakdownWeight: {
         fontSize: 10,
-        color: '#666',
+        color: theme.colors.text.disabled,
     },
     breakdownDivider: {
         paddingHorizontal: 8,
     },
     plusSign: {
         fontSize: 24,
-        color: '#666',
+        color: theme.colors.text.disabled,
     },
     equalsSign: {
         fontSize: 24,
-        color: '#4CAF50',
+        color: theme.colors.success.main,
     },
     statsContainer: {
         width: '100%',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
@@ -348,26 +366,26 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontSize: 11,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginTop: 2,
     },
     soundDetailsContainer: {
         width: '100%',
-        backgroundColor: '#1a1a1a',
+        backgroundColor: theme.colors.background.secondary,
         borderRadius: 12,
         padding: 16,
         marginBottom: 16,
     },
     soundFeedback: {
         fontSize: 14,
-        color: '#888',
+        color: theme.colors.text.secondary,
         marginBottom: 16,
     },
     beatsList: {
         gap: 12,
     },
     beatDetailItem: {
-        backgroundColor: '#252525',
+        backgroundColor: theme.colors.background.primary,
         borderRadius: 8,
         padding: 12,
     },
@@ -380,7 +398,7 @@ const styles = StyleSheet.create({
     beatNumber: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#fff',
+        color: theme.colors.text.primary,
     },
     beatScore: {
         fontSize: 18,
@@ -396,11 +414,11 @@ const styles = StyleSheet.create({
     },
     qualityLabel: {
         fontSize: 12,
-        color: '#888',
+        color: theme.colors.text.secondary,
     },
     beatFeedback: {
         fontSize: 12,
-        color: '#aaa',
+        color: theme.colors.text.secondary,
         fontStyle: 'italic',
     },
     metricsRow: {
@@ -412,18 +430,17 @@ const styles = StyleSheet.create({
     },
     miniMetricLabel: {
         fontSize: 10,
-        color: '#666',
+        color: theme.colors.text.disabled,
         marginBottom: 2,
     },
     miniMetricBar: {
         height: 4,
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.neutral.gray[700],
         borderRadius: 2,
         overflow: 'hidden',
     },
     miniMetricFill: {
         height: '100%',
-        backgroundColor: '#4CAF50',
         borderRadius: 2,
     },
     buttonContainer: {
@@ -434,13 +451,13 @@ const styles = StyleSheet.create({
     retryButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#333',
+        backgroundColor: theme.colors.neutral.gray[700],
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 8,
     },
     retryButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 16,
         fontWeight: '600',
         marginLeft: 8,
@@ -448,17 +465,17 @@ const styles = StyleSheet.create({
     continueButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
         paddingHorizontal: 24,
         paddingVertical: 12,
         borderRadius: 8,
     },
     continueButtonText: {
-        color: '#fff',
+        color: theme.colors.text.inverse,
         fontSize: 16,
         fontWeight: '600',
         marginRight: 8,
     },
-});
+}));
 
 export default EnhancedScoringResults;
