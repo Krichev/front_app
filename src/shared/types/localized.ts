@@ -1,5 +1,7 @@
 import { AppLanguage } from '../../entities/SettingsState/model/types/settings.types';
 
+export type { AppLanguage };
+
 export interface LocalizedString {
   en: string;
   ru: string;

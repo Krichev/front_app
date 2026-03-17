@@ -1,4 +1,7 @@
+// src/services/wwwGame/wwwGameService.ts
 import i18n from '../../shared/config/i18n/i18n';
+import {QuizQuestion} from '../../entities/QuizState/model/slice/quizApi';
+import {Difficulty} from '../../shared/types/difficulty';
 
 export interface RoundData {
     question: string;
@@ -19,14 +22,14 @@ export interface PlayerPerformance {
 export interface GameSettings {
     teamName: string;
     teamMembers: string[];
-    difficulty: 'Easy' | 'Medium' | 'Hard';
+    difficulty: Difficulty;
     roundTime: number;
     roundCount: number;
     enableAIHost: boolean;
     enableAiAnswerValidation?: boolean;
     // Add these new properties:
     questionSource?: 'app' | 'user';
-    userQuestions?: QuizQuestion[] | UserQuestion[];
+    userQuestions?: QuizQuestion[];
     challengeId?: string; // Challenge ID for tracking
 }
 
@@ -36,87 +39,12 @@ import {DeepSeekHostService} from './deepseekHostService';
 
 export class WWWGameService {
     /**
-     * Enhanced answer validation with optional AI semantic matching
-     */
-    static async validateAnswerEnhanced(
-        teamAnswer: string,
-        correctAnswer: string,
-        enableAiValidation: boolean = false,
-        language: string = 'en'
-    ): Promise<{
-        isCorrect: boolean;
-        exactMatch: boolean;
-        aiAccepted: boolean;
-        aiConfidence: number;
-        aiExplanation: string;
-    }> {
-        // 1. Run existing local validation first
-        const isLocallyCorrect = this.validateAnswer(teamAnswer, correctAnswer);
-
-        // 2. If local says correct → return immediately
-        if (isLocallyCorrect) {
-            return {
-                isCorrect: true,
-                exactMatch: true,
-                aiAccepted: false,
-                aiConfidence: 0,
-                aiExplanation: ''
-            };
-        }
-
-        // 3. If enableAiValidation → call DeepSeekHostService.validateAnswerWithAi()
-        if (enableAiValidation) {
-            try {
-                // Check answer length to prevent abuse/errors
-                if (teamAnswer.length > 500) {
-                    return {
-                        isCorrect: false,
-                        exactMatch: false,
-                        aiAccepted: false,
-                        aiConfidence: 0,
-                        aiExplanation: ''
-                    };
-                }
-
-                const aiResult = await DeepSeekHostService.validateAnswerWithAi(
-                    teamAnswer,
-                    correctAnswer,
-                    language
-                );
-
-                if (aiResult.equivalent && aiResult.confidence >= 0.7) {
-                    return {
-                        isCorrect: true,
-                        exactMatch: false,
-                        aiAccepted: true,
-                        aiConfidence: aiResult.confidence,
-                        aiExplanation: aiResult.explanation
-                    };
-                }
-            } catch (error) {
-                console.error('Error in enhanced validation:', error);
-                // Fallthrough to return false
-            }
-        }
-
-        // 4. Fallback to local result (which was false)
-        return {
-            isCorrect: false,
-            exactMatch: false,
-            aiAccepted: false,
-            aiConfidence: 0,
-            aiExplanation: ''
-        };
-    }
-
-    /**
-     * Initialize a new game with the given settings
+     * Initialize a new game
      */
     static initializeGame(settings: GameSettings): {
         gameQuestions: Array<{ question: string, answer: string }>,
         roundsData: RoundData[]
     } {
-        // Default implementation for initialization
         return {
             gameQuestions: [],
             roundsData: []
@@ -124,330 +52,189 @@ export class WWWGameService {
     }
 
     /**
-     * Validate team answer against correct answer with improved Russian language support
-     */
-    static validateAnswer(teamAnswer: string, correctAnswer: string): boolean {
-        if (!teamAnswer || !correctAnswer) return false;
-        
-        const trimmedTeam = teamAnswer.trim();
-        const trimmedCorrect = correctAnswer.trim();
-        if (!trimmedTeam || !trimmedCorrect) return false;
-
-        // Normalize strings for comparison (trim whitespace, remove punctuation, lowercase)
-        const normalizeForComparison = (text: string): string => {
-            return text
-                .toLowerCase()
-                .trim()
-                // Use Unicode properties with 'u' flag to keep letters and digits from any language
-                .replace(/[^\p{L}\p{N}\s]/gu, "")
-                .replace(/\s{2,}/g, " ");
-        };
-
-        const normalizedTeamAnswer = normalizeForComparison(teamAnswer);
-        const normalizedCorrectAnswer = normalizeForComparison(correctAnswer);
-
-        // Direct match after normalization
-        if (normalizedTeamAnswer === normalizedCorrectAnswer) {
-            return true;
-        }
-
-        // Only use contains check if user answer is substantial (at least 50% of correct answer length)
-        // This prevents short generic words from matching everything
-        const minLengthForContains = Math.max(3, Math.floor(normalizedCorrectAnswer.length * 0.5));
-        
-        if (normalizedTeamAnswer.length >= minLengthForContains) {
-            if (normalizedTeamAnswer.includes(normalizedCorrectAnswer) ||
-                normalizedCorrectAnswer.includes(normalizedTeamAnswer)) {
-                return true;
-            }
-        }
-
-        // For short answers (1-2 words), use approximate matching
-        const isShortAnswer = normalizedCorrectAnswer.split(" ").length <= 2;
-        if (isShortAnswer) {
-            return this.isApproximatelyCorrect(teamAnswer, correctAnswer);
-        }
-
-        return false;
-    }
-
-    /**
-     * Update round data with team's answer
+     * Process a round answer
      */
     static processRoundAnswer(
-        roundsData: RoundData[],
-        currentRound: number,
-        teamAnswer: string,
-        selectedPlayer: string,
-        discussionNotes: string
+        answer: string,
+        correctAnswer: string,
+        playerWhoAnswered: string,
+        discussionNotes: string,
+        roundsData: RoundData[]
     ): {
         updatedRoundsData: RoundData[],
         isCorrect: boolean
     } {
-        const updatedRoundsData = [...roundsData];
-        const isCorrect = this.validateAnswer(
-            teamAnswer,
-            roundsData[currentRound].correctAnswer
-        );
-
-        updatedRoundsData[currentRound] = {
-            ...updatedRoundsData[currentRound],
-            teamAnswer,
+        const isCorrect = answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
+        
+        const newRoundData: RoundData = {
+            question: '', // Should be filled by caller
+            correctAnswer,
+            teamAnswer: answer,
             isCorrect,
-            playerWhoAnswered: selectedPlayer,
+            playerWhoAnswered,
             discussionNotes
         };
 
-        return {updatedRoundsData, isCorrect};
+        return {
+            updatedRoundsData: [...roundsData, newRoundData],
+            isCorrect
+        };
     }
 
     /**
-     * Calculate player performance statistics
+     * Enhanced answer validation with optional AI semantic matching
      */
-    static calculatePlayerPerformance(roundsData: RoundData[]): PlayerPerformance[] {
-        // Create a map to aggregate player stats
-        const playerStatsMap = new Map<string, { total: number, correct: number }>();
+    static async validateAnswer(
+        userAnswer: string,
+        correctAnswer: string,
+        enableAi: boolean = false,
+        language: string = 'en'
+    ): Promise<{
+        isCorrect: boolean;
+        confidence?: number;
+        explanation?: string;
+        aiUsed?: boolean;
+    }> {
+        if (!userAnswer) return { isCorrect: false };
 
-        // Process each round
-        roundsData.forEach(round => {
-            const player = round.playerWhoAnswered;
-            if (!player) return; // Skip if no player answered
+        const normalizedUser = userAnswer.trim().toLowerCase();
+        const normalizedCorrect = correctAnswer.trim().toLowerCase();
 
-            if (!playerStatsMap.has(player)) {
-                playerStatsMap.set(player, {total: 0, correct: 0});
+        // 1. Simple exact match or subset check
+        if (normalizedUser === normalizedCorrect || normalizedCorrect.includes(normalizedUser)) {
+            return { isCorrect: true };
+        }
+
+        // 2. AI semantic matching if enabled
+        if (enableAi) {
+            try {
+                const result = await DeepSeekHostService.validateAnswerWithAi(
+                    userAnswer,
+                    correctAnswer,
+                    language
+                );
+                
+                // We consider it correct if AI is confident (e.g. > 0.7)
+                return {
+                    isCorrect: result.equivalent && result.confidence >= 0.7,
+                    confidence: result.confidence,
+                    explanation: result.explanation,
+                    aiUsed: true
+                };
+            } catch (error) {
+                console.error('AI Answer Validation failed:', error);
+                // Fallback to simple comparison already done
             }
+        }
 
-            const stats = playerStatsMap.get(player)!;
-            stats.total += 1;
+        return { isCorrect: false };
+    }
 
-            if (round.isCorrect) {
-                stats.correct += 1;
-            }
+    /**
+     * Calculate comprehensive game results and player performance
+     */
+    static calculateResults(
+        teamName: string,
+        rounds: RoundData[],
+        teamMembers: string[]
+    ) {
+        const totalRounds = rounds.length;
+        const correctAnswers = rounds.filter(r => r.isCorrect).length;
+        const scorePercentage = totalRounds > 0 ? Math.round((correctAnswers / totalRounds) * 100) : 0;
+
+        // Calculate performance per player
+        const playerPerformances: PlayerPerformance[] = teamMembers.map(player => {
+            const playerRounds = rounds.filter(r => r.playerWhoAnswered === player);
+            const total = playerRounds.length;
+            const correct = playerRounds.filter(r => r.isCorrect).length;
+            const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+            return {
+                player,
+                total,
+                correct,
+                percentage
+            };
         });
 
-        // Convert map to array and calculate percentages
-        return Array.from(playerStatsMap.entries())
-            .map(([player, stats]) => ({
-                player,
-                total: stats.total,
-                correct: stats.correct,
-                percentage: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0
-            }))
-            .sort((a, b) => b.correct - a.correct); // Sort by correct answers
-    }
-
-    /**
-     * Generate AI host feedback for a round
-     */
-    static generateRoundFeedback(
-        roundData: RoundData,
-        enableAIHost: boolean
-    ): string {
-        if (!enableAIHost) return '';
-
-        if (!roundData.isCorrect) {
-            // Check if correct answer was mentioned in discussion notes
-            const wasCorrectAnswerDiscussed =
-                roundData.discussionNotes.toLowerCase().includes(
-                    roundData.correctAnswer.toLowerCase()
-                );
-
-            if (wasCorrectAnswerDiscussed) {
-                return i18n.t('wwwGame.feedback.discussedCorrect', { answer: roundData.correctAnswer });
-            } else {
-                return i18n.t('wwwGame.feedback.notDiscussedCorrect', { answer: roundData.correctAnswer });
-            }
-        } else {
-            return i18n.t('wwwGame.feedback.correct', { answer: roundData.correctAnswer });
-        }
-    }
-
-    /**
-     * Generate an AI hint for the current question
-     */
-    static generateHint(correctAnswer: string): string {
-        let hint = i18n.t('wwwGame.hint.characters', { count: correctAnswer.length });
-
-        if (correctAnswer.includes(' ')) {
-            hint += i18n.t('wwwGame.hint.words', { count: correctAnswer.split(' ').length });
-        }
-
-        // Could add more sophisticated hints here
-        return hint;
-    }
-
-    /**
-     * Generate comprehensive AI feedback for game results
-     */
-    static generateGameFeedback(
-        roundsData: RoundData[],
-        performances: PlayerPerformance[]
-    ): string {
-        // Best performing player
-        const bestPlayer = performances.length > 0 ? performances[0] : null;
-
-        // Identifying what topics the team struggled with
-        const incorrectQuestions = roundsData.filter(round => !round.isCorrect);
-
-        let feedback = '';
-
-        if (bestPlayer && bestPlayer.total > 1) {
-            feedback += i18n.t('wwwGame.gameFeedback.strongestPlayer', { player: bestPlayer.player, correct: bestPlayer.correct, total: bestPlayer.total });
-        }
-
-        if (incorrectQuestions.length > 0) {
-            feedback += i18n.t('wwwGame.gameFeedback.struggledWith');
-            const topics = incorrectQuestions.map(q => {
-                const words = q.question.split(' ');
-                // Extract a few words to represent the topic
-                return words.length > 3 ? words.slice(1, 4).join(' ') : q.question.substring(0, 15);
-            }).slice(0, 3);
-
-            feedback += topics.join(', ');
-            feedback += i18n.t('wwwGame.gameFeedback.studyMore');
-        } else {
-            feedback += i18n.t('wwwGame.gameFeedback.excellentKnowledge');
-        }
-
-        return feedback;
-    }
-
-    /**
-     * Generate overall results message based on score
-     */
-    static generateResultsMessage(score: number, totalRounds: number): string {
-        const correctPercentage = (score / totalRounds) * 100;
-
-        if (correctPercentage >= 90) return i18n.t('wwwGame.performance.outstanding');
-        if (correctPercentage >= 70) return i18n.t('wwwGame.performance.great');
-        if (correctPercentage >= 50) return i18n.t('wwwGame.performance.good');
-        if (correctPercentage >= 30) return i18n.t('wwwGame.performance.niceTry');
-        return i18n.t('wwwGame.performance.dontGiveUp');
-    }
-
-    /**
-     * Determine if an answer is approximately correct
-     * This provides more flexibility in accepting answers
-     */
-    static isApproximatelyCorrect(userAnswer: string, correctAnswer: string): boolean {
-        // Handle null/undefined inputs
-        if (!userAnswer || !correctAnswer) return false;
-
-        // Normalize strings for comparison (trim whitespace, remove punctuation, lowercase)
-        const normalizeForComparison = (text: string): string => {
-            return text
-                .toLowerCase()
-                .trim()
-                // Use Unicode properties with 'u' flag to keep letters and digits from any language
-                .replace(/[^\p{L}\p{N}\s]/gu, "")
-                .replace(/\s{2,}/g, " ");
+        return {
+            teamName,
+            totalRounds,
+            correctAnswers,
+            scorePercentage,
+            playerPerformances
         };
+    }
 
-        const normalizedUserAnswer = normalizeForComparison(userAnswer);
-        const normalizedCorrectAnswer = normalizeForComparison(correctAnswer);
+    static calculatePlayerPerformance(rounds: RoundData[]): PlayerPerformance[] {
+        const players = Array.from(new Set(rounds.map(r => r.playerWhoAnswered).filter(Boolean)));
+        return players.map(player => {
+            const playerRounds = rounds.filter(r => r.playerWhoAnswered === player);
+            const correct = playerRounds.filter(r => r.isCorrect).length;
+            return {
+                player,
+                total: playerRounds.length,
+                correct,
+                percentage: Math.round((correct / playerRounds.length) * 100)
+            };
+        });
+    }
 
-        // Handle empty strings after normalization
-        if (!normalizedUserAnswer || !normalizedCorrectAnswer) return false;
+    static generateResultsMessage(score: number, total: number): string {
+        const percentage = total > 0 ? (score / total) * 100 : 0;
+        if (percentage >= 80) return i18n.t('game.results.excellent');
+        if (percentage >= 60) return i18n.t('game.results.good');
+        if (percentage >= 40) return i18n.t('game.results.fair');
+        return i18n.t('game.results.poor');
+    }
 
-        // Exact match
-        if (normalizedUserAnswer === normalizedCorrectAnswer) return true;
-
-        // Check if the answer contains the correct answer (for partial matches)
-        // Only use contains check if user answer is substantial (at least 50% of correct answer length)
-        const minLengthForContains = Math.max(3, Math.floor(normalizedCorrectAnswer.length * 0.5));
-        
-        if (normalizedUserAnswer.length >= minLengthForContains) {
-            if (normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
-                normalizedCorrectAnswer.includes(normalizedUserAnswer)) {
-                return true;
-            }
+    static generateGameFeedback(rounds: RoundData[], performances: PlayerPerformance[]): string {
+        // Simple local version, could be enhanced with AI
+        const bestPlayer = [...performances].sort((a, b) => b.correct - a.correct)[0];
+        if (bestPlayer && bestPlayer.correct > 0) {
+            return `Great job! ${bestPlayer.player} was the MVP with ${bestPlayer.correct} correct answers.`;
         }
-
-        // Calculate similarity ratio using Levenshtein distance
-        // This is a simple implementation that could be improved
-        const distance = this.levenshteinDistance(normalizedUserAnswer, normalizedCorrectAnswer);
-        const maxLength = Math.max(normalizedUserAnswer.length, normalizedCorrectAnswer.length);
-
-        // Avoid division by zero (though this shouldn't happen after our checks above)
-        if (maxLength === 0) return false;
-
-        const similarityRatio = 1 - distance / maxLength;
-
-        // Accept answers that are at least 80% similar
-        return similarityRatio >= 0.8;
+        return "Thanks for playing! Keep practicing to improve your score.";
     }
 
     /**
-     * Calculate Levenshtein distance between two strings
-     * (Helper for approximate matching)
+     * Generate AI-driven final game summary using DeepSeek
      */
-    private static levenshteinDistance(a: string, b: string): number {
-        if (a.length === 0) return b.length;
-        if (b.length === 0) return a.length;
+    static async generateFinalSummary(
+        teamName: string,
+        results: any,
+        rounds: RoundData[]
+    ): Promise<string> {
+        try {
+            // Prepare the question/answer data for analysis
+            const questionData = rounds.map(r => ({
+                question: r.question,
+                correctAnswer: r.correctAnswer,
+                teamAnswer: r.teamAnswer,
+                isCorrect: r.isCorrect
+            }));
 
-        const matrix = [];
-
-        // Initialize matrix
-        for (let i = 0; i <= b.length; i++) {
-            matrix[i] = [i];
+            // Use DeepSeek to generate encouraging summary
+            return await DeepSeekHostService.generateGameFeedback(
+                teamName,
+                results.correctAnswers,
+                results.totalRounds,
+                results.playerPerformances,
+                questionData
+            );
+        } catch (error) {
+            console.error('Failed to generate AI summary:', error);
+            return `Congratulations ${teamName}! You correctly answered ${results.correctAnswers} out of ${results.totalRounds} questions. Well done!`;
         }
-
-        for (let j = 0; j <= a.length; j++) {
-            matrix[0][j] = j;
-        }
-
-        // Fill matrix
-        for (let i = 1; i <= b.length; i++) {
-            for (let j = 1; j <= a.length; j++) {
-                if (b.charAt(i - 1) === a.charAt(j - 1)) {
-                    matrix[i][j] = matrix[i - 1][j - 1];
-                } else {
-                    matrix[i][j] = Math.min(
-                        matrix[i - 1][j - 1] + 1, // substitution
-                        matrix[i][j - 1] + 1,     // insertion
-                        matrix[i - 1][j] + 1      // deletion
-                    );
-                }
-            }
-        }
-
-        return matrix[b.length][a.length];
     }
 
     /**
-     * Analyze discussion notes to find potential answers
+     * Parse and normalize speech-to-text transcriptions for analysis
      */
-    static analyzeDiscussionNotes(
-        notes: string,
-        correctAnswer: string
-    ): {
-        mentionedCorrectAnswer: boolean,
-        potentialAnswers: string[]
-    } {
-        // Split notes into sentences
-        const sentences = notes.split(/[.!?]+/).filter(s => s.trim().length > 0);
-
-        // Extract potential answers (simple approach)
-        const potentialAnswers: string[] = [];
-        const lowercaseNotes = notes.toLowerCase();
-        const lowercaseAnswer = correctAnswer.toLowerCase();
-
-        // Check if correct answer was mentioned
-        const mentionedCorrectAnswer = lowercaseNotes.includes(lowercaseAnswer);
-
-        // Extract statements that sound like answers
-        for (const sentence of sentences) {
-            if (
-                sentence.includes('maybe') ||
-                sentence.includes('could be') ||
-                sentence.includes('I think') ||
-                sentence.includes('answer is')
-            ) {
-                potentialAnswers.push(sentence.trim());
-            }
-        }
-
-                return {mentionedCorrectAnswer, potentialAnswers};
-            }
-        }
-        
+    static normalizeTranscription(transcript: string): string {
+        return transcript
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+    }
+}

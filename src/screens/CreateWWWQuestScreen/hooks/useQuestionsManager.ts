@@ -9,19 +9,23 @@ import {
     useGetUserQuestionsPaginatedQuery,
 } from '../../../entities/QuizState/model/slice/quizApi';
 import {QuestionService} from "../../../services/wwwGame";
-import {APIDifficulty, MediaType, QuestionSource, QuestionType} from "../../../services/wwwGame/questionService";
+import {QuestionSource} from "../../../services/wwwGame/questionService";
 import {BaseQuestionForQuest} from "../types/question.types";
 import {CreateQuizQuestionRequest, QuestionVisibility} from "../../../entities/QuizState/model/types/question.types";
-import { LocalizedString } from '../../../shared/types/localized';
+import { Difficulty, QuestionType } from '../../../shared/types';
+import { QuestionFormData } from '../../../features/question-form/model/types';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
+// Re-export for convenience
+export type { QuestionFormData };
+
 export interface CustomQuestion {
     question: string;
     answer: string;
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     topic?: string;
     acceptSimilarAnswers?: boolean;
     additionalInfo?: string;
@@ -31,49 +35,11 @@ export interface MultimediaQuestionData {
     id?: string;
     question: string;
     answer: string;
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     topic?: string;
     acceptSimilarAnswers?: boolean;
     additionalInfo?: string;
     questionType: QuestionType;
-}
-
-/**
- * ✅ Updated to match the unified CreateQuestionRequest interface
- */
-export interface QuestionFormData {
-    question: string;
-    answer: string;
-    difficulty: APIDifficulty;
-    topic?: string;
-    acceptSimilarAnswers?: boolean;
-    additionalInfo?: string;
-    questionLocalized?: LocalizedString;
-    answerLocalized?: LocalizedString;
-    additionalInfoLocalized?: LocalizedString;
-    questionType: QuestionType;
-    // DEPRECATED: Remove after migration - media is uploaded separately (old flow)
-    media?: {
-        mediaId: string;
-        mediaUrl: string;
-        mediaType: MediaType;
-        thumbnailUrl?: string;
-    };
-    // NEW: Raw file for direct upload in atomic operation
-    mediaFile?: {
-        uri: string;
-        name: string;
-        type: string;
-    };
-    // NEW: External media support
-    mediaSourceType?: 'UPLOADED' | 'EXTERNAL_URL' | 'YOUTUBE' | 'VIMEO' | 'SOUNDCLOUD';
-    externalMediaUrl?: string;
-    questionVideoStartTime?: number;
-    questionVideoEndTime?: number;
-    answerMediaUrl?: string;
-    answerVideoStartTime?: number;
-    answerVideoEndTime?: number;
-    answerTextVerification?: string;
 }
 
 // ============================================================================

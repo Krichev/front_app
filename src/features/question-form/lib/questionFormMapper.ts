@@ -1,11 +1,12 @@
 // questApp/src/features/question-form/lib/questionFormMapper.ts
 import { 
     getLocalizedValue, 
-    LocalizedString 
+    LocalizedString,
+    AppLanguage
 } from "../../../shared/types/localized";
 import { QuestionType, DifficultyLevel, QuestionFormData, MediaInfo } from "../model/types";
 import { QuestionVisibility, MediaSourceType } from "../../../entities/QuizState/model/types/question.types";
-import { AudioChallengeConfig } from "../../../screens/components/AudioChallengeSection";
+import { AudioChallengeConfig, DEFAULT_AUDIO_CONFIG } from "../../../screens/components/AudioChallengeSection";
 import { isValidYouTubeUrl } from "../../../utils/youtubeUtils";
 
 export function mapFormStateToPayload(params: {
@@ -28,7 +29,7 @@ export function mapFormStateToPayload(params: {
     aEndTime?: number;
     answerTextVerification: string;
     audioConfig: AudioChallengeConfig;
-    currentLanguage: string;
+    currentLanguage: AppLanguage;
 }): QuestionFormData {
     const {
         questionText,
@@ -65,12 +66,13 @@ export function mapFormStateToPayload(params: {
         questionLocalized: questionText,
         answerLocalized: answer,
         additionalInfoLocalized: additionalInfo,
+        audioConfig: DEFAULT_AUDIO_CONFIG,
     };
 
     // Media info for IMAGE/VIDEO
     if (questionType === 'IMAGE' || questionType === 'VIDEO') {
         if (mediaSourceType === MediaSourceType.UPLOADED && uploadedMediaInfo) {
-            payload.media = uploadedMediaInfo;
+            payload.mediaInfo = uploadedMediaInfo;
             payload.mediaSourceType = MediaSourceType.UPLOADED;
         } else if (mediaSourceType !== MediaSourceType.UPLOADED && externalUrl) {
             const isYouTube = isValidYouTubeUrl(externalUrl);

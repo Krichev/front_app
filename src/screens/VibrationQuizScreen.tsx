@@ -23,6 +23,8 @@ import {
   VibrationDifficulty,
 } from '../features/VibrationQuiz';
 
+import { DIFFICULTY_LEVELS } from '../shared/types/difficulty';
+
 // UI Components
 import { VibrationButton } from '../features/VibrationQuiz/ui/VibrationButton';
 import { AnswerOptions } from '../features/VibrationQuiz/ui/AnswerOptions';
@@ -150,7 +152,7 @@ const VibrationQuizScreen: React.FC = () => {
           </Text>
 
           <View style={styles.difficultyContainer}>
-            {(['EASY', 'MEDIUM', 'HARD'] as VibrationDifficulty[]).map((diff) => (
+            {DIFFICULTY_LEVELS.map((diff) => (
               <TouchableOpacity
                 key={diff}
                 style={[

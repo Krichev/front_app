@@ -22,12 +22,11 @@ import { LocalizedInput } from '../../shared/ui/LocalizedInput';
 import { LocalizedString, EMPTY_LOCALIZED_STRING, isLocalizedStringEmpty, createLocalizedString } from '../../shared/types/localized';
 import { useI18n } from '../../app/providers/I18nProvider';
 import { safeRNFS as RNFS } from '../../shared/lib/fileSystem';
+import { Difficulty } from '../../shared/types/difficulty';
 
 // ============================================================================
 // TYPES
 // ============================================================================
-
-export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface AudioQuestionFormData {
     // Core question fields
@@ -129,6 +128,8 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
     // Audio preview and trim state
     const [audioDuration, setAudioDuration] = useState(0);
+    const [playbackPosition, setPlaybackPosition] = useState(0);
+    const [isPaused, setIsPaused] = useState(true);
 
     // ============================================================================
     // DERIVED STATE

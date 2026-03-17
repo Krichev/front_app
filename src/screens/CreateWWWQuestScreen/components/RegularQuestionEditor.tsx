@@ -33,6 +33,9 @@ import {
     LocalizedString
 } from '../../../shared/types/localized';
 import {useI18n} from '../../../app/providers/I18nProvider';
+import { Difficulty, DIFFICULTY_LEVELS } from '../../../shared/types/difficulty';
+import { QuestionVisibility, MediaSourceType } from '../../../entities/QuizState/model/types/question.types';
+import { DEFAULT_AUDIO_CONFIG } from '../../../screens/components/AudioChallengeSection';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -76,7 +79,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
     // Form state
     const [question, setQuestion] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
     const [answer, setAnswer] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
-    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+    const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
     const [topic, setTopic] = useState('');
     const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState(true);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
@@ -281,7 +284,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
 
     useEffect(() => {
         if (visible && preSelectedMediaType) {
-            handleSelectMedia(preSelectedMediaType);
+            handleSelectMedia(preSelectedMediaType,);
         }
     }, [visible, preSelectedMediaType, handleSelectMedia]);
 
@@ -371,6 +374,8 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             additionalInfoLocalized: additionalInfo,
             acceptSimilarAnswers,
             questionType,
+            visibility: QuestionVisibility.PRIVATE,
+            audioConfig: DEFAULT_AUDIO_CONFIG,
             // CRITICAL: Pass the raw file info for the mutation to handle
             mediaFile: (mediaInputMode === 'upload' && selectedMedia) ? {
                 uri: selectedMedia.uri,
@@ -379,8 +384,8 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
             } : undefined,
             // External media (new)
             mediaSourceType: mediaInputMode === 'link' && detectedPlatform 
-                ? (detectedPlatform === 'youtube' ? 'YOUTUBE' : detectedPlatform === 'vimeo' ? 'VIMEO' : 'EXTERNAL_URL')
-                : (selectedMedia ? 'UPLOADED' : undefined),
+                ? (detectedPlatform === 'youtube' ? MediaSourceType.YOUTUBE : detectedPlatform === 'vimeo' ? MediaSourceType.VIMEO : MediaSourceType.EXTERNAL_URL)
+                : (selectedMedia ? MediaSourceType.UPLOADED : undefined),
             externalMediaUrl: mediaInputMode === 'link' ? externalVideoUrl.trim() : undefined,
             questionVideoStartTime: videoStartTime ? parseFloat(videoStartTime) : undefined,
             questionVideoEndTime: videoEndTime ? parseFloat(videoEndTime) : undefined,
@@ -852,7 +857,7 @@ const RegularQuestionEditor: React.FC<RegularQuestionEditorProps> = ({
                     <View style={form.section}>
                         <Text style={form.sectionTitle}>{t('createQuest.addQuestion.difficultyLabel')} *</Text>
                         <View style={styles.difficultyContainer}>
-                            {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
+                            {DIFFICULTY_LEVELS.map((level) => (
                                 <TouchableOpacity
                                     key={level}
                                     style={[
@@ -1235,4 +1240,3 @@ const themeStyles = createStyles(theme => ({
 }));
 
 export default RegularQuestionEditor;
-

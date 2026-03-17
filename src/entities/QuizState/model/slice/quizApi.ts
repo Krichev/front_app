@@ -2,10 +2,11 @@
 import {BaseQueryArg, createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
-import {APIDifficulty, MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
+import {MediaType, QuestionType} from '../../../../services/wwwGame/questionService';
 import {CreateQuizQuestionRequest, QuestionVisibility, MediaSourceType, UserRelationship, RelationshipStatus, RelationshipType} from "../types/question.types";
 import {RootStateForApi} from '../../../../app/providers/StoreProvider/storeTypes';
 import {Platform} from 'react-native';
+import { Difficulty } from '../../../../shared/types/difficulty';
 
 // ============================================================================
 // TYPES
@@ -18,7 +19,7 @@ import {Platform} from 'react-native';
 export interface CreateQuestionRequest {
     question: string;
     answer: string;
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     topic?: string;
     additionalInfo?: string;
     source?: string;
@@ -57,7 +58,7 @@ export interface QuizQuestion {
     answer: string;
 
     // Classification
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     questionType: QuestionType;
     topic?: string;
     source?: string;
@@ -153,7 +154,7 @@ export interface PaginatedQuestionResponse {
  */
 export interface QuestionSearchParams {
     keyword?: string;
-    difficulty?: APIDifficulty;
+    difficulty?: Difficulty;
     topic?: string;
     page?: number;
     size?: number;
@@ -211,7 +212,7 @@ export interface QuizConfig {
     gameType: 'WWW';
     teamName: string;
     teamMembers: string[];
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     gameMode: GameMode;
     answerTimeSeconds: number;
     roundTime: number;
@@ -229,7 +230,7 @@ export interface QuizSession {
     hostUsername: string;
     teamName: string;
     teamMembers: string[];
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     gameMode: GameMode;
     answerTimeSeconds: number;
     roundTimeSeconds: number;
@@ -257,7 +258,7 @@ export interface StartQuizSessionRequest {
     challengeId: string;
     teamName: string;
     teamMembers: string[];
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     gameMode?: GameMode;
     answerTimeSeconds?: number;
     roundTimeSeconds: number;
@@ -579,7 +580,7 @@ export const quizApi = createApi({
         /**
          * Random questions endpoint
          */
-        getRandomQuestions: builder.query<QuizQuestion[], { count?: number; difficulty?: APIDifficulty }>({
+        getRandomQuestions: builder.query<QuizQuestion[], { count?: number; difficulty?: Difficulty }>({
             query: ({ count = 20, difficulty }) => ({
                 url: '/quiz/questions/random',
                 params: {
@@ -596,7 +597,7 @@ export const quizApi = createApi({
         /**
          * Keyword search endpoint (uses QuizQuestionSearchController)
          */
-        searchQuestionsByKeyword: builder.query<QuizQuestion[], { keyword: string; count?: number; difficulty?: APIDifficulty }>({
+        searchQuestionsByKeyword: builder.query<QuizQuestion[], { keyword: string; count?: number; difficulty?: Difficulty }>({
             query: ({ keyword, count = 20, difficulty }) => ({
                 url: '/quiz/questions/search',
                 params: {

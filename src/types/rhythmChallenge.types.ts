@@ -1,4 +1,4 @@
-// src/types/rhythmChallenge.types.ts
+import { Difficulty } from '../shared/types/difficulty';
 
 /**
  * Rhythm pattern extracted from reference audio
@@ -66,7 +66,7 @@ export interface ScoreRhythmTapsRequest {
     questionId: number;
     referencePattern: RhythmPatternDTO;
     userOnsetTimesMs: number[];
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: Difficulty;
     minimumScorePercentage: number;
     toleranceMs?: number; // Deprecated
     minimumScoreRequired?: number; // Legacy
@@ -175,7 +175,7 @@ export interface ScoreRhythmAudioRequest {
         type: string;
     };
     enableSoundSimilarity: boolean;
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: Difficulty;
     minimumScorePercentage: number;
     toleranceMs?: number; // Deprecated
 }

@@ -1,4 +1,4 @@
-import {ApiChallenge} from '../../entities/ChallengeState/model/slice/challengeApi';
+import {ApiChallenge} from '../../entities/ChallengeState/model/types';
 import {getVerificationMethods, VerificationMethod} from '../../app/types';
 import i18n from 'i18next';
 

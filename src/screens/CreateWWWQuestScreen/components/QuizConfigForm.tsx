@@ -4,7 +4,7 @@ import React from 'react';
 import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {QuizConfig} from '../hooks/useQuestCreator';
-import {APIDifficulty} from '../../../services/wwwGame/questionService';
+import { Difficulty, DIFFICULTY_LEVELS } from '../../../shared/types/difficulty';
 
 interface QuizConfigFormProps {
     config: QuizConfig;
@@ -32,11 +32,8 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
         onConfigChange({ ...config, ...updates });
     };
 
-    // Use APIDifficulty type (uppercase values)
-    const difficulties: APIDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
-
     // Helper function to display difficulty with proper capitalization
-    const formatDifficultyDisplay = (difficulty: APIDifficulty): string => {
+    const formatDifficultyDisplay = (difficulty: Difficulty): string => {
         switch (difficulty) {
             case 'EASY': return t('createQuest.quizConfig.easy');
             case 'MEDIUM': return t('createQuest.quizConfig.medium');
@@ -165,7 +162,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
             <View style={styles.section}>
                 <Text style={styles.label}>{t('createQuest.quizConfig.difficulty')} *</Text>
                 <View style={styles.difficultyContainer}>
-                    {difficulties.map((diff: APIDifficulty) => (
+                    {DIFFICULTY_LEVELS.map((diff: Difficulty) => (
                         <TouchableOpacity
                             key={diff}
                             style={[

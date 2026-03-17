@@ -1,6 +1,7 @@
 // src/entities/QuizState/model/types/question.types.ts
 
 import { LocalizedString } from '../../../../shared/types/localized';
+import { Difficulty } from '../../../../shared/types/difficulty';
 
 export enum QuestionVisibility {
     PRIVATE = 'PRIVATE',
@@ -21,7 +22,7 @@ export enum MediaSourceType {
 export interface CreateQuizQuestionRequest {
     question: string;
     answer: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty?: Difficulty;
     topic?: string;
     source?: string;
     additionalInfo?: string;
@@ -57,96 +58,29 @@ export interface UpdateQuestionVisibilityRequest {
 
 export interface QuestionSearchParams {
     keyword?: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty?: Difficulty;
     topic?: string;
     quizId?: number;
     page?: number;
     size?: number;
 }
 
-// Relationship types
-export enum RelationshipType {
-    COLLEAGUE = 'COLLEAGUE',
-    CLASSMATE = 'CLASSMATE',
-    FRIEND = 'FRIEND',
-    CLOSE_FRIEND = 'CLOSE_FRIEND',
-    FAMILY = 'FAMILY',
-    FAMILY_PARENT = 'FAMILY_PARENT',
-    FAMILY_SIBLING = 'FAMILY_SIBLING',
-    FAMILY_EXTENDED = 'FAMILY_EXTENDED',
-    PARTNER = 'PARTNER',
-    ACQUAINTANCE = 'ACQUAINTANCE',
-    BLOCKED = 'BLOCKED'
-}
+// Re-export relationship types for backward compatibility during migration
+export {
+    RelationshipType,
+    RelationshipStatus
+} from '../../../ContactState/model/types';
 
-export enum RelationshipStatus {
-    PENDING = 'PENDING',
-    ACCEPTED = 'ACCEPTED',
-    REJECTED = 'REJECTED'
-}
-
-export interface UserRelationship {
-    id: string;
-    userId: string;
-    relatedUserId: string;
-    relatedUserUsername: string;
-    relatedUserAvatar?: string;
-    relationshipType: RelationshipType;
-    status: RelationshipStatus;
-    nickname?: string;
-    notes?: string;
-    isFavorite: boolean;
-    createdAt: string;
-}
-
-export interface ContactGroup {
-    id: string;
-    name: string;
-    color?: string;
-    icon?: string;
-    memberCount: number;
-}
-
-export interface UserSearchResult {
-    id: string;
-    username: string;
-    avatar?: string;
-    bio?: string;
-    mutualConnectionsCount: number;
-    connectionStatus?: 'NONE' | 'PENDING' | 'ACCEPTED';
-}
-
-export interface CreateRelationshipRequest {
-    relatedUserId: string | number;
-    relationshipType: RelationshipType;
-    nickname?: string;
-}
-
-export interface UpdateRelationshipRequest {
-    relationshipType?: RelationshipType;
-    nickname?: string;
-    notes?: string;
-    isFavorite?: boolean;
-}
-
-export interface UserPrivacySettings {
-    allowRequestsFrom: string;
-    showConnections: boolean;
-    showMutualConnections: boolean;
-}
-
-export interface UserSuggestion {
-    id: string;
-    username: string;
-    avatar?: string;
-    mutualConnectionsCount: number;
-}
-
-export interface MutualConnection {
-    id: string;
-    username: string;
-    avatar?: string;
-}
+export type {
+    UserRelationship,
+    ContactGroup,
+    UserSearchResult,
+    CreateRelationshipRequest,
+    UpdateRelationshipRequest,
+    UserPrivacySettings,
+    UserSuggestion,
+    MutualConnection
+} from '../../../ContactState/model/types';
 
 // Helper functions
 export const getVisibilityLabel = (visibility: QuestionVisibility): string => {

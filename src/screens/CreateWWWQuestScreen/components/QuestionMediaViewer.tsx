@@ -10,7 +10,7 @@ import {
     ViewStyle
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { MediaType } from '../../../services/wwwGame/questionService';
+import { MediaType } from '../../../shared/types';
 import AuthenticatedImage from '../../../components/AuthenticatedImage';
 import AuthenticatedVideo from '../../../components/AuthenticatedVideo';
 import AuthenticatedAudio from '../../../components/AuthenticatedAudio';

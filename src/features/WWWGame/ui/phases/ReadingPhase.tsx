@@ -4,7 +4,7 @@ import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import QuestionMediaViewer from '../../../../screens/CreateWWWQuestScreen/components/QuestionMediaViewer';
-import { MediaType } from '../../../../services/wwwGame/questionService';
+import { MediaType } from '../../../../shared/types';
 
 interface ReadingPhaseProps {
   question: QuizQuestion;

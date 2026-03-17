@@ -2,9 +2,9 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
+import { Difficulty } from '../../../../shared/types/difficulty';
 
-export type UIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
-export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type { Difficulty as APIDifficulty } from '../../../../shared/types/difficulty';
 
 export interface TournamentQuestionSummaryDTO {
     id: string;
@@ -13,7 +13,7 @@ export interface TournamentQuestionSummaryDTO {
     tournamentTitle: string;
     displayOrder: number;
     questionPreview: string;
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     topic: string;
     questionType: string;
     hasMedia: boolean;
@@ -38,24 +38,6 @@ export interface TournamentStatistics {
     hasMediaCount: number;
 }
 
-export const convertToAPIDifficulty = (difficulty: UIDifficulty): APIDifficulty => {
-    const mapping: Record<UIDifficulty, APIDifficulty> = {
-        'EASY': 'EASY',
-        'MEDIUM': 'MEDIUM',
-        'HARD': 'HARD'
-    };
-    return mapping[difficulty];
-};
-
-export const convertToUIDifficulty = (difficulty: APIDifficulty): UIDifficulty => {
-    const mapping: Record<APIDifficulty, UIDifficulty> = {
-        'EASY': 'EASY',
-        'MEDIUM': 'MEDIUM',
-        'HARD': 'HARD'
-    };
-    return mapping[difficulty];
-};
-
 export const tournamentQuestionApi = createApi({
     reducerPath: 'tournamentQuestionApi',
     baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
@@ -63,7 +45,7 @@ export const tournamentQuestionApi = createApi({
     endpoints: (builder) => ({
         getQuestionsByDifficulty: builder.query<TournamentQuestionSummaryDTO[], {
             tournamentId: number;
-            difficulty: APIDifficulty;
+            difficulty: Difficulty;
             count?: number;
         }>({
             query: ({ tournamentId, difficulty, count = 10 }) => ({

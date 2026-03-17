@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { LocalizedString, EMPTY_LOCALIZED_STRING } from '../../../shared/types/localized';
-import { ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationType } from '../../../app/types';
+import { ChallengeFrequency, ChallengeType, ChallengeVisibility, VerificationType } from '../../../entities/ChallengeState/model/types';
 
 export interface CreateChallengeFormData {
     title: LocalizedString;

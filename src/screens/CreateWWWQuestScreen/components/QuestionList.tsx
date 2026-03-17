@@ -5,7 +5,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
-import {APIDifficulty, MediaType, QuestionSource} from '../../../services/wwwGame/questionService';
+import {APIDifficulty, QuestionSource} from '../../../services/wwwGame/questionService';
+import { MediaType } from '../../../shared/types';
 import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi";
 import QuestionMediaViewer from './QuestionMediaViewer';
 import AuthenticatedImage from '../../../components/AuthenticatedImage';

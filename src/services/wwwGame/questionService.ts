@@ -8,34 +8,14 @@ import {Alert} from 'react-native';
 import KeychainService from "../auth/KeychainService.ts";
 import {QuestionVisibility} from "../../entities/QuizState/model/types/question.types.ts";
 import {QuizQuestion} from '../../entities/QuizState/model/slice/quizApi.ts';
+import { Difficulty, QuestionType, MediaType } from '../../shared/types';
+
+export { QuestionType, MediaType };
+export type { Difficulty, Difficulty as APIDifficulty, QuestionType as QuestionTypeType, MediaType as MediaTypeType } from '../../shared/types';
 
 // Types matching backend DTOs
-export type UIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
-export type APIDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type QuestionSource = 'app' | 'user';
 // export type QuestionVisibility = 'PUBLIC' | 'PRIVATE' | 'FRIENDS_ONLY';
-
-export const QuestionType = {
-    TEXT: 'TEXT',
-    IMAGE: 'IMAGE',
-    VIDEO: 'VIDEO',
-    AUDIO: 'AUDIO'
-} as const;
-
-export type QuestionType = typeof QuestionType[keyof typeof QuestionType];
-
-// export enum QuestionType {
-//     WHAT_WHERE_WHEN = 'WHAT_WHERE_WHEN',
-//     BLITZ = 'BLITZ',
-//     OWN_QUESTION = 'OWN_QUESTION',
-//     STANDARD = 'STANDARD'
-// }
-
-export enum MediaType {
-    IMAGE = 'IMAGE',
-    AUDIO = 'AUDIO',
-    VIDEO = 'VIDEO'
-}
 
 
 export interface UserQuestion {
@@ -44,7 +24,7 @@ export interface UserQuestion {
     answer: string;
     questionLocalized?: import('../../shared/types/localized').LocalizedString;
     answerLocalized?: import('../../shared/types/localized').LocalizedString;
-    difficulty: APIDifficulty;
+    difficulty: Difficulty;
     visibility: QuestionVisibility;
     topic?: string;
     acceptSimilarAnswers?: boolean;
@@ -221,7 +201,7 @@ export class QuestionService {
      */
     static async advancedSearchQuestions(params: {
         keyword?: string;
-        difficulty?: APIDifficulty;
+        difficulty?: Difficulty;
         topic?: string;
         isUserCreated?: boolean;
         page?: number;
@@ -288,7 +268,7 @@ export class QuestionService {
      */
     static async fetchRandomQuestions(
         count: number = 50,
-        difficulty?: APIDifficulty
+        difficulty?: Difficulty
     ): Promise<QuizQuestion[]> {
         try {
             const queryParams = new URLSearchParams();
@@ -319,7 +299,7 @@ export class QuestionService {
     static async searchQuestions(
         keyword: string,
         count: number = 20,
-        difficulty?: APIDifficulty
+        difficulty?: Difficulty
     ): Promise<QuizQuestion[]> {
         try {
             const queryParams = new URLSearchParams();
@@ -355,7 +335,7 @@ export class QuestionService {
      * Get questions by difficulty
      */
     static async getQuestionsByDifficulty(
-        difficulty: APIDifficulty,
+        difficulty: Difficulty,
         count: number = 20
     ): Promise<QuizQuestion[]> {
         return this.fetchRandomQuestions(count, difficulty);

@@ -3,7 +3,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
-import { MediaType, QuestionType } from '../../services/wwwGame/questionService';
+import { MediaType, QuestionType } from '../../shared/types';
 import { AudioChallengeType } from '../../types/audioChallenge.types';
 import { KaraokeQuestionDisplay } from './KaraokeQuestionDisplay';
 import QuestionMediaViewer from '../CreateWWWQuestScreen/components/QuestionMediaViewer';

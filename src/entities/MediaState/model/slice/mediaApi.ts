@@ -2,6 +2,7 @@
 import {createApi} from '@reduxjs/toolkit/query/react';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
+import { MediaType } from '../../../../shared/types';
 
 // ============================================================================
 // TYPES
@@ -12,7 +13,7 @@ export interface MediaFile {
     filename: string;
     url: string;
     thumbnailUrl?: string;
-    mediaType: 'IMAGE' | 'VIDEO' | 'AUDIO';
+    mediaType: MediaType;
     fileSize: number;
     mimeType: string;
     processingStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
@@ -25,7 +26,7 @@ export interface UploadMediaResponse {
     filename: string;
     url: string;
     thumbnailUrl?: string;
-    mediaType: 'IMAGE' | 'VIDEO' | 'AUDIO';
+    mediaType: MediaType;
     fileSize: number;
     processingStatus: string;
 }

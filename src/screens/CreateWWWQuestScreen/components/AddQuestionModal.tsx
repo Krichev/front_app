@@ -6,6 +6,7 @@ import {useTranslation} from 'react-i18next';
 import {CustomQuestion} from '../hooks/useQuestionsManager';
 import {TopicTreeSelector} from '../../../shared/ui/TopicSelector';
 import {SelectableTopic} from '../../../entities/TopicState';
+import { Difficulty, DIFFICULTY_LEVELS } from '../../../shared/types/difficulty';
 
 interface AddQuestionModalProps {
     visible: boolean;
@@ -21,7 +22,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
     const {t} = useTranslation();
     const [question, setQuestion] = useState('');
     const [answer, setAnswer] = useState('');
-    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+    const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
     const [topic, setTopic] = useState('');
     const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState(true);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
@@ -78,7 +79,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         onClose();
     };
 
-    const getDifficultyLabel = (diff: 'EASY' | 'MEDIUM' | 'HARD') => {
+    const getDifficultyLabel = (diff: Difficulty) => {
         switch (diff) {
             case 'EASY': return t('createQuest.quizConfig.easy');
             case 'MEDIUM': return t('createQuest.quizConfig.medium');
@@ -158,7 +159,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                             <View style={styles.inputContainer}>
                                 <Text style={styles.label}>{t('createQuest.addQuestion.difficultyLabel')}</Text>
                                 <View style={styles.difficultyContainer}>
-                                    {(['EASY', 'MEDIUM', 'HARD'] as const).map((diff) => (
+                                    {DIFFICULTY_LEVELS.map((diff) => (
                                         <TouchableOpacity
                                             key={diff}
                                             style={[

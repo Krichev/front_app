@@ -4,6 +4,8 @@
 // ENUMS
 // ============================================================================
 
+import { Difficulty } from '../../../shared/types/difficulty';
+
 export type PuzzleGameMode = 'SHARED' | 'INDIVIDUAL';
 
 export type PuzzleEdgeType = 'FLAT' | 'TAB' | 'BLANK';
@@ -24,7 +26,7 @@ export interface CreatePuzzleGameRequest {
     gridCols: number;        // 2-8
     answer: string;
     answerAliases?: string[];
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty?: Difficulty;
     timeLimitSeconds?: number;
     hintText?: string;
     hintAvailableAfterSeconds?: number;
@@ -48,7 +50,7 @@ export interface PuzzleGameDTO {
     gridRows: number;
     gridCols: number;
     totalPieces: number;
-    difficulty: string;
+    difficulty: Difficulty;
     status: PuzzleSessionStatus;
     timeLimitSeconds?: number;
     hintText?: string;

@@ -27,6 +27,9 @@ import {createStyles} from '../../../shared/ui/theme';
 import { LocalizedInput } from '../../../shared/ui/LocalizedInput';
 import { LocalizedString, EMPTY_LOCALIZED_STRING, getLocalizedValue, isLocalizedStringEmpty } from '../../../shared/types/localized';
 import { useI18n } from '../../../app/providers/I18nProvider';
+import { Difficulty, DIFFICULTY_LEVELS } from '../../../shared/types/difficulty';
+import { QuestionVisibility } from '../../../entities/QuizState/model/types/question.types';
+import { DEFAULT_AUDIO_CONFIG } from '../../../screens/components/AudioChallengeSection';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -60,7 +63,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
     // Form state
     const [question, setQuestion] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
     const [answer, setAnswer] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
-    const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
+    const [difficulty, setDifficulty] = useState<Difficulty>('MEDIUM');
     const [topic, setTopic] = useState('');
     const [acceptSimilarAnswers, setAcceptSimilarAnswers] = useState(true);
     const [selectedTopicId, setSelectedTopicId] = useState<number | undefined>(undefined);
@@ -278,6 +281,9 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
             additionalInfo: getLocalizedValue(additionalInfo, currentLanguage),
             additionalInfoLocalized: additionalInfo,
             questionType,
+            visibility: QuestionVisibility.PRIVATE,
+            audioConfig: DEFAULT_AUDIO_CONFIG,
+            acceptSimilarAnswers,
             // CRITICAL: Pass the raw file info for the mutation to handle
             mediaFile: selectedMedia ? {
                 uri: selectedMedia.uri,
@@ -554,7 +560,7 @@ const MediaQuestionModal: React.FC<MediaQuestionModalProps> = ({
                     <View style={form.section}>
                         <Text style={form.sectionTitle}>{t('createQuest.addQuestion.difficultyLabel')} *</Text>
                         <View style={styles.difficultyContainer}>
-                            {(['EASY', 'MEDIUM', 'HARD'] as const).map((level) => (
+                            {DIFFICULTY_LEVELS.map((level) => (
                                 <TouchableOpacity
                                     key={level}
                                     style={[

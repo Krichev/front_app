@@ -1,5 +1,6 @@
 // src/services/wwwGame/deepseekHostService.ts
 import {Platform} from 'react-native';
+import { Difficulty } from '../../shared/types/difficulty';
 
 /**
  * Configuration for the DeepSeek AI Host Service
@@ -284,7 +285,7 @@ Did the team mention the correct answer or something very close to it? Extract t
     static async generateHint(
         question: string,
         correctAnswer: string,
-        difficulty: 'EASY' | 'MEDIUM' | 'HARD' = 'MEDIUM',
+        difficulty: Difficulty = 'MEDIUM',
         previousHints: string[] = []
     ): Promise<string> {
         if (!question || !correctAnswer) {
@@ -366,7 +367,7 @@ Did the team mention the correct answer or something very close to it? Extract t
         teamName: string,
         correctAnswers: number,
         totalQuestions: number,
-        playerPerformances: Array<{ player: string, correct: number, total: number }>,
+        playerPerformances: Array<{ player: string, correct: number, total: number } >,
         questionData: Array<{
             question: string,
             correctAnswer: string,
@@ -460,7 +461,7 @@ Did the team mention the correct answer or something very close to it? Extract t
     static async classifyQuestionDifficulty(
         question: string,
         answer: string
-    ): Promise<'EASY' | 'MEDIUM' | 'HARD'> {
+    ): Promise<Difficulty> {
         try {
             const messages = [
                 {
@@ -527,7 +528,7 @@ Did the team mention the correct answer or something very close to it? Extract t
      */
     static async generateQuestionIntroduction(
         question: string,
-        difficulty: 'EASY' | 'MEDIUM' | 'HARD',
+        difficulty: Difficulty,
         roundNumber: number,
         totalRounds: number
     ): Promise<string> {
@@ -643,7 +644,7 @@ Did the team mention the correct answer or something very close to it? Extract t
         }
     }
 
-    // ========== Local fallback implementations ==========
+    // ========== Local fallback implementations ========== 
 
     /**
      * Local fallback for discussion analysis
@@ -733,7 +734,7 @@ Did the team mention the correct answer or something very close to it? Extract t
      */
     private static localGenerateHint(
         correctAnswer: string,
-        difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+        difficulty: Difficulty
     ): string {
         // Basic hints that reveal more based on difficulty
         const words = correctAnswer.split(' ');
@@ -768,7 +769,7 @@ Did the team mention the correct answer or something very close to it? Extract t
     private static localGenerateGameFeedback(
         correctAnswers: number,
         totalQuestions: number,
-        playerPerformances: Array<{ player: string, correct: number, total: number }>,
+        playerPerformances: Array<{ player: string, correct: number, total: number } >,
         incorrectQuestions: Array<{ question: string, correctAnswer: string }>
     ): string {
         const correctPercentage = (correctAnswers / totalQuestions) * 100;

@@ -159,13 +159,14 @@ export const getScoringWeights = (type: AudioChallengeType): { pitch: number; rh
 
 import {ProcessedFileInfo} from '../services/speech/FileService';
 import {QuestionVisibility} from '../entities/QuizState/model/types/question.types';
+import { Difficulty } from '../shared/types/difficulty';
 
 export interface CreateAudioQuestionForm {
     question: string;
     answer?: string;
     audioChallengeType: AudioChallengeType;
     topic?: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty?: Difficulty;
     rhythmBpm?: number; // 40-240
     rhythmTimeSignature?: string; // e.g. "4/4"
     minimumScorePercentage: number; // 0-100

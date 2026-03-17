@@ -21,6 +21,7 @@ import {
     useGetScreenTimeBudgetQuery
 } from '../../../entities/WagerState/model/slice/wagerApi';
 import { useGetRelationshipsQuery } from '../../../entities/UserState/model/slice/relationshipApi';
+import { RelationshipStatus } from '../../../entities/ContactState/model/types';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../../app/providers/StoreProvider/store';
 
@@ -39,13 +40,13 @@ export const ScreenTimeSettingsSection: React.FC = () => {
     
     const [showDelegateModal, setShowDelegateModal] = useState(false);
     const { data: friendsData, isLoading: isLoadingFriends } = useGetRelationshipsQuery(
-        { status: 'ACCEPTED', size: 50 },
+        { status: RelationshipStatus.ACCEPTED, size: 50 },
         { skip: !showDelegateModal }
     );
 
     const handleToggle = async (value: boolean) => {
         try {
-            if (budget?.controlLocked && budget.controlledBy !== currentUser?.id) {
+            if (budget?.controlLocked && budget.controlledBy !== Number(currentUser?.id)) {
                 // Should be disabled in UI, but safety check
                 return;
             }
@@ -83,7 +84,7 @@ export const ScreenTimeSettingsSection: React.FC = () => {
 
     if (!budget) return null;
 
-    const isControlledByOthers = budget.controlLocked && budget.controlledBy !== currentUser?.id;
+    const isControlledByOthers = budget.controlLocked && budget.controlledBy !== Number(currentUser?.id);
     const isSelfManaged = !budget.controlLocked;
 
     return (

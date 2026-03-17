@@ -3,6 +3,7 @@ import {createApi} from '@reduxjs/toolkit/query/react';
 import {Platform} from 'react-native';
 import {createBaseQueryWithAuth} from '../../../../app/api/baseQueryWithAuth';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
+import { Difficulty } from '../../../../shared/types/difficulty';
 import {
     AudioChallengeType,
     AudioChallengeTypeInfo,
@@ -31,7 +32,7 @@ export interface CreateAudioQuestionRequest {
     answer?: string;
     audioChallengeType: AudioChallengeType;
     topic?: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty?: Difficulty;
     visibility?: 'PUBLIC' | 'PRIVATE' | 'GROUP_ONLY' | 'QUIZ_ONLY';
     additionalInfo?: string;
     audioSegmentStart?: number;
@@ -63,7 +64,7 @@ export interface AudioQuestionResponse {
     question: string;
     answer?: string;
     questionType: 'AUDIO';
-    difficulty?: string;
+    difficulty?: Difficulty;
     topic?: string;
     
     // Media properties

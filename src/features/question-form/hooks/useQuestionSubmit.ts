@@ -7,7 +7,7 @@ import { QuestionService, UserQuestion } from "../../../services/wwwGame/questio
 import { QuestionFormData, MediaInfo, QuestionType, DifficultyLevel } from "../model/types";
 import { validateQuestionForm } from "../lib/questionValidation";
 import { mapFormStateToPayload } from "../lib/questionFormMapper";
-import { LocalizedString } from "../../../shared/types/localized";
+import { LocalizedString, AppLanguage } from "../../../shared/types/localized";
 import { QuestionVisibility, MediaSourceType } from "../../../entities/QuizState/model/types/question.types";
 import { AudioChallengeConfig } from "../../../screens/components/AudioChallengeSection";
 import { ProcessedFileInfo } from "../../../services/speech/FileService";
@@ -16,7 +16,7 @@ interface UseQuestionSubmitOptions {
     isEditing: boolean;
     existingQuestion?: UserQuestion;
     onQuestionSubmit?: (data: QuestionFormData) => void;
-    currentLanguage: string;
+    currentLanguage: AppLanguage;
 }
 
 export function useQuestionSubmit({

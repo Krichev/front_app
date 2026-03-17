@@ -2,6 +2,7 @@
 // import React, {useState} from 'react';
 // import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
 // import {QuizConfig} from '../entities/QuizState/model/slice/quizApi';
+// import {Difficulty, DIFFICULTY_LEVELS} from '../shared/types/difficulty';
 //
 // interface QuizConfigFormProps {
 //     quizConfig: QuizConfig;
@@ -31,7 +32,7 @@
 //         updateConfig({ teamMembers: newMembers });
 //     };
 //
-//     const difficulties: Array<'EASY' | 'MEDIUM' | 'HARD'> = ['EASY', 'MEDIUM', 'HARD'];
+//     const difficulties: Difficulty[] = DIFFICULTY_LEVELS as any;
 //
 //     return (
 //         <View style={styles.container}>

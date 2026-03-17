@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { LocalizedInput } from '../../../shared/ui/LocalizedInput';
 import { styles } from '../styles';
 import { CreateChallengeFormData } from '../hooks/useCreateChallengeForm';
-import { ChallengeType, ChallengeVisibility, ChallengeFrequency } from '../../../app/types';
+import { ChallengeType, ChallengeVisibility, ChallengeFrequency } from '../../../entities/ChallengeState/model/types';
 
 interface ChallengeBasicInfoSectionProps {
     formData: CreateChallengeFormData;
@@ -36,6 +36,7 @@ export const ChallengeBasicInfoSection: React.FC<ChallengeBasicInfoSectionProps>
         { label: t('createChallenge.basicInfo.frequencyOptions.ONE_TIME'), value: 'ONE_TIME' },
         { label: t('createChallenge.basicInfo.frequencyOptions.DAILY'), value: 'DAILY' },
         { label: t('createChallenge.basicInfo.frequencyOptions.WEEKLY'), value: 'WEEKLY' },
+        { label: t('createChallenge.basicInfo.frequencyOptions.MONTHLY'), value: 'MONTHLY' },
     ];
 
     return (

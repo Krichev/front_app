@@ -1,9 +1,19 @@
 // types/index.ts - Shared type definitions for the application
+import {
+    ChallengeStatus,
+    ChallengeFrequency,
+    ChallengeType,
+    ChallengeVisibility,
+    VerificationType
+} from '../../entities/ChallengeState/model/types';
 
-/**
- * Verification method types - UPDATED to match backend enum
- */
-export type VerificationType = 'PHOTO' | 'LOCATION' | 'QUIZ' | 'MANUAL' | 'FITNESS_API' | 'ACTIVITY';
+export type {
+    ChallengeStatus,
+    ChallengeFrequency,
+    ChallengeType,
+    ChallengeVisibility,
+    VerificationType
+};
 
 /**
  * Verification status types
@@ -55,26 +65,6 @@ export interface LocationData {
     address: string;
     timestamp: string;
 }
-
-/**
- * Challenge frequency types
- */
-export type ChallengeFrequency = 'DAILY' | 'WEEKLY' | 'ONE_TIME';
-
-/**
- * Challenge type definition
- */
-export type ChallengeType = 'QUEST' | 'QUIZ' | 'ACTIVITY_PARTNER' | 'FITNESS_TRACKING' | 'HABIT_BUILDING';
-
-/**
- * Challenge visibility options
- */
-export type ChallengeVisibility = 'PUBLIC' | 'PRIVATE' | 'GROUP_ONLY';
-
-/**
- * Challenge status options
- */
-export type ChallengeStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'ACTIVE' | 'DRAFT';
 
 /**
  * Verification details for photo verification

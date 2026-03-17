@@ -5,7 +5,7 @@
 // WWW QUIZ TYPES (EXISTING)
 // ============================================================================
 
-import {APIDifficulty} from "../../../services/wwwGame/questionService.ts";
+import { Difficulty } from '../../../shared/types/difficulty';
 import { LocalizedString } from '../../../shared/types/localized';
 
 export enum PaymentType {
@@ -37,7 +37,7 @@ export interface WWWQuizConfig {
     /** List of team member names */
     teamMembers: string[];
     /** Difficulty level of quiz questions */
-    difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    difficulty: Difficulty;
     /** Time allowed for discussion in seconds */
     roundTime: number;
     /** Number of questions in the quiz */
@@ -114,7 +114,7 @@ export interface ApiChallenge {
     penalty?: string;
     verificationMethod?: string;
     targetGroup?: string;
-    frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
+    frequency?: ChallengeFrequency;
     startDate?: string;
     endDate?: string;
     quizConfig?: string;
@@ -150,7 +150,7 @@ export interface CreateChallengeRequest {
     verificationMethod?: string;
     verificationDetails?: Record<string, any>;
     targetGroup?: string;
-    frequency?: 'DAILY' | 'WEEKLY' | 'ONE_TIME';
+    frequency?: ChallengeFrequency;
     startDate?: string;
     endDate?: string;
     tags?: string[];
@@ -163,7 +163,7 @@ export interface CreateChallengeRequest {
     hasPrize?: boolean;
     prizeAmount?: number;
     prizeCurrency?: CurrencyType;
-    difficulty?: APIDifficulty;
+    difficulty?: Difficulty;
     // Access control properties
     requiresApproval?: boolean;
     invitedUserIds?: number[];
@@ -259,7 +259,7 @@ export type ParticipantConsentStatus =
  */
 export interface QuizChallengeConfig {
     // Existing fields
-    defaultDifficulty: 'EASY' | 'MEDIUM' | 'HARD';
+    defaultDifficulty: Difficulty;
     defaultRoundTimeSeconds: number;
     defaultTotalRounds: number;
     enableAiHost: boolean;
@@ -369,10 +369,10 @@ export interface UpdateConsentRequest {
 export interface CreateQuizChallengeRequest {
     title: string;
     description: string;
-    visibility: 'PUBLIC' | 'PRIVATE';
+    visibility: ChallengeVisibility;
     startDate?: Date;
     endDate?: Date;
-    frequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONE_TIME';
+    frequency?: ChallengeFrequency;
     quizConfig: QuizChallengeConfig;
     customQuestions: any[]; // CreateQuizQuestionRequest[] from quizApi
     selectedQuestionIds?: number[];
@@ -727,8 +727,8 @@ export interface CreateAudioQuestionRequest {
     answer?: string;
     audioChallengeType: import('../../../types/audioChallenge.types').AudioChallengeType;
     topic?: string;
-    difficulty?: 'EASY' | 'MEDIUM' | 'HARD';
-    visibility?: 'PUBLIC' | 'PRIVATE' | 'GROUP_ONLY';
+    difficulty?: Difficulty;
+    visibility?: ChallengeVisibility;
     additionalInfo?: string;
     audioSegmentStart?: number;
     audioSegmentEnd?: number;
@@ -736,4 +736,7 @@ export interface CreateAudioQuestionRequest {
     rhythmBpm?: number;
     rhythmTimeSignature?: string;
     timeLimitSeconds?: number;
+    answerInputMode?: string;
+    maxReplays?: number;
+    allowReplay?: boolean;
 }

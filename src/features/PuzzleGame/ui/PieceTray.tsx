@@ -35,7 +35,7 @@ export const PieceTray: React.FC<PieceTrayProps> = ({
                             width={cellWidth * 1.2}
                             height={cellHeight * 1.2}
                             onDragStart={() => {}}
-                            onDragEnd={onDragEnd}
+                            onDragEnd={(x, y) => onDragEnd(index, x, y)}
                             disabled={disabled}
                         />
                     </View>

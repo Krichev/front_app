@@ -2,12 +2,13 @@
  * Media Utility Functions
  * Helper functions for working with media files and URLs
  */
+import { MediaType } from '../shared/types';
 
 export class MediaUtils {
     /**
      * Determine media type from file extension or MIME type
      */
-    static getMediaType(urlOrMimeType: string): 'image' | 'video' | 'audio' | 'unknown' {
+    static getMediaType(urlOrMimeType: string): MediaType | 'UNKNOWN' {
         const lower = urlOrMimeType.toLowerCase();
 
         // Check for video
@@ -15,7 +16,7 @@ export class MediaUtils {
             lower.includes('video/') ||
             /\.(mp4|mov|avi|wmv|flv|webm|m4v|mkv)(\?|$)/.test(lower)
         ) {
-            return 'video';
+            return MediaType.VIDEO;
         }
 
         // Check for audio
@@ -23,7 +24,7 @@ export class MediaUtils {
             lower.includes('audio/') ||
             /\.(mp3|wav|ogg|m4a|aac|flac|wma)(\?|$)/.test(lower)
         ) {
-            return 'audio';
+            return MediaType.AUDIO;
         }
 
         // Check for image
@@ -31,10 +32,22 @@ export class MediaUtils {
             lower.includes('image/') ||
             /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?|$)/.test(lower)
         ) {
-            return 'image';
+            return MediaType.IMAGE;
         }
 
-        return 'unknown';
+        return 'UNKNOWN';
+    }
+
+    /**
+     * Helper to normalize media type to uppercase canonical format
+     */
+    static normalizeMediaType(type?: string): MediaType | undefined {
+        if (!type) return undefined;
+        const upper = type.toUpperCase();
+        if (upper === 'IMAGE' || upper === 'VIDEO' || upper === 'AUDIO') {
+            return upper as MediaType;
+        }
+        return undefined;
     }
 
     /**
@@ -92,12 +105,13 @@ export class MediaUtils {
      * Get media icon name for MaterialCommunityIcons
      */
     static getMediaIconName(mediaType?: string): string {
-        switch (mediaType) {
-            case 'image':
+        const type = this.normalizeMediaType(mediaType);
+        switch (type) {
+            case MediaType.IMAGE:
                 return 'image';
-            case 'video':
+            case MediaType.VIDEO:
                 return 'video';
-            case 'audio':
+            case MediaType.AUDIO:
                 return 'music';
             default:
                 return 'file-document';
@@ -108,12 +122,13 @@ export class MediaUtils {
      * Get display label for media type
      */
     static getMediaLabel(mediaType?: string): string {
-        switch (mediaType) {
-            case 'image':
+        const type = this.normalizeMediaType(mediaType);
+        switch (type) {
+            case MediaType.IMAGE:
                 return '📷 Image';
-            case 'video':
+            case MediaType.VIDEO:
                 return '🎥 Video';
-            case 'audio':
+            case MediaType.AUDIO:
                 return '🎵 Audio';
             default:
                 return '📎 Media';
@@ -124,7 +139,8 @@ export class MediaUtils {
      * Check if media type supports thumbnails
      */
     static supportsThumbnails(mediaType?: string): boolean {
-        return mediaType === 'image' || mediaType === 'video';
+        const type = this.normalizeMediaType(mediaType);
+        return type === MediaType.IMAGE || type === MediaType.VIDEO;
     }
 
     /**
@@ -222,18 +238,19 @@ export class MediaUtils {
      * Validate media file type for upload
      */
     static isValidMediaType(mimeType: string, allowedTypes: string[] = ['image', 'video', 'audio']): boolean {
-        const type = mimeType.split('/')[0];
-        return allowedTypes.includes(type);
+        const type = mimeType.split('/')[0].toLowerCase();
+        return allowedTypes.map(t => t.toLowerCase()).includes(type);
     }
 
     /**
      * Get recommended thumbnail size based on media type
      */
     static getThumbnailDimensions(mediaType: string): { width: number; height: number } {
-        switch (mediaType) {
-            case 'image':
+        const type = this.normalizeMediaType(mediaType);
+        switch (type) {
+            case MediaType.IMAGE:
                 return { width: 300, height: 300 };
-            case 'video':
+            case MediaType.VIDEO:
                 return { width: 320, height: 180 }; // 16:9 aspect ratio
             default:
                 return { width: 150, height: 150 };
@@ -281,31 +298,3 @@ export class MediaUtils {
 }
 
 export default MediaUtils;
-
-/**
- * USAGE EXAMPLES:
- *
- * // Detect media type
- * const type = MediaUtils.getMediaType('video.mp4');
- * // Returns: 'video'
- *
- * // Check if URL is presigned
- * const isPresigned = MediaUtils.isPresignedUrl(mediaUrl);
- * // Returns: true/false
- *
- * // Get expiry time
- * const expiryMinutes = MediaUtils.getUrlExpiryTime(presignedUrl);
- * // Returns: number of minutes or null
- *
- * // Format file size
- * const size = MediaUtils.formatFileSize(1048576);
- * // Returns: "1 MB"
- *
- * // Check if needs refresh
- * const needsRefresh = MediaUtils.needsRefresh(url, 5);
- * // Returns: true if expires in less than 5 minutes
- *
- * // Get media icon
- * const iconName = MediaUtils.getMediaIconName('video');
- * // Returns: 'video'
- */

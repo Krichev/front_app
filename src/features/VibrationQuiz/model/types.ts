@@ -5,6 +5,7 @@
  */
 
 import type { RhythmPatternDTO } from '../../../types/rhythmChallenge.types';
+import { Difficulty } from '../../../shared/types/difficulty';
 
 // Re-export for convenience (also defined locally in vibrationConverter for standalone use)
 export type { RhythmPatternDTO };
@@ -16,7 +17,7 @@ export type { RhythmPatternDTO };
 /**
  * Difficulty levels for the vibration quiz
  */
-export type VibrationDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type VibrationDifficulty = Difficulty;
 
 /**
  * Game phases for the state machine
