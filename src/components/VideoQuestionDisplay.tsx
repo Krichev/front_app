@@ -73,6 +73,7 @@ const VideoQuestionDisplay: React.FC<VideoQuestionDisplayProps> = ({
                 showControls={false}
                 hideTitle={true}
                 style={styles.videoPlayer}
+                enableFullscreen={true}
             />
 
             <View style={styles.controls}>

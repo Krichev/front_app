@@ -3,6 +3,7 @@ import {
     ActivityIndicator,
     Animated,
     BackHandler,
+    Dimensions,
     Image,
     LayoutChangeEvent,
     Modal,
@@ -17,6 +18,7 @@ import YoutubePlayer, {YoutubeIframeRef} from 'react-native-youtube-iframe';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Slider from '@react-native-community/slider';
 import {useTranslation} from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface YouTubePlayerProps {
     videoId: string;
@@ -56,6 +58,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          style,
                                                      }) => {
     const { t } = useTranslation();
+    const insets = useSafeAreaInsets();
     const playerRef = useRef<YoutubeIframeRef>(null);
     const { width: screenWidth, height: screenHeight } = useDimensions();
 
@@ -66,6 +69,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const [playerHeight, setPlayerHeight] = useState(0);
     const [containerWidth, setContainerWidth] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(initialFullscreen);
+    const isTransitioningRef = useRef(false);
 
     // THUMBNAIL MODE
     const [videoStarted, setVideoStarted] = useState(autoPlay || !onlyPlayButton);
@@ -82,8 +86,20 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
     const overlayOpacity = useRef(new Animated.Value(1)).current;
 
-    const playerWidth = isFullscreen ? screenWidth : containerWidth;
-    const playerHeightFinal = isFullscreen ? screenHeight : playerHeight;
+    // Safe area aware fullscreen dimensions
+    const safeWidth = screenWidth - insets.left - insets.right;
+    const safeHeight = screenHeight - insets.top - insets.bottom;
+
+    // In fullscreen, fit 16:9 video within safe area using "contain" logic
+    let fullscreenVideoWidth = safeWidth;
+    let fullscreenVideoHeight = safeWidth * 9 / 16;
+    if (fullscreenVideoHeight > safeHeight) {
+        fullscreenVideoHeight = safeHeight;
+        fullscreenVideoWidth = safeHeight * 16 / 9;
+    }
+
+    const playerWidth = isFullscreen ? fullscreenVideoWidth : containerWidth;
+    const playerHeightFinal = isFullscreen ? fullscreenVideoHeight : playerHeight;
 
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${thumbnailFailed ? 'hqdefault' : 'maxresdefault'}.jpg`;
 
@@ -190,8 +206,11 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     }, [isReady, autoPlay, startTime]);
 
     const toggleFullscreen = useCallback(async () => {
+        if (isTransitioningRef.current) return;
+        isTransitioningRef.current = true;
         await saveCurrentState();
         setIsFullscreen(prev => !prev);
+        setTimeout(() => { isTransitioningRef.current = false; }, 500);
     }, [saveCurrentState]);
 
     useEffect(() => {
@@ -218,8 +237,33 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     );
 
     useEffect(() => {
-        setOrientation(screenWidth > screenHeight ? 'landscape' : 'portrait');
-    }, [screenWidth, screenHeight]);
+        const sub = Dimensions.addEventListener('change', ({ window }) => {
+            if (window.width === 0 || window.height === 0) return; // Guard against nonsensical values
+            const newOrientation = window.width > window.height ? 'landscape' : 'portrait';
+            setOrientation(newOrientation);
+        });
+        return () => sub.remove();
+    }, []);
+
+    // Auto-fullscreen on landscape, auto-exit on portrait
+    useEffect(() => {
+        if (!enableFullscreen || !videoStarted || isTransitioningRef.current) return;
+
+        const shouldBeFullscreen = orientation === 'landscape';
+        if (shouldBeFullscreen && !isFullscreen) {
+            isTransitioningRef.current = true;
+            saveCurrentState().then(() => {
+                setIsFullscreen(true);
+                setTimeout(() => { isTransitioningRef.current = false; }, 500);
+            });
+        } else if (!shouldBeFullscreen && isFullscreen) {
+            isTransitioningRef.current = true;
+            saveCurrentState().then(() => {
+                setIsFullscreen(false);
+                setTimeout(() => { isTransitioningRef.current = false; }, 500);
+            });
+        }
+    }, [orientation, enableFullscreen, videoStarted, isFullscreen, saveCurrentState]);
 
     const handleLayout = (e: LayoutChangeEvent) => {
         const { width, height } = e.nativeEvent.layout;
@@ -453,24 +497,40 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 onRequestClose={toggleFullscreen}
             >
                 <View style={styles.fullscreenContainer}>
-                    <View style={styles.fullscreenVideoWrapper}>
-                        <YoutubePlayer
-                            key={`${replayKey}-fs`}
-                            ref={playerRef}
-                            videoId={videoId}
-                            play={playing}
-                            onChangeState={handleStateChange}
-                            onReady={handleReady}
-                            onError={handleError}
-                            height={playerHeightFinal}
-                            width={playerWidth}
-                            webViewStyle={{ backgroundColor: 'transparent' }}
-                            webViewProps={commonWebViewProps}
-                            initialPlayerParams={commonPlayerParams}
-                        />
-                        {renderCustomControls()}
+                    <View style={[
+                        styles.fullscreenSafeArea,
+                        {
+                            paddingTop: insets.top,
+                            paddingBottom: insets.bottom,
+                            paddingLeft: insets.left,
+                            paddingRight: insets.right,
+                        }
+                    ]}>
+                        <View style={styles.fullscreenVideoWrapper}>
+                            <YoutubePlayer
+                                key={`${replayKey}-fs`}
+                                ref={playerRef}
+                                videoId={videoId}
+                                play={playing}
+                                onChangeState={handleStateChange}
+                                onReady={handleReady}
+                                onError={handleError}
+                                height={playerHeightFinal}
+                                width={playerWidth}
+                                webViewStyle={{ backgroundColor: 'transparent' }}
+                                webViewProps={commonWebViewProps}
+                                initialPlayerParams={commonPlayerParams}
+                            />
+                            {renderCustomControls()}
+                        </View>
                     </View>
-                    <TouchableOpacity style={styles.exitFullscreenButton} onPress={toggleFullscreen}>
+                    <TouchableOpacity
+                        style={[
+                            styles.exitFullscreenButton,
+                            { top: insets.top + 12, right: insets.right + 12 }
+                        ]}
+                        onPress={toggleFullscreen}
+                    >
                         <MaterialCommunityIcons name="fullscreen-exit" size={36} color="#fff" />
                     </TouchableOpacity>
                 </View>
@@ -491,9 +551,21 @@ const styles = StyleSheet.create({
 
     // Z-index bumped to 40 so it stays above the custom controls interceptor Z-index 10
     fullscreenButton: { position: 'absolute', top: 12, right: 12, zIndex: 40, padding: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 20 },
-    fullscreenContainer: { flex: 1, backgroundColor: '#000' },
-    fullscreenVideoWrapper: { flex: 1, backgroundColor: '#000' },
-    exitFullscreenButton: { position: 'absolute', top: 55, right: 20, zIndex: 50, padding: 12, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 30 },
+    fullscreenContainer: { flex: 1, backgroundColor: '#000', position: 'relative' },
+    fullscreenSafeArea: { flex: 1 },
+    fullscreenVideoWrapper: {
+        flex: 1,
+        backgroundColor: '#000',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    exitFullscreenButton: {
+        position: 'absolute',
+        zIndex: 50,
+        padding: 12,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        borderRadius: 30,
+    },
     thumbnailImage: { width: '100%', height: '100%' },
     thumbnailOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.35)' },
     bigPlayButtonContainer: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -46 }, { translateY: -46 }], zIndex: 30 },

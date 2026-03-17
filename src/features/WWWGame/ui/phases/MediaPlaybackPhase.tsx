@@ -83,35 +83,25 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
             <View
                 style={[
                     {width: '100%', overflow: 'hidden', borderRadius: 8},
-                    mediaType === 'VIDEO' && !isExternalMedia && {aspectRatio: 16 / 9},
+                    mediaType === 'VIDEO' && {aspectRatio: 16 / 9},
                 ]}
             >
                 {mediaType === 'VIDEO' ? (
-                    isExternalMedia ? (
-                        <ExternalVideoPlayer
-                            key={replayKey}
-                            mediaSourceType={mediaSourceType}
-                            videoId={videoId}
-                            videoUrl={question.externalMediaUrl || question.questionMediaUrl}
-                            startTime={question.questionVideoStartTime}
-                            endTime={question.questionVideoEndTime}
-                            onSegmentEnd={handleEnd}
-                            autoPlay={true}              // ← video starts instantly, no play button
-                            showControls={false}
-                            hideTitle={true}
-                            enableFullscreen={true}
-                            initialFullscreen={false}    // ← starts in normal embedded mode
-                        />
-                    ) : (
-                        <AuthenticatedVideo
-                            key={replayKey}
-                            questionId={Number(question.id)}
-                            shouldPlay={true}
-                            useNativeControls={true}
-                            onEnd={handleEnd}
-                            style={styles.mediaContainer}
-                        />
-                    )
+                    <ExternalVideoPlayer
+                        key={replayKey}
+                        mediaSourceType={mediaSourceType}
+                        videoId={videoId}
+                        questionId={Number(question.id)}
+                        videoUrl={question.externalMediaUrl || question.questionMediaUrl}
+                        startTime={question.questionVideoStartTime}
+                        endTime={question.questionVideoEndTime}
+                        onSegmentEnd={handleEnd}
+                        autoPlay={true}              // ← video starts instantly, no play button
+                        showControls={false}
+                        hideTitle={true}
+                        enableFullscreen={true}
+                        initialFullscreen={false}    // ← starts in normal embedded mode
+                    />
                 ) : (
                     <AuthenticatedAudio
                         key={replayKey}

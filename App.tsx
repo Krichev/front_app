@@ -36,6 +36,7 @@ import { useAppUpdate, UpdateModal } from './src/features/AppUpdate';
 import { useDeviceScreenLock } from './src/features/ScreenTime/hooks/useDeviceScreenLock';
 import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const linking = {
     prefixes: ['challengerapp://', 'https://play.yourapp.com'],
@@ -111,15 +112,17 @@ const AppContent: React.FC = () => {
  */
 const App: React.FC = () => {
     return (
-        <GestureHandlerRootView style={styles.container}>
-            <Provider store={store}>
-                <I18nProvider>
-                    <ThemeProvider>
-                        <AppContent />
-                    </ThemeProvider>
-                </I18nProvider>
-            </Provider>
-        </GestureHandlerRootView>
+        <SafeAreaProvider>
+            <GestureHandlerRootView style={styles.container}>
+                <Provider store={store}>
+                    <I18nProvider>
+                        <ThemeProvider>
+                            <AppContent />
+                        </ThemeProvider>
+                    </I18nProvider>
+                </Provider>
+            </GestureHandlerRootView>
+        </SafeAreaProvider>
     );
 };
 
