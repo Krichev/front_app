@@ -40,7 +40,11 @@ export function useWWWGameController(sessionId: string) {
     return beginQuizSession(sessionId).unwrap();
   }, [beginQuizSession, sessionId]);
 
-  const pauseSession = useCallback(async (pauseData: PauseQuizSessionRequest) => {
+  const pauseSession = useCallback(async (roundNumber: number, remainingTime: number) => {
+    const pauseData: PauseQuizSessionRequest = {
+        pausedAtRound: roundNumber,
+        remainingTimeSeconds: remainingTime,
+    };
     return pauseQuizSession({ sessionId, pauseData }).unwrap();
   }, [pauseQuizSession, sessionId]);
 

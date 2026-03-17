@@ -20,7 +20,7 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
     case 'SESSION_STARTED':
       return { 
         ...state, 
-        phase: 'waiting', // Wait for orchestration to decide reading vs media
+        phase: 'waiting', 
         gameStartTime: new Date(),
         timer: event.roundTime || 0,
         isTimerRunning: false,
@@ -32,7 +32,7 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
         ...state,
         phase: 'reading',
         readingTimeSeconds: event.readingTime,
-        isTimerRunning: false, // We'll use a different timer or handle it in UI
+        isTimerRunning: false,
       };
 
     case 'READING_COMPLETE':
@@ -86,7 +86,7 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
     case 'NEXT_ROUND':
       return {
         ...state,
-        phase: 'waiting', // Wait for orchestration to decide next phase
+        phase: 'waiting',
         currentRound: state.currentRound + 1,
         teamAnswer: '',
         discussionNotes: '',
@@ -146,26 +146,25 @@ export function useWWWGameState() {
   const [state, dispatch] = useReducer(gameReducer, initialState);
 
   const actions = {
-    startSession: useCallback((roundTime?: number) => dispatch({ type: 'SESSION_STARTED', roundTime }), []),
-    startReading: useCallback((readingTime: number) => dispatch({ type: 'START_READING', readingTime }), []),
-    readingComplete: useCallback(() => dispatch({ type: 'READING_COMPLETE' }), []),
-    skipReading: useCallback(() => dispatch({ type: 'SKIP_READING' }), []),
-    startMediaPlayback: useCallback((mediaDuration?: number) => dispatch({ type: 'START_MEDIA_PLAYBACK', mediaDuration }), []),
-    mediaPlaybackComplete: useCallback(() => dispatch({ type: 'MEDIA_PLAYBACK_COMPLETE' }), []),
-    skipMedia: useCallback(() => dispatch({ type: 'SKIP_MEDIA' }), []),
-    startDiscussion: useCallback((roundTime: number) => 
-      dispatch({ type: 'START_DISCUSSION', roundTime }), []),
-    timeUp: useCallback(() => dispatch({ type: 'TIME_UP' }), []),
-    submitAnswer: useCallback(() => dispatch({ type: 'SUBMIT_ANSWER' }), []),
-    answerSubmitted: useCallback(() => dispatch({ type: 'ANSWER_SUBMITTED' }), []),
-    nextRound: useCallback((roundTime?: number) => dispatch({ type: 'NEXT_ROUND', roundTime }), []),
-    completeGame: useCallback(() => dispatch({ type: 'GAME_COMPLETED' }), []),
-    setAnswer: useCallback((answer: string) => dispatch({ type: 'SET_ANSWER', answer }), []),
-    setNotes: useCallback((notes: string) => dispatch({ type: 'SET_NOTES', notes }), []),
-    setPlayer: useCallback((player: string) => dispatch({ type: 'SET_PLAYER', player }), []),
-    setRound: useCallback((roundIndex: number) => dispatch({ type: 'SET_ROUND', roundIndex }), []),
-    pauseGame: useCallback(() => dispatch({ type: 'PAUSE_GAME' }), []),
-    resumeGame: useCallback(() => dispatch({ type: 'RESUME_GAME' }), []),
+    startSession: (roundTime?: number): GameEvent => ({ type: 'SESSION_STARTED', roundTime }),
+    startReading: (readingTime: number): GameEvent => ({ type: 'START_READING', readingTime }),
+    readingComplete: (): GameEvent => ({ type: 'READING_COMPLETE' }),
+    skipReading: (): GameEvent => ({ type: 'SKIP_READING' }),
+    startMediaPlayback: (mediaDuration?: number): GameEvent => ({ type: 'START_MEDIA_PLAYBACK', mediaDuration }),
+    mediaPlaybackComplete: (): GameEvent => ({ type: 'MEDIA_PLAYBACK_COMPLETE' }),
+    skipMedia: (): GameEvent => ({ type: 'SKIP_MEDIA' }),
+    startDiscussion: (roundTime: number): GameEvent => ({ type: 'START_DISCUSSION', roundTime }),
+    timeUp: (): GameEvent => ({ type: 'TIME_UP' }),
+    submitAnswer: (): GameEvent => ({ type: 'SUBMIT_ANSWER' }),
+    answerSubmitted: (): GameEvent => ({ type: 'ANSWER_SUBMITTED' }),
+    nextRound: (roundTime?: number): GameEvent => ({ type: 'NEXT_ROUND', roundTime }),
+    completeGame: (): GameEvent => ({ type: 'GAME_COMPLETED' }),
+    setAnswer: (answer: string): GameEvent => ({ type: 'SET_ANSWER', answer }),
+    setNotes: (notes: string): GameEvent => ({ type: 'SET_NOTES', notes }),
+    setPlayer: (player: string): GameEvent => ({ type: 'SET_PLAYER', player }),
+    setRound: (roundIndex: number): GameEvent => ({ type: 'SET_ROUND', roundIndex }),
+    pauseGame: (): GameEvent => ({ type: 'PAUSE_GAME' }),
+    resumeGame: (): GameEvent => ({ type: 'RESUME_GAME' }),
   };
 
   return { state, actions, dispatch };

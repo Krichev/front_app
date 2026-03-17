@@ -1877,6 +1877,8 @@ const en = {
             readyToStart: 'Ready to Start?',
             startQuiz: 'Start Quiz',
             starting: 'Starting...', 
+            preparingMedia: 'Preparing media...',
+            mediaReady: 'Ready to play!',
             // --- NEW KEY ---
             welcomeText: "Welcome to WWW Quiz!\n\nYou'll have {{roundTime}} seconds to discuss each question with your team.\n\nWhen you're ready to begin, press the button below.",
         },

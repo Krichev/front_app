@@ -12,13 +12,14 @@ import { useAnswerTimer } from '../../hooks/useAnswerTimer';
 
 interface AnswerPhaseProps {
   question: QuizQuestion;
-  answer: string;
-  player: string;
-  onAnswerChange: (text: string) => void;
-  onPlayerChange: (player: string) => void;
+  answer?: string;
+  player?: string;
+  onAnswerChange?: (text: string) => void;
+  onPlayerChange?: (player: string) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
   gameSettings?: any;
+  teamMembers?: string[];
   isVoiceEnabled?: boolean;
   onAudioRecordingComplete?: (audioFile: { uri: string; name: string; type: string }) => void;
   recordedAudio?: { uri: string; name: string; type: string } | null;
@@ -26,13 +27,14 @@ interface AnswerPhaseProps {
 
 export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   question,
-  answer,
-  player,
+  answer: propsAnswer,
+  player: propsPlayer,
   onAnswerChange,
   onPlayerChange,
   onSubmit,
   isSubmitting,
   gameSettings,
+  teamMembers = [],
   isVoiceEnabled = false,
   onAudioRecordingComplete,
   recordedAudio,
@@ -40,6 +42,14 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
+  
+  // Local state if props not provided
+  const [localAnswer, setLocalAnswer] = useState('');
+  const [localPlayer, setLocalPlayer] = useState('');
+  
+  const answer = propsAnswer !== undefined ? propsAnswer : localAnswer;
+  const player = propsPlayer !== undefined ? propsPlayer : localPlayer;
+
   const [showHint, setShowHint] = useState(false);
   const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
   const hasStartedTyping = useRef(false);
@@ -55,11 +65,24 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   });
 
   const handleAnswerChange = (text: string) => {
-    onAnswerChange(text);
+    if (onAnswerChange) {
+        onAnswerChange(text);
+    } else {
+        setLocalAnswer(text);
+    }
+    
     if (!hasStartedTyping.current && text.length > 0) {
       hasStartedTyping.current = true;
       timer.startCompletionPhase();
     }
+  };
+
+  const handlePlayerSelect = (p: string) => {
+      if (onPlayerChange) {
+          onPlayerChange(p);
+      } else {
+          setLocalPlayer(p);
+      }
   };
 
   const handleVoiceTranscription = (text: string) => {
@@ -87,17 +110,19 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       <AudioAnswerPhase
         question={question}
         answer={answer}
-        onAnswerChange={onAnswerChange}
+        onAnswerChange={handleAnswerChange}
         onSubmit={onSubmit}
         isSubmitting={isSubmitting}
         gameSettings={gameSettings}
         onAudioRecordingComplete={onAudioRecordingComplete}
         recordedAudio={recordedAudio}
         player={player}
-        onPlayerChange={onPlayerChange}
+        onPlayerChange={handlePlayerSelect}
       />
     );
   }
+
+  const effectivePlayers = teamMembers.length > 0 ? teamMembers : (gameSettings?.players || []);
 
   return (
     <View style={styles.container}>
@@ -170,15 +195,15 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         </View>
       )}
 
-      {gameSettings?.players && gameSettings.players.length > 0 && (
+      {effectivePlayers.length > 0 && (
         <View style={{ marginBottom: theme.spacing.lg }}>
           <Text style={styles.label}>{t('wwwPhases.answer.whoIsAnswering')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row', maxHeight: 50 }}>
-            {gameSettings.players.map((p: string) => (
+            {effectivePlayers.map((p: string) => (
               <TouchableOpacity
                 key={p}
                 style={{ paddingVertical: theme.spacing.sm, paddingHorizontal: theme.spacing.lg, borderRadius: theme.layout.borderRadius['2xl'], backgroundColor: player === p ? theme.colors.success.main : theme.colors.background.tertiary, marginRight: theme.spacing.sm }}
-                onPress={() => onPlayerChange(p)}
+                onPress={() => handlePlayerSelect(p)}
               >
                 <Text style={{ color: player === p ? theme.colors.text.inverse : theme.colors.text.primary, fontWeight: player === p ? theme.typography.fontWeight.bold : undefined }}>
                   {p}

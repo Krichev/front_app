@@ -1,12 +1,13 @@
 // src/screens/WWWGamePlayScreen.tsx - Orchestration Layer
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Alert, BackHandler, SafeAreaView} from 'react-native';
+import {Alert, BackHandler, SafeAreaView, View, Text, TouchableOpacity} from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {RootStackParamList} from '../navigation/AppNavigator';
 import {useWWWGameState} from '../features/WWWGame/hooks/useWWWGameState';
 import {useWWWGameController} from '../features/WWWGame/hooks/useWWWGameController';
-import {useReadingTime} from '../features/WWWGame/hooks/useReadingTime';
+import {useMediaPreloader} from '../features/WWWGame/hooks/useMediaPreloader';
 import {
   AnswerPhase,
   DiscussionPhase,
@@ -15,533 +16,308 @@ import {
   ReadingPhase,
   WaitingPhase,
 } from '../features/WWWGame/ui/phases';
-import {AudioChallengeScoringPhase} from './WWWGamePlayScreen/components/AudioChallengeScoringPhase';
-import {AudioChallengeSubmission} from '../entities/AudioChallengeState/model/slice/audioChallengeApi';
-import {useCountdownTimer} from '../shared/hooks/useCountdownTimer';
-import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
-import {RootStackParamList} from '../navigation/AppNavigator';
 import {ExitGameModal} from '../features/WWWGame/ui/components/ExitGameModal';
+import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../shared/ui/theme';
 import {WagerResultsOverlay} from '../features/Wager/ui/WagerResultsOverlay';
-import {useGetWagersByChallengeQuery} from '../entities/WagerState/model/slice/wagerApi';
-import {useWager} from '../features/Wager/hooks/useWager';
-import {Wager, WagerOutcome} from '../entities/WagerState/model/types';
+import {WagerOutcome} from '../entities/WagerState/model/types';
 
-type WWWGamePlayNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
-type WWWGamePlayRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
+type WWWGamePlayScreenRouteProp = RouteProp<RootStackParamList, 'WWWGamePlay'>;
+type WWWGamePlayScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WWWGamePlay'>;
 
 const WWWGamePlayScreen: React.FC = () => {
-  const route = useRoute<WWWGamePlayRouteProp>();
-  const navigation = useNavigation<WWWGamePlayNavigationProp>();
-  const { screen } = useAppStyles();
+  const route = useRoute<WWWGamePlayScreenRouteProp>();
+  const navigation = useNavigation<WWWGamePlayScreenNavigationProp>();
   
-  // Safely access params - Hermes seals objects so destructuring missing optional props throws ReferenceError
-  const sessionId = route.params?.sessionId;
-  const challengeId = route.params?.challengeId;
-  const gameSettings = route.params as any; // Legacy params support
+  // Handle complex union type for params
+  const params = route.params as any;
+  const sessionId = params?.sessionId;
+  
+  const {theme} = useAppStyles();
+  const styles = themeStyles;
 
-  // Wager State
-  const { data: wagers } = useGetWagersByChallengeQuery(Number(challengeId), { skip: !challengeId });
-  const { settleWager } = useWager();
-  const [activeWager, setActiveWager] = useState<Wager | null>(null);
-  const [wagerOutcome, setWagerOutcome] = useState<WagerOutcome | null>(null);
-  const [showWagerOverlay, setShowWagerResults] = useState(false);
-
-  // Audio Results State
-  const [audioSubmissionResults, setAudioSubmissionResults] = useState<Record<string, AudioChallengeSubmission>>({});
-
-  // Guard clause for missing sessionId
-  useEffect(() => {
-    if (!sessionId) {
-      Alert.alert('Error', 'Session ID is required to play');
-      navigation.goBack();
-    }
-  }, [sessionId, navigation]);
-
-  // API controller - only if sessionId exists
+  // Controller handles API interaction
   const controller = useWWWGameController(sessionId || '');
+  
+  // Media Preloader
+  const {
+    preloadProgress,
+    hasMediaQuestions,
+    preloadStatuses
+  } = useMediaPreloader(controller.rounds || []);
 
-  // State machine
-  const { state, actions } = useWWWGameState();
-  const { calculateReadingTime } = useReadingTime();
+  // State machine handles UI phases
+  const {state, dispatch, actions} = useWWWGameState();
 
-  // Timer (initialized when discussion starts)
-  const timer = useCountdownTimer({
-    duration: controller.session?.roundTimeSeconds || 60,
-    onComplete: actions.timeUp,
-  });
-  const { start: timerStart, reset: timerReset, pause: timerPause } = timer;
-
-  // Exit Modal State
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showWagerResults, setShowWagerResults] = useState(false);
+  const [wagerOutcome, setWagerOutcome] = useState<WagerOutcome | null>(null);
 
-  // Current round data
-  const currentRound = controller.rounds[state.currentRound];
-  const isLastRound = state.currentRound >= controller.rounds.length - 1;
+  // ============================================================================
+  // PHASE TRANSITION LOGIC
+  // ============================================================================
 
-  // Handle hardware back button
+  const currentRoundIdx = state.currentRound > 0 ? state.currentRound - 1 : 0;
+  const currentRound = controller.rounds?.[currentRoundIdx];
+  const currentQuestion = currentRound?.question;
+
+  // Handle phase transitions
   useEffect(() => {
-    const onBackPress = () => {
-      // Only intercept if game is in progress or paused and not completed
-      if (state.phase !== 'completed' && (controller.session?.status === 'IN_PROGRESS' || controller.session?.status === 'PAUSED')) {
-        setShowExitModal(true);
-        return true;
-      }
-      return false;
-    };
-
-    BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-    return () => {
-      BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    };
-  }, [state.phase, controller.session?.status]);
-
-  const handleResumeGame = useCallback(() => {
-    setShowExitModal(false);
-  }, []);
-
-  const handlePauseAndExit = useCallback(async () => {
-    try {
-      if (!controller.session) return;
+    // If we're entering media_playback, check if we need to wait a tiny bit for preloader
+    if (state.phase === 'media_playback' && currentQuestion) {
+      const status = preloadStatuses[currentQuestion.id];
       
-      await controller.pauseSession({
-        pausedAtRound: state.currentRound + 1, // 1-based index for backend
-        remainingTimeSeconds: timer.timeLeft,
-        currentAnswer: state.teamAnswer,
-        discussionNotes: state.discussionNotes
-      });
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to pause game');
-    }
-  }, [controller, state, timer.timeLeft, navigation]);
-
-  const handleAbandonGame = useCallback(async () => {
-    try {
-      await controller.abandonGame();
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to abandon game');
-    }
-  }, [controller, navigation]);
-
-  const navigateToResults = useCallback(() => {
-    if (!controller.session) { return; }
-
-    // Prepare results data
-    const roundsData = controller.rounds.map(round => ({
-      question: round.question.question,
-      correctAnswer: round.question.answer,
-      teamAnswer: round.teamAnswer || '',
-      isCorrect: round.isCorrect,
-      playerWhoAnswered: round.playerWhoAnswered || '',
-      discussionNotes: round.discussionNotes || '',
-    }));
-
-    navigation.navigate('WWWGameResults', {
-      teamName: controller.session.teamName,
-      score: controller.session.correctAnswers,
-      totalRounds: controller.session.totalRounds,
-      roundsData: roundsData,
-      challengeId: challengeId,
-    });
-  }, [controller, navigation, challengeId]);
-
-  const handleGameCompletion = useCallback(async () => {
-    try {
-      await controller.completeGame();
-
-      // Check for active wagers to settle
-      const wagerToSettle = wagers?.find(w => w.status === 'ACTIVE');
-      if (wagerToSettle) {
-        try {
-          const outcome = await settleWager(wagerToSettle.id);
-          setActiveWager(wagerToSettle);
-          setWagerOutcome(outcome);
-          setShowWagerResults(true);
-          return; // Don't navigate yet, show overlay
-        } catch (wagerError) {
-          console.error('Failed to settle wager:', wagerError);
-        }
-      }
-
-      navigateToResults();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to complete game');
-    }
-  }, [controller, wagers, settleWager, navigateToResults]);
-
-  // Auto-start discussion timer when entering discussion phase
-  const prevPhaseRef = useRef<string>(state.phase);
-  const prevRoundRef = useRef<number>(state.currentRound);
-  const configuredRoundTime = controller.session?.roundTimeSeconds || 60;
-
-  // Use question-specific time limit if available, otherwise session default
-  const effectiveRoundTime = currentRound?.question?.timeLimitSeconds ?? configuredRoundTime;
-
-  const handleNextRound = useCallback(() => {
-    actions.nextRound(effectiveRoundTime);
-  }, [actions, effectiveRoundTime]);
-
-  // Initialize game when session data is loaded
-  useEffect(() => {
-    if (controller.session && controller.rounds.length > 0) {
-      if (controller.session.status === 'IN_PROGRESS' && state.phase === 'waiting' && !state.gameStartTime) {
-        const currentRoundIndex = controller.session.completedRounds || 0;
-        if (currentRoundIndex < controller.rounds.length) {
-          actions.setRound(currentRoundIndex);
-          actions.startSession(effectiveRoundTime);
-        } else {
-          // All rounds completed, show results?
-          handleGameCompletion();
-        }
-      } else if (controller.session.status === 'PAUSED' && state.phase === 'waiting' && !state.gameStartTime) {
-        // Restore paused state
-        const pausedRound = (controller.session.pausedAtRound || 1) - 1; // Convert back to 0-based
-        const validRound = Math.max(0, pausedRound);
-        const remainingTime = controller.session.remainingTimeSeconds || effectiveRoundTime;
-
-        actions.setRound(validRound);
-        if (controller.session.pausedAnswer) actions.setAnswer(controller.session.pausedAnswer);
-        if (controller.session.pausedNotes) actions.setNotes(controller.session.pausedNotes);
-
-        // Resume session via API and start game loop
-        controller.resumeGame().then(() => {
-           actions.startSession(remainingTime); // Marks session start locally
-           // Jump straight to discussion or appropriate phase if we knew it
-           // For simplicity, we restart discussion with remaining time
-           // Note: This might replay media if we had phase restoration, but here we assume discussion
-           actions.startDiscussion(remainingTime);
-           timerReset(remainingTime);
-           timerStart();
-        });
+      if (status === 'loading') {
+        console.log(`🎬 [WWWGamePlayScreen] Delaying media_playback phase for question ${currentQuestion.id} to finish preload`);
+        const timer = setTimeout(() => {
+          // No action needed, component will just render and pick up where preload left off
+        }, 300);
+        return () => clearTimeout(timer);
       }
     }
-  }, [controller.session, controller.rounds, state.phase, state.gameStartTime, actions, handleGameCompletion, effectiveRoundTime, timerReset, timerStart]);
+  }, [state.phase, currentQuestion, preloadStatuses]);
 
-  // Orchestration: Determine sub-phase when starting round
+  // Sync state with controller when rounds loaded
   useEffect(() => {
-    if (state.phase === 'waiting' && currentRound && state.gameStartTime && controller.session?.status === 'IN_PROGRESS') {
-      const q = currentRound.question;
-      
-      // === DIAGNOSTIC: Log ALL audio-related fields ===
-      console.log('🔍 [AUDIO DEBUG] Question routing data:', {
-        questionId: q.id,
-        questionType: q.questionType,
-        questionTypeExact: JSON.stringify(q.questionType), // catches hidden chars
-        audioChallengeType: q.audioChallengeType,
-        audioChallengeTypeExact: JSON.stringify(q.audioChallengeType),
-        isAudioChallenge: q.questionType === 'AUDIO' && !!q.audioChallengeType,
-        questionMediaId: q.questionMediaId,
-        questionMediaUrl: q.questionMediaUrl?.substring(0, 80),
-        audioReferenceMediaId: q.audioReferenceMediaId,
-        questionMediaType: q.questionMediaType,
-        mediaSourceType: q.mediaSourceType,
-      });
-
-      const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
-      
-      // FALLBACK: If questionType is AUDIO but audioChallengeType is missing,
-      // still treat it as an audio challenge (don't send to text reading!)
-      const isAnyAudioQuestion = q.questionType === 'AUDIO';
-
-      // Check for media
-      const mediaType = q.questionMediaType || q.questionType;
-      const hasUploadedMedia = ['VIDEO', 'AUDIO'].includes(mediaType as string) && !!q.questionMediaId;
-      const hasExternalMedia = ['VIDEO', 'AUDIO'].includes(q.questionType as string) 
-          && !!q.mediaSourceType 
-          && q.mediaSourceType !== 'UPLOADED'
-          && (!!q.externalMediaUrl || !!q.externalMediaId);
-      const hasMedia = hasUploadedMedia || hasExternalMedia;
-
-      console.log('🎮 [Orchestration] Question media detection:', { 
-        questionId: q.id,
-        questionType: q.questionType, 
-        mediaType, 
-        hasUploadedMedia, 
-        hasExternalMedia, 
-        mediaSourceType: q.mediaSourceType 
-      });
-
-      if (isAudioChallenge || isAnyAudioQuestion) {
-         // Audio questions should NEVER go through reading phase
-         // For proper karaoke: go to discussion → immediately to answer (existing flow)
-         console.log('🎵 [Orchestration] Routing as audio question:', {
-           isAudioChallenge,
-           isAnyAudioQuestion,
-           audioChallengeType: q.audioChallengeType
-         });
-         actions.startDiscussion(effectiveRoundTime);
-      } else if (hasMedia) {
-         actions.startMediaPlayback();
-      } else {
-         const readingTime = calculateReadingTime(q.question);
-         actions.startReading(readingTime);
-      }
+    if (controller.rounds && controller.rounds.length > 0 && state.currentRound === 0) {
+      dispatch(actions.setRound(1));
     }
-  }, [state.phase, currentRound, state.gameStartTime, controller.session?.status, actions, calculateReadingTime, effectiveRoundTime]);
+  }, [controller.rounds, dispatch, actions, state.currentRound]);
 
-  useEffect(() => {
-    const isEnteringDiscussion = state.phase === 'discussion' &&
-      (prevPhaseRef.current !== 'discussion' || prevRoundRef.current !== state.currentRound);
-
-    prevPhaseRef.current = state.phase;
-    prevRoundRef.current = state.currentRound;
-
-    if (isEnteringDiscussion && currentRound) {
-      const isAudioChallenge = currentRound.question.questionType === 'AUDIO' && !!currentRound.question.audioChallengeType;
-      const isAnyAudioQuestion = currentRound.question.questionType === 'AUDIO';
-
-      if (isAudioChallenge || isAnyAudioQuestion) {
-        // Skip discussion phase for audio challenges, go straight to answer/record
-        // AudioChallengePhase manages its own timer
-        actions.timeUp();
-      } else {
-        requestAnimationFrame(() => {
-          // If we just resumed (timer running), don't reset
-          if (!timer.isRunning) {
-             timerReset(effectiveRoundTime);
-             timerStart();
-          }
-        });
-      }
-    }
-  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timerReset, timerStart, timer.isRunning]);
-
-  // Pause timer when leaving discussion phase
-  useEffect(() => {
-    if (state.phase !== 'discussion') {
-      timerPause();
-    }
-  }, [state.phase, timerPause]);
-
-  // Phase-specific handlers
   const handleStartGame = async () => {
     try {
-      if (controller.session?.status === 'IN_PROGRESS') {
-        actions.startSession(configuredRoundTime);
-      } else {
-        await controller.startSession();
-        actions.startSession(configuredRoundTime);
-      }
+      await controller.startSession();
+      // Start with reading phase (default 5s)
+      dispatch(actions.startReading(5));
     } catch (error) {
-      Alert.alert('Error', 'Failed to start session');
+      Alert.alert('Error', 'Failed to start the game session');
     }
   };
 
-  const handleReadingComplete = useCallback(() => {
-    actions.readingComplete();
-  }, [actions]);
-
-  const handleSkipReading = useCallback(() => {
-    actions.skipReading();
-  }, [actions]);
-
-  const handleMediaComplete = useCallback(() => {
-    actions.startDiscussion(configuredRoundTime);
-  }, [actions, configuredRoundTime]);
-
-  const handleSkipMedia = useCallback(() => {
-    actions.skipMedia();
-  }, [actions]);
-
-  const handleSubmitAnswer = async () => {
-    if (!currentRound) { return; }
-
-    try {
-      const answerToSubmit = state.teamAnswer.trim() || '';
-      // roundId is string in QuizRound entity
-      await controller.submitAnswer(currentRound.id, {
-        teamAnswer: answerToSubmit,
-        playerWhoAnswered: state.selectedPlayer || 'Team',
-        discussionNotes: state.discussionNotes,
-      });
-      actions.answerSubmitted();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit answer');
-    }
-  };
-
-  const handleAudioSubmissionComplete = useCallback(async (submission: AudioChallengeSubmission) => {
-    if (!currentRound) return;
+  const navigateToResults = useCallback(() => {
+    if (!sessionId) return;
     
-    setAudioSubmissionResults(prev => ({
-      ...prev,
-      [currentRound.id]: submission
-    }));
+    // Build results data for the screen
+    const resultsData = {
+      teamName: controller.session?.teamName || 'Team',
+      score: controller.session?.correctAnswers || 0,
+      totalRounds: controller.session?.totalRounds || controller.rounds?.length || 0,
+      roundsData: controller.rounds.map(r => ({
+        question: r.question.question,
+        correctAnswer: r.question.answer,
+        teamAnswer: r.teamAnswer || '',
+        isCorrect: r.isCorrect,
+        playerWhoAnswered: r.playerWhoAnswered || '',
+        discussionNotes: r.discussionNotes || ''
+      })),
+      challengeId: controller.session?.challengeId,
+      sessionId: sessionId
+    };
 
-    try {
-      await controller.submitAnswer(currentRound.id, {
-        teamAnswer: `Audio submission: ${submission.id}`,
-        playerWhoAnswered: state.selectedPlayer || 'Team',
-        discussionNotes: state.discussionNotes,
-      });
-      actions.answerSubmitted();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit audio answer');
+    navigation.replace('WWWGameResults', resultsData as any);
+  }, [navigation, sessionId, controller.session, controller.rounds]);
+
+  const handleGameComplete = useCallback(async (outcome?: WagerOutcome) => {
+    if (outcome) {
+      setWagerOutcome(outcome);
+      setShowWagerResults(true);
+    } else {
+      navigateToResults();
     }
-  }, [currentRound, controller, state.selectedPlayer, state.discussionNotes, actions]);
+  }, [navigateToResults]);
 
-  const handleAudioRecordingComplete = async (audioFile: { uri: string; name: string; type: string }) => {
-    if (!currentRound) { return; }
+  // ============================================================================
+  // BACK HANDLER
+  // ============================================================================
 
-    try {
-      await controller.submitAudioAnswer(
-        currentRound.id,
-        currentRound.question.id,
-        audioFile,
-        {
-          playerWhoAnswered: state.selectedPlayer || 'Team',
-          discussionNotes: state.discussionNotes,
-        }
-      );
-      actions.answerSubmitted();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to submit audio answer');
-    }
-  };
+  useEffect(() => {
+    const backAction = () => {
+      if (state.phase === 'waiting') return false;
+      setShowExitModal(true);
+      return true;
+    };
 
-  // If no sessionId, return null (effect handles navigation)
-  if (!sessionId) { return null; }
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [state.phase]);
 
-  // Render current phase
+  // ============================================================================
+  // RENDER PHASES
+  // ============================================================================
+
   const renderPhase = () => {
-    // Show waiting phase if loading initially
-    if (controller.isLoading && state.phase === 'waiting' && !state.gameStartTime) {
-      return (
-        <WaitingPhase
-          roundTime={60}
-          onStart={() => {}}
-          isLoading={true}
-        />
-      );
+    if (controller.isLoading) {
+      return <WaitingPhase roundTime={60} onStart={() => {}} isLoading={true} />;
     }
 
     switch (state.phase) {
       case 'waiting':
-        // If game is started but we are waiting (round init), show loader or null
-        if (state.gameStartTime) {
-            return (
-                 <WaitingPhase
-                    roundTime={controller.session?.roundTimeSeconds || 60}
-                    onStart={() => {}}
-                    isLoading={true}
-                  />
-            );
-        }
         return (
           <WaitingPhase
             roundTime={controller.session?.roundTimeSeconds || 60}
             onStart={handleStartGame}
             isLoading={controller.isBeginningSession}
+            mediaPreloadProgress={preloadProgress}
+            hasMediaQuestions={hasMediaQuestions}
           />
         );
+
       case 'reading':
-        if (!currentRound) { return null; }
         return (
           <ReadingPhase
-            question={currentRound.question}
-            timeLeft={state.readingTimeSeconds}
-            onSkip={handleSkipReading}
-            onComplete={handleReadingComplete}
+            question={currentQuestion!}
+            timeLeft={state.timer || 5}
+            onSkip={() => {
+                const q = currentQuestion!;
+                const hasMedia = q.questionMediaId || q.externalMediaUrl;
+                if (hasMedia) {
+                    dispatch(actions.startMediaPlayback());
+                } else {
+                    dispatch(actions.startDiscussion(controller.session?.roundTimeSeconds || 60));
+                }
+            }}
+            onComplete={() => {
+                const q = currentQuestion!;
+                const hasMedia = q.questionMediaId || q.externalMediaUrl;
+                if (hasMedia) {
+                    dispatch(actions.startMediaPlayback());
+                } else {
+                    dispatch(actions.startDiscussion(controller.session?.roundTimeSeconds || 60));
+                }
+            }}
           />
         );
+
       case 'media_playback':
-        if (!currentRound) { return null; }
         return (
           <MediaPlaybackPhase
-            question={currentRound.question}
-            onPlaybackComplete={handleMediaComplete}
-            onSkip={handleSkipMedia}
+            question={currentQuestion!}
+            onPlaybackComplete={() => dispatch(actions.startDiscussion(controller.session?.roundTimeSeconds || 60))}
+            onSkip={() => dispatch(actions.startDiscussion(controller.session?.roundTimeSeconds || 60))}
           />
         );
+
       case 'discussion':
-        if (!currentRound) { return null; }
         return (
           <DiscussionPhase
-            question={currentRound.question}
-            timeLeft={timer.timeLeft}
-            animation={timer.animation}
-            notes={state.discussionNotes}
-            onNotesChange={actions.setNotes}
-            onSubmitEarly={() => {
-              timer.pause();
-              actions.timeUp();
-            }}
-            isVoiceEnabled={controller.session?.difficulty === 'EASY'}
+            question={currentQuestion!}
+            timeLeft={state.timer || 60}
           />
         );
+
       case 'answer':
-        if (!currentRound) { return null; }
-
-        // Handle Audio Challenges with the specialized AudioChallengeScoringPhase
-        if (currentRound.question.questionType === 'AUDIO' && currentRound.question.audioChallengeType) {
-           return (
-             <AudioChallengeScoringPhase
-               question={currentRound.question}
-               onSubmissionComplete={handleAudioSubmissionComplete}
-               onCancel={() => actions.timeUp()}
-               isSubmitting={controller.isSubmittingAnswer || controller.isSubmittingAudio}
-             />
-           );
-        }
-
         return (
           <AnswerPhase
-            question={currentRound.question}
-            answer={state.teamAnswer}
-            player={state.selectedPlayer}
-            onAnswerChange={actions.setAnswer}
-            onPlayerChange={actions.setPlayer}
-            onSubmit={handleSubmitAnswer}
-            isSubmitting={controller.isSubmittingAnswer || controller.isSubmittingAudio}
-            gameSettings={gameSettings}
-            isVoiceEnabled={controller.session?.difficulty === 'EASY'}
-            onAudioRecordingComplete={handleAudioRecordingComplete}
+            question={currentQuestion!}
+            teamMembers={controller.session?.teamMembers || []}
+            isSubmitting={controller.isSubmittingAnswer}
+            onSubmit={() => {
+              // Internal implementation handles selection
+              // We just wait for mutation completion in controller
+            }}
           />
         );
+
       case 'feedback':
-        if (!currentRound) { return null; }
-        const audioSubmission = audioSubmissionResults[currentRound.id];
+        const isLastRound = state.currentRound >= (controller.rounds?.length || 0);
         return (
           <FeedbackPhase
-            roundData={currentRound}
-            isCorrect={currentRound.isCorrect}
+            roundData={currentRound!}
+            isCorrect={currentRound?.isCorrect || false}
             isLastRound={isLastRound}
-            onNextRound={handleNextRound}
-            onComplete={handleGameCompletion}
-            audioSubmission={audioSubmission}
+            onNextRound={() => {
+              dispatch(actions.nextRound());
+              dispatch(actions.startReading(5));
+            }}
+            onComplete={async () => {
+              const outcome = await controller.completeGame();
+              handleGameComplete(outcome as any);
+            }}
           />
         );
+
       default:
         return null;
     }
   };
 
   return (
-    <SafeAreaView style={screen.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setShowExitModal(true)} style={styles.headerButton}>
+          <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitle}>{controller.session?.teamName || 'WWW Quiz'}</Text>
+          <Text style={styles.headerSubtitle}>
+            Round {state.currentRound} / {controller.rounds?.length || 0}
+          </Text>
+        </View>
+        <View style={styles.headerButton} />
+      </View>
+
       {renderPhase()}
-      
+
       <ExitGameModal
         visible={showExitModal}
-        onResume={handleResumeGame}
-        onPauseAndExit={handlePauseAndExit}
-        onAbandon={handleAbandonGame}
-        isPausing={controller.isPausingSession}
+        onResume={() => setShowExitModal(false)}
+        onPauseAndExit={() => {
+          controller.pauseSession(state.currentRound, state.timer || 0);
+          navigation.goBack();
+        }}
+        onAbandon={() => {
+          controller.abandonGame();
+          navigation.goBack();
+        }}
       />
 
-      {showWagerOverlay && activeWager && wagerOutcome && (
-        <WagerResultsOverlay 
-          wager={activeWager}
-          outcome={wagerOutcome}
-          onClose={() => {
-            setShowWagerResults(false);
-            navigateToResults();
-          }}
+      {showWagerResults && wagerOutcome && (
+        <WagerResultsOverlay
+            wager={{} as any} // Fallback if missing
+            outcome={wagerOutcome}
+            onClose={() => {
+                setShowWagerResults(false);
+                navigateToResults();
+            }}
         />
       )}
     </SafeAreaView>
   );
 };
+
+const themeStyles = createStyles(theme => ({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border.light,
+    backgroundColor: theme.colors.background.primary,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...theme.typography.body.medium,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
+  },
+  headerSubtitle: {
+    ...theme.typography.caption,
+    color: theme.colors.text.secondary,
+  },
+}));
 
 export default WWWGamePlayScreen;

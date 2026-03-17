@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useRef} from 'react';
 import {Animated, Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
 import {phaseStyles} from './phases.styles';
@@ -15,10 +15,10 @@ import {extractYouTubeVideoId} from '../../../../utils/youtubeUtils';
 interface DiscussionPhaseProps {
     question: QuizQuestion;
     timeLeft: number;
-    animation: Animated.Value;
-    notes: string;
-    onNotesChange: (text: string) => void;
-    onSubmitEarly: () => void;
+    animation?: Animated.Value;
+    notes?: string;
+    onNotesChange?: (text: string) => void;
+    onSubmitEarly?: () => void;
     isVoiceEnabled?: boolean;
 }
 
@@ -26,14 +26,18 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                                                     question,
                                                                     timeLeft,
                                                                     animation,
-                                                                    notes,
-                                                                    onNotesChange,
-                                                                    onSubmitEarly,
+                                                                    notes = '',
+                                                                    onNotesChange = () => {},
+                                                                    onSubmitEarly = () => {},
                                                                     isVoiceEnabled = false,
                                                                 }) => {
     const {theme} = useAppStyles();
     const styles = phaseStyles(theme);
     const [voiceTranscription, setVoiceTranscription] = useState('');
+    
+    // Internal animation if not provided
+    const internalAnim = useRef(new Animated.Value(0)).current;
+    const activeAnim = animation || internalAnim;
 
     const handleVoiceTranscription = (text: string) => {
         setVoiceTranscription(text);
@@ -78,7 +82,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                         style={[
                             styles.timerProgress,
                             {
-                                width: animation.interpolate({
+                                width: activeAnim.interpolate({
                                     inputRange: [0, 1],
                                     outputRange: ['0%', '100%'],
                                 }),

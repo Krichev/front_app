@@ -218,4 +218,27 @@ export const phaseStyles = (theme: Theme) =>
             ...theme.typography.body.medium,
             fontWeight: theme.typography.fontWeight.bold,
         },
+        buttonContainer: {
+            width: '100%',
+            alignItems: 'center',
+        },
+        preloadIndicatorContainer: {
+            marginTop: theme.spacing.md,
+            height: 24,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        preparingContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: theme.spacing.sm,
+        },
+        tinySpinner: {
+            transform: [{scale: 0.8}],
+        },
+        preloadText: {
+            ...theme.typography.caption,
+            color: theme.colors.text.secondary,
+            fontSize: 12,
+        },
     });
