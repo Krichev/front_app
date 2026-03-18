@@ -69,16 +69,25 @@ export function useWWWGameController(sessionId: string) {
   const submitAudioAnswer = useCallback(async (
     roundId: string, 
     questionId: number,
-    audioFile: { uri: string; name: string; type: string },
-    payload: Omit<AnswerPayload, 'teamAnswer'>
+    audioFileOrSubmissionId: { uri: string; name: string; type: string } | number,
+    payload?: Omit<AnswerPayload, 'teamAnswer'>
   ) => {
-    const audioResult = await submitRecording({ questionId, audioFile }).unwrap();
+    let submissionId: number;
+    
+    if (typeof audioFileOrSubmissionId === 'number') {
+      submissionId = audioFileOrSubmissionId;
+    } else {
+      const audioResult = await submitRecording({ questionId, audioFile: audioFileOrSubmissionId }).unwrap();
+      submissionId = audioResult.id;
+    }
+
     const result = await submitRoundAnswer({
       sessionId,
       roundId,
       answer: {
-        ...payload,
-        teamAnswer: `Audio submission: ${audioResult.id}`,
+        playerWhoAnswered: payload?.playerWhoAnswered || 'Team',
+        discussionNotes: payload?.discussionNotes || '',
+        teamAnswer: `Audio submission: ${submissionId}`,
       },
     }).unwrap();
     await refetchRounds();

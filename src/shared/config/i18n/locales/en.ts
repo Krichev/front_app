@@ -1872,6 +1872,7 @@ const en = {
             replay: 'Replay',
             continueToDiscussion: 'Continue to Discussion',
             skipMedia: 'Skip Media',
+            mediaUnavailable: 'Media is not available for this question.',
         },
         waiting: {
             readyToStart: 'Ready to Start?',
@@ -1885,6 +1886,9 @@ const en = {
         youtube: {
             unavailable: 'YouTube video unavailable',
             retry: 'Retry',
+            replay: 'Replay',
+            skipBack: 'Back 10s',
+            skipForward: 'Forward 10s',
         },
         // --- NEW SUB-SECTION ---
         feedback: {

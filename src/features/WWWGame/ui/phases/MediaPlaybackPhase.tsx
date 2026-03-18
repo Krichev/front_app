@@ -60,6 +60,28 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
     const mediaSourceType = question.mediaSourceType || MediaSourceType.UPLOADED;
     const isExternalMedia = !!question.mediaSourceType && question.mediaSourceType !== MediaSourceType.UPLOADED;
 
+    const hasUploadedMedia = !!question.questionMediaId;
+    const hasExternalMedia = !!question.externalMediaUrl || !!question.externalMediaId;
+
+    if (!hasUploadedMedia && !hasExternalMedia) {
+        return (
+            <View style={[styles.container, {padding: theme.spacing.xl, justifyContent: 'center'}]}>
+                <Text style={styles.title}>{question.question}</Text>
+                <Text style={[styles.text, {textAlign: 'center', marginTop: theme.spacing.md}]}>
+                    {t('wwwPhases.mediaPlayback.mediaUnavailable')}
+                </Text>
+                <TouchableOpacity 
+                    style={[styles.continueButton, {marginTop: theme.spacing.xl}]} 
+                    onPress={onPlaybackComplete}
+                >
+                    <Text style={styles.continueButtonText}>
+                        {t('wwwPhases.mediaPlayback.continueToDiscussion')}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
     const videoId = mediaSourceType === MediaSourceType.YOUTUBE
         ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
         : undefined;

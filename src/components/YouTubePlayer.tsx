@@ -86,6 +86,14 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
     const overlayOpacity = useRef(new Animated.Value(1)).current;
 
+    /** Formats seconds into m:ss display string */
+    const formatTime = (seconds: number): string => {
+        if (!seconds || seconds < 0) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
     // Safe area aware fullscreen dimensions
     const safeWidth = screenWidth - insets.left - insets.right;
     const safeHeight = screenHeight - insets.top - insets.bottom;
@@ -107,7 +115,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
         controlsTimeoutRef.current = setTimeout(() => {
             setControlsVisible(false);
-        }, 3000);
+        }, 4000);
     }, []);
 
     const toggleControls = useCallback(() => {
@@ -212,6 +220,39 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         setIsFullscreen(prev => !prev);
         setTimeout(() => { isTransitioningRef.current = false; }, 500);
     }, [saveCurrentState]);
+
+    const handleSkipBack = useCallback(async () => {
+        try {
+            const minTime = startTime || 0;
+            const newTime = Math.max(currentTimeRef.current - 10, minTime);
+            await playerRef.current?.seekTo(newTime, true);
+            currentTimeRef.current = newTime;
+            setCurrentTime(newTime);
+            resetControlsTimeout();
+        } catch { /* seekTo can fail silently */ }
+    }, [startTime, resetControlsTimeout]);
+
+    const handleSkipForward = useCallback(async () => {
+        try {
+            const maxTime = endTime || duration || Infinity;
+            const newTime = Math.min(currentTimeRef.current + 10, maxTime);
+            await playerRef.current?.seekTo(newTime, true);
+            currentTimeRef.current = newTime;
+            setCurrentTime(newTime);
+            resetControlsTimeout();
+        } catch { /* seekTo can fail silently */ }
+    }, [endTime, duration, resetControlsTimeout]);
+
+    const handleReplayFromStart = useCallback(async () => {
+        try {
+            const seekTarget = startTime || 0;
+            await playerRef.current?.seekTo(seekTarget, true);
+            currentTimeRef.current = seekTarget;
+            setCurrentTime(seekTarget);
+            setPlaying(true);
+            resetControlsTimeout();
+        } catch { /* seekTo can fail silently */ }
+    }, [startTime, resetControlsTimeout]);
 
     useEffect(() => {
         if (isReady) restoreState();
@@ -364,6 +405,9 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
         const sliderMin = startTime || 0;
         const sliderMax = endTime || duration || 1;
+        const displayTime = Math.min(Math.max(currentTime, sliderMin), sliderMax);
+        const displayDuration = endTime || duration || 0;
+        const isSeekDisabled = displayDuration === 0;
 
         return (
             <View style={[StyleSheet.absoluteFillObject, { zIndex: 10 }]} pointerEvents="box-none">
@@ -379,39 +423,97 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         <View style={styles.controlsDimmer} pointerEvents="none" />
 
                         <View style={styles.centerControls} pointerEvents="box-none">
-                            <TouchableOpacity
-                                onPress={() => {
-                                    setPlaying(!playing);
-                                    resetControlsTimeout();
-                                }}
-                            >
-                                <MaterialCommunityIcons
-                                    name={playing ? "pause-circle" : "play-circle"}
-                                    size={64}
-                                    color="#fff"
-                                />
-                            </TouchableOpacity>
+                            <View style={styles.centerControlsRow}>
+                                {/* Replay from start */}
+                                <TouchableOpacity
+                                    onPress={handleReplayFromStart}
+                                    style={styles.controlButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityLabel={t('wwwPhases.youtube.replay')}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="replay"
+                                        size={28}
+                                        color="rgba(255,255,255,0.85)"
+                                    />
+                                </TouchableOpacity>
+
+                                {/* Skip back 10s */}
+                                <TouchableOpacity
+                                    onPress={handleSkipBack}
+                                    style={styles.controlButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityLabel={t('wwwPhases.youtube.skipBack')}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="rewind-10"
+                                        size={36}
+                                        color="rgba(255,255,255,0.92)"
+                                    />
+                                </TouchableOpacity>
+
+                                {/* Play / Pause */}
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setPlaying(!playing);
+                                        resetControlsTimeout();
+                                    }}
+                                    style={styles.controlButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                    <MaterialCommunityIcons
+                                        name={playing ? "pause-circle" : "play-circle"}
+                                        size={64}
+                                        color="#fff"
+                                    />
+                                </TouchableOpacity>
+
+                                {/* Skip forward 10s */}
+                                <TouchableOpacity
+                                    onPress={handleSkipForward}
+                                    style={styles.controlButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityLabel={t('wwwPhases.youtube.skipForward')}
+                                >
+                                    <MaterialCommunityIcons
+                                        name="fast-forward-10"
+                                        size={36}
+                                        color="rgba(255,255,255,0.92)"
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
                         <View style={styles.bottomControls}>
-                            <Slider
-                                style={{ width: '100%', height: 40 }}
-                                minimumValue={sliderMin}
-                                maximumValue={sliderMax}
-                                value={currentTime < sliderMin ? sliderMin : currentTime}
-                                onSlidingStart={() => {
-                                    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
-                                }}
-                                onSlidingComplete={async (val) => {
-                                    await playerRef.current?.seekTo(val, true);
-                                    setCurrentTime(val);
-                                    currentTimeRef.current = val;
-                                    resetControlsTimeout();
-                                }}
-                                minimumTrackTintColor="#FF0000"
-                                maximumTrackTintColor="#FFFFFF"
-                                thumbTintColor="#FF0000"
-                            />
+                            <View style={styles.bottomControlsRow}>
+                                <Text style={styles.timeLabel}>
+                                    {formatTime(displayTime)}
+                                </Text>
+                                <Slider
+                                    style={styles.seekSlider}
+                                    minimumValue={sliderMin}
+                                    maximumValue={sliderMax}
+                                    value={displayTime}
+                                    disabled={isSeekDisabled}
+                                    onSlidingStart={() => {
+                                        if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
+                                    }}
+                                    onSlidingComplete={async (val) => {
+                                        try {
+                                            await playerRef.current?.seekTo(val, true);
+                                            setCurrentTime(val);
+                                            currentTimeRef.current = val;
+                                        } catch { /* silent */ }
+                                        resetControlsTimeout();
+                                    }}
+                                    minimumTrackTintColor="#FF0000"
+                                    maximumTrackTintColor="rgba(255,255,255,0.4)"
+                                    thumbTintColor="#FF0000"
+                                />
+                                <Text style={styles.timeLabel}>
+                                    {formatTime(displayDuration)}
+                                </Text>
+                            </View>
                         </View>
                     </View>
                 )}
@@ -573,8 +675,52 @@ const styles = StyleSheet.create({
     // Custom Controls Styles
     customControlsContainer: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
     controlsDimmer: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
-    centerControls: { position: 'absolute', justifyContent: 'center', alignItems: 'center', zIndex: 20 },
-    bottomControls: { position: 'absolute', bottom: 15, left: 10, right: 10, zIndex: 20 },
+    centerControls: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 20,
+    },
+    centerControlsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 20,
+    },
+    controlButton: {
+        width: 48,
+        height: 48,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    bottomControls: {
+        position: 'absolute',
+        bottom: 8,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        paddingHorizontal: 8,
+    },
+    bottomControlsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    seekSlider: {
+        flex: 1,
+        height: 40,
+    },
+    timeLabel: {
+        color: '#fff',
+        fontSize: 12,
+        fontVariant: ['tabular-nums'],
+        minWidth: 36,
+        textAlign: 'center',
+    },
 });
 
 export default YouTubePlayer;

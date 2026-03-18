@@ -16,6 +16,7 @@ export type GameEvent =
   | { type: 'SKIP_READING' }
   | { type: 'SKIP_MEDIA' }
   | { type: 'START_DISCUSSION'; roundTime: number }
+  | { type: 'START_AUDIO_CHALLENGE'; roundTime?: number }
   | { type: 'TIME_UP' }
   | { type: 'SUBMIT_ANSWER' }
   | { type: 'ANSWER_SUBMITTED' }

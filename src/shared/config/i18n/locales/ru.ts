@@ -1339,6 +1339,7 @@ const ru = {
             replay: 'Повторить',
             continueToDiscussion: 'Перейти к обсуждению',
             skipMedia: 'Пропустить медиа',
+            mediaUnavailable: 'Медиа недоступно для этого вопроса.',
         },
         waiting: {
             readyToStart: 'Готовы начать?',
@@ -1351,6 +1352,9 @@ const ru = {
         youtube: {
             unavailable: 'Видео YouTube недоступно',
             retry: 'Повторить',
+            replay: 'Повторить сначала',
+            skipBack: 'Назад 10с',
+            skipForward: 'Вперёд 10с',
         },
         feedback: {
             title: 'Результаты раунда',

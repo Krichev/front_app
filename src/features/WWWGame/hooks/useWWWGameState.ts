@@ -74,6 +74,15 @@ function gameReducer(state: GameState, event: GameEvent): GameState {
         roundStartTime: new Date(),
       };
 
+    case 'START_AUDIO_CHALLENGE':
+      return {
+        ...state,
+        phase: 'answer',
+        timer: event.roundTime || 0,
+        isTimerRunning: false,
+        roundStartTime: new Date(),
+      };
+
     case 'TIME_UP':
       return { ...state, phase: 'answer', isTimerRunning: false };
 
@@ -154,6 +163,7 @@ export function useWWWGameState() {
     mediaPlaybackComplete: (): GameEvent => ({ type: 'MEDIA_PLAYBACK_COMPLETE' }),
     skipMedia: (): GameEvent => ({ type: 'SKIP_MEDIA' }),
     startDiscussion: (roundTime: number): GameEvent => ({ type: 'START_DISCUSSION', roundTime }),
+    startAudioChallenge: (roundTime?: number): GameEvent => ({ type: 'START_AUDIO_CHALLENGE', roundTime }),
     timeUp: (): GameEvent => ({ type: 'TIME_UP' }),
     submitAnswer: (): GameEvent => ({ type: 'SUBMIT_ANSWER' }),
     answerSubmitted: (): GameEvent => ({ type: 'ANSWER_SUBMITTED' }),

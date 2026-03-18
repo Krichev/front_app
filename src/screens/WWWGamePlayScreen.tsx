@@ -8,6 +8,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {useWWWGameState} from '../features/WWWGame/hooks/useWWWGameState';
 import {useWWWGameController} from '../features/WWWGame/hooks/useWWWGameController';
 import {useMediaPreloader} from '../features/WWWGame/hooks/useMediaPreloader';
+import {useReadingTime} from '../features/WWWGame/hooks/useReadingTime';
 import {
   AnswerPhase,
   DiscussionPhase,
@@ -16,6 +17,7 @@ import {
   ReadingPhase,
   WaitingPhase,
 } from '../features/WWWGame/ui/phases';
+import {AudioChallengeScoringPhase} from './WWWGamePlayScreen/components/AudioChallengeScoringPhase';
 import {ExitGameModal} from '../features/WWWGame/ui/components/ExitGameModal';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
@@ -48,6 +50,7 @@ const WWWGamePlayScreen: React.FC = () => {
 
   // State machine handles UI phases
   const {state, dispatch, actions} = useWWWGameState();
+  const {calculateReadingTime} = useReadingTime();
 
   const [showExitModal, setShowExitModal] = useState(false);
   const [showWagerResults, setShowWagerResults] = useState(false);
@@ -61,7 +64,39 @@ const WWWGamePlayScreen: React.FC = () => {
   const currentRound = controller.rounds?.[currentRoundIdx];
   const currentQuestion = currentRound?.question;
 
-  // Handle phase transitions
+  // Orchestration Effect: Handles routing between phases based on question type
+  useEffect(() => {
+    if (state.phase === 'waiting' && currentQuestion && state.gameStartTime && !controller.isLoading) {
+      const q = currentQuestion;
+      const effectiveRoundTime = controller.session?.roundTimeSeconds || 60;
+      
+      const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
+      const isAnyAudioQuestion = q.questionType === 'AUDIO';
+      const isMediaQuestionType = ['VIDEO', 'IMAGE'].includes(q.questionType as string);
+      
+      const mediaType = (q.questionMediaType || q.questionType)?.toUpperCase();
+      const hasUploadedMedia = ['VIDEO', 'AUDIO', 'IMAGE'].includes(mediaType) && !!q.questionMediaId;
+      const hasExternalMedia = ['VIDEO', 'AUDIO', 'IMAGE'].includes(q.questionType) 
+          && !!q.mediaSourceType && q.mediaSourceType !== 'UPLOADED'
+          && (!!q.externalMediaUrl || !!q.externalMediaId);
+      
+      const hasMedia = hasUploadedMedia || hasExternalMedia;
+
+      if (isAudioChallenge) {
+        console.log('🎵 [WWWGamePlayScreen] Audio challenge → skipping discussion, going to answer');
+        dispatch(actions.startAudioChallenge(effectiveRoundTime));
+      } else if (isAnyAudioQuestion) {
+        dispatch(actions.startDiscussion(effectiveRoundTime));
+      } else if (hasMedia || isMediaQuestionType) {
+        dispatch(actions.startMediaPlayback());
+      } else {
+        const readingTime = calculateReadingTime(q.question);
+        dispatch(actions.startReading(readingTime));
+      }
+    }
+  }, [state.phase, currentQuestion, state.gameStartTime, controller.isLoading, controller.session, dispatch, actions, calculateReadingTime]);
+
+  // Handle phase transitions for preloader delay
   useEffect(() => {
     // If we're entering media_playback, check if we need to wait a tiny bit for preloader
     if (state.phase === 'media_playback' && currentQuestion) {
@@ -87,8 +122,8 @@ const WWWGamePlayScreen: React.FC = () => {
   const handleStartGame = async () => {
     try {
       await controller.startSession();
-      // Start with reading phase (default 5s)
-      dispatch(actions.startReading(5));
+      // Initialize session in state machine
+      dispatch(actions.startSession(controller.session?.roundTimeSeconds || 60));
     } catch (error) {
       Alert.alert('Error', 'Failed to start the game session');
     }
@@ -206,6 +241,18 @@ const WWWGamePlayScreen: React.FC = () => {
         );
 
       case 'answer':
+        if (currentQuestion?.questionType === 'AUDIO' && currentQuestion.audioChallengeType) {
+          return (
+            <AudioChallengeScoringPhase
+              question={currentQuestion!}
+              isSubmitting={controller.isSubmittingAnswer}
+              onSubmissionComplete={(submission) => {
+                controller.submitAudioAnswer(currentRound!.id, currentQuestion!.id, submission.id);
+              }}
+              onCancel={() => setShowExitModal(true)}
+            />
+          );
+        }
         return (
           <AnswerPhase
             question={currentQuestion!}
@@ -226,8 +273,7 @@ const WWWGamePlayScreen: React.FC = () => {
             isCorrect={currentRound?.isCorrect || false}
             isLastRound={isLastRound}
             onNextRound={() => {
-              dispatch(actions.nextRound());
-              dispatch(actions.startReading(5));
+              dispatch(actions.nextRound(controller.session?.roundTimeSeconds || 60));
             }}
             onComplete={async () => {
               const outcome = await controller.completeGame();
