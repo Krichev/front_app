@@ -1,10 +1,12 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useTranslation } from 'react-i18next';
-import {AudioPlayer} from './AudioPlayer';
+import {useTranslation} from 'react-i18next';
+import {ReferenceAudioSection} from './audio/ReferenceAudioSection';
 import {AudioRecorder} from './AudioRecorder';
 import {AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType} from '../../types/audioChallenge.types';
+import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../shared/ui/theme';
 
 /**
  * @deprecated Use AudioChallengeContainer or AudioChallengePreview from ./audio/ instead.
@@ -12,8 +14,10 @@ import {AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType} from '../../types/audioC
  */
 interface KaraokeQuestionDisplayProps {
   question: {
+    id: number;
     question: string;
     questionMediaUrl?: string;
+    questionMediaId?: number | string | null;
     audioChallengeType?: AudioChallengeType;
     audioSegmentStart?: number;
     audioSegmentEnd?: number;
@@ -29,6 +33,9 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
   disabled = false,
 }) => {
   const { t } = useTranslation();
+  const { theme } = useAppStyles();
+  const styles = themeStyles;
+
   const challengeTypeInfo = question.audioChallengeType
     ? AUDIO_CHALLENGE_TYPES_INFO[question.audioChallengeType]
     : null;
@@ -38,7 +45,7 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
       {/* Challenge Type Header */}
       {challengeTypeInfo && (
         <View style={styles.header}>
-          <MaterialCommunityIcons name="microphone-variant" size={24} color="#4CAF50" />
+          <MaterialCommunityIcons name="microphone-variant" size={24} color={theme.colors.success.main} />
           <View style={styles.headerText}>
             <Text style={styles.typeTitle}>
               {challengeTypeInfo.type.replace('_', ' ')}
@@ -55,13 +62,18 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
       <Text style={styles.questionText}>{question.question}</Text>
 
       {/* Reference Audio Player */}
-      {question.questionMediaUrl && (
+      {(question.questionMediaUrl || question.questionMediaId || question.id) && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t('questionDisplay.karaoke.listenReference')}</Text>
-          <AudioPlayer 
-            audioUrl={question.questionMediaUrl}
-            segmentStart={question.audioSegmentStart}
-            segmentEnd={question.audioSegmentEnd}
+          <ReferenceAudioSection
+            question={{
+              id: question.id,
+              questionMediaUrl: question.questionMediaUrl,
+              questionMediaId: question.questionMediaId ?? null,
+              audioSegmentStart: question.audioSegmentStart ?? null,
+              audioSegmentEnd: question.audioSegmentEnd ?? null,
+            }}
+            title={t('questionDisplay.karaoke.listenReference')}
           />
         </View>
       )}
@@ -78,13 +90,13 @@ export const KaraokeQuestionDisplay: React.FC<KaraokeQuestionDisplayProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   container: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.layout.borderRadius.md,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: theme.colors.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
@@ -92,38 +104,38 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 16,
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme.colors.background.tertiary,
   },
   headerText: {
-    marginLeft: 12,
+    marginLeft: theme.spacing.md,
   },
   typeTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme.colors.text.primary,
   },
   typeDescription: {
     fontSize: 12,
-    color: '#666',
+    color: theme.colors.text.secondary,
   },
   questionText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 24,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xl,
     textAlign: 'center',
   },
   section: {
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
   },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
-    marginBottom: 12,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.md,
     textTransform: 'uppercase',
   },
-});
+}));

@@ -12,6 +12,8 @@ import { QuestionVisibility, MediaSourceType } from "../../../entities/QuizState
 import { AudioChallengeConfig } from "../../../screens/components/AudioChallengeSection";
 import { ProcessedFileInfo } from "../../../services/speech/FileService";
 
+import { useCreateAudioQuestionMutation } from '../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
+
 interface UseQuestionSubmitOptions {
     isEditing: boolean;
     existingQuestion?: UserQuestion;
@@ -28,47 +30,7 @@ export function useQuestionSubmit({
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const submitAudioQuestion = async (
-        questionData: any,
-        audioFile: ProcessedFileInfo
-    ): Promise<void> => {
-        const formData = new FormData();
-
-        formData.append('request', JSON.stringify({
-            question: questionData.question,
-            answer: questionData.answer,
-            audioChallengeType: questionData.audioChallengeType,
-            topic: questionData.topic,
-            difficulty: questionData.difficulty,
-            visibility: questionData.visibility,
-            acceptSimilarAnswers: questionData.acceptSimilarAnswers,
-            additionalInfo: questionData.additionalInfo,
-            audioSegmentStart: questionData.audioSegmentStart,
-            audioSegmentEnd: questionData.audioSegmentEnd,
-            minimumScorePercentage: questionData.minimumScorePercentage,
-            rhythmBpm: questionData.rhythmBpm,
-            rhythmTimeSignature: questionData.rhythmTimeSignature,
-        }));
-
-        formData.append('referenceAudio', {
-            uri: audioFile.uri,
-            name: audioFile.name,
-            type: audioFile.type,
-        } as any);
-
-        const response = await fetch('http://10.0.2.2:8082/api/questions/audio', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-            body: formData,
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to create audio question');
-        }
-    };
+    const [createAudioQuestion] = useCreateAudioQuestionMutation();
 
     const handleSubmit = useCallback(async (params: {
         questionText: LocalizedString;
@@ -146,7 +108,27 @@ export function useQuestionSubmit({
                 }
 
                 if (params.questionType === 'AUDIO' && params.audioConfig.referenceAudioFile) {
-                    await submitAudioQuestion(questionData, params.audioConfig.referenceAudioFile);
+                    await createAudioQuestion({
+                        request: {
+                            question: questionData.question,
+                            answer: questionData.answer,
+                            audioChallengeType: questionData.audioChallengeType,
+                            topic: questionData.topic,
+                            difficulty: questionData.difficulty,
+                            visibility: questionData.visibility,
+                            additionalInfo: questionData.additionalInfo,
+                            audioSegmentStart: questionData.audioSegmentStart,
+                            audioSegmentEnd: questionData.audioSegmentEnd,
+                            minimumScorePercentage: questionData.minimumScorePercentage,
+                            rhythmBpm: questionData.rhythmBpm,
+                            rhythmTimeSignature: questionData.rhythmTimeSignature,
+                        },
+                        referenceAudio: {
+                            uri: params.audioConfig.referenceAudioFile.uri,
+                            name: params.audioConfig.referenceAudioFile.name,
+                            type: params.audioConfig.referenceAudioFile.type,
+                        },
+                    }).unwrap();
                     Alert.alert(t('userQuestions.successTitle'), t('audioQuestion.createSuccess'));
                 } else if (onQuestionSubmit) {
                     onQuestionSubmit({

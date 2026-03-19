@@ -1,7 +1,7 @@
 import React from 'react';
 import {Text, View} from 'react-native';
 import {AudioPlayer} from '../AudioPlayer';
-import NetworkConfigManager from '../../../config/NetworkConfig';
+import MediaUrlService from '../../../services/media/MediaUrlService';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
 
@@ -35,7 +35,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
 }) => {
   const {theme} = useAppStyles();
   const styles = themeStyles;
-  const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
+  const mediaService = MediaUrlService.getInstance();
   
   // Resolution priority:
   // 1. Explicit audioUrl prop
@@ -45,36 +45,27 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   // 5. question.id (question-specific media endpoint)
 
   const getEffectiveUrl = () => {
-    const resolveRelative = (url: string | undefined) => {
-      if (!url) return undefined;
-      if (url.startsWith('http')) return url;
-      if (url.startsWith('/')) {
-        // If it already has /api, we should be careful not to double it if API_BASE_URL has it
-        // However, API_BASE_URL usually includes /api, e.g. http://host/api
-        // If url is /api/media/..., we want http://host/api/media/...
-        // So we should strip /api from url OR strip /api from API_BASE_URL
-        if (url.startsWith('/api/')) {
-          const hostPart = API_BASE_URL.replace(/\/api$/, '').replace(/\/api\/$/, '');
-          return `${hostPart}${url}`;
-        }
-        return `${API_BASE_URL}${url}`;
-      }
-      return url;
-    };
-
-    if (audioUrl) return resolveRelative(audioUrl);
-    if (question?.questionMediaUrl) return resolveRelative(question.questionMediaUrl);
+    // If we have an explicit URL or questionMediaUrl, try to proxy it if it's direct MinIO
+    const rawUrl = audioUrl || question?.questionMediaUrl;
+    if (rawUrl) {
+      // Use toProxyUrl to ensure we don't hit MinIO directly from emulator
+      const proxiedUrl = mediaService.toProxyUrl(rawUrl, typeof question?.id === 'number' ? question.id : undefined);
+      if (proxiedUrl) return proxiedUrl;
+      
+      // Fallback to original if proxying failed but it's already a full URL
+      if (rawUrl.startsWith('http')) return rawUrl;
+    }
     
     if (question?.audioReferenceMediaId) {
-      return `${API_BASE_URL}/media/audio/${question.audioReferenceMediaId}/playback-url`;
+      return mediaService.getMediaByIdUrl(question.audioReferenceMediaId);
     }
     
     if (question?.questionMediaId) {
-      return `${API_BASE_URL}/media/stream/${question.questionMediaId}`;
+      return mediaService.getMediaByIdUrl(question.questionMediaId);
     }
     
-    if (question?.id) {
-      return `${API_BASE_URL}/media/question/${question.id}/stream`;
+    if (question?.id && typeof question.id === 'number') {
+      return mediaService.getQuestionMediaUrl(question.id);
     }
     
     // diagnostic logging

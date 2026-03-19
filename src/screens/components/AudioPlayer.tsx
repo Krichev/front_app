@@ -1,9 +1,9 @@
-// src/screens/components/AudioPlayer.tsx
 import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {StyleSheet, Text, TouchableOpacity, View, ActivityIndicator} from 'react-native';
 import Video, {OnProgressData, VideoRef} from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Slider from '@react-native-community/slider';
+import { useTranslation } from 'react-i18next';
 import MediaUrlService from '../../services/media/MediaUrlService';
 
 interface AudioPlayerProps {
@@ -35,8 +35,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   const mediaService = MediaUrlService.getInstance();
+  const { t } = useTranslation();
 
   const effectiveEnd = segmentEnd || duration;
 
@@ -77,11 +79,19 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const handleLoad = (data: any) => {
     setDuration(data.duration);
     setIsLoading(false);
+    setHasError(false);
     if (videoRef.current) {
         videoRef.current.seek(segmentStart);
         setCurrentTime(segmentStart);
     }
     onLoad?.(data);
+  };
+
+  const handleError = (error: any) => {
+    console.error('🎵 [AudioPlayer] Playback error:', error?.error?.errorString || error, 'URL:', audioUrl);
+    setIsLoading(false);
+    setHasError(true);
+    onError?.(error);
   };
 
   const handleEnd = () => {
@@ -124,18 +134,35 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         onProgress={handleProgress}
         onLoad={handleLoad}
         onEnd={handleEnd}
-        onError={onError}
+        onError={handleError}
         playInBackground={false}
         playWhenInactive={false}
         ignoreSilentSwitch="ignore"
         style={{ height: 0, width: 0 }}
       />
 
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color={activeColor} />
+          <Text style={styles.loadingText}>{t('common.loading', 'Loading...')}</Text>
+        </View>
+      )}
+
+      {hasError && (
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons name="music-off" size={24} color="#F44336" />
+          <Text style={styles.errorText}>Failed to load audio</Text>
+          <TouchableOpacity onPress={() => { setHasError(false); setIsLoading(true); }}>
+            <Text style={styles.retryText}>Tap to retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.controls}>
         <TouchableOpacity 
             onPress={handlePlayPause} 
             style={styles.playButton}
-            disabled={isLoading}
+            disabled={isLoading || hasError}
         >
           {isLoading ? (
             <ActivityIndicator size="small" color={activeColor} />
@@ -143,7 +170,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <MaterialCommunityIcons
                 name={isPlaying ? 'pause-circle' : 'play-circle'}
                 size={42}
-                color={activeColor}
+                color={hasError ? '#999' : activeColor}
             />
           )}
         </TouchableOpacity>
@@ -166,7 +193,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             minimumTrackTintColor={activeColor}
             maximumTrackTintColor="#E0E0E0"
             thumbTintColor={activeColor}
-            disabled={isLoading}
+            disabled={isLoading || hasError}
           />
         </View>
       </View>
@@ -178,6 +205,36 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: 'transparent',
     paddingVertical: 8,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    backgroundColor: '#FFF0F0',
+    padding: 8,
+    borderRadius: 8,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#F44336',
+    flex: 1,
+  },
+  retryText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
   controls: {
     flexDirection: 'row',

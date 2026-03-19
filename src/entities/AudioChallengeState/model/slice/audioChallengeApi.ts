@@ -131,7 +131,7 @@ export interface AudioChallengeSubmission {
 
 export const audioChallengeApi = createApi({
     reducerPath: 'audioChallengeApi',
-    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getBaseUrl()),
+    baseQuery: createBaseQueryWithAuth(NetworkConfigManager.getInstance().getKaraokeBaseUrl()),
     tagTypes: ['AudioQuestion', 'AudioSubmission'],
     endpoints: (builder) => ({
         // =============================================================================
