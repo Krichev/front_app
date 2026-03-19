@@ -7,7 +7,8 @@ import {AudioRecorder} from './AudioRecorder';
 import {AUDIO_CHALLENGE_TYPES_INFO, AudioChallengeType} from '../../types/audioChallenge.types';
 
 /**
- * @deprecated Use AudioChallengeContainer or AudioChallengePreview from ./audio/ instead
+ * @deprecated Use AudioChallengeContainer or AudioChallengePreview from ./audio/ instead.
+ * This component is currently UNUSED in the project and can be safely deleted in a future cleanup.
  */
 interface KaraokeQuestionDisplayProps {
   question: {

@@ -45,8 +45,25 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   // 5. question.id (question-specific media endpoint)
 
   const getEffectiveUrl = () => {
-    if (audioUrl) return audioUrl;
-    if (question?.questionMediaUrl) return question.questionMediaUrl;
+    const resolveRelative = (url: string | undefined) => {
+      if (!url) return undefined;
+      if (url.startsWith('http')) return url;
+      if (url.startsWith('/')) {
+        // If it already has /api, we should be careful not to double it if API_BASE_URL has it
+        // However, API_BASE_URL usually includes /api, e.g. http://host/api
+        // If url is /api/media/..., we want http://host/api/media/...
+        // So we should strip /api from url OR strip /api from API_BASE_URL
+        if (url.startsWith('/api/')) {
+          const hostPart = API_BASE_URL.replace(/\/api$/, '').replace(/\/api\/$/, '');
+          return `${hostPart}${url}`;
+        }
+        return `${API_BASE_URL}${url}`;
+      }
+      return url;
+    };
+
+    if (audioUrl) return resolveRelative(audioUrl);
+    if (question?.questionMediaUrl) return resolveRelative(question.questionMediaUrl);
     
     if (question?.audioReferenceMediaId) {
       return `${API_BASE_URL}/media/audio/${question.audioReferenceMediaId}/playback-url`;

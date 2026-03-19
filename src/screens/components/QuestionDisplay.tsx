@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { MediaType, QuestionType } from '../../shared/types';
 import { AudioChallengeType } from '../../types/audioChallenge.types';
 import { AudioChallengeContainer } from './audio/AudioChallengeContainer';
+import { ReferenceAudioSection } from './audio/ReferenceAudioSection';
 import QuestionMediaViewer from '../CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { AudioPlayer } from './AudioPlayer';
 import VideoQuestionDisplay from '../../components/VideoQuestionDisplay';
@@ -130,20 +131,12 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
                 showAnswer={phase === 'answer'}
              />
           ) : isRegularAudio ? (
-            // For regular audio, use AudioPlayer if URL is available, or QuestionMediaViewer if using ID
-            question.questionMediaUrl ? (
-              <AudioPlayer 
-                audioUrl={question.questionMediaUrl}
-                segmentStart={question.audioSegmentStart}
-                segmentEnd={question.audioSegmentEnd}
-              />
-            ) : (
-              <QuestionMediaViewer 
-                questionId={question.id} 
-                mediaType={MediaType.AUDIO} 
-                height={80}
-              />
-            )
+            // For regular audio, use ReferenceAudioSection for proper URL resolution
+            <ReferenceAudioSection 
+              question={question}
+              mini={true}
+              title={t('questionDisplay.types.audio')}
+            />
           ) : (
             // Image/Video
             <QuestionMediaViewer 
