@@ -161,6 +161,8 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                                     style={{ width: safeWidth, height: safeHeight } as any}
                                     resizeMode="contain"
                                     shouldPlay={true}
+                                    useNativeControls={showControls}
+                                    showPlayButton={showControls}
                                     onEnd={onSegmentEnd}
                                 />
                             )}
@@ -237,6 +239,8 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
                     style={styles.video}
                     resizeMode={resizeMode}
                     shouldPlay={autoPlay || shouldPlay}
+                    useNativeControls={showControls}
+                    showPlayButton={showControls}
                     onEnd={onSegmentEnd}
                 />
                 {enableFullscreen && (

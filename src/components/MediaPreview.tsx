@@ -116,6 +116,7 @@ const MediaPreview: React.FC<MediaPreviewProps> = ({
                         startTime={videoStartTime}
                         endTime={videoEndTime}
                         shouldPlay={autoPlay}
+                        showControls={showControls}
                         style={{ height }}
                     />
                 );

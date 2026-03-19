@@ -8,6 +8,7 @@ import {RootStackParamList} from '../navigation/AppNavigator';
 import {useWWWGameState} from '../features/WWWGame/hooks/useWWWGameState';
 import {useWWWGameController} from '../features/WWWGame/hooks/useWWWGameController';
 import {useMediaPreloader} from '../features/WWWGame/hooks/useMediaPreloader';
+import {useVideoPreloader} from '../features/WWWGame/hooks/useVideoPreloader';
 import {useReadingTime} from '../features/WWWGame/hooks/useReadingTime';
 import {
   AnswerPhase,
@@ -51,6 +52,13 @@ const WWWGamePlayScreen: React.FC = () => {
   // State machine handles UI phases
   const {state, dispatch, actions} = useWWWGameState();
   const {calculateReadingTime} = useReadingTime();
+
+  // Video preloading — prefetch next round's media while current round is active
+  useVideoPreloader(
+    controller.rounds,
+    state.currentRound,
+    !!state.gameStartTime && controller.session?.status === 'IN_PROGRESS',
+  );
 
   const [showExitModal, setShowExitModal] = useState(false);
   const [showWagerResults, setShowWagerResults] = useState(false);
