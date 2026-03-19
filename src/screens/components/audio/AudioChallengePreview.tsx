@@ -36,7 +36,6 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
       />
       
       <ReferenceAudioSection 
-        audioUrl={question.questionMediaUrl}
         question={question}
         segmentStart={question.audioSegmentStart ?? undefined}
         segmentEnd={question.audioSegmentEnd ?? undefined}

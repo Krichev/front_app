@@ -75,10 +75,11 @@
 - Send: `/app/room/{roomCode}/join`, `/app/room/{roomCode}/action`
 
 ### Section 4: Media / MinIO
-- App never talks to MinIO directly
-- All media URLs come as presigned URLs from backend DTOs
-- URLs are time-limited — do not cache or persist them
-- Media types: images, audio, video (all served as presigned MinIO URLs)
+- App never talks to MinIO directly.
+- Frontend always builds media URLs from question IDs via `MediaUrlService`.
+- Never trusts raw `questionMediaUrl` from backend DTOs for uploaded media.
+- External media URLs (YouTube, Vimeo, SoundCloud) are absolute in DTOs and used directly.
+- Media types: images, audio, video (all served as backend proxy URLs).
 
 ### Section 5: Port Conventions
 | Service        | Dev Port | Prod Port |

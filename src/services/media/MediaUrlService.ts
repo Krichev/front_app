@@ -76,6 +76,48 @@ class MediaUrlService {
     }
 
     /**
+     * Resolve the correct audio playback URL for a question.
+     * Always builds from IDs using our NetworkConfig — never trusts raw backend URLs.
+     *
+     * Resolution order:
+     * 1. questionId → /media/question/{id}/stream (most reliable)
+     * 2. questionMediaId → /media/stream/{id} (fallback for media library items)
+     * 3. null (no media available)
+     *
+     * @param question - Object with at least an id field
+     * @returns Fully qualified proxy URL, or null if no media can be resolved
+     */
+    public resolveQuestionAudioUrl(question: {
+        id?: number | string;
+        questionMediaId?: number | string | null;
+        audioReferenceMediaId?: number | string | null;
+        questionMediaUrl?: string;  // accepted but IGNORED for uploaded media
+    }): string | null {
+        // Priority 1: Build from question ID (always correct for uploaded media)
+        if (question.id) {
+            const numId = typeof question.id === 'string' ? parseInt(question.id, 10) : question.id;
+            if (!isNaN(numId)) {
+                return this.getQuestionMediaUrl(numId);
+            }
+        }
+
+        // Priority 2: Build from reference media ID
+        if (question.audioReferenceMediaId) {
+            return this.getMediaByIdUrl(question.audioReferenceMediaId);
+        }
+
+        // Priority 3: Build from media ID
+        if (question.questionMediaId) {
+            return this.getMediaByIdUrl(question.questionMediaId);
+        }
+
+        // Priority 4: No media resolvable
+        // Note: we intentionally do NOT fall back to question.questionMediaUrl
+        // because it may contain a stale/wrong absolute URL from the backend.
+        return null;
+    }
+
+    /**
      * Check if URL is already a proxy URL (from our backend)
      */
     public isProxyUrl(url: string): boolean {

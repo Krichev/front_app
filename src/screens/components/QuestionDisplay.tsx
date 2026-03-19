@@ -8,7 +8,6 @@ import { AudioChallengeType } from '../../types/audioChallenge.types';
 import { AudioChallengeContainer } from './audio/AudioChallengeContainer';
 import { ReferenceAudioSection } from './audio/ReferenceAudioSection';
 import QuestionMediaViewer from '../CreateWWWQuestScreen/components/QuestionMediaViewer';
-import { AudioPlayer } from './AudioPlayer';
 import VideoQuestionDisplay from '../../components/VideoQuestionDisplay';
 
 export interface QuestionDisplayProps {

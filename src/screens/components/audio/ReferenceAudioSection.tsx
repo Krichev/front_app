@@ -2,6 +2,7 @@ import React from 'react';
 import {Text, View} from 'react-native';
 import {AudioPlayer} from '../AudioPlayer';
 import MediaUrlService from '../../../services/media/MediaUrlService';
+import NetworkConfigManager from '../../../config/NetworkConfig';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
 
@@ -45,27 +46,31 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   // 5. question.id (question-specific media endpoint)
 
   const getEffectiveUrl = () => {
-    // If we have an explicit URL or questionMediaUrl, try to proxy it if it's direct MinIO
-    const rawUrl = audioUrl || question?.questionMediaUrl;
-    if (rawUrl) {
-      // Use toProxyUrl to ensure we don't hit MinIO directly from emulator
-      const proxiedUrl = mediaService.toProxyUrl(rawUrl, typeof question?.id === 'number' ? question.id : undefined);
-      if (proxiedUrl) return proxiedUrl;
+    // 1. Explicit audioUrl prop (caller knows best)
+    if (audioUrl) return audioUrl;
+
+    // 2. Resolve through MediaUrlService (prioritizes IDs, ignores uploaded media URL)
+    const resolvedUrl = mediaService.resolveQuestionAudioUrl(question || {});
+    if (resolvedUrl) return resolvedUrl;
+
+    // 3. Last resort: questionMediaUrl — only if it looks like a relative path
+    //    (after backend fix, these will be relative like /api/media/question/44/stream)
+    if (question?.questionMediaUrl) {
+      if (question.questionMediaUrl.startsWith('/')) {
+        // Relative path from new backend — prepend our base URL
+        // We need to reach private getBaseUrl or use another service method
+        // But getQuestionMediaUrl already uses getBaseUrl() internally.
+        // Actually, we can just use the fact that resolveQuestionAudioUrl already tried to build it.
+        // If it's a relative path, we can prepend base URL manually if we had it, 
+        // but it's better to trust resolveQuestionAudioUrl more.
+        
+        const baseUrl = (mediaService as any).getBaseUrl?.() || NetworkConfigManager.getInstance().getBaseUrl();
+        return `${baseUrl.replace('/api', '')}${question.questionMediaUrl}`;
+      }
       
-      // Fallback to original if proxying failed but it's already a full URL
-      if (rawUrl.startsWith('http')) return rawUrl;
-    }
-    
-    if (question?.audioReferenceMediaId) {
-      return mediaService.getMediaByIdUrl(question.audioReferenceMediaId);
-    }
-    
-    if (question?.questionMediaId) {
-      return mediaService.getMediaByIdUrl(question.questionMediaId);
-    }
-    
-    if (question?.id && typeof question.id === 'number') {
-      return mediaService.getQuestionMediaUrl(question.id);
+      // Old absolute URL — log a warning but try to use it
+      console.warn('⚠️ [ReferenceAudioSection] Received absolute questionMediaUrl, should build from IDs:', question.questionMediaUrl);
+      return question.questionMediaUrl;
     }
     
     // diagnostic logging

@@ -43,6 +43,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const effectiveEnd = segmentEnd || duration;
 
   useEffect(() => {
+    if (__DEV__ && audioUrl) {
+      if (audioUrl.includes('localhost') || audioUrl.includes(':8082')) {
+        console.error(
+          '🚨 [AudioPlayer] Suspect URL detected — this may have come from an unsanitized backend DTO:',
+          audioUrl.substring(0, 100)
+        );
+      }
+    }
+  }, [audioUrl]);
+
+  useEffect(() => {
     // Seek to start time initially
     if (videoRef.current && !isSeeking) {
         videoRef.current.seek(segmentStart);
