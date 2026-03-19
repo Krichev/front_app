@@ -63,6 +63,25 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
     const hasUploadedMedia = !!question.questionMediaId;
     const hasExternalMedia = !!question.externalMediaUrl || !!question.externalMediaId;
 
+    const videoId = mediaSourceType === MediaSourceType.YOUTUBE
+        ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
+        : undefined;
+
+    if (__DEV__) {
+        console.log('🎬 [MediaPlaybackPhase] Render:', {
+            questionId: question.id,
+            mediaType,
+            mediaSourceType,
+            isExternalMedia,
+            videoId,
+            externalMediaUrl: question.externalMediaUrl?.substring(0, 60),
+            questionMediaUrl: question.questionMediaUrl?.substring(0, 60),
+            questionMediaId: question.questionMediaId,
+            replayKey,
+            playbackEnded,
+        });
+    }
+
     if (!hasUploadedMedia && !hasExternalMedia) {
         return (
             <View style={[styles.container, {padding: theme.spacing.xl, justifyContent: 'center'}]}>
@@ -81,10 +100,6 @@ export const MediaPlaybackPhase: React.FC<MediaPlaybackPhaseProps> = ({
             </View>
         );
     }
-
-    const videoId = mediaSourceType === MediaSourceType.YOUTUBE
-        ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
-        : undefined;
 
     return (
         <ScrollView

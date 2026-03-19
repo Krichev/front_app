@@ -7,8 +7,11 @@ import {createStyles} from '../../../shared/ui/theme';
 
 interface AudioChallengePreviewProps {
   question: {
+    id?: number | string;
     question?: string;
     questionMediaUrl?: string;
+    questionMediaId?: string | number | null;
+    audioReferenceMediaId?: number | string | null;
     audioChallengeType?: AudioChallengeType | null;
     audioSegmentStart?: number | null;
     audioSegmentEnd?: number | null;
@@ -34,6 +37,7 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
       
       <ReferenceAudioSection 
         audioUrl={question.questionMediaUrl}
+        question={question}
         segmentStart={question.audioSegmentStart ?? undefined}
         segmentEnd={question.audioSegmentEnd ?? undefined}
         title="Reference Audio"

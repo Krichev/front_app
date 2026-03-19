@@ -86,6 +86,28 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     const controlsTimeoutRef = useRef<NodeJS.Timeout>();
     const overlayOpacity = useRef(new Animated.Value(1)).current;
 
+    // === DIAGNOSTIC LOGGING ===
+    useEffect(() => {
+        if (__DEV__) {
+            console.log('🎬 [YouTubePlayer] State snapshot:', {
+                videoId,
+                showControls,
+                autoPlay,
+                onlyPlayButton,
+                enableFullscreen,
+                playing,
+                isReady,
+                hasError,
+                videoStarted,
+                showOverlay,
+                controlsVisible,
+                isFullscreen,
+                currentTime: currentTimeRef.current,
+                duration,
+            });
+        }
+    }, [playing, isReady, hasError, videoStarted, showOverlay, controlsVisible, isFullscreen, duration]);
+
     /** Formats seconds into m:ss display string */
     const formatTime = (seconds: number): string => {
         if (!seconds || seconds < 0) return '0:00';
@@ -119,6 +141,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     }, []);
 
     const toggleControls = useCallback(() => {
+        if (__DEV__) console.log('🎬 [YouTubePlayer] toggleControls', { wasVisible: controlsVisible, willBeVisible: !controlsVisible });
         if (controlsVisible) {
             setControlsVisible(false);
             if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -135,18 +158,29 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         }
     }, [onlyPlayButton, autoPlay]);
 
+    // Auto-show custom controls when showControls=true and video has started
+    useEffect(() => {
+        if (showControls && videoStarted && isReady) {
+            if (__DEV__) console.log('🎬 [YouTubePlayer] Auto-showing controls (showControls=true, videoStarted, isReady)');
+            setControlsVisible(true);
+            resetControlsTimeout();
+        }
+    }, [showControls, videoStarted, isReady]);
+
     const handleThumbnailPress = useCallback(() => {
+        if (__DEV__) console.log('🎬 [YouTubePlayer] Thumbnail pressed, starting video', { videoId });
         setVideoStarted(true);
         setPlaying(true);
         setShowOverlay(true);
         overlayOpacity.setValue(1);
-    }, [overlayOpacity]);
+    }, [overlayOpacity, videoId]);
 
     const handleThumbnailError = useCallback(() => {
         setThumbnailFailed(true);
     }, []);
 
     const handleStateChange = useCallback(async (state: string) => {
+        if (__DEV__) console.log('🎬 [YouTubePlayer] onChangeState:', state, { videoId, playing, videoStarted, showControls, onlyPlayButton });
         if (state === 'ended') {
             setPlaying(false);
             onSegmentEnd?.();
@@ -172,7 +206,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             }
         }
         onStateChange?.(state);
-    }, [onSegmentEnd, onStateChange, autoPlay, showControls, onlyPlayButton, startTime]);
+    }, [onSegmentEnd, onStateChange, autoPlay, showControls, onlyPlayButton, startTime, videoId, playing, videoStarted]);
 
     useEffect(() => {
         if (!playing || !isReady) return;
@@ -313,6 +347,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     };
 
     const handleReady = useCallback(async () => {
+        if (__DEV__) console.log('🎬 [YouTubePlayer] handleReady fired', { videoId, autoPlay, showOverlay, showControls });
         setIsReady(true);
         try {
             const vidDuration = await playerRef.current?.getDuration();
@@ -322,7 +357,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
         onReady?.();
         if (autoPlay) setTimeout(() => setPlaying(true), 100);
         setTimeout(restoreState, 200);
-    }, [autoPlay, onReady, restoreState]);
+    }, [autoPlay, onReady, restoreState, videoId, showOverlay, showControls]);
 
     const handleError = useCallback((error: any) => {
         setHasError(true);
@@ -336,7 +371,19 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                 useNativeDriver: true,
             }).start(({ finished }) => finished && setShowOverlay(false));
         }
-    }, [isReady, showOverlay]);
+    }, [isReady, showOverlay, overlayOpacity]);
+
+    // Safety: Force-hide overlay after 5 seconds even if animation glitches
+    useEffect(() => {
+        if (videoStarted && showOverlay) {
+            const safetyTimer = setTimeout(() => {
+                if (__DEV__) console.log('🎬 [YouTubePlayer] Safety timer: force-hiding overlay');
+                setShowOverlay(false);
+                overlayOpacity.setValue(0);
+            }, 5000);
+            return () => clearTimeout(safetyTimer);
+        }
+    }, [videoStarted, showOverlay, overlayOpacity]);
 
     useEffect(() => onPlayingChange?.(playing), [playing, onPlayingChange]);
 
@@ -392,6 +439,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     } as any;
 
     const renderCustomControls = () => {
+        if (__DEV__) console.log('🎬 [YouTubePlayer] renderCustomControls called', { showControls, controlsVisible, playing, videoStarted });
         if (!showControls) {
             return (
                 <TouchableOpacity
@@ -648,7 +696,7 @@ const styles = StyleSheet.create({
     errorText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginTop: 12 },
     retryButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#444', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginTop: 16, gap: 8 },
     retryText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-    loadingOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 20, backgroundColor: '#000' },
+    loadingOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 5, backgroundColor: '#000' },
     loadingOverlayDimmed: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
 
     // Z-index bumped to 40 so it stays above the custom controls interceptor Z-index 10

@@ -112,6 +112,19 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
         setTimeout(() => { isTransitioningRef.current = false; }, 500);
     }, []);
 
+    if (__DEV__) {
+        console.log('🎬 [ExternalVideoPlayer] Render:', {
+            mediaSourceType,
+            videoId: videoId?.substring(0, 20),
+            videoUrl: videoUrl?.substring(0, 60),
+            autoPlay,
+            showControls,
+            shouldPlay,
+            onlyPlayButton,
+            height,
+        });
+    }
+
     // Safe area fullscreen dimensions for non-YouTube videos
     const safeWidth = screenWidth - insets.left - insets.right;
     const safeHeight = screenHeight - insets.top - insets.bottom;
@@ -184,6 +197,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
 
     // 1. YouTube
     if (mediaSourceType === MediaSourceType.YOUTUBE && videoId) {
+        if (__DEV__) console.log('🎬 [ExternalVideoPlayer] → YouTubePlayer branch', { videoId });
         return (
             <View style={[styles.container, combinedStyle]}>
                 <YouTubePlayer
@@ -205,6 +219,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
 
     // 2. Direct External URL (mp4, etc.)
     if (mediaSourceType === MediaSourceType.EXTERNAL_URL && videoUrl) {
+        if (__DEV__) console.log('🎬 [ExternalVideoPlayer] → Video (EXTERNAL_URL) branch', { videoUrl: videoUrl?.substring(0, 60) });
         return (
             <View style={[styles.container, combinedStyle]}>
                 <Video
@@ -231,6 +246,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
 
     // 3. Uploaded (Proxy URL)
     if (mediaSourceType === MediaSourceType.UPLOADED || !mediaSourceType) {
+        if (__DEV__) console.log('🎬 [ExternalVideoPlayer] → AuthenticatedVideo (UPLOADED) branch', { videoUrl: videoUrl?.substring(0, 60) });
         return (
             <View style={[styles.container, combinedStyle]}>
                 <AuthenticatedVideo
@@ -253,6 +269,7 @@ const ExternalVideoPlayer: React.FC<ExternalVideoPlayerProps> = ({
         );
     }
 
+    if (__DEV__) console.log('🎬 [ExternalVideoPlayer] → No matching branch! Rendering null', { mediaSourceType, videoId, videoUrl });
     return null;
 };
 

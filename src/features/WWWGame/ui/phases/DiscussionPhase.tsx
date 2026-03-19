@@ -120,6 +120,14 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                             </View>
                             {hasExternalMedia && mediaType === 'VIDEO' ? (
                                 <View style={{width: '100%', borderRadius: 8, overflow: 'hidden'}}>
+                                    {__DEV__ && (console.log('🎬 [DiscussionPhase] Rendering ExternalVideoPlayer:', {
+                                        questionId: question.id,
+                                        mediaSourceType: question.mediaSourceType,
+                                        videoId,
+                                        externalMediaUrl: question.externalMediaUrl?.substring(0, 60),
+                                        showControls: false,
+                                        onlyPlayButton: true,
+                                    }), null)}
                                     <ExternalVideoPlayer
                                         mediaSourceType={question.mediaSourceType as MediaSourceType}
                                         videoId={videoId}

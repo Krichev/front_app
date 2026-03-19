@@ -84,20 +84,35 @@ const AuthenticatedVideo: React.FC<AuthenticatedVideoProps> = ({
 
     const videoUrl = getVideoUrl();
 
+    if (__DEV__) {
+        console.log('🎬 [AuthenticatedVideo] Render:', {
+            questionId,
+            mediaId,
+            uri: uri?.substring(0, 60),
+            computedUrl: videoUrl?.substring(0, 80),
+            hasUrl: !!videoUrl,
+            shouldPlay,
+            isLoading,
+            hasError,
+        });
+    }
+
     const handleLoad = useCallback((data: OnLoadData) => {
+        if (__DEV__) console.log('🎬 [AuthenticatedVideo] Video loaded successfully', { questionId, videoUrl: videoUrl?.substring(0, 80) });
         setIsLoading(false);
         setHasError(false);
         onLoad?.(data);
-    }, [onLoad]);
+    }, [onLoad, questionId, videoUrl]);
 
     const handleError = useCallback((error: any) => {
         setIsLoading(false);
         setHasError(true);
         const errorMsg = error?.error?.errorString || 'Unknown error';
         setErrorMessage(errorMsg);
+        if (__DEV__) console.log('🎬 [AuthenticatedVideo] Load error at', new Date().toISOString(), { questionId, errorMsg, videoUrl: videoUrl?.substring(0, 80) });
         console.error('🎬 Video playback error:', errorMsg, 'URL:', videoUrl);
         onError?.({ message: errorMsg, url: videoUrl });
-    }, [onError, videoUrl]);
+    }, [onError, videoUrl, questionId]);
 
     const handleProgress = useCallback((data: OnProgressData) => {
         // Update playing state based on actual playback

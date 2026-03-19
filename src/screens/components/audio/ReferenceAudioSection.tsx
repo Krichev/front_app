@@ -60,6 +60,15 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
       return `${API_BASE_URL}/media/question/${question.id}/stream`;
     }
     
+    // diagnostic logging
+    console.warn('🎵 [ReferenceAudioSection] No audio URL could be resolved. Available fields:', {
+      audioUrl,
+      questionMediaUrl: question?.questionMediaUrl,
+      audioReferenceMediaId: question?.audioReferenceMediaId,
+      questionMediaId: question?.questionMediaId,
+      questionId: question?.id,
+    });
+    
     return undefined;
   };
 

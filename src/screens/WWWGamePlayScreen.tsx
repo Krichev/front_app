@@ -53,12 +53,8 @@ const WWWGamePlayScreen: React.FC = () => {
   const {state, dispatch, actions} = useWWWGameState();
   const {calculateReadingTime} = useReadingTime();
 
-  // Video preloading — prefetch next round's media while current round is active
-  useVideoPreloader(
-    controller.rounds,
-    state.currentRound,
-    !!state.gameStartTime && controller.session?.status === 'IN_PROGRESS',
-  );
+  // Video preloading — primes cache for the next round's media
+  useVideoPreloader(state.currentRound, controller.rounds);
 
   const [showExitModal, setShowExitModal] = useState(false);
   const [showWagerResults, setShowWagerResults] = useState(false);
@@ -76,6 +72,25 @@ const WWWGamePlayScreen: React.FC = () => {
   useEffect(() => {
     if (state.phase === 'waiting' && currentQuestion && state.gameStartTime && !controller.isLoading) {
       const q = currentQuestion;
+      if (__DEV__) {
+        console.log('📦 [WWWGamePlayScreen] Phase orchestration — entering round:', {
+          phase: state.phase,
+          currentRound: state.currentRound,
+          questionId: q.id,
+          questionType: q.questionType,
+          mediaSourceType: q.mediaSourceType,
+          hasExternalMedia: !!q.externalMediaUrl || !!q.externalMediaId,
+          hasUploadedMedia: !!q.questionMediaId,
+          questionMediaType: q.questionMediaType,
+        });
+        console.log('🔍 [AUDIO DEBUG] Question routing data:', {
+          questionId: q.id,
+          type: q.questionType,
+          mediaType: q.questionMediaType,
+          hasUrl: !!q.questionMediaUrl,
+          hasId: !!q.questionMediaId,
+        });
+      }
       const effectiveRoundTime = controller.session?.roundTimeSeconds || 60;
       
       const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
@@ -111,7 +126,7 @@ const WWWGamePlayScreen: React.FC = () => {
       const status = preloadStatuses[currentQuestion.id];
       
       if (status === 'loading') {
-        console.log(`🎬 [WWWGamePlayScreen] Delaying media_playback phase for question ${currentQuestion.id} to finish preload`);
+        if (__DEV__) console.log(`🎬 [WWWGamePlayScreen] Delaying media_playback phase for question ${currentQuestion.id} to finish preload`);
         const timer = setTimeout(() => {
           // No action needed, component will just render and pick up where preload left off
         }, 300);

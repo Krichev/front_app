@@ -5,7 +5,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { useTranslation } from 'react-i18next';
 import { MediaType, QuestionType } from '../../shared/types';
 import { AudioChallengeType } from '../../types/audioChallenge.types';
-import { KaraokeQuestionDisplay } from './KaraokeQuestionDisplay';
+import { AudioChallengeContainer } from './audio/AudioChallengeContainer';
 import QuestionMediaViewer from '../CreateWWWQuestScreen/components/QuestionMediaViewer';
 import { AudioPlayer } from './AudioPlayer';
 import VideoQuestionDisplay from '../../components/VideoQuestionDisplay';
@@ -18,6 +18,7 @@ export interface QuestionDisplayProps {
     questionMediaUrl?: string;
     questionMediaId?: number;
     questionMediaType?: MediaType;
+    audioReferenceMediaId?: number | null;
     // Audio challenge specific (only when questionType === 'AUDIO')
     audioChallengeType?: AudioChallengeType;
     audioSegmentStart?: number;
@@ -91,8 +92,9 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
       return (
         <View style={styles.container}>
           {renderTypeBadge()}
-          <KaraokeQuestionDisplay
+          <AudioChallengeContainer
             question={question}
+            mode="record"
             onRecordingComplete={onRecordingComplete || (() => {})}
             disabled={disabled}
           />
@@ -104,10 +106,9 @@ export const QuestionDisplay: React.FC<QuestionDisplayProps> = ({
     return (
       <View style={styles.container}>
         {renderTypeBadge()}
-        <KaraokeQuestionDisplay
+        <AudioChallengeContainer
           question={question}
-          onRecordingComplete={() => {}} // No recording in these phases
-          disabled={true} // Disable recorder
+          mode="preview"
         />
       </View>
     );

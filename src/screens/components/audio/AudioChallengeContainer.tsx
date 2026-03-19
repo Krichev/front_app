@@ -6,8 +6,11 @@ import {AudioChallengeType} from '../../../types/audioChallenge.types';
 
 interface AudioChallengeContainerProps {
   question: {
+    id?: number | string;
     question?: string;
     questionMediaUrl?: string;
+    questionMediaId?: string | number | null;
+    audioReferenceMediaId?: number | string | null;
     audioChallengeType?: AudioChallengeType | null;
     audioSegmentStart?: number | null;
     audioSegmentEnd?: number | null;
