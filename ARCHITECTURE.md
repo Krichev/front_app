@@ -104,3 +104,11 @@
 - Backend returns `Long` IDs as numbers — frontend treats them as `string | number`
 - Presigned URLs expire — never store them in AsyncStorage or persist in state
 - Backend `completeQuizSession` is idempotent — safe to call multiple times
+
+### Section 8: Location Quest
+- Screens: `QuestDiscovery`, `QuestDetail`, `QuestActive` (Live Tracking)
+- RTK Query: `locationQuestApi` (reducerPath: `'locationQuestApi'`)
+- WebSocket: `/topic/quest/{id}/progress`, `/user/queue/quest-hints`
+- Entity: `src/entities/LocationQuest/`, Widget: `src/widgets/QuestMap/`
+- GPS: `@react-native-community/geolocation` (foreground tracking)
+- Endpoints (11): `/location-quests/` (discover, join, start, arrive, complete, location-update, progress, abandon)

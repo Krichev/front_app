@@ -22,6 +22,7 @@ import {invitationApi} from '../../../entities/InvitationState/model/slice/invit
 import {competitiveApi} from '../../../entities/CompetitiveMatch/model/slice/competitiveApi';
 import {puzzleApi} from '../../../entities/PuzzleState/model/slice/puzzleApi';
 import {tvDisplayApi} from '../../../entities/TvDisplayState/model/slice/tvDisplayApi';
+import {locationQuestApi} from '../../../entities/LocationQuest/model/slice/locationQuestApi';
 
 export const store = configureStore({
     reducer: {
@@ -47,6 +48,7 @@ export const store = configureStore({
         [competitiveApi.reducerPath]: competitiveApi.reducer,
         [puzzleApi.reducerPath]: puzzleApi.reducer,
         [tvDisplayApi.reducerPath]: tvDisplayApi.reducer,
+        [locationQuestApi.reducerPath]: locationQuestApi.reducer,
     },
 
     middleware: (getDefaultMiddleware) =>
@@ -69,6 +71,7 @@ export const store = configureStore({
             competitiveApi.middleware,
             puzzleApi.middleware,
             tvDisplayApi.middleware,
+            locationQuestApi.middleware,
         ),
 
 

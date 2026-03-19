@@ -34,7 +34,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(segmentStart);
   const [duration, setDuration] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   const mediaService = MediaUrlService.getInstance();
@@ -62,13 +63,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   }, [segmentStart, isSeeking]);
 
   const handlePlayPause = useCallback(() => {
+    if (!isPlaying && !isLoaded) {
+      // First play — media may need to buffer
+      setIsLoading(true);
+    }
     // If we're at the end of the segment, restart from the beginning when playing
     if (!isPlaying && segmentEnd && currentTime >= segmentEnd - 0.1) {
         videoRef.current?.seek(segmentStart);
         setCurrentTime(segmentStart);
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying, segmentEnd, currentTime, segmentStart]);
+  }, [isPlaying, isLoaded, segmentEnd, currentTime, segmentStart]);
 
   const handleProgress = useCallback((data: OnProgressData) => {
     if (!isSeeking) {
@@ -90,6 +95,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const handleLoad = (data: any) => {
     setDuration(data.duration);
     setIsLoading(false);
+    setIsLoaded(true);
     setHasError(false);
     if (videoRef.current) {
         videoRef.current.seek(segmentStart);
@@ -99,7 +105,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   };
 
   const handleError = (error: any) => {
-    console.error('🎵 [AudioPlayer] Playback error:', error?.error?.errorString || error, 'URL:', audioUrl);
+    console.error('🎵 [AudioPlayer] Playback error:', 
+      error?.error?.errorString || 'Unknown', 'URL:', audioUrl);
     setIsLoading(false);
     setHasError(true);
     onError?.(error);
@@ -173,7 +180,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <TouchableOpacity 
             onPress={handlePlayPause} 
             style={styles.playButton}
-            disabled={isLoading || hasError}
+            activeOpacity={0.7}
         >
           {isLoading ? (
             <ActivityIndicator size="small" color={activeColor} />
@@ -181,7 +188,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             <MaterialCommunityIcons
                 name={isPlaying ? 'pause-circle' : 'play-circle'}
                 size={42}
-                color={hasError ? '#999' : activeColor}
+                color={activeColor}
             />
           )}
         </TouchableOpacity>
@@ -204,7 +211,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             minimumTrackTintColor={activeColor}
             maximumTrackTintColor="#E0E0E0"
             thumbTintColor={activeColor}
-            disabled={isLoading || hasError}
+            disabled={isLoading}
           />
         </View>
       </View>

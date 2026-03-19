@@ -36,56 +36,59 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
 }) => {
   const {theme} = useAppStyles();
   const styles = themeStyles;
-  const mediaService = MediaUrlService.getInstance();
+  const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
   
-  // Resolution priority:
-  // 1. Explicit audioUrl prop
-  // 2. question.questionMediaUrl (direct stream URL)
-  // 3. question.audioReferenceMediaId (dedicated reference audio)
-  // 4. question.questionMediaId (media library ID)
-  // 5. question.id (question-specific media endpoint)
+  const isValidPlayableUrl = (url: string | undefined): boolean => {
+    if (!url) return false;
+    // Relative paths without host won't work for ExoPlayer
+    if (url.startsWith('/')) return false;
+    // Must start with http:// or https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) return false;
+    // localhost URLs won't work from Android emulator
+    if (url.includes('localhost')) return false;
+    return true;
+  };
 
   const getEffectiveUrl = () => {
-    // 1. Explicit audioUrl prop (caller knows best)
-    if (audioUrl) return audioUrl;
+    // 1. Explicit audioUrl prop (if valid)
+    if (audioUrl && isValidPlayableUrl(audioUrl)) return audioUrl;
 
-    // 2. Resolve through MediaUrlService (prioritizes IDs, ignores uploaded media URL)
-    const resolvedUrl = mediaService.resolveQuestionAudioUrl(question || {});
-    if (resolvedUrl) return resolvedUrl;
-
-    // 3. Last resort: questionMediaUrl — only if it looks like a relative path
-    //    (after backend fix, these will be relative like /api/media/question/44/stream)
-    if (question?.questionMediaUrl) {
-      if (question.questionMediaUrl.startsWith('/')) {
-        // Relative path from new backend — prepend our base URL
-        // We need to reach private getBaseUrl or use another service method
-        // But getQuestionMediaUrl already uses getBaseUrl() internally.
-        // Actually, we can just use the fact that resolveQuestionAudioUrl already tried to build it.
-        // If it's a relative path, we can prepend base URL manually if we had it, 
-        // but it's better to trust resolveQuestionAudioUrl more.
-        
-        const baseUrl = (mediaService as any).getBaseUrl?.() || NetworkConfigManager.getInstance().getBaseUrl();
-        return `${baseUrl.replace('/api', '')}${question.questionMediaUrl}`;
-      }
-      
-      // Old absolute URL — log a warning but try to use it
-      console.warn('⚠️ [ReferenceAudioSection] Received absolute questionMediaUrl, should build from IDs:', question.questionMediaUrl);
-      return question.questionMediaUrl;
+    // 2. question.questionMediaUrl (if valid)
+    if (question?.questionMediaUrl && isValidPlayableUrl(question.questionMediaUrl)) return question.questionMediaUrl;
+    
+    // 3. question.audioReferenceMediaId
+    if (question?.audioReferenceMediaId) {
+      return `${API_BASE_URL}/media/stream/${question.audioReferenceMediaId}`;
     }
     
-    // diagnostic logging
-    console.warn('🎵 [ReferenceAudioSection] No audio URL could be resolved. Available fields:', {
-      audioUrl,
-      questionMediaUrl: question?.questionMediaUrl,
-      audioReferenceMediaId: question?.audioReferenceMediaId,
-      questionMediaId: question?.questionMediaId,
-      questionId: question?.id,
-    });
+    // 4. question.questionMediaId
+    if (question?.questionMediaId) {
+      return `${API_BASE_URL}/media/stream/${question.questionMediaId}`;
+    }
+    
+    // 5. question.id
+    if (question?.id) {
+      return `${API_BASE_URL}/media/question/${question.id}/stream`;
+    }
+    
+    // Last resort: try to fix a relative audioUrl by prepending base URL
+    if (audioUrl && audioUrl.startsWith('/')) {
+      return `${API_BASE_URL}${audioUrl.startsWith('/api') ? audioUrl.substring(4) : audioUrl}`;
+    }
     
     return undefined;
   };
 
   const effectiveUrl = getEffectiveUrl();
+
+  // diagnostic logging
+  console.log('🎵 [ReferenceAudioSection] Resolved audio URL:', { 
+    audioUrl, 
+    questionId: question?.id,
+    questionMediaId: question?.questionMediaId,
+    effectiveUrl 
+  });
+
   const effectiveStart = (segmentStart ?? question?.audioSegmentStart) ?? 0;
   const effectiveEnd = (segmentEnd ?? question?.audioSegmentEnd) ?? undefined;
 

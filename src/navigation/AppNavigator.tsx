@@ -39,6 +39,9 @@ import CameraScreen from '../screens/CameraScreen';
 import PuzzleSetupScreen from '../screens/PuzzleSetupScreen';
 import PuzzleGamePlayScreen from '../screens/PuzzleGamePlayScreen';
 import PuzzleResultsScreen from '../screens/PuzzleResultsScreen';
+import QuestDiscoveryScreen from '../screens/QuestDiscoveryScreen';
+import QuestDetailScreen from '../screens/QuestDetailScreen';
+import QuestActiveScreen from '../screens/QuestActiveScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -155,6 +158,9 @@ export type RootStackParamList = {
     PuzzleResults: {
         puzzleGameId: number;
     };
+    QuestDiscovery: undefined;
+    QuestDetail: { questId: number };
+    QuestActive: { questId: number; participationId?: number };
 };
 
 export type MainTabParamList = {
@@ -405,6 +411,9 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                         <Stack.Screen name="PuzzleSetup" component={PuzzleSetupScreen} />
                         <Stack.Screen name="PuzzleGamePlay" component={PuzzleGamePlayScreen} />
                         <Stack.Screen name="PuzzleResults" component={PuzzleResultsScreen} />
+                        <Stack.Screen name="QuestDiscovery" component={QuestDiscoveryScreen} />
+                        <Stack.Screen name="QuestDetail" component={QuestDetailScreen} />
+                        <Stack.Screen name="QuestActive" component={QuestActiveScreen} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>

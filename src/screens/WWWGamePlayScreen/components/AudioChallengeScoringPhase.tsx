@@ -282,7 +282,7 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                 {hasReferenceAudio && (
                     <View style={styles.miniReferenceContainer}>
                         <ReferenceAudioSection 
-                            audioUrl={question.questionMediaUrl}
+                            question={question}
                             segmentStart={question.audioSegmentStart}
                             segmentEnd={question.audioSegmentEnd}
                             mini 
@@ -343,7 +343,7 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
                                 {challengeType === AudioChallengeType.RHYTHM_REPEAT && (
                                     <View style={styles.referenceSection}>
                                         <ReferenceAudioSection
-                                            audioUrl={question.questionMediaUrl}
+                                            question={question}
                                             segmentStart={question.audioSegmentStart}
                                             segmentEnd={question.audioSegmentEnd}
                                             onPlaybackComplete={handlePlaybackComplete}
