@@ -155,12 +155,12 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
             // const transcribedAnswer = await SpeechToTextService.transcribe(audioAnswer, language);
 
             // Process the answer using the base service
-            const { updatedRoundsData, isCorrect } = super.processRoundAnswer(
-                roundsData,
-                currentRound,
+            const { updatedRoundsData, isCorrect } = WWWGameService.processRoundAnswer(
                 transcribedAnswer,
+                roundsData[currentRound].correctAnswer,
                 selectedPlayer,
-                discussionNotes
+                discussionNotes,
+                roundsData
             );
 
             // Generate AI host response to the answer
@@ -192,12 +192,12 @@ export class WWWGameServiceWithQuestions extends WWWGameService {
             console.error('Error processing voice answer:', error);
 
             // Fall back to text-based processing
-            const { updatedRoundsData, isCorrect } = super.processRoundAnswer(
-                roundsData,
-                currentRound,
+            const { updatedRoundsData, isCorrect } = WWWGameService.processRoundAnswer(
                 'Fallback answer',
+                roundsData[currentRound].correctAnswer,
                 selectedPlayer,
-                discussionNotes
+                discussionNotes,
+                roundsData
             );
 
             return {

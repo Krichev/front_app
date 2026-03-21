@@ -29,7 +29,7 @@ const PuzzleResultsScreen: React.FC = () => {
     const { data: results = [], isLoading: isResultsLoading } = useGetPuzzleResultsQuery(puzzleGameId);
 
     const renderParticipant = ({ item, index }: { item: any, index: number }) => (
-        <View style={[card.container, styles.participantCard]}>
+        <View style={[card.base, styles.participantCard]}>
             <View style={styles.rankBadge}>
                 <Text style={styles.rankText}>{index + 1}</Text>
             </View>

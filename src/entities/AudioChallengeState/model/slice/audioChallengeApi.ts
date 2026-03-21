@@ -40,6 +40,10 @@ export interface CreateAudioQuestionRequest {
     minimumScorePercentage?: number;
     rhythmBpm?: number;
     rhythmTimeSignature?: string;
+    timeLimitSeconds?: number;
+    answerInputMode?: string;
+    maxReplays?: number;
+    allowReplay?: boolean;
 }
 
 /**

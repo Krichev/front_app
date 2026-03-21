@@ -130,11 +130,9 @@ export const useGameResults = (): UseGameResultsReturn => {
         setShowEndGameModal(false);
         if (challengeId) {
             navigation.navigate('QuizResults', {
-                challengeId,
+                challengeId: String(challengeId),
                 score,
-                totalRounds,
-                teamName,
-                roundsData: roundsData as any
+                totalQuestions: totalRounds
             });
         } else {
             navigation.navigate('Main', { screen: 'Home' });

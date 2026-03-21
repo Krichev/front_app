@@ -130,8 +130,8 @@ const themeStyles = createStyles(theme => ({
     chip: {
         paddingHorizontal: theme.spacing.md,
         paddingVertical: theme.spacing.xs,
-        borderRadius: theme.layout.borderRadius.pill,
-        backgroundColor: theme.colors.background.main,
+        borderRadius: theme.layout.borderRadius.full,
+        backgroundColor: theme.colors.background.primary,
         borderWidth: 1,
         borderColor: theme.colors.divider,
         minWidth: 44,

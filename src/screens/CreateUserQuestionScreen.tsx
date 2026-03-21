@@ -196,7 +196,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                             <View style={styles.toggleRow}>
                                 <View style={styles.toggleInfo}>
                                     <Text style={styles.label}>{t('createQuest.addQuestion.acceptSimilarAnswers')}</Text>
-                                    <Text style={styles.helperText}>
+                                    <Text style={styles.helpText}>
                                         {t('createQuest.addQuestion.acceptSimilarAnswersDesc')}
                                     </Text>
                                 </View>

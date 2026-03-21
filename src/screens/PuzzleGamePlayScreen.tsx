@@ -120,7 +120,7 @@ const PuzzleGamePlayScreen: React.FC = () => {
 
             {phase === 'WAITING_FOR_START' ? (
                 <View style={styles.lobbyContainer}>
-                    <Text style={[textStyles.h2, { color: theme.colors.text.primary }]}>Waiting Room</Text>
+                    <Text style={[textStyles.pageTitle, { color: theme.colors.text.primary }]}>Waiting Room</Text>
                     <Text style={[styles.lobbySub, { color: theme.colors.text.secondary }]}>
                         Pieces are ready!
                     </Text>

@@ -124,7 +124,7 @@ export const themeStyles = createStyles(theme => ({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.colors.background.overlay || 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlay.medium || 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,

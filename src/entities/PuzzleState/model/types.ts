@@ -52,6 +52,7 @@ export interface PuzzleGameDTO {
     totalPieces: number;
     difficulty: Difficulty;
     status: PuzzleSessionStatus;
+    answer?: string;
     timeLimitSeconds?: number;
     hintText?: string;
     hintAvailableAfterSeconds?: number;
