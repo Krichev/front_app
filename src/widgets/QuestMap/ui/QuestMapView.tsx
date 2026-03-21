@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 import { createStyles } from '../../../shared/ui/theme/createStyles';
@@ -131,5 +131,3 @@ const themeStyles = createStyles(theme => ({
     borderColor: theme.colors.neutral.white,
   },
 }));
-
-import { StyleSheet } from 'react-native';

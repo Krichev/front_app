@@ -48,7 +48,9 @@ const QuestActiveScreen: React.FC = () => {
 
   const [startQuest] = useStartQuestMutation();
   const [reportArrival, { isLoading: isReporting }] = useReportArrivalMutation();
-  const [abandonQuest] = useAbandonQuestMutation();
+  const [abandonQuest, { isLoading: isAbandoning }] = useAbandonQuestMutation();
+
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
   useEffect(() => {
     if (questId) {
@@ -59,6 +61,27 @@ const QuestActiveScreen: React.FC = () => {
     }
     return () => stopTracking();
   }, [questId, progress?.participation.status, startQuest, startTracking, stopTracking]);
+
+  useEffect(() => {
+    if (quest?.timeLimitMinutes && progress?.participation.startedAt) {
+      const timer = setInterval(() => {
+        const start = new Date(progress.participation.startedAt!).getTime();
+        const limit = quest.timeLimitMinutes! * 60 * 1000;
+        const now = new Date().getTime();
+        const remaining = limit - (now - start);
+
+        if (remaining <= 0) {
+          setTimeLeft('00:00');
+          clearInterval(timer);
+        } else {
+          const minutes = Math.floor(remaining / 60000);
+          const seconds = Math.floor((remaining % 60000) / 1000);
+          setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [quest?.timeLimitMinutes, progress?.participation.startedAt]);
 
   const currentWaypointIndex = progress?.participation.currentWaypointIndex || 0;
   const currentWaypoint = quest?.waypoints[currentWaypointIndex];
@@ -106,8 +129,12 @@ const QuestActiveScreen: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             if (questId) {
-              await abandonQuest(questId);
-              navigation.navigate('QuestDiscovery');
+              try {
+                await abandonQuest(questId).unwrap();
+                navigation.navigate('QuestDiscovery');
+              } catch (err) {
+                console.error('Abandon error:', err);
+              }
             }
           }
         }
@@ -127,8 +154,12 @@ const QuestActiveScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleAbandon}>
-          <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.primary} />
+        <TouchableOpacity style={styles.backButton} onPress={handleAbandon} disabled={isAbandoning}>
+          {isAbandoning ? (
+            <ActivityIndicator size="small" color={theme.colors.text.primary} />
+          ) : (
+            <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.primary} />
+          )}
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={text.sectionTitle} numberOfLines={1}>{quest?.title}</Text>
@@ -136,10 +167,10 @@ const QuestActiveScreen: React.FC = () => {
             {connectionStatus === 'CONNECTED' ? '● Live' : '○ Offline'}
           </Text>
         </View>
-        {quest?.timeLimitMinutes && (
+        {quest?.timeLimitMinutes && timeLeft && (
           <View style={styles.timerBadge}>
             <MaterialCommunityIcons name="clock-outline" size={16} color={theme.colors.error.main} />
-            <Text style={styles.timerText}>15:00</Text> 
+            <Text style={styles.timerText}>{timeLeft}</Text> 
           </View>
         )}
       </View>
