@@ -4,7 +4,6 @@ import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
 import {phaseStyles} from './phases.styles';
 import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
-import VoiceRecorder from '../../../../components/VoiceRecorder';
 import QuestionMediaViewer from '../../../../screens/CreateWWWQuestScreen/components/QuestionMediaViewer';
 import ExternalVideoPlayer from '../../../../components/ExternalVideoPlayer';
 import {MediaType} from '../../../../services/wwwGame/questionService';
@@ -35,18 +34,10 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
     const {t} = useTranslation();
     const {theme} = useAppStyles();
     const styles = phaseStyles(theme);
-    const [voiceTranscription, setVoiceTranscription] = useState('');
     
     // Internal animation if not provided
     const internalAnim = useRef(new Animated.Value(0)).current;
     const activeAnim = animation || internalAnim;
-
-    const handleVoiceTranscription = (text: string) => {
-        setVoiceTranscription(text);
-        if (text) {
-            onNotesChange(notes ? `${notes} ${text}` : text);
-        }
-    };
 
     const isAudioChallenge = question.questionType === 'AUDIO' && !!question.audioChallengeType;
 
@@ -154,25 +145,6 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                         </View>
                     )}
                     <Text style={styles.text}>{question.question}</Text>
-                </View>
-            )}
-
-            {isVoiceEnabled && !isAudioChallenge && (
-                <View style={styles.voiceRecorderContainer}>
-                    <VoiceRecorder
-                        onTranscription={handleVoiceTranscription}
-                        isActive={true}
-                    />
-                    {voiceTranscription ? (
-                        <View style={styles.transcriptionContainer}>
-                            <Text style={styles.transcriptionLabel}>
-                                {t('wwwPhases.discussion.latestTranscription')}
-                            </Text>
-                            <Text style={styles.transcriptionText}>
-                                {voiceTranscription}
-                            </Text>
-                        </View>
-                    ) : null}
                 </View>
             )}
 

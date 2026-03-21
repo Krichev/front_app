@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
-import VoiceRecorder from '../../../../components/VoiceRecorder';
 import { AudioChallengePhase } from './AudioChallengePhase';
 import { AudioAnswerPhase } from './AudioAnswerPhase';
 import { useAnswerTimer } from '../../hooks/useAnswerTimer';
@@ -51,7 +50,6 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const player = propsPlayer !== undefined ? propsPlayer : localPlayer;
 
   const [showHint, setShowHint] = useState(false);
-  const [isRecordingVoiceAnswer, setIsRecordingVoiceAnswer] = useState(false);
   const hasStartedTyping = useRef(false);
 
   const isAudioChallenge = question.questionType === 'AUDIO' && !!question.audioChallengeType;
@@ -83,12 +81,6 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       } else {
           setLocalPlayer(p);
       }
-  };
-
-  const handleVoiceTranscription = (text: string) => {
-    if (text) {
-      handleAnswerChange(answer ? `${answer} ${text}` : text);
-    }
   };
 
   if (isAudioChallenge) {
@@ -166,31 +158,6 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
             <View style={{ backgroundColor: theme.colors.background.secondary, padding: theme.spacing.md, borderRadius: theme.layout.borderRadius.md, marginBottom: theme.spacing.lg }}>
               <Text style={{ color: theme.colors.text.secondary, fontStyle: 'italic' }}>{question.additionalInfo}</Text>
             </View>
-          )}
-        </View>
-      )}
-
-      {isVoiceEnabled && (
-        <View style={{ marginBottom: theme.spacing.lg }}>
-          <TouchableOpacity
-            style={{ flexDirection: 'row', backgroundColor: isRecordingVoiceAnswer ? theme.colors.error.main : theme.colors.warning.main, paddingVertical: theme.spacing.md, paddingHorizontal: theme.spacing['2xl'], borderRadius: theme.layout.borderRadius.md, alignItems: 'center', justifyContent: 'center', marginBottom: theme.spacing.md }}
-            onPress={() => setIsRecordingVoiceAnswer(!isRecordingVoiceAnswer)}
-          >
-            <MaterialCommunityIcons
-              name={isRecordingVoiceAnswer ? 'stop' : 'microphone'}
-              size={20}
-              color={theme.colors.text.inverse}
-            />
-            <Text style={{ color: theme.colors.text.inverse, ...theme.typography.body.medium, fontWeight: theme.typography.fontWeight.bold, marginLeft: theme.spacing.sm }}>
-              {isRecordingVoiceAnswer ? t('wwwPhases.answer.stopRecordingAnswer') : t('wwwPhases.answer.recordVoiceAnswer')}
-            </Text>
-          </TouchableOpacity>
-
-          {isRecordingVoiceAnswer && (
-            <VoiceRecorder
-              onTranscription={handleVoiceTranscription}
-              isActive={isRecordingVoiceAnswer}
-            />
           )}
         </View>
       )}
