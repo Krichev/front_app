@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -18,6 +19,10 @@ import {
   useStartQuestMutation,
   useAbandonQuestMutation,
 } from '../entities/LocationQuest';
+import { WaypointTask } from '../entities/LocationQuest/model/types';
+import { TaskRouter } from '../features/LocationQuest/ui/tasks';
+import { triggerHaptic } from '../features/LocationQuest/lib/haptics';
+import { HapticFeedbackTypes } from 'react-native-haptic-feedback';
 import { useGpsTracking } from '../features/LocationQuest/hooks/useGpsTracking';
 import { useQuestWebSocket } from '../features/LocationQuest/hooks/useQuestWebSocket';
 import { QuestMapView } from '../widgets/QuestMap/ui/QuestMapView';
@@ -51,6 +56,8 @@ const QuestActiveScreen: React.FC = () => {
   const [abandonQuest, { isLoading: isAbandoning }] = useAbandonQuestMutation();
 
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<WaypointTask | null>(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
 
   useEffect(() => {
     if (questId) {
@@ -73,7 +80,11 @@ const QuestActiveScreen: React.FC = () => {
         if (remaining <= 0) {
           setTimeLeft('00:00');
           clearInterval(timer);
+          triggerHaptic(HapticFeedbackTypes.notificationWarning);
         } else {
+          if (remaining < 60000 && remaining > 59000) {
+            triggerHaptic(HapticFeedbackTypes.notificationWarning);
+          }
           const minutes = Math.floor(remaining / 60000);
           const seconds = Math.floor((remaining % 60000) / 1000);
           setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
@@ -112,10 +123,38 @@ const QuestActiveScreen: React.FC = () => {
     if (!questId || !currentWaypoint) return;
     try {
       await reportArrival({ questId, waypointId: currentWaypoint.id }).unwrap();
-      Alert.alert(t('locationQuest.active.arrived'), t('locationQuest.active.confirmArrival'));
+      triggerHaptic(HapticFeedbackTypes.notificationSuccess);
+      
+      if (currentWaypoint.task) {
+        setActiveTask(currentWaypoint.task);
+        setShowTaskModal(true);
+      }
     } catch (err) {
       console.error('Arrival error:', err);
     }
+  };
+
+  const handleTaskFinished = () => {
+    setShowTaskModal(false);
+    setActiveTask(null);
+  };
+
+  const handleCloseModalAttempt = () => {
+    Alert.alert(
+      t('locationQuest.tasks.common.skipConfirmTitle'),
+      t('locationQuest.tasks.common.skipConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { 
+          text: t('locationQuest.tasks.common.skip'), 
+          style: 'destructive',
+          onPress: () => {
+            setShowTaskModal(false);
+            setActiveTask(null);
+          }
+        }
+      ]
+    );
   };
 
   const handleAbandon = () => {
@@ -243,6 +282,32 @@ const QuestActiveScreen: React.FC = () => {
         )}
       </View>
 
+      <Modal
+        visible={showTaskModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseModalAttempt}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <View style={styles.dragHandle} />
+            <TouchableOpacity style={styles.closeModalButton} onPress={handleCloseModalAttempt}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.secondary} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.modalContent}>
+            {activeTask && questId && (
+              <TaskRouter 
+                questId={questId} 
+                task={activeTask} 
+                onFinished={handleTaskFinished} 
+              />
+            )}
+          </View>
+        </SafeAreaView>
+      </Modal>
+
       {connectionStatus !== 'CONNECTED' && (
         <View style={styles.offlineBanner}>
           <Text style={styles.offlineText}>{t('locationQuest.active.wsDisconnected')}</Text>
@@ -366,6 +431,30 @@ const themeStyles = createStyles(theme => ({
     color: theme.colors.neutral.white,
     fontSize: theme.typography.fontSize.xs,
     fontWeight: theme.typography.fontWeight.bold,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background.primary,
+  },
+  modalHeader: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: theme.colors.neutral.gray[300],
+    borderRadius: 2,
+  },
+  closeModalButton: {
+    position: 'absolute',
+    right: theme.spacing.md,
+    padding: theme.spacing.xs,
+  },
+  modalContent: {
+    flex: 1,
   },
 }));
 

@@ -12,13 +12,32 @@ export interface QuestWaypoint {
   estimatedMinutes?: number;
 }
 
-export type WaypointTaskType = 'QUIZ' | 'PHOTO' | 'LOCATION_CHECKIN' | 'CODE_ENTRY' | 'CUSTOM';
+export type WaypointTaskType = 
+  | 'GPS_CHECKIN' 
+  | 'COIN_JINGLE' 
+  | 'VIDEO_SELFIE' 
+  | 'PHOTO_RECREATION' 
+  | 'AUDIO_RECORD' 
+  | 'TRIVIA_QUESTION' 
+  | 'CUSTOM';
 
 export interface WaypointTask {
-  instructions: string;
-  requiredProofType?: 'PHOTO' | 'TEXT' | 'CODE';
-  correctAnswer?: string;
-  hintText?: string;
+  id: number;
+  type: WaypointTaskType;
+  instructions?: string;
+  questionText?: string;
+  referenceImageUrl?: string;
+  multiline?: boolean;
+  requiresNote?: boolean;
+  hintOnComplete?: string;
+  waypointId: number;
+  timeLimitSeconds?: number;
+}
+
+export interface TaskProofFile {
+  uri: string;
+  name: string;
+  type: string;
 }
 
 export interface LocationQuest {

@@ -1,5 +1,6 @@
 import React, {useState, useRef} from 'react';
 import {Animated, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
 import {phaseStyles} from './phases.styles';
 import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
@@ -31,6 +32,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                                                     onSubmitEarly = () => {},
                                                                     isVoiceEnabled = false,
                                                                 }) => {
+    const {t} = useTranslation();
     const {theme} = useAppStyles();
     const styles = phaseStyles(theme);
     const [voiceTranscription, setVoiceTranscription] = useState('');
@@ -76,7 +78,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
     return (
         <View style={styles.container}>
             <View style={styles.timerContainer}>
-                <Text style={styles.timerText}>{timeLeft} seconds</Text>
+                <Text style={styles.timerText}>{t('wwwPhases.discussion.timeRemaining', {seconds: timeLeft})}</Text>
                 <View style={styles.timerBar}>
                     <Animated.View
                         style={[
@@ -92,7 +94,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                 </View>
             </View>
 
-            <Text style={styles.title}>Team Discussion</Text>
+            <Text style={styles.title}>{t('wwwPhases.discussion.title')}</Text>
 
             {isAudioChallenge ? (
                 <AudioChallengeContainer
@@ -114,8 +116,8 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                     color: theme.colors.text.secondary,
                                     fontWeight: theme.typography.fontWeight.medium
                                 }}>
-                                    {mediaType === 'AUDIO' ? 'Listen to the audio' :
-                                        mediaType === 'VIDEO' ? 'Watch the video' : 'View the image'}
+                                    {mediaType === 'AUDIO' ? t('wwwPhases.discussion.listenAudio') :
+                                        mediaType === 'VIDEO' ? t('wwwPhases.discussion.watchVideo') : t('wwwPhases.discussion.viewImage')}
                                 </Text>
                             </View>
                             {hasExternalMedia && mediaType === 'VIDEO' ? (
@@ -125,8 +127,8 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                         mediaSourceType: question.mediaSourceType,
                                         videoId,
                                         externalMediaUrl: question.externalMediaUrl?.substring(0, 60),
-                                        showControls: false,
-                                        onlyPlayButton: true,
+                                        showControls: true,
+                                        onlyPlayButton: false,
                                     }), null)}
                                     <ExternalVideoPlayer
                                         mediaSourceType={question.mediaSourceType as MediaSourceType}
@@ -134,11 +136,11 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                                         videoUrl={question.externalMediaUrl}
                                         startTime={question.questionVideoStartTime || 0}
                                         endTime={question.questionVideoEndTime}
-                                        onlyPlayButton={true}
                                         autoPlay={false}
-                                        showControls={false}
+                                        showControls={true}
                                         hideTitle={true}
                                         enableFullscreen={true}
+                                        initialFullscreen={false}
                                     />
                                 </View>
                             ) : (
@@ -164,7 +166,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                     {voiceTranscription ? (
                         <View style={styles.transcriptionContainer}>
                             <Text style={styles.transcriptionLabel}>
-                                Latest Transcription:
+                                {t('wwwPhases.discussion.latestTranscription')}
                             </Text>
                             <Text style={styles.transcriptionText}>
                                 {voiceTranscription}
@@ -175,12 +177,12 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
             )}
 
             <View style={{marginBottom: theme.spacing.lg}}>
-                <Text style={styles.label}>Discussion Notes:</Text>
+                <Text style={styles.label}>{t('wwwPhases.discussion.discussionNotes')}</Text>
                 <TextInput
                     style={styles.input}
                     value={notes}
                     onChangeText={onNotesChange}
-                    placeholder="Record your team's discussion..."
+                    placeholder={t('wwwPhases.discussion.notesPlaceholder')}
                     multiline
                     textAlignVertical="top"
                     placeholderTextColor={theme.colors.text.disabled}
@@ -191,7 +193,7 @@ export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
                 style={styles.button}
                 onPress={onSubmitEarly}
             >
-                <Text style={styles.buttonText}>Submit Answer</Text>
+                <Text style={styles.buttonText}>{t('wwwPhases.discussion.submitAnswer')}</Text>
             </TouchableOpacity>
         </View>
     );

@@ -53,11 +53,14 @@ const QuestDetailScreen: React.FC = () => {
 
   const getTaskIcon = (type: WaypointTaskType) => {
     switch (type) {
-      case 'PHOTO': return 'camera';
-      case 'QUIZ': return 'help-circle';
-      case 'CODE_ENTRY': return 'numeric';
-      case 'LOCATION_CHECKIN': return 'map-marker-check';
-      default: return 'checkbox-marked-circle-outline';
+      case 'PHOTO_RECREATION': return 'camera';
+      case 'TRIVIA_QUESTION': return 'help-circle';
+      case 'GPS_CHECKIN': return 'map-marker-check';
+      case 'COIN_JINGLE': return 'microphone';
+      case 'VIDEO_SELFIE': return 'video';
+      case 'AUDIO_RECORD': return 'music-note';
+      case 'CUSTOM': return 'dots-horizontal';
+      default: return 'help-circle-outline';
     }
   };
 

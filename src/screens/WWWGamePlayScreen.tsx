@@ -10,6 +10,7 @@ import {useWWWGameController} from '../features/WWWGame/hooks/useWWWGameControll
 import {useMediaPreloader} from '../features/WWWGame/hooks/useMediaPreloader';
 import {useVideoPreloader} from '../features/WWWGame/hooks/useVideoPreloader';
 import {useReadingTime} from '../features/WWWGame/hooks/useReadingTime';
+import {useCountdownTimer} from '../shared/hooks/useCountdownTimer';
 import {
   AnswerPhase,
   DiscussionPhase,
@@ -52,6 +53,53 @@ const WWWGamePlayScreen: React.FC = () => {
   // State machine handles UI phases
   const {state, dispatch, actions} = useWWWGameState();
   const {calculateReadingTime} = useReadingTime();
+
+  const effectiveRoundTime = controller.session?.roundTimeSeconds || 60;
+
+  const {
+    timeLeft,
+    isRunning: isTimerRunning,
+    animation,
+    start: timerStart,
+    pause: timerPause,
+    reset: timerReset,
+  } = useCountdownTimer({
+    duration: effectiveRoundTime,
+    onComplete: () => dispatch(actions.timeUp()),
+  });
+
+  // Track phase/round transitions to trigger timer reset
+  const prevPhaseRef = useRef<string>(state.phase);
+  const prevRoundRef = useRef<number>(state.currentRound);
+
+  // Auto-start discussion timer when entering discussion phase
+  useEffect(() => {
+    if (state.phase !== 'discussion' || !currentRound) {
+      return;
+    }
+
+    const q = currentRound.question;
+    const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
+    const isAnyAudioQuestion = q.questionType === 'AUDIO';
+
+    if (isAudioChallenge || isAnyAudioQuestion) {
+      // Skip discussion phase for audio challenges, go straight to answer/record
+      // AudioChallengePhase manages its own timer
+      dispatch(actions.timeUp());
+    } else {
+      // Start timer immediately — no requestAnimationFrame delay
+      timerReset(effectiveRoundTime);
+      timerStart();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.phase, state.currentRound]);
+
+  // Pause timer when leaving discussion phase
+  useEffect(() => {
+    if (state.phase !== 'discussion') {
+      timerPause();
+    }
+  }, [state.phase, timerPause]);
 
   // Video preloading — primes cache for the next round's media
   useVideoPreloader(state.currentRound, controller.rounds);
@@ -259,7 +307,8 @@ const WWWGamePlayScreen: React.FC = () => {
         return (
           <DiscussionPhase
             question={currentQuestion!}
-            timeLeft={state.timer || 60}
+            timeLeft={timeLeft}
+            animation={animation}
           />
         );
 
@@ -332,7 +381,7 @@ const WWWGamePlayScreen: React.FC = () => {
         visible={showExitModal}
         onResume={() => setShowExitModal(false)}
         onPauseAndExit={() => {
-          controller.pauseSession(state.currentRound, state.timer || 0);
+          controller.pauseSession(state.currentRound, timeLeft);
           navigation.goBack();
         }}
         onAbandon={() => {

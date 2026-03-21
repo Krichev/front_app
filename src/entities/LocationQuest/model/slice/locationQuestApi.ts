@@ -68,20 +68,26 @@ export const locationQuestApi = createApi({
       questId: number;
       waypointId: number;
       answer?: string;
-      proofUri?: string;
+      fileUri?: string;
+      fileName?: string;
+      fileType?: string;
+      metadata?: string;
     }>({
-      queryFn: async ({ questId, waypointId, answer, proofUri }, api, _, baseQuery) => {
+      queryFn: async ({ questId, waypointId, answer, fileUri, fileName, fileType, metadata }, api, _, baseQuery) => {
         const formData = new FormData();
         if (answer) formData.append('answer', answer);
-        if (proofUri) {
-          formData.append('proof', {
-            uri: proofUri,
-            name: `proof_${questId}_${waypointId}_${Date.now()}.jpg`,
-            type: 'image/jpeg',
+        if (metadata) formData.append('metadata', metadata);
+        
+        if (fileUri) {
+          formData.append('file', {
+            uri: fileUri,
+            name: fileName || `proof_${questId}_${waypointId}_${Date.now()}`,
+            type: fileType || 'application/octet-stream',
           } as any);
         }
+        
         const result = await baseQuery({
-          url: `/location-quests/${questId}/waypoints/${waypointId}/complete`,
+          url: `/location-quests/${questId}/waypoints/${waypointId}/complete-task`,
           method: 'POST',
           body: formData,
         });
