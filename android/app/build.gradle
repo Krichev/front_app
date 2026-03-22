@@ -118,6 +118,16 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += ['**/libc++_shared.so', '**/libfbjni.so']
+        }
+        resources {
+            excludes += ['META-INF/INDEX.LIST', 'META-INF/io.netty.*']
+        }
+    }
 }
 
 // Helper function to calculate version code from git
