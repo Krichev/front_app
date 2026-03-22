@@ -1,5 +1,6 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState, useRef} from 'react';
 import {ActivityIndicator, Animated, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import Video, { VideoRef } from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
@@ -8,6 +9,8 @@ import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
 import {useAudioChallengeTimer} from '../../hooks/useAudioChallengeTimer';
 import {AudioResponseRecorder, ReferenceAudioSection} from '../../../../screens/components/audio';
 import {createStyles} from '../../../../shared/ui/theme';
+import { AudioChallengeType } from '../../../../types/audioChallenge.types';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 interface AudioAnswerPhaseProps {
   question: QuizQuestion;
@@ -47,6 +50,30 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   const [replaysUsed, setReplaysUsed] = useState(0);
   const [replayKey, setReplayKey] = useState(0);
   const [hasPlayedAtLeastOnce, setHasPlayedAtLeastOnce] = useState(false);
+  const [countdownValue, setCountdownValue] = useState<number | null>(null);
+  const [isRecordingStarted, setIsRecordingStarted] = useState(false);
+  const [isBackingTrackPlaying, setIsBackingTrackPlaying] = useState(false);
+  
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const backingTrackRef = useRef<VideoRef>(null);
+
+  const isSinging = question.audioChallengeType === AudioChallengeType.SINGING || 
+                    (question.audioChallengeType as string) === 'SINGING';
+
+  const backingTrackUrl = useMemo(() => {
+    if (question.questionMediaUrl) return question.questionMediaUrl;
+    const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
+    if (question.audioReferenceMediaId) {
+       return `${API_BASE_URL}/media/stream/${question.audioReferenceMediaId}`;
+    }
+    if (question.questionMediaId) {
+       return `${API_BASE_URL}/media/stream/${question.questionMediaId}`;
+    }
+    if (question.id) {
+       return `${API_BASE_URL}/media/question/${question.id}/stream`;
+    }
+    return null;
+  }, [question]);
 
   const duration = question.timeLimitSeconds || gameSettings?.roundTimeSeconds || 60;
 
@@ -64,12 +91,18 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
     timer.start();
   }, []);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleAudioEnd = useCallback(() => {
     if (!hasPlayedAtLeastOnce) {
         setHasPlayedAtLeastOnce(true);
-    } else {
-        // Only increment replaysUsed if it's actually a replay
-        // The first play-through doesn't count towards maxReplays
     }
   }, [hasPlayedAtLeastOnce]);
 
@@ -83,6 +116,38 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
           setReplayKey(prev => prev + 1);
       }
   }, [canReplay]);
+
+  const handleStartRecording = useCallback(() => {
+    setCountdownValue(3);
+    
+    let count = 3;
+    countdownTimerRef.current = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+        setCountdownValue(null);
+        setIsRecordingStarted(true);
+        
+        if (isSinging && backingTrackUrl) {
+          setIsBackingTrackPlaying(true);
+        }
+      } else {
+        setCountdownValue(count);
+      }
+    }, 1000);
+  }, [isSinging, backingTrackUrl]);
+
+  const stopBackingTrack = useCallback(() => {
+    setIsBackingTrackPlaying(false);
+  }, []);
+
+  const handleRecordingDone = useCallback((audioFile: any) => {
+    onAudioRecordingComplete?.(audioFile);
+    stopBackingTrack();
+  }, [onAudioRecordingComplete, stopBackingTrack]);
 
   const isSubmitDisabled = useMemo(() => {
     if (isSubmitting) return true;
@@ -124,141 +189,209 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
         <Text style={[styles.text, localStyles.questionText]}>{question.question}</Text>
 
         {/* Audio Player Section */}
-        <View style={localStyles.audioSection}>
-          {hasAudio ? (
-            <View>
-              <ReferenceAudioSection 
-                key={replayKey}
-                question={question as any} 
-                onPlaybackComplete={handleAudioEnd}
-                title={t('wwwPhases.audioAnswer.listenToQuestion')}
-              />
-              
-              {hasPlayedAtLeastOnce && (
-                  <View style={localStyles.replayContainer}>
-                      {canReplay ? (
-                          <TouchableOpacity 
-                            style={localStyles.replayButton}
-                            onPress={handleReplay}
-                          >
-                            <MaterialCommunityIcons name="replay" size={24} color={theme.colors.text.inverse} />
-                            <Text style={localStyles.replayButtonText}>
-                                {t('wwwPhases.audioAnswer.listenAgain')}
-                            </Text>
-                            <View style={localStyles.replayBadge}>
-                                <Text style={localStyles.replayBadgeText}>
-                                    {maxReplaysAllowed === 0 
-                                        ? t('wwwPhases.audioAnswer.unlimitedReplays')
-                                        : t('wwwPhases.audioAnswer.replaysRemaining', { count: maxReplaysAllowed - replaysUsed })}
+        {countdownValue === null && (
+          <View style={localStyles.audioSection}>
+            {hasAudio ? (
+              <View>
+                <ReferenceAudioSection 
+                  key={replayKey}
+                  question={question as any} 
+                  onPlaybackComplete={handleAudioEnd}
+                  title={t('wwwPhases.audioAnswer.listenToQuestion')}
+                />
+                
+                {hasPlayedAtLeastOnce && !isRecordingStarted && !recordedAudio && (
+                    <View style={localStyles.replayContainer}>
+                        {canReplay ? (
+                            <TouchableOpacity 
+                              style={localStyles.replayButton}
+                              onPress={handleReplay}
+                            >
+                              <MaterialCommunityIcons name="replay" size={24} color={theme.colors.text.inverse} />
+                              <Text style={localStyles.replayButtonText}>
+                                  {t('wwwPhases.audioAnswer.listenAgain')}
+                              </Text>
+                              <View style={localStyles.replayBadge}>
+                                  <Text style={localStyles.replayBadgeText}>
+                                      {maxReplaysAllowed === 0 
+                                          ? t('wwwPhases.audioAnswer.unlimitedReplays')
+                                          : t('wwwPhases.audioAnswer.replaysRemaining', { count: maxReplaysAllowed - replaysUsed })}
+                                  </Text>
+                              </View>
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={localStyles.noReplaysContainer}>
+                                <MaterialCommunityIcons name="timer-off-outline" size={20} color={theme.colors.text.disabled} />
+                                <Text style={localStyles.noReplaysText}>
+                                    {t('wwwPhases.audioAnswer.noReplaysLeft')}
                                 </Text>
                             </View>
-                          </TouchableOpacity>
-                      ) : (
-                          <View style={localStyles.noReplaysContainer}>
-                              <MaterialCommunityIcons name="timer-off-outline" size={20} color={theme.colors.text.disabled} />
-                              <Text style={localStyles.noReplaysText}>
-                                  {t('wwwPhases.audioAnswer.noReplaysLeft')}
-                              </Text>
-                          </View>
-                      )}
-                  </View>
-              )}
-            </View>
-          ) : (
-            <View style={localStyles.fallbackContainer}>
-              <MaterialCommunityIcons 
-                name="music-off" 
-                size={32} 
-                color={theme.colors.text.disabled} 
-              />
-              <Text style={localStyles.fallbackText}>
-                {t('wwwPhases.audioAnswer.audioNotAvailable')}
-              </Text>
-            </View>
-          )}
-        </View>
+                        )}
+                    </View>
+                )}
+              </View>
+            ) : (
+              <View style={localStyles.fallbackContainer}>
+                <MaterialCommunityIcons 
+                  name="music-off" 
+                  size={32} 
+                  color={theme.colors.text.disabled} 
+                />
+                <Text style={localStyles.fallbackText}>
+                  {t('wwwPhases.audioAnswer.audioNotAvailable')}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Countdown Area */}
+        {countdownValue !== null && (
+          <View style={localStyles.countdownContainer}>
+            <Text style={[localStyles.countdownNumber, { color: theme.colors.primary.main }]}>
+              {countdownValue}
+            </Text>
+            <Text style={[localStyles.countdownLabel, { color: theme.colors.text.secondary }]}>
+              {t('audioChallenge.countdown.getReady')}
+            </Text>
+          </View>
+        )}
 
         {/* Answer Area */}
-        <View style={localStyles.answerArea}>
-          {answerMode === 'text' ? (
-            <View>
-              {gameSettings?.players && gameSettings.players.length > 0 && (
-                <View style={localStyles.playerSelector}>
-                  <Text style={styles.label}>{t('wwwPhases.answer.whoIsAnswering')}</Text>
-                  <View style={localStyles.playersList}>
-                    {gameSettings.players.map((p: string) => (
+        {countdownValue === null && (
+          <View style={localStyles.answerArea}>
+            {answerMode === 'text' ? (
+              <View>
+                {gameSettings?.players && gameSettings.players.length > 0 && (
+                  <View style={localStyles.playerSelector}>
+                    <Text style={styles.label}>{t('wwwPhases.answer.whoIsAnswering')}</Text>
+                    <View style={localStyles.playersList}>
+                      {gameSettings.players.map((p: string) => (
+                        <TouchableOpacity
+                          key={p}
+                          style={[
+                            localStyles.playerChip,
+                            player === p && { backgroundColor: theme.colors.success.main }
+                          ]}
+                          onPress={() => onPlayerChange?.(p)}
+                        >
+                          <Text style={[
+                            localStyles.playerChipText,
+                            player === p && { color: theme.colors.text.inverse, fontWeight: 'bold' }
+                          ]}>
+                            {p}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+                <Text style={styles.label}>{t('wwwPhases.answer.teamAnswer')}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={answer}
+                  onChangeText={onAnswerChange}
+                  placeholder={t('wwwPhases.audioAnswer.answerPlaceholder')}
+                  multiline
+                  placeholderTextColor={theme.colors.text.disabled}
+                  editable={!isSubmitting}
+                />
+              </View>
+            ) : (
+              <View style={localStyles.recordContainer}>
+                {!isRecordingStarted && !recordedAudio ? (
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={localStyles.recordTitle}>
+                      {t('wwwPhases.audioAnswer.recordYourAnswer')}
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        localStyles.roundRecordButton,
+                        { backgroundColor: theme.colors.primary.main }
+                      ]}
+                      onPress={handleStartRecording}
+                      activeOpacity={0.8}
+                      disabled={isSubmitting}
+                    >
+                      <MaterialCommunityIcons name="microphone" size={48} color={theme.colors.text.inverse} />
+                      <Text style={[localStyles.roundButtonLabel, { color: theme.colors.text.inverse }]}>
+                        {t('audioChallenge.tapToRecord')}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ width: '100%', alignItems: 'center' }}>
+                    {isRecordingStarted && !recordedAudio && isSinging && isBackingTrackPlaying && (
+                      <View style={localStyles.backingTrackIndicator}>
+                        <MaterialCommunityIcons name="music-note" size={16} color={theme.colors.success.main} />
+                        <Text style={[localStyles.backingTrackText, { color: theme.colors.success.main }]}>
+                          {t('audioChallenge.karaoke.backingTrackPlaying')}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={localStyles.recordTitle}>
+                      {recordedAudio 
+                        ? t('wwwPhases.audioAnswer.reviewYourAnswer') 
+                        : t('wwwPhases.audioAnswer.recordYourAnswer')
+                      }
+                    </Text>
+                    <AudioResponseRecorder
+                      onRecordingComplete={handleRecordingDone}
+                      onStop={stopBackingTrack}
+                      disabled={isSubmitting || timer.timeLeft === 0}
+                      maxDuration={timer.timeLeft}
+                    />
+                    {recordedAudio && (
                       <TouchableOpacity
-                        key={p}
-                        style={[
-                          localStyles.playerChip,
-                          player === p && { backgroundColor: theme.colors.success.main }
-                        ]}
-                        onPress={() => onPlayerChange?.(p)}
+                        style={localStyles.reRecordButton}
+                        onPress={() => {
+                          onAudioRecordingComplete?.(null as any);
+                          setIsRecordingStarted(false);
+                          stopBackingTrack();
+                        }}
+                        disabled={isSubmitting}
                       >
-                        <Text style={[
-                          localStyles.playerChipText,
-                          player === p && { color: theme.colors.text.inverse, fontWeight: 'bold' }
-                        ]}>
-                          {p}
+                        <Text style={localStyles.reRecordText}>
+                          {t('wwwPhases.audioAnswer.recordAgain')}
                         </Text>
                       </TouchableOpacity>
-                    ))}
+                    )}
                   </View>
-                </View>
-              )}
-              <Text style={styles.label}>{t('wwwPhases.answer.teamAnswer')}</Text>
-              <TextInput
-                style={styles.input}
-                value={answer}
-                onChangeText={onAnswerChange}
-                placeholder={t('wwwPhases.audioAnswer.answerPlaceholder')}
-                multiline
-                placeholderTextColor={theme.colors.text.disabled}
-                editable={!isSubmitting}
-              />
-            </View>
-          ) : (
-            <View style={localStyles.recordContainer}>
-              <Text style={localStyles.recordTitle}>
-                {recordedAudio 
-                  ? t('wwwPhases.audioAnswer.reviewYourAnswer') 
-                  : t('wwwPhases.audioAnswer.recordYourAnswer')
-                }
-              </Text>
-              <AudioResponseRecorder
-                onRecordingComplete={onAudioRecordingComplete!}
-                disabled={isSubmitting || timer.timeLeft === 0}
-                maxDuration={timer.timeLeft}
-              />
-              {recordedAudio && (
-                <TouchableOpacity
-                  style={localStyles.reRecordButton}
-                  onPress={() => onAudioRecordingComplete?.(null as any)}
-                  disabled={isSubmitting}
-                >
-                  <Text style={localStyles.reRecordText}>
-                    {t('wwwPhases.audioAnswer.recordAgain')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
+                )}
+                
+                {isRecordingStarted && !recordedAudio && isSinging && backingTrackUrl && (
+                  <Video
+                    ref={backingTrackRef}
+                    source={{ uri: backingTrackUrl }}
+                    paused={!isBackingTrackPlaying}
+                    onEnd={() => {
+                      stopBackingTrack();
+                    }}
+                    onError={(e) => console.error('Backing track error:', e)}
+                    style={{ height: 0, width: 0 }}
+                  />
+                )}
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Submit Button */}
-        <TouchableOpacity
-          style={[styles.button, isSubmitDisabled && styles.disabledButton]}
-          onPress={onSubmit}
-          disabled={isSubmitDisabled}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={theme.colors.text.inverse} />
-          ) : (
-            <Text style={styles.buttonText}>
-              {t('wwwPhases.audioAnswer.submitAnswer')}
-            </Text>
-          )}
-        </TouchableOpacity>
+        {countdownValue === null && (
+          <TouchableOpacity
+            style={[styles.button, isSubmitDisabled && styles.disabledButton]}
+            onPress={onSubmit}
+            disabled={isSubmitDisabled}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color={theme.colors.text.inverse} />
+            ) : (
+              <Text style={styles.buttonText}>
+                {t('wwwPhases.audioAnswer.submitAnswer')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -351,6 +484,53 @@ const themeStyles = createStyles(theme => ({
     marginBottom: theme.spacing.lg,
     color: theme.colors.text.primary,
   },
+  roundRecordButton: {
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    marginVertical: theme.spacing.lg,
+  },
+  roundButtonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  countdownContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  countdownNumber: {
+    fontSize: 96,
+    fontWeight: '900',
+  },
+  countdownLabel: {
+    fontSize: 20,
+    marginTop: 12,
+  },
+  backingTrackIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    marginBottom: 12,
+    alignSelf: 'center',
+  },
+  backingTrackText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   reRecordButton: {
     marginTop: theme.spacing.md,
     padding: theme.spacing.sm,
@@ -384,4 +564,5 @@ const themeStyles = createStyles(theme => ({
     color: theme.colors.text.primary,
   }
 }));
+
 

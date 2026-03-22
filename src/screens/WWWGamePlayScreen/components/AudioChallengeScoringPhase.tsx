@@ -275,9 +275,50 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
     }
 
     if (subPhase === 'completed' && localSubmission) {
+        const isSinging = challengeType === AudioChallengeType.SINGING;
+
         return (
             <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-                <AudioChallengeScoreDisplay submission={localSubmission} />
+                <AudioChallengeScoreDisplay submission={localSubmission} showDetails={isSinging} />
+
+                {/* Karaoke-specific score breakdown */}
+                {isSinging && (
+                  <View style={localStyles.karaokeBreakdown}>
+                    <Text style={localStyles.breakdownTitle}>
+                      {t('audioChallenge.karaoke.scoreBreakdown')}
+                    </Text>
+                    
+                    <KaraokeScoreBar 
+                      label={t('audioChallenge.karaoke.pitchAccuracy')}
+                      score={localSubmission.pitchScore}
+                      icon="music-note"
+                      weight={40}
+                      theme={theme}
+                    />
+                    <KaraokeScoreBar 
+                      label={t('audioChallenge.karaoke.rhythmTiming')}
+                      score={localSubmission.rhythmScore}
+                      icon="metronome"
+                      weight={30}
+                      theme={theme}
+                    />
+                    <KaraokeScoreBar 
+                      label={t('audioChallenge.karaoke.voiceQuality')}
+                      score={localSubmission.voiceScore}
+                      icon="equalizer"
+                      weight={30}
+                      theme={theme}
+                    />
+                    
+                    <Text style={localStyles.weightExplanation}>
+                      {t('audioChallenge.karaoke.weightExplanation', { pitch: 40, rhythm: 30, voice: 30 })}
+                    </Text>
+                    
+                    <Text style={localStyles.performanceEmoji}>
+                      {getPerformanceEmoji(localSubmission.overallScore || 0)}
+                    </Text>
+                  </View>
+                )}
 
                 {hasReferenceAudio && (
                     <View style={styles.miniReferenceContainer}>
@@ -625,5 +666,110 @@ const themeStyles = createStyles(theme => ({
     },
 }));
 
+
+const getPerformanceEmoji = (score: number): string => {
+  if (score >= 90) return '🎤🌟 Outstanding!';
+  if (score >= 80) return '🎤🔥 Great job!';
+  if (score >= 70) return '🎤👏 Good effort!';
+  if (score >= 50) return '🎤👍 Not bad!';
+  return '🎤💪 Keep practicing!';
+};
+
+const KaraokeScoreBar: React.FC<{
+  label: string;
+  score: number | undefined;
+  icon: string;
+  weight: number;
+  theme: any;
+}> = ({ label, score, icon, weight, theme }) => {
+  const { t } = useTranslation();
+  const displayScore = score !== undefined && score !== null ? Math.round(score) : null;
+  const barColor = displayScore !== null 
+    ? (displayScore >= 80 ? theme.colors.success.main : displayScore >= 60 ? '#FF9800' : theme.colors.error.main)
+    : theme.colors.text.disabled;
+  
+  return (
+    <View style={localStyles.scoreBarRow}>
+      <View style={localStyles.scoreBarLabelContainer}>
+        <MaterialCommunityIcons name={icon} size={16} color={barColor} />
+        <Text style={[localStyles.scoreBarLabel, { color: theme.colors.text.primary }]}>{label}</Text>
+        <Text style={localStyles.scoreBarWeight}>({weight}%)</Text>
+      </View>
+      <View style={localStyles.scoreBarTrack}>
+        <View style={[localStyles.scoreBarFill, { 
+          width: displayScore !== null ? `${displayScore}%` : '0%', 
+          backgroundColor: barColor 
+        }]} />
+      </View>
+      <Text style={[localStyles.scoreBarValue, { color: barColor }]}>
+        {displayScore !== null ? `${displayScore}%` : t('audioChallenge.karaoke.notAvailable')}
+      </Text>
+    </View>
+  );
+};
+
+const localStyles = StyleSheet.create({
+  karaokeBreakdown: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#F9FAFB', // fallback
+    borderRadius: 12,
+  },
+  breakdownTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  scoreBarRow: {
+    marginBottom: 12,
+  },
+  scoreBarLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  scoreBarLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+  },
+  scoreBarWeight: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  scoreBarTrack: {
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  scoreBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  scoreBarValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  weightExplanation: {
+    fontSize: 11,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  performanceEmoji: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 12,
+    color: '#111827',
+  },
+});
 
 export default AudioChallengeScoringPhase;

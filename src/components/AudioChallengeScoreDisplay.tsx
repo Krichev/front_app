@@ -1,6 +1,7 @@
 import React from 'react';
 import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useTranslation } from 'react-i18next';
 import {AudioChallengeSubmission} from '../entities/ChallengeState/model/types';
 
 interface AudioChallengeScoreDisplayProps {
@@ -12,6 +13,7 @@ const AudioChallengeScoreDisplay: React.FC<AudioChallengeScoreDisplayProps> = ({
     submission,
     showDetails = true
 }) => {
+    const { t } = useTranslation();
     const getStatusIcon = () => {
         switch (submission.processingStatus) {
             case 'PENDING':

@@ -1383,6 +1383,26 @@ const ru = {
         },
     },
     audioChallenge: {
+        countdown: {
+          getReady: 'Приготовьтесь!',
+          go: 'НАЧАЛИ!',
+          starting: 'Начало через...',
+        },
+        karaoke: {
+          backingTrackPlaying: 'Играет фонограмма',
+          backingTrackError: 'Фонограмма недоступна — запись без неё',
+          noBackingTrack: 'Фонограмма отсутствует',
+          scoreBreakdown: 'Детализация оценки',
+          pitchAccuracy: 'Точность высоты',
+          rhythmTiming: 'Чувство ритма',
+          voiceQuality: 'Качество голоса',
+          weightExplanation: 'Высота {{pitch}}% • Ритм {{rhythm}}% • Голос {{voice}}%',
+          notAvailable: 'Н/Д',
+          performanceSummary: 'Итоги выступления',
+        },
+        tapToRecord: 'Нажмите для записи',
+        recording: 'Запись...',
+        reviewRecording: 'Прослушайте вашу запись',
         types: {
             RHYTHM_CREATION: {
                 label: 'Создание ритма',

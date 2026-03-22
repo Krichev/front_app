@@ -5,12 +5,14 @@ import {useAudioRecorder} from '../../../hooks/useAudioRecorder';
 
 interface AudioResponseRecorderProps {
   onRecordingComplete: (audioFile: { uri: string; name: string; type: string }) => void;
+  onStop?: () => void;
   maxDuration?: number;
   disabled?: boolean;
 }
 
 export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
   onRecordingComplete,
+  onStop,
   maxDuration = 120, // Default 2 min
   disabled = false,
 }) => {
@@ -65,6 +67,7 @@ export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
   }, [isRecording, duration, maxDuration]);
 
   const handleStopRecording = async () => {
+    onStop?.();
     const path = await stopRecording();
     if (path) {
       const file = {

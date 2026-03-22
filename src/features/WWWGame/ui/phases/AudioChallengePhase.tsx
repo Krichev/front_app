@@ -1,8 +1,10 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import Video, { VideoRef } from 'react-native-video';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../../shared/ui/theme';
 import { phaseStyles } from './phases.styles';
 import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
 import { 
@@ -11,6 +13,8 @@ import {
   AudioResponseRecorder 
 } from '../../../../screens/components/audio';
 import { useAudioChallengeTimer } from '../../hooks/useAudioChallengeTimer';
+import { AudioChallengeType } from '../../../../types/audioChallenge.types';
+import NetworkConfigManager from '../../../../config/NetworkConfig';
 
 export type AudioPhaseState = 'listening' | 'ready' | 'recording' | 'review';
 
@@ -34,43 +38,103 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
   const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
+  const localStyles = themeStyles;
+  
   const [phase, setPhase] = useState<AudioPhaseState>('listening');
   const [hasListenedOnce, setHasListenedOnce] = useState(false);
+  const [countdownValue, setCountdownValue] = useState<number | null>(null);
+  const [isBackingTrackPlaying, setIsBackingTrackPlaying] = useState(false);
+  
+  const countdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const backingTrackRef = useRef<VideoRef>(null);
+
+  const isSinging = question.audioChallengeType === AudioChallengeType.SINGING || 
+                    (question.audioChallengeType as string) === 'SINGING';
+
+  const backingTrackUrl = useMemo(() => {
+    if (question.questionMediaUrl) return question.questionMediaUrl;
+    const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
+    if (question.audioReferenceMediaId) {
+       // Using same pattern as ReferenceAudioSection
+       return `${API_BASE_URL}/media/stream/${question.audioReferenceMediaId}`;
+    }
+    if (question.questionMediaId) {
+       return `${API_BASE_URL}/media/stream/${question.questionMediaId}`;
+    }
+    if (question.id) {
+       return `${API_BASE_URL}/media/question/${question.id}/stream`;
+    }
+    return null;
+  }, [question]);
 
   const timer = useAudioChallengeTimer({
     duration: timeLimitSeconds,
     onAutoSubmit: onSubmit,
   });
 
+  const stopBackingTrack = useCallback(() => {
+    setIsBackingTrackPlaying(false);
+  }, []);
+
   const handleStartRecordingPhase = useCallback(() => {
-    setPhase('recording');
-    timer.start();
-  }, [timer]);
+    setCountdownValue(3);
+    
+    let count = 3;
+    countdownTimerRef.current = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        if (countdownTimerRef.current) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+        }
+        setCountdownValue(null);
+        setPhase('recording');
+        timer.start();
+        
+        if (isSinging && backingTrackUrl) {
+          setIsBackingTrackPlaying(true);
+        }
+      } else {
+        setCountdownValue(count);
+      }
+    }, 1000);
+  }, [timer, isSinging, backingTrackUrl]);
 
   const handleRecordingDone = useCallback((audioFile: { uri: string; name: string; type: string }) => {
     onRecordingComplete(audioFile);
     setPhase('review');
-  }, [onRecordingComplete]);
+    stopBackingTrack();
+  }, [onRecordingComplete, stopBackingTrack]);
 
   const handleReRecord = useCallback(() => {
-    setPhase('recording');
-  }, []);
+    handleStartRecordingPhase();
+  }, [handleStartRecordingPhase]);
 
   const handlePlaybackComplete = useCallback(() => {
     setHasListenedOnce(true);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+      }
+    };
   }, []);
 
   // Sync phase with recordedAudio prop if it changes externally
   useEffect(() => {
     if (recordedAudio && phase === 'recording') {
       setPhase('review');
+      stopBackingTrack();
     }
-  }, [recordedAudio, phase]);
+  }, [recordedAudio, phase, stopBackingTrack]);
 
   return (
     <View style={styles.container}>
       {/* Timer Bar - Only visible after listening phase */}
-      {phase !== 'listening' && phase !== 'ready' && (
+      {phase !== 'listening' && phase !== 'ready' && countdownValue === null && (
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>
             {t('audioChallenge.timeRemaining', { seconds: timer.timeLeft })}
@@ -92,16 +156,20 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
         </View>
       )}
 
-      <AudioChallengeHeader 
-        challengeType={question.audioChallengeType} 
-        minimumScorePercentage={question.minimumScorePercentage}
-        instructions={question.question}
-      />
+      {countdownValue === null && (
+        <AudioChallengeHeader 
+          challengeType={question.audioChallengeType} 
+          minimumScorePercentage={question.minimumScorePercentage}
+          instructions={question.question}
+        />
+      )}
 
       <View style={localStyles.content}>
-        <Text style={[styles.text, localStyles.questionText]}>{question.question}</Text>
+        {countdownValue === null && (
+          <Text style={[styles.text, localStyles.questionText]}>{question.question}</Text>
+        )}
 
-        {phase === 'listening' && (
+        {phase === 'listening' && countdownValue === null && (
           <View style={localStyles.phaseContainer}>
             <Text style={localStyles.instructionText}>
               {t('audioChallenge.listenFirst')}
@@ -116,15 +184,18 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
             
             <TouchableOpacity
               style={[
-                styles.button, 
-                !hasListenedOnce && styles.disabledButton,
-                localStyles.readyButton
+                localStyles.roundRecordButton, 
+                { backgroundColor: theme.colors.primary.main },
+                !hasListenedOnce && localStyles.disabledButton
               ]}
               onPress={() => setPhase('ready')}
               disabled={!hasListenedOnce}
+              activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="microphone" size={24} color={theme.colors.text.inverse} />
-              <Text style={styles.buttonText}>{t('audioChallenge.readyToRecord')}</Text>
+              <MaterialCommunityIcons name="microphone" size={48} color={theme.colors.text.inverse} />
+              <Text style={[localStyles.roundButtonLabel, { color: theme.colors.text.inverse }]}>
+                {t('audioChallenge.readyToRecord')}
+              </Text>
             </TouchableOpacity>
             
             {!hasListenedOnce && (
@@ -135,17 +206,30 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
           </View>
         )}
 
-        {phase === 'ready' && (
+        {phase === 'ready' && countdownValue === null && (
            <View style={localStyles.phaseContainer}>
              <Text style={localStyles.instructionText}>
                {t('audioChallenge.prepareYourself')}
              </Text>
+             
              <TouchableOpacity
-               style={[styles.button, localStyles.largeButton]}
+               style={[
+                 localStyles.roundRecordButton,
+                 { backgroundColor: theme.colors.primary.main }
+               ]}
                onPress={handleStartRecordingPhase}
+               activeOpacity={0.8}
              >
-               <Text style={styles.buttonText}>{t('audioChallenge.startRecordingPhase')}</Text>
+               <MaterialCommunityIcons 
+                 name="microphone" 
+                 size={48} 
+                 color={theme.colors.text.inverse} 
+               />
+               <Text style={[localStyles.roundButtonLabel, { color: theme.colors.text.inverse }]}>
+                 {t('audioChallenge.tapToRecord')}
+               </Text>
              </TouchableOpacity>
+
              <TouchableOpacity 
                onPress={() => setPhase('listening')}
                style={{ marginTop: theme.spacing.md }}
@@ -155,16 +239,38 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
            </View>
         )}
 
-        {(phase === 'recording' || phase === 'review') && (
+        {countdownValue !== null && (
+          <View style={localStyles.countdownContainer}>
+            <Text style={[localStyles.countdownNumber, { color: theme.colors.primary.main }]}>
+              {countdownValue}
+            </Text>
+            <Text style={[localStyles.countdownLabel, { color: theme.colors.text.secondary }]}>
+              {t('audioChallenge.countdown.getReady')}
+            </Text>
+          </View>
+        )}
+
+        {(phase === 'recording' || phase === 'review') && countdownValue === null && (
           <View style={localStyles.phaseContainer}>
              {phase === 'recording' ? (
-               <Text style={localStyles.instructionText}>{t('audioChallenge.recording')}</Text>
+               <View style={{ alignItems: 'center' }}>
+                 {isSinging && isBackingTrackPlaying && (
+                    <View style={localStyles.backingTrackIndicator}>
+                      <MaterialCommunityIcons name="music-note" size={16} color={theme.colors.success.main} />
+                      <Text style={[localStyles.backingTrackText, { color: theme.colors.success.main }]}>
+                        {t('audioChallenge.karaoke.backingTrackPlaying')}
+                      </Text>
+                    </View>
+                  )}
+                 <Text style={localStyles.instructionText}>{t('audioChallenge.recording')}</Text>
+               </View>
              ) : (
                <Text style={localStyles.instructionText}>{t('audioChallenge.reviewRecording')}</Text>
              )}
 
              <AudioResponseRecorder
                onRecordingComplete={handleRecordingDone}
+               onStop={stopBackingTrack}
                disabled={isSubmitting || !timer.isRunning && phase === 'recording' && timer.timeLeft === 0}
                maxDuration={timer.timeLeft}
              />
@@ -194,9 +300,24 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
                </View>
              )}
 
-             <View style={localStyles.miniReference}>
-                <ReferenceAudioSection question={question} mini />
-             </View>
+             {!isSinging && (
+               <View style={localStyles.miniReference}>
+                  <ReferenceAudioSection question={question} mini />
+               </View>
+             )}
+
+             {isSinging && backingTrackUrl && (
+                <Video
+                  ref={backingTrackRef}
+                  source={{ uri: backingTrackUrl }}
+                  paused={!isBackingTrackPlaying}
+                  onEnd={() => {
+                    stopBackingTrack();
+                  }}
+                  onError={(e) => console.error('Backing track error:', e)}
+                  style={{ height: 0, width: 0 }}
+                />
+              )}
           </View>
         )}
       </View>
@@ -204,17 +325,19 @@ export const AudioChallengePhase: React.FC<AudioChallengePhaseProps> = ({
   );
 };
 
-const localStyles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
   content: {
     flex: 1,
     padding: 20,
     alignItems: 'center',
+    width: '100%',
   },
   questionText: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 20,
     textAlign: 'center',
+    color: theme.colors.text.primary,
   },
   phaseContainer: {
     width: '100%',
@@ -225,26 +348,66 @@ const localStyles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 15,
     textAlign: 'center',
-    color: '#666',
+    color: theme.colors.text.secondary,
   },
   hintText: {
     fontSize: 12,
-    color: '#999',
+    color: theme.colors.text.disabled,
     marginTop: 10,
     fontStyle: 'italic',
   },
-  readyButton: {
-    marginTop: 30,
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 30,
+  roundRecordButton: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    marginVertical: 30,
   },
-  largeButton: {
-    paddingVertical: 20,
-    paddingHorizontal: 40,
+  roundButtonLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  countdownContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  countdownNumber: {
+    fontSize: 96,
+    fontWeight: '900',
+  },
+  countdownLabel: {
+    fontSize: 20,
+    marginTop: 12,
+  },
+  backingTrackIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    marginBottom: 12,
+    alignSelf: 'center',
+  },
+  backingTrackText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   errorTextSmall: {
-    color: '#ff4444',
+    color: theme.colors.error.main,
     fontSize: 12,
     marginTop: 8,
     textAlign: 'center',
@@ -259,16 +422,18 @@ const localStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#2196F3',
+    borderColor: theme.colors.primary.main,
     flexDirection: 'row',
     gap: 5,
   },
   submitButton: {
     flex: 2,
+    backgroundColor: theme.colors.primary.main,
   },
   miniReference: {
     marginTop: 'auto',
     width: '100%',
     paddingTop: 20,
   }
-});
+}));
+
