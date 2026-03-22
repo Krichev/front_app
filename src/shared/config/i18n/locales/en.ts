@@ -2047,15 +2047,11 @@ const en = {
             skipForward: 'Forward 10s',
         },
         discussion: {
-            title: 'Team Discussion',
-            timeRemaining: '{{seconds}} seconds',
-            listenAudio: 'Listen to the audio',
-            watchVideo: 'Watch the video',
-            viewImage: 'View the image',
-            latestTranscription: 'Latest Transcription:',
             discussionNotes: 'Discussion Notes:',
             notesPlaceholder: "Record your team's discussion...",
-            submitAnswer: 'Submit Answer',
+            proceedToAnswer: 'Proceed to Answer',
+            latestTranscription: 'Latest Transcription:',
+            timeRemaining: 'Time Remaining: {{seconds}}s',
         },
 
         // --- NEW SUB-SECTION ---

@@ -54,16 +54,15 @@ const WWWGamePlayScreen: React.FC = () => {
   const {state, dispatch, actions} = useWWWGameState();
   const {calculateReadingTime} = useReadingTime();
 
+  const currentRoundIdx = state.currentRound > 0 ? state.currentRound - 1 : 0;
+  const currentRound = controller.rounds?.[currentRoundIdx];
+  const currentQuestion = currentRound?.question;
+
+  const [discussionNotes, setDiscussionNotes] = useState('');
+
   const effectiveRoundTime = controller.session?.roundTimeSeconds || 60;
 
-  const {
-    timeLeft,
-    isRunning: isTimerRunning,
-    animation,
-    start: timerStart,
-    pause: timerPause,
-    reset: timerReset,
-  } = useCountdownTimer({
+  const timer = useCountdownTimer({
     duration: effectiveRoundTime,
     onComplete: () => dispatch(actions.timeUp()),
   });
@@ -87,19 +86,43 @@ const WWWGamePlayScreen: React.FC = () => {
       // AudioChallengePhase manages its own timer
       dispatch(actions.timeUp());
     } else {
-      // Start timer immediately — no requestAnimationFrame delay
-      timerReset(effectiveRoundTime);
-      timerStart();
+      // Start timer
+      console.log('🎮 [Discussion] Starting timer with duration:', effectiveRoundTime);
+      timer.reset(effectiveRoundTime);
+      timer.start();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.phase, state.currentRound]);
 
+  // Safety fallback: guarantee discussion → answer transition even if timer callback is lost
+  useEffect(() => {
+    if (state.phase !== 'discussion' || !currentRound) return;
+
+    const isAudioQuestion = currentRound.question.questionType === 'AUDIO';
+    if (isAudioQuestion) return; // Audio questions skip discussion
+
+    // Safety margin: 2 seconds after expected timer expiry
+    const safetyDelayMs = (effectiveRoundTime + 2) * 1000;
+
+    console.log('🛡️ [Safety] Setting fallback timer:', safetyDelayMs, 'ms');
+    const safetyTimeout = setTimeout(() => {
+      // Only fire if still stuck in discussion phase
+      if (state.phase === 'discussion') {
+        console.warn('🛡️ [Safety] Timer fallback triggered — forcing transition to answer phase');
+        timer.pause();
+        actions.timeUp();
+      }
+    }, safetyDelayMs);
+
+    return () => clearTimeout(safetyTimeout);
+  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timer.pause]);
+
   // Pause timer when leaving discussion phase
   useEffect(() => {
     if (state.phase !== 'discussion') {
-      timerPause();
+      timer.pause();
     }
-  }, [state.phase, timerPause]);
+  }, [state.phase, timer.pause]);
 
   // Video preloading — primes cache for the next round's media
   useVideoPreloader(state.currentRound, controller.rounds);
@@ -108,15 +131,8 @@ const WWWGamePlayScreen: React.FC = () => {
   const [showWagerResults, setShowWagerResults] = useState(false);
   const [wagerOutcome, setWagerOutcome] = useState<WagerOutcome | null>(null);
 
-  // ============================================================================
-  // PHASE TRANSITION LOGIC
-  // ============================================================================
+  // Auto-start discussion timer when entering discussion phase
 
-  const currentRoundIdx = state.currentRound > 0 ? state.currentRound - 1 : 0;
-  const currentRound = controller.rounds?.[currentRoundIdx];
-  const currentQuestion = currentRound?.question;
-
-  // Orchestration Effect: Handles routing between phases based on question type
   useEffect(() => {
     if (state.phase === 'waiting' && currentQuestion && state.gameStartTime && !controller.isLoading) {
       const q = currentQuestion;
@@ -306,9 +322,16 @@ const WWWGamePlayScreen: React.FC = () => {
       case 'discussion':
         return (
           <DiscussionPhase
-            question={currentQuestion!}
-            timeLeft={timeLeft}
-            animation={animation}
+            question={currentRound.question}
+            timeLeft={timer.timeLeft}
+            animation={timer.animation}
+            notes={discussionNotes}
+            onNotesChange={setDiscussionNotes}
+            onSubmitEarly={() => {
+              console.log('🎮 [Discussion] User pressed Proceed to Answer');
+              timer.pause();
+              actions.timeUp();
+            }}
           />
         );
 
@@ -381,7 +404,7 @@ const WWWGamePlayScreen: React.FC = () => {
         visible={showExitModal}
         onResume={() => setShowExitModal(false)}
         onPauseAndExit={() => {
-          controller.pauseSession(state.currentRound, timeLeft);
+          controller.pauseSession(state.currentRound, timer.timeLeft);
           navigation.goBack();
         }}
         onAbandon={() => {

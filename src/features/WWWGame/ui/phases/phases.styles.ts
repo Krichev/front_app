@@ -218,4 +218,23 @@ export const phaseStyles = (theme: Theme) =>
             color: theme.colors.text.secondary,
             fontSize: 12,
         },
+        transcriptionContainer: {
+            backgroundColor: theme.colors.background.tertiary,
+            padding: theme.spacing.md,
+            borderRadius: theme.layout.borderRadius.md,
+            marginTop: theme.spacing.sm,
+            borderLeftWidth: 4,
+            borderLeftColor: theme.colors.primary.main,
+        },
+        transcriptionLabel: {
+            ...theme.typography.caption,
+            color: theme.colors.text.secondary,
+            fontWeight: theme.typography.fontWeight.bold,
+            marginBottom: 2,
+        },
+        transcriptionText: {
+            ...theme.typography.body.small,
+            color: theme.colors.text.primary,
+            fontStyle: 'italic',
+        },
     });

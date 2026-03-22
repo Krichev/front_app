@@ -1,5 +1,14 @@
-import React, {useState, useRef} from 'react';
-import {Animated, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import React, {useState} from 'react';
+import {
+    Animated,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
 import {phaseStyles} from './phases.styles';
@@ -11,162 +20,200 @@ import {MediaSourceType} from '../../../../entities/QuizState/model/types/questi
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {AudioChallengeContainer} from '../../../../screens/components/audio/AudioChallengeContainer';
 import {extractYouTubeVideoId} from '../../../../utils/youtubeUtils';
+import {VoiceRecorderV2} from '../../../../shared/ui';
 
 interface DiscussionPhaseProps {
     question: QuizQuestion;
     timeLeft: number;
-    animation?: Animated.Value;
-    notes?: string;
-    onNotesChange?: (text: string) => void;
-    onSubmitEarly?: () => void;
+    animation: Animated.Value;
+    notes: string;
+    onNotesChange: (text: string) => void;
+    onSubmitEarly: () => void;
     isVoiceEnabled?: boolean;
 }
 
 export const DiscussionPhase: React.FC<DiscussionPhaseProps> = ({
-                                                                    question,
-                                                                    timeLeft,
-                                                                    animation,
-                                                                    notes = '',
-                                                                    onNotesChange = () => {},
-                                                                    onSubmitEarly = () => {},
-                                                                    isVoiceEnabled = false,
-                                                                }) => {
+    question,
+    timeLeft,
+    animation,
+    notes,
+    onNotesChange,
+    onSubmitEarly,
+    isVoiceEnabled = false,
+}) => {
     const {t} = useTranslation();
     const {theme} = useAppStyles();
     const styles = phaseStyles(theme);
-    
-    // Internal animation if not provided
-    const internalAnim = useRef(new Animated.Value(0)).current;
-    const activeAnim = animation || internalAnim;
+    const [voiceTranscription, setVoiceTranscription] = useState('');
 
-    const isAudioChallenge = question.questionType === 'AUDIO' && !!question.audioChallengeType;
+    const handleVoiceTranscription = (text: string) => {
+        setVoiceTranscription(text);
+        if (text) {
+            onNotesChange(notes ? `${notes} ${text}` : text);
+        }
+    };
 
-    // Helper to determine media type
-    const getMediaType = (q: QuizQuestion): MediaType | null => {
-        const mediaType = q.questionMediaType?.toUpperCase();
-        if (mediaType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mediaType)) {
-            return mediaType as MediaType;
-        }
-        // Fallback to questionType for external media where questionMediaType may be null
-        const qType = q.questionType?.toUpperCase();
-        if (qType && ['IMAGE', 'VIDEO', 'AUDIO'].includes(qType)) {
-            return qType as MediaType;
-        }
+    // ── Media type helpers (same logic as before) ──────────────────
+    const isAudioChallenge =
+        question.questionType === 'AUDIO' && !!question.audioChallengeType;
+
+    const getMediaType = (): MediaType | null => {
+        const mt = question.questionMediaType?.toUpperCase();
+        if (mt && ['IMAGE', 'VIDEO', 'AUDIO'].includes(mt)) return mt as MediaType;
+        const qt = question.questionType?.toUpperCase();
+        if (qt && ['IMAGE', 'VIDEO', 'AUDIO'].includes(qt)) return qt as MediaType;
         return null;
     };
 
-    const mediaType = getMediaType(question);
-    const hasUploadedMedia = !!question.questionMediaId;
-    const hasExternalMedia = !!question.mediaSourceType
-        && question.mediaSourceType !== MediaSourceType.UPLOADED
-        && (!!question.externalMediaUrl || !!question.externalMediaId);
-    const showMedia = !!mediaType && !isAudioChallenge && (hasUploadedMedia || hasExternalMedia);
+    const mediaType = getMediaType();
+    const hasExternalMedia =
+        !!question.externalMediaUrl || !!question.externalMediaId;
+    const showMedia =
+        !!mediaType &&
+        !isAudioChallenge &&
+        (!!question.questionMediaId || hasExternalMedia);
 
-    const videoId = (hasExternalMedia && mediaType === 'VIDEO')
-        ? (question.externalMediaId || extractYouTubeVideoId(question.externalMediaUrl || '') || undefined)
-        : undefined;
+    // Determine media source type for QuestionMediaViewer
+    const getMediaSourceType = (): MediaSourceType | undefined => {
+        if (question.mediaSourceType) return question.mediaSourceType as MediaSourceType;
+        if (question.externalMediaUrl || question.externalMediaId) return 'EXTERNAL' as MediaSourceType;
+        if (question.questionMediaId) return 'UPLOADED' as MediaSourceType;
+        return undefined;
+    };
 
+    // Check if external media is a YouTube link
+    const youtubeVideoId = question.externalMediaUrl
+        ? extractYouTubeVideoId(question.externalMediaUrl)
+        : null;
+
+    // ── Render ─────────────────────────────────────────────────────
     return (
-        <View style={styles.container}>
-            <View style={styles.timerContainer}>
-                <Text style={styles.timerText}>{t('wwwPhases.discussion.timeRemaining', {seconds: timeLeft})}</Text>
-                <View style={styles.timerBar}>
-                    <Animated.View
-                        style={[
-                            styles.timerProgress,
-                            {
-                                width: activeAnim.interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: ['0%', '100%'],
-                                }),
-                            },
-                        ]}
-                    />
+        <KeyboardAvoidingView
+            style={{flex: 1}}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+        >
+            <ScrollView
+                style={{flex: 1}}
+                contentContainerStyle={{
+                    padding: theme.spacing['2xl'],
+                    paddingBottom: theme.spacing['3xl'],
+                }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+                {/* ── Timer ─────────────────────────────────── */}
+                <View style={styles.timerContainer}>
+                    <Text style={styles.timerText}>
+                        {t('wwwPhases.discussion.timeRemaining', {seconds: timeLeft})}
+                    </Text>
+                    <View style={styles.timerBar}>
+                        <Animated.View
+                            style={[
+                                styles.timerProgress,
+                                {
+                                    width: animation.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: ['0%', '100%'],
+                                    }),
+                                },
+                            ]}
+                        />
+                    </View>
                 </View>
-            </View>
 
-            <Text style={styles.title}>{t('wwwPhases.discussion.title')}</Text>
+                {/* ── Question text ─────────────────────────── */}
+                <Text style={styles.title}>{question.question}</Text>
+                {question.additionalInfo ? (
+                    <Text style={styles.text}>{question.additionalInfo}</Text>
+                ) : null}
 
-            {isAudioChallenge ? (
-                <AudioChallengeContainer
-                    question={question}
-                    mode="preview"
-                />
-            ) : (
-                <View style={styles.questionContent}>
-                    {showMedia && mediaType && (
-                        <View style={(hasExternalMedia && mediaType === 'VIDEO') ? styles.mediaContainerFlexible : styles.mediaContainer}>
-                            <View style={styles.mediaHeader}>
-                                <MaterialCommunityIcons
-                                    name={mediaType === 'AUDIO' ? 'music' : mediaType === 'VIDEO' ? 'video' : 'image'}
-                                    size={16}
-                                    color={theme.colors.text.secondary}
-                                />
-                                <Text style={{
-                                    ...theme.typography.body.small,
-                                    color: theme.colors.text.secondary,
-                                    fontWeight: theme.typography.fontWeight.medium
-                                }}>
-                                    {mediaType === 'AUDIO' ? t('wwwPhases.discussion.listenAudio') :
-                                        mediaType === 'VIDEO' ? t('wwwPhases.discussion.watchVideo') : t('wwwPhases.discussion.viewImage')}
+                {/* ── Audio challenge ───────────────────────── */}
+                {isAudioChallenge && (
+                    <AudioChallengeContainer question={question} mode="preview" />
+                )}
+
+                {/* ── YouTube external video ───────────────── */}
+                {!isAudioChallenge && youtubeVideoId && (
+                    <View style={{marginBottom: theme.spacing.lg}}>
+                        <ExternalVideoPlayer
+                            mediaSourceType={MediaSourceType.YOUTUBE}
+                            videoId={youtubeVideoId}
+                            height={200}
+                        />
+                    </View>
+                )}
+
+                {/* ── Uploaded/external media (non-YouTube) ── */}
+                {showMedia && mediaType && !youtubeVideoId && (
+                    <View style={styles.mediaContainer}>
+                        <View style={styles.mediaHeader}>
+                            <MaterialCommunityIcons
+                                name={
+                                    mediaType === 'AUDIO'
+                                        ? 'music'
+                                        : mediaType === 'VIDEO'
+                                        ? 'video'
+                                        : 'image'
+                                }
+                                size={16}
+                                color={theme.colors.text.secondary}
+                            />
+                        </View>
+                        <QuestionMediaViewer
+                            questionId={question.id}
+                            mediaType={mediaType}
+                        />
+                    </View>
+                )}
+
+                {/* ── Voice recorder ───────────────────────── */}
+                {isVoiceEnabled && (
+                    <View style={{marginBottom: theme.spacing.lg}}>
+                        <VoiceRecorderV2
+                            onTranscription={handleVoiceTranscription}
+                            isActive={true}
+                        />
+                        {voiceTranscription ? (
+                            <View style={styles.transcriptionContainer}>
+                                <Text style={styles.transcriptionLabel}>
+                                    {t('wwwPhases.discussion.latestTranscription')}
+                                </Text>
+                                <Text style={styles.transcriptionText}>
+                                    {voiceTranscription}
                                 </Text>
                             </View>
-                            {hasExternalMedia && mediaType === 'VIDEO' ? (
-                                <View style={{width: '100%', borderRadius: 8, overflow: 'hidden'}}>
-                                    {__DEV__ && (console.log('🎬 [DiscussionPhase] Rendering ExternalVideoPlayer:', {
-                                        questionId: question.id,
-                                        mediaSourceType: question.mediaSourceType,
-                                        videoId,
-                                        externalMediaUrl: question.externalMediaUrl?.substring(0, 60),
-                                        showControls: true,
-                                        onlyPlayButton: false,
-                                    }), null)}
-                                    <ExternalVideoPlayer
-                                        mediaSourceType={question.mediaSourceType as MediaSourceType}
-                                        videoId={videoId}
-                                        videoUrl={question.externalMediaUrl}
-                                        startTime={question.questionVideoStartTime || 0}
-                                        endTime={question.questionVideoEndTime}
-                                        autoPlay={false}
-                                        showControls={true}
-                                        hideTitle={true}
-                                        enableFullscreen={true}
-                                        initialFullscreen={false}
-                                    />
-                                </View>
-                            ) : (
-                                <QuestionMediaViewer
-                                    questionId={Number(question.id)}
-                                    mediaType={mediaType as MediaType}
-                                    height={mediaType === 'AUDIO' ? 80 : 200}
-                                    enableFullscreen={mediaType !== 'AUDIO'}
-                                />
-                            )}
-                        </View>
-                    )}
-                    <Text style={styles.text}>{question.question}</Text>
+                        ) : null}
+                    </View>
+                )}
+
+                {/* ── Discussion notes ─────────────────────── */}
+                <View style={{marginBottom: theme.spacing.lg}}>
+                    <Text style={styles.label}>
+                        {t('wwwPhases.discussion.discussionNotes')}
+                    </Text>
+                    <TextInput
+                        style={styles.input}
+                        value={notes}
+                        onChangeText={onNotesChange}
+                        placeholder={t('wwwPhases.discussion.notesPlaceholder')}
+                        multiline
+                        textAlignVertical="top"
+                        placeholderTextColor={theme.colors.text.disabled}
+                    />
                 </View>
-            )}
 
-            <View style={{marginBottom: theme.spacing.lg}}>
-                <Text style={styles.label}>{t('wwwPhases.discussion.discussionNotes')}</Text>
-                <TextInput
-                    style={styles.input}
-                    value={notes}
-                    onChangeText={onNotesChange}
-                    placeholder={t('wwwPhases.discussion.notesPlaceholder')}
-                    multiline
-                    textAlignVertical="top"
-                    placeholderTextColor={theme.colors.text.disabled}
-                />
-            </View>
-
-            <TouchableOpacity
-                style={styles.button}
-                onPress={onSubmitEarly}
-            >
-                <Text style={styles.buttonText}>{t('wwwPhases.discussion.submitAnswer')}</Text>
-            </TouchableOpacity>
-        </View>
+                {/* ── Proceed to Answer button ─────────────── */}
+                <TouchableOpacity
+                    style={styles.button}
+                    onPress={onSubmitEarly}
+                    activeOpacity={0.7}
+                >
+                    <Text style={styles.buttonText}>
+                        {t('wwwPhases.discussion.proceedToAnswer')}
+                    </Text>
+                </TouchableOpacity>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };

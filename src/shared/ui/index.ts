@@ -9,3 +9,4 @@ export * from './Modal';
 export * from './Portal';
 export * from './TopicSelector';
 export * from './ValidationStatusBadge';
+export * from './VoiceRecorderV2/VoiceRecorderV2';

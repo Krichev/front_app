@@ -10,37 +10,39 @@ interface UseCountdownTimerOptions {
 export function useCountdownTimer({ duration, onComplete, autoStart = false }: UseCountdownTimerOptions) {
   const [timeLeft, setTimeLeft] = useState(duration);
   const [isRunning, setIsRunning] = useState(autoStart);
-  // Track effective duration so animation ratio is always correct after reset(newDuration)
-  const effectiveDurationRef = useRef(duration);
   const animation = useRef(new Animated.Value(1)).current;
   const onCompleteRef = useRef(onComplete);
+  const hasCompletedRef = useRef(false);
+  const activeDurationRef = useRef(duration);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  // Keep effectiveDurationRef in sync if the prop changes
-  useEffect(() => {
-    effectiveDurationRef.current = duration;
-  }, [duration]);
-
   useEffect(() => {
     if (!isRunning || timeLeft <= 0) {
-      if (timeLeft <= 0 && isRunning) {
+      if (timeLeft <= 0 && isRunning && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
         setIsRunning(false);
+        console.log('⏰ [Timer] Time expired, firing onComplete');
         onCompleteRef.current();
       }
       return;
     }
 
     const interval = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft(prev => {
+        const next = prev - 1;
+        if (next <= 0) {
+          clearInterval(interval);
+        }
+        return next;
+      });
     }, 1000);
 
-    // Use effectiveDurationRef so the bar is correct after reset(newDuration)
-    const currentDuration = effectiveDurationRef.current;
+    // Use activeDurationRef for correct animation ratio after reset
     Animated.timing(animation, {
-      toValue: currentDuration > 0 ? timeLeft / currentDuration : 0,
+      toValue: (timeLeft - 1) / activeDurationRef.current,
       duration: 1000,
       useNativeDriver: false,
     }).start();
@@ -48,13 +50,23 @@ export function useCountdownTimer({ duration, onComplete, autoStart = false }: U
     return () => clearInterval(interval);
   }, [timeLeft, isRunning, animation]);
 
-  const start = useCallback(() => setIsRunning(true), []);
-  const pause = useCallback(() => setIsRunning(false), []);
+  const start = useCallback(() => {
+    console.log('⏰ [Timer] start() called');
+    setIsRunning(true);
+  }, []);
+
+  const pause = useCallback(() => {
+    console.log('⏰ [Timer] pause() called');
+    setIsRunning(false);
+  }, []);
+
   const reset = useCallback((newDuration?: number) => {
     const d = newDuration ?? duration;
-    effectiveDurationRef.current = d;
+    console.log('⏰ [Timer] reset() called with duration:', d);
     setTimeLeft(d);
+    activeDurationRef.current = d;
     animation.setValue(1);
+    hasCompletedRef.current = false; // Allow onComplete to fire again after reset
   }, [duration, animation]);
 
   return { timeLeft, isRunning, animation, start, pause, reset };
