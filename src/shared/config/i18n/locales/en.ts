@@ -21,14 +21,75 @@ const en = {
         invitation: {
             success: 'Invitation sent successfully!',
             error: 'Failed to send invitation.',
+            tabs: {
+                received: 'Received',
+                sent: 'Sent',
+            },
+            noInvitations: 'No invitations found',
+            card: {
+                from: 'From: {{username}}',
+                to: 'To: {{username}}',
+                negotiationInProgress: 'Negotiation in progress',
+                expired: 'Expired',
+                status: {
+                    PENDING: 'PENDING',
+                    ACCEPTED: 'ACCEPTED',
+                    DECLINED: 'DECLINED',
+                    NEGOTIATING: 'NEGOTIATING',
+                    EXPIRED: 'EXPIRED',
+                    CANCELLED: 'CANCELLED',
+                },
+            },
+            details: {
+                questLabel: 'Quest',
+                fromLabel: 'From',
+                toLabel: 'To',
+                stakesTitle: 'Stakes',
+                typeLabel: 'Type',
+                amountLabel: 'Amount',
+                socialPenaltyLabel: 'Social Penalty',
+                activeNegotiationTitle: 'Active Negotiation',
+                counterOfferButton: 'Counter-Offer',
+                declineButton: 'Decline',
+                acceptButton: 'Accept',
+                cancelInvitationButton: 'Cancel Invitation',
+            },
+            negotiation: {
+                counterOfferTitle: 'Counter Offer',
+                proposedBy: 'Proposed by {{username}}',
+                typeLabel: 'Type:',
+                amountLabel: 'Amount:',
+                penaltyLabel: 'Penalty:',
+                waitingForResponse: 'Waiting for response...',
+                rejectButton: 'Reject',
+                acceptButton: 'Accept',
+            },
+            modal: {
+                title: 'Invite to "{{title}}"',
+                userIdLabel: 'User ID to Invite',
+                userIdPlaceholder: 'Enter User ID',
+                checkingPrivacy: 'Checking privacy...',
+                cannotInvite: 'User cannot be invited.',
+                minutesLabel: 'Minutes',
+                minutesPlaceholder: 'e.g. 30',
+                penaltyLabel: 'Penalty Description',
+                penaltyPlaceholder: 'What must the loser do?',
+                amountLabel: 'Amount',
+                amountPlaceholder: '0',
+                expiresAtLabel: 'Expires At',
+                messageLabel: 'Message (Optional)',
+                messagePlaceholder: 'Add a note...',
+                cancelButton: 'Cancel',
+                sendButton: 'Send Invite',
+                errorTitle: 'Error',
+                errorUserId: 'Please enter a user ID',
+                errorCannotInvite: 'This user does not accept invitations from you.',
+                errorStake: 'Please enter a stake amount',
+            },
         },
         creator: {
             errorInfoNotAvailable: 'Creator information is not available',
         },
-        error: 'Error',
-        success: 'Success',
-        cancel: 'Cancel',
-        ok: 'OK',
     },
     common: {
         all: 'All',
@@ -59,6 +120,17 @@ const en = {
         localizedInput: {
             fillAtLeastOne: 'Please fill in at least one language',
             fillBothLanguages: 'Please fill in both languages',
+        },
+        difficulty: {
+            easy: 'Easy',
+            medium: 'Medium',
+            hard: 'Hard',
+        },
+        visibility: {
+            public: 'Public',
+            private: 'Private',
+            friendsOnly: 'Friends Only',
+            groupOnly: 'Group Only',
         },
     },
     locationQuest: {
@@ -572,6 +644,13 @@ const en = {
         emptyCompletedHint: 'Complete your first quest to see it here!',
     },
     challengeCard: {
+        wager: {
+            title: 'Wager',
+            points: '{{amount}} pts',
+            screenTime: '{{amount}} min',
+            money: '{{amount}}',
+            socialQuest: 'Social Quest',
+        },
         visibility: {
             private: 'Private',
         },
@@ -692,9 +771,6 @@ const en = {
         discussion: 'Discussion',
         teamName: 'Team Name',
         difficulty: 'Difficulty',
-        easy: 'Easy',
-        medium: 'Medium',
-        hard: 'Hard',
         aiAcceptedBadge: 'Accepted as equivalent (AI)',
         aiAcceptedExplanation: 'Your answer "{{userAnswer}}" was accepted as equivalent to "{{correctAnswer}}" ',
     },
@@ -755,9 +831,6 @@ const en = {
         additionalInfo: 'Additional Info',
         source: 'Source',
         visibility: 'Visibility',
-        public: 'Public',
-        private: 'Private',
-        friendsOnly: 'Friends Only',
         noQuestions: 'You have no questions yet',
         questionType: 'Question Type',
         text: 'Text',
@@ -829,22 +902,13 @@ const en = {
         additionalInfoLabel: 'Additional Info (Optional)',
         additionalInfoPlaceholder: 'Add sources, hints, or extra context',
 
-        // Difficulty options
-        easy: 'Easy',
-        medium: 'Medium',
-        hard: 'Hard',
-
         // Buttons
         create: 'Create',
         update: 'Update',
         creating: 'Creating...', 
         updating: 'Updating...', 
-        cancel: 'Cancel',
-        delete: 'Delete',
 
         // Alerts & Messages
-        errorTitle: 'Error',
-        successTitle: 'Success',
         questionRequiredError: 'Please enter a question',
         answerRequiredError: 'Please enter an answer',
         createSuccess: 'Question created successfully',
@@ -914,9 +978,6 @@ const en = {
 
         // Visibility
         visibilityLabel: 'Visibility',
-        public: 'Public',
-        private: 'Private',
-        friendsOnly: 'Friends Only',
     },
     audioQuestion: {
         title: 'Create Audio Question',
@@ -1110,15 +1171,21 @@ const en = {
         nextQuestion: 'Next Question',
         finalScore: 'Final Score',
         playAgain: 'Play Again',
-        difficulty: {
-            easy: 'Easy',
-            medium: 'Medium',
-            hard: 'Hard',
-        },
     },
     wager: {
         setup: {
             title: 'Setup Your Wager',
+            stakeTypes: {
+                POINTS: 'Points',
+                SCREEN_TIME: 'Time',
+                MONEY: 'Money',
+                SOCIAL_QUEST: 'Quest',
+            },
+            pointsAmount: 'Points Amount',
+            pointsAmountPlaceholder: 'e.g. 100',
+            moneyAmount: 'Amount',
+            moneyAmountPlaceholder: 'e.g. 5.00',
+            selectStakeType: 'Select Stake Type',
             stakeAmount: 'Stake Amount',
             stakeAmountPlaceholder: 'e.g. 100',
             screenTime: 'Screen Time (Minutes)',
@@ -1126,6 +1193,14 @@ const en = {
             socialPenalty: 'Social Penalty Description',
             socialPenaltyPlaceholder: 'e.g. Change profile pic to a clown for 24h',
             confirmButton: 'Confirm Wager',
+            counterOffer: {
+                title: 'Propose Counter Offer',
+                amountLabel: 'Amount',
+                messageLabel: 'Message (Optional)',
+                messagePlaceholder: 'Add a note...',
+                cancelButton: 'Cancel',
+                submitButton: 'Submit Proposal',
+            },
         },
         invitation: {
             challengeFrom: 'Wager Challenge from {{username}}',
@@ -1671,7 +1746,6 @@ const en = {
             audioChallenge: 'Audio Challenge',
             audioChallengeInstructions: 'Listen to the audio track and complete the verification tasks.',
             failedToStart: 'Failed to start quiz session. Please try again.',
-            error: 'Error',
         },
         status: {
             active: 'Active',
@@ -1679,11 +1753,6 @@ const en = {
             completed: 'Completed',
             expired: 'Expired',
             failed: 'Failed',
-        },
-        visibility: {
-            public: 'Public',
-            private: 'Private',
-            groupOnly: 'Group Only',
         },
         gameTypes: {
             www: 'What? Where? When?',
@@ -1699,9 +1768,6 @@ const en = {
             puzzle: 'Puzzle',
         },
         difficulty: {
-            easy: 'Easy',
-            medium: 'Medium',
-            hard: 'Hard',
             mixed: 'Mixed',
         },
         verification: {
@@ -1733,7 +1799,6 @@ const en = {
         rhythmListenFirst: 'Listen to the pattern, then repeat it',
         soundMatchInstructions: 'Match the sounds you hear as closely as possible',
         singingInstructions: 'Sing along with the track',
-        notEnoughTaps: 'Not enough taps',
         minTapsRequired: 'Please tap at least a few times to be scored.',
         listenToPattern: 'Listen to Pattern',
         readyToTap: 'Ready to tap? Start when you\'re ready!',

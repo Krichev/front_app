@@ -1,108 +1,126 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, StyleSheet, TextInput, ScrollView, Alert } from 'react-native';
-import { useTheme } from '../../../shared/ui/theme';
+import { Modal, View, Text, TextInput, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
 import { Button, ButtonVariant } from '../../../shared/ui/Button/Button';
+import { Input } from '../../../shared/ui/Input/Input';
 import { StakeSelector } from '../../Wager/ui/StakeSelector';
-import { StakeType, CurrencyType } from '../../../entities/WagerState/model/types';
-import { CreateCounterOfferRequest, QuestInvitationDTO } from '../../../entities/InvitationState/model/types';
+import { StakeType } from '../../../entities/WagerState/model/types';
+import { CreateCounterOfferRequest } from '../../../entities/InvitationState/model/types';
 
 interface CounterOfferModalProps {
     visible: boolean;
-    invitation: QuestInvitationDTO;
-    onSubmit: (request: CreateCounterOfferRequest) => void;
+    initialStakeType: StakeType;
+    initialAmount: number;
+    onSubmit: (data: Partial<CreateCounterOfferRequest>) => void;
     onClose: () => void;
     isLoading?: boolean;
 }
 
-export const CounterOfferModal: React.FC<CounterOfferModalProps> = ({ visible, invitation, onSubmit, onClose, isLoading }) => {
-    const { theme } = useTheme();
-    const [stakeType, setStakeType] = useState<StakeType>(invitation.stakeType);
-    const [stakeAmount, setStakeAmount] = useState<string>(invitation.stakeAmount.toString());
-    const [screenTime, setScreenTime] = useState<string>(invitation.screenTimeMinutes?.toString() || '');
-    const [socialPenalty, setSocialPenalty] = useState<string>(invitation.socialPenaltyDescription || '');
+export const CounterOfferModal: React.FC<CounterOfferModalProps> = ({
+    visible,
+    initialStakeType,
+    initialAmount,
+    onSubmit,
+    onClose,
+    isLoading,
+}) => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
+    const [stakeType, setStakeType] = useState<StakeType>(initialStakeType);
+    const [amount, setAmount] = useState(initialAmount.toString());
+    const [screenTime, setScreenTime] = useState(initialAmount.toString());
+    const [socialPenalty, setSocialPenalty] = useState('');
     const [message, setMessage] = useState('');
 
     const handleSubmit = () => {
-        if (!stakeAmount && stakeType !== 'SOCIAL_QUEST') {
-            Alert.alert('Error', 'Please enter a stake amount');
-            return;
-        }
-
-        const request: CreateCounterOfferRequest = {
+        const data: Partial<CreateCounterOfferRequest> = {
             stakeType,
-            stakeAmount: parseFloat(stakeAmount) || 0,
-            stakeCurrency: stakeType === 'MONEY' ? 'USD' as CurrencyType : undefined, // Default USD for now
-            screenTimeMinutes: stakeType === 'SCREEN_TIME' ? parseInt(screenTime) : undefined,
-            socialPenaltyDescription: stakeType === 'SOCIAL_QUEST' ? socialPenalty : undefined,
             message,
         };
-        
-        onSubmit(request);
+
+        if (stakeType === 'POINTS' || stakeType === 'MONEY') {
+            data.stakeAmount = parseFloat(amount) || 0;
+        } else if (stakeType === 'SCREEN_TIME') {
+            data.stakeAmount = parseInt(screenTime) || 0;
+            data.screenTimeMinutes = parseInt(screenTime) || 0;
+        } else if (stakeType === 'SOCIAL_QUEST') {
+            data.stakeAmount = 0;
+            data.socialPenaltyDescription = socialPenalty;
+        }
+
+        onSubmit(data);
     };
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <View style={styles.overlay}>
-                <View style={[styles.container, { backgroundColor: theme.colors.background.paper }]}>
-                    <Text style={[styles.title, { color: theme.colors.text.primary }]}>Propose Counter Offer</Text>
-                    
+                <View style={styles.container}>
+                    <Text style={styles.title}>{t('wager.setup.counterOffer.title')}</Text>
+
                     <ScrollView contentContainerStyle={styles.scrollContent}>
                         <StakeSelector selectedType={stakeType} onSelect={setStakeType} />
 
-                        {stakeType === 'SCREEN_TIME' ? (
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Minutes</Text>
-                                <TextInput
-                                    style={[styles.input, { borderColor: theme.colors.border.main, color: theme.colors.text.primary }]}
-                                    value={screenTime}
-                                    onChangeText={setScreenTime}
-                                    keyboardType="numeric"
-                                    placeholder="e.g. 30"
-                                    placeholderTextColor={theme.colors.text.disabled}
-                                />
-                            </View>
-                        ) : stakeType === 'SOCIAL_QUEST' ? (
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Penalty Description</Text>
-                                <TextInput
-                                    style={[styles.input, styles.textArea, { borderColor: theme.colors.border.main, color: theme.colors.text.primary }]}
-                                    value={socialPenalty}
-                                    onChangeText={setSocialPenalty}
-                                    multiline
-                                    placeholder="What must the loser do?"
-                                    placeholderTextColor={theme.colors.text.disabled}
-                                />
-                            </View>
-                        ) : (
-                            <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Amount</Text>
-                                <TextInput
-                                    style={[styles.input, { borderColor: theme.colors.border.main, color: theme.colors.text.primary }]}
-                                    value={stakeAmount}
-                                    onChangeText={setStakeAmount}
-                                    keyboardType="numeric"
-                                    placeholder="0"
-                                    placeholderTextColor={theme.colors.text.disabled}
-                                />
-                            </View>
+                        {stakeType === 'POINTS' && (
+                            <Input
+                                label={t('wager.setup.pointsAmount')}
+                                value={amount}
+                                onChangeText={setAmount}
+                                keyboardType="numeric"
+                                placeholder={t('wager.setup.pointsAmountPlaceholder')}
+                            />
                         )}
 
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Message (Optional)</Text>
-                            <TextInput
-                                style={[styles.input, styles.textArea, { borderColor: theme.colors.border.main, color: theme.colors.text.primary }]}
-                                value={message}
-                                onChangeText={setMessage}
-                                multiline
-                                placeholder="Add a note..."
-                                placeholderTextColor={theme.colors.text.disabled}
+                        {stakeType === 'MONEY' && (
+                            <Input
+                                label={t('wager.setup.moneyAmount')}
+                                value={amount}
+                                onChangeText={setAmount}
+                                keyboardType="decimal-pad"
+                                placeholder={t('wager.setup.moneyAmountPlaceholder')}
                             />
-                        </View>
+                        )}
+
+                        {stakeType === 'SCREEN_TIME' && (
+                            <Input
+                                label={t('wager.setup.screenTime')}
+                                value={screenTime}
+                                onChangeText={setScreenTime}
+                                keyboardType="numeric"
+                                placeholder={t('wager.setup.screenTimePlaceholder')}
+                            />
+                        )}
+
+                        {stakeType === 'SOCIAL_QUEST' && (
+                            <Input
+                                label={t('wager.setup.socialPenalty')}
+                                value={socialPenalty}
+                                onChangeText={setSocialPenalty}
+                                multiline
+                                numberOfLines={3}
+                                placeholder={t('wager.setup.socialPenaltyPlaceholder')}
+                            />
+                        )}
+
+                        <Input
+                            label={t('wager.setup.counterOffer.messageLabel')}
+                            value={message}
+                            onChangeText={setMessage}
+                            multiline
+                            numberOfLines={3}
+                            placeholder={t('wager.setup.counterOffer.messagePlaceholder')}
+                        />
                     </ScrollView>
 
                     <View style={styles.actions}>
-                        <Button variant={ButtonVariant.GHOST} onPress={onClose} style={styles.button}>Cancel</Button>
-                        <Button onPress={handleSubmit} loading={isLoading} style={styles.button}>Submit Proposal</Button>
+                        <Button variant={ButtonVariant.GHOST} onPress={onClose} style={styles.button}>
+                            {t('wager.setup.counterOffer.cancelButton')}
+                        </Button>
+                        <Button onPress={handleSubmit} loading={isLoading} style={styles.button}>
+                            {t('wager.setup.counterOffer.submitButton')}
+                        </Button>
                     </View>
                 </View>
             </View>
@@ -110,41 +128,45 @@ export const CounterOfferModal: React.FC<CounterOfferModalProps> = ({ visible, i
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
-        padding: 20,
+        padding: theme.spacing.md,
     },
     container: {
-        borderRadius: 16,
-        padding: 20,
-        maxHeight: '80%',
+        backgroundColor: theme.colors.background.paper,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        maxHeight: '90%',
     },
     title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.md,
         textAlign: 'center',
+        color: theme.colors.text.primary,
     },
     scrollContent: {
-        paddingBottom: 20,
+        paddingBottom: theme.spacing.md,
     },
     inputGroup: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.md,
     },
     label: {
-        fontSize: 14,
-        marginBottom: 8,
-        fontWeight: '600',
-        color: '#666',
+        fontSize: theme.typography.fontSize.sm,
+        marginBottom: theme.spacing.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     input: {
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.main,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.sm,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
     },
     textArea: {
         height: 80,
@@ -152,10 +174,10 @@ const styles = StyleSheet.create({
     },
     actions: {
         flexDirection: 'row',
-        gap: 12,
-        marginTop: 10,
+        gap: theme.spacing.sm,
+        marginTop: theme.spacing.sm,
     },
     button: {
         flex: 1,
-    }
-});
+    },
+}));

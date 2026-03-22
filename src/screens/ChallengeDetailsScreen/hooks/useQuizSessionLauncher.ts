@@ -64,7 +64,7 @@ export function useQuizSessionLauncher(deps: LauncherDeps) {
         } catch (error: any) {
             console.error('Failed to start quiz:', error);
             Alert.alert(
-                t('challengeDetails.launcher.error'),
+                t('common.error'),
                 error?.data?.message || t('challengeDetails.launcher.failedToStart')
             );
         } finally {

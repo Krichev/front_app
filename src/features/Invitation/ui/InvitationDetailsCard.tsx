@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { QuestInvitationDTO, InvitationNegotiationDTO } from '../../../entities/InvitationState/model/types';
-import { useTheme } from '../../../shared/ui/theme';
+import React from 'react';
+import { View, Text, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { QuestInvitationDTO } from '../../../entities/InvitationState/model/types';
+import { StakeType } from '../../../entities/WagerState/model/types';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
 import { Button, ButtonVariant } from '../../../shared/ui/Button/Button';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { NegotiationCard } from './NegotiationCard';
 
 interface InvitationDetailsCardProps {
@@ -27,7 +30,9 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
     currentUserId,
     isLoading
 }) => {
-    const { theme } = useTheme();
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const isInviter = invitation.inviterId === currentUserId;
     const canRespond = !isInviter && invitation.status === 'PENDING';
     const canCancel = isInviter && (invitation.status === 'PENDING' || invitation.status === 'NEGOTIATING');
@@ -35,44 +40,52 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
 
     return (
         <ScrollView style={styles.container}>
-            <View style={[styles.card, { backgroundColor: theme.colors.background.paper }]}>
+            <View style={styles.card}>
                 <View style={styles.section}>
-                    <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Quest</Text>
-                    <Text style={[styles.value, { color: theme.colors.text.primary }]}>{invitation.questTitle}</Text>
+                    <Text style={styles.label}>{t('invitation.details.questLabel')}</Text>
+                    <Text style={styles.value}>{invitation.questTitle}</Text>
                 </View>
 
                 <View style={styles.row}>
                     <View style={styles.halfSection}>
-                        <Text style={[styles.label, { color: theme.colors.text.secondary }]}>From</Text>
-                        <Text style={[styles.value, { color: theme.colors.text.primary }]}>{invitation.inviterUsername}</Text>
+                        <Text style={styles.label}>{t('invitation.details.fromLabel')}</Text>
+                        <Text style={styles.value}>{invitation.inviterUsername}</Text>
                     </View>
                     <View style={styles.halfSection}>
-                        <Text style={[styles.label, { color: theme.colors.text.secondary }]}>To</Text>
-                        <Text style={[styles.value, { color: theme.colors.text.primary }]}>{invitation.inviteeUsername}</Text>
+                        <Text style={styles.label}>{t('invitation.details.toLabel')}</Text>
+                        <Text style={styles.value}>{invitation.inviteeUsername}</Text>
                     </View>
                 </View>
 
                 <View style={styles.divider} />
 
-                <Text style={[styles.sectionTitle, { color: theme.colors.primary.main }]}>Stakes</Text>
+                <Text style={styles.sectionTitle}>{t('invitation.details.stakesTitle')}</Text>
                 
                 <View style={styles.stakeContainer}>
                     <View style={styles.stakeItem}>
-                        <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Type</Text>
-                        <Text style={[styles.value, { color: theme.colors.text.primary }]}>{invitation.stakeType}</Text>
+                        <Text style={styles.label}>{t('invitation.details.typeLabel')}</Text>
+                        <Text style={styles.value}>{t(`wager.setup.stakeTypes.${invitation.stakeType}`)}</Text>
                     </View>
-                    <View style={styles.stakeItem}>
-                        <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Amount</Text>
-                        <Text style={[styles.value, { color: theme.colors.text.primary }]}>
-                            {invitation.stakeAmount} {invitation.stakeCurrency || (invitation.stakeType === 'SCREEN_TIME' ? 'mins' : '')}
-                        </Text>
-                    </View>
+                    {invitation.stakeType !== 'SOCIAL_QUEST' && (
+                        <View style={styles.stakeItem}>
+                            <Text style={styles.label}>{t('invitation.details.amountLabel')}</Text>
+                            <Text style={styles.value}>
+                                {invitation.stakeAmount} {
+                                    invitation.stakeType === 'POINTS' 
+                                        ? t('wager.invitation.points') 
+                                        : invitation.stakeType === 'SCREEN_TIME' 
+                                            ? t('wager.invitation.minutes') 
+                                            : invitation.stakeCurrency || ''
+                                }
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 {invitation.socialPenaltyDescription && (
-                    <View style={[styles.penaltyBox, { backgroundColor: theme.colors.background.default }]}>
-                        <Text style={[styles.label, { color: theme.colors.text.secondary }]}>Social Penalty</Text>
-                        <Text style={[styles.penaltyText, { color: theme.colors.text.primary }]}>
+                    <View style={styles.penaltyBox}>
+                        <Text style={styles.label}>{t('invitation.details.socialPenaltyLabel')}</Text>
+                        <Text style={styles.penaltyText}>
                             {invitation.socialPenaltyDescription}
                         </Text>
                     </View>
@@ -80,8 +93,8 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
 
                 {invitation.message && (
                     <View style={styles.messageBox}>
-                        <Icon name="chatbox-outline" size={16} color={theme.colors.text.secondary} />
-                        <Text style={[styles.messageText, { color: theme.colors.text.secondary }]}>
+                        <MaterialCommunityIcons name="chat-outline" size={16} color={theme.colors.text.secondary} />
+                        <Text style={styles.messageText}>
                             "{invitation.message}"
                         </Text>
                     </View>
@@ -89,7 +102,7 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
 
                 {hasNegotiation && invitation.currentNegotiation && (
                     <View style={styles.negotiationSection}>
-                         <Text style={[styles.sectionTitle, { color: theme.colors.warning.main, marginTop: 16 }]}>Active Negotiation</Text>
+                         <Text style={styles.negotiationTitle}>{t('invitation.details.activeNegotiationTitle')}</Text>
                          <NegotiationCard 
                             negotiation={invitation.currentNegotiation}
                             isInviter={isInviter}
@@ -108,7 +121,7 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
                                 style={styles.actionButton}
                                 disabled={isLoading}
                             >
-                                Counter-Offer
+                                {t('invitation.details.counterOfferButton')}
                             </Button>
                             <View style={styles.row}>
                                 <Button 
@@ -117,7 +130,7 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
                                     style={[styles.actionButton, styles.halfButton]}
                                     disabled={isLoading}
                                 >
-                                    Decline
+                                    {t('invitation.details.declineButton')}
                                 </Button>
                                 <Button 
                                     onPress={onAccept}
@@ -125,7 +138,7 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
                                     disabled={isLoading}
                                     loading={isLoading}
                                 >
-                                    Accept
+                                    {t('invitation.details.acceptButton')}
                                 </Button>
                             </View>
                         </>
@@ -135,11 +148,11 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
                         <Button 
                             variant={ButtonVariant.OUTLINE}
                             onPress={onCancel}
-                            style={[styles.actionButton, { borderColor: theme.colors.error.main }]}
+                            style={[styles.actionButton, styles.cancelButton]}
                             textStyle={{ color: theme.colors.error.main }}
                             disabled={isLoading}
                         >
-                            Cancel Invitation
+                            {t('invitation.details.cancelInvitationButton')}
                         </Button>
                     )}
                 </View>
@@ -148,89 +161,110 @@ export const InvitationDetailsCard: React.FC<InvitationDetailsCardProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
     },
     card: {
-        margin: 16,
-        padding: 20,
-        borderRadius: 16,
+        margin: theme.spacing.md,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.lg,
+        backgroundColor: theme.colors.background.paper,
         elevation: 2,
+        shadowColor: theme.colors.text.primary,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     section: {
-        marginBottom: 16,
+        marginBottom: theme.spacing.md,
     },
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 16,
-        gap: 12,
+        marginBottom: theme.spacing.md,
+        gap: theme.spacing.md,
     },
     halfSection: {
         flex: 1,
     },
     label: {
-        fontSize: 12,
+        fontSize: theme.typography.fontSize.xs,
         marginBottom: 4,
-        fontWeight: '600',
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     value: {
-        fontSize: 16,
-        fontWeight: '500',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.text.primary,
     },
     divider: {
-        height: 1,
-        backgroundColor: '#e0e0e0',
-        marginVertical: 16,
+        height: theme.layout.borderWidth.thin,
+        backgroundColor: theme.colors.border.light,
+        marginVertical: theme.spacing.md,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 12,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.sm,
+        color: theme.colors.primary.main,
     },
     stakeContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        marginBottom: theme.spacing.md,
     },
     stakeItem: {
         flex: 1,
     },
     penaltyBox: {
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.md,
+        backgroundColor: theme.colors.background.default,
     },
     penaltyText: {
-        fontSize: 14,
+        fontSize: theme.typography.fontSize.sm,
         fontStyle: 'italic',
+        color: theme.colors.text.primary,
     },
     messageBox: {
         flexDirection: 'row',
-        gap: 8,
-        padding: 12,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        marginBottom: 16,
+        gap: theme.spacing.sm,
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.default,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.md,
         alignItems: 'center',
     },
     messageText: {
-        fontSize: 14,
+        fontSize: theme.typography.fontSize.sm,
         fontStyle: 'italic',
         flex: 1,
+        color: theme.colors.text.secondary,
     },
     actions: {
-        marginTop: 24,
-        gap: 12,
+        marginTop: theme.spacing.lg,
+        gap: theme.spacing.sm,
     },
     actionButton: {
         width: '100%',
+    },
+    cancelButton: {
+        borderColor: theme.colors.error.main,
     },
     halfButton: {
         flex: 1,
     },
     negotiationSection: {
-        marginBottom: 16,
-    }
-});
+        marginBottom: theme.spacing.md,
+    },
+    negotiationTitle: {
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.warning.main,
+        marginTop: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+    },
+}));

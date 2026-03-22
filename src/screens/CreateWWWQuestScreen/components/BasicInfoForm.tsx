@@ -3,32 +3,30 @@ import React from 'react';
 import {Text, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
-import { LocalizedInput } from '../../../shared/ui/LocalizedInput';
+import {createStyles} from '../../../shared/ui/theme/createStyles';
+import {LocalizedInput} from '../../../shared/ui/LocalizedInput/LocalizedInput';
 import { LocalizedString } from '../../../shared/types/localized';
 
 interface BasicInfoFormProps {
     title: LocalizedString;
     description: LocalizedString;
-    reward: LocalizedString;
-    onTitleChange: (value: LocalizedString) => void;
-    onDescriptionChange: (value: LocalizedString) => void;
-    onRewardChange: (value: LocalizedString) => void;
+    onTitleChange: (title: LocalizedString) => void;
+    onDescriptionChange: (description: LocalizedString) => void;
 }
 
 const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
-                                                         title,
-                                                         description,
-                                                         reward,
-                                                         onTitleChange,
-                                                         onDescriptionChange,
-                                                         onRewardChange,
-                                                     }) => {
+    title,
+    description,
+    onTitleChange,
+    onDescriptionChange,
+}) => {
     const {t} = useTranslation();
-    const {form} = useAppStyles();
+    const {theme} = useAppStyles();
+    const styles = themeStyles;
 
     return (
-        <View style={form.section}>
-            <Text style={form.sectionTitle}>{t('createQuest.basicInfo.sectionTitle')}</Text>
+        <View style={styles.container}>
+            <Text style={styles.sectionTitle}>{t('createQuest.basicInfo.sectionTitle')}</Text>
 
             <LocalizedInput
                 label={t('createQuest.basicInfo.title')}
@@ -38,33 +36,33 @@ const BasicInfoForm: React.FC<BasicInfoFormProps> = ({
                     en: t('createQuest.basicInfo.titlePlaceholder'),
                     ru: t('createQuest.basicInfo.titlePlaceholder'),
                 }}
-                required
             />
 
             <LocalizedInput
                 label={t('createQuest.basicInfo.description')}
                 value={description}
                 onChangeLocalized={onDescriptionChange}
+                multiline
+                numberOfLines={4}
                 placeholder={{
                     en: t('createQuest.basicInfo.descriptionPlaceholder'),
                     ru: t('createQuest.basicInfo.descriptionPlaceholder'),
-                }}
-                multiline
-                numberOfLines={3}
-                required
-            />
-
-            <LocalizedInput
-                label={t('createQuest.basicInfo.reward')}
-                value={reward}
-                onChangeLocalized={onRewardChange}
-                placeholder={{
-                    en: t('createQuest.basicInfo.rewardPlaceholder'),
-                    ru: t('createQuest.basicInfo.rewardPlaceholder'),
                 }}
             />
         </View>
     );
 };
+
+const themeStyles = createStyles(theme => ({
+    container: {
+        marginBottom: theme.spacing.xl,
+    },
+    sectionTitle: {
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.md,
+        color: theme.colors.text.primary,
+    },
+}));
 
 export default BasicInfoForm;

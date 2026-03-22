@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, Animated } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Wager } from '../../../entities/WagerState/model/types';
-import { useTheme } from '../../../shared/ui/theme';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { Wager, StakeType } from '../../../entities/WagerState/model/types';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
 import { Button, ButtonVariant } from '../../../shared/ui/Button/Button';
 import { useAcceptWagerMutation, useDeclineWagerMutation } from '../../../entities/WagerState/model/slice/wagerApi';
 
@@ -12,7 +14,8 @@ interface WagerInvitationCardProps {
 
 export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager }) => {
     const { t } = useTranslation();
-    const { theme } = useTheme();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const [acceptWager, { isLoading: isAccepting }] = useAcceptWagerMutation();
     const [declineWager, { isLoading: isDeclining }] = useDeclineWagerMutation();
     
@@ -51,7 +54,7 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [wager.expiresAt]);
+    }, [wager.expiresAt, t]);
 
     const handleAccept = async () => {
         try {
@@ -69,13 +72,13 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
         }
     };
 
-    const getStakeIcon = () => {
-        switch (wager.stakeType) {
-            case 'POINTS': return '💎';
-            case 'SCREEN_TIME': return '⏳';
-            case 'MONEY': return '💵';
-            case 'SOCIAL_QUEST': return '🎭';
-            default: return '🎲';
+    const getStakeIcon = (stakeType: StakeType): string => {
+        switch (stakeType) {
+            case 'POINTS': return 'diamond-stone';
+            case 'SCREEN_TIME': return 'clock-outline';
+            case 'MONEY': return 'cash';
+            case 'SOCIAL_QUEST': return 'drama-masks';
+            default: return 'help-circle-outline';
         }
     };
 
@@ -83,40 +86,45 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
         <Animated.View style={[
             styles.container, 
             { 
-                backgroundColor: theme.colors.background.primary,
-                borderColor: theme.colors.border.main,
                 transform: [{ translateY: slideIn }],
                 opacity: opacity,
             }
         ]}>
             <View style={styles.header}>
-                <Text style={styles.icon}>{getStakeIcon()}</Text>
+                <MaterialCommunityIcons 
+                    name={getStakeIcon(wager.stakeType)} 
+                    size={32} 
+                    color={theme.colors.primary.main} 
+                    style={styles.icon}
+                />
                 <View style={styles.headerText}>
-                    <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+                    <Text style={styles.title}>
                         {t('wager.invitation.challengeFrom', { username: wager.creatorUsername })}
                     </Text>
-                    <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
+                    <Text style={styles.subtitle}>
                         {t('wager.invitation.expiresIn', { time: timeLeft })}
                     </Text>
                 </View>
             </View>
 
             <View style={styles.content}>
-                <Text style={[styles.amount, { color: theme.colors.primary.main }]}>
-                    {t('wager.invitation.stake', { 
-                        amount: wager.stakeAmount, 
-                        unit: wager.stakeType === 'POINTS' 
-                            ? t('wager.invitation.points') 
-                            : wager.stakeType === 'SCREEN_TIME' 
-                                ? t('wager.invitation.minutes') 
-                                : wager.stakeCurrency || '' 
-                    })}
-                </Text>
+                {wager.stakeType !== 'SOCIAL_QUEST' && (
+                    <Text style={styles.amount}>
+                        {t('wager.invitation.stake', { 
+                            amount: wager.stakeAmount, 
+                            unit: wager.stakeType === 'POINTS' 
+                                ? t('wager.invitation.points') 
+                                : wager.stakeType === 'SCREEN_TIME' 
+                                    ? t('wager.invitation.minutes') 
+                                    : wager.stakeCurrency || '' 
+                        })}
+                    </Text>
+                )}
                 
                 {wager.stakeType === 'SOCIAL_QUEST' && (
-                    <View style={[styles.penaltyBox, { backgroundColor: theme.colors.background.secondary }]}>
-                        <Text style={[styles.penaltyLabel, { color: theme.colors.text.secondary }]}>{t('wager.invitation.loserPenalty')}</Text>
-                        <Text style={[styles.penaltyText, { color: theme.colors.text.primary }]}>
+                    <View style={styles.penaltyBox}>
+                        <Text style={styles.penaltyLabel}>{t('wager.invitation.loserPenalty')}</Text>
+                        <Text style={styles.penaltyText}>
                             {wager.socialPenaltyDescription}
                         </Text>
                     </View>
@@ -144,14 +152,16 @@ export const WagerInvitationCard: React.FC<WagerInvitationCardProps> = ({ wager 
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        margin: 16,
-        padding: 16,
-        borderRadius: 16,
-        borderWidth: 1,
+        margin: theme.spacing.md,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.lg,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.main,
+        backgroundColor: theme.colors.background.paper,
         elevation: 4,
-        shadowColor: '#000',
+        shadowColor: theme.colors.text.primary,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -159,44 +169,49 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: theme.spacing.md,
     },
     icon: {
-        fontSize: 32,
-        marginRight: 12,
+        marginRight: theme.spacing.md,
     },
     headerText: {
         flex: 1,
     },
     title: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     subtitle: {
-        fontSize: 12,
+        fontSize: theme.typography.fontSize.xs,
         marginTop: 2,
+        color: theme.colors.text.secondary,
     },
     content: {
-        marginBottom: 20,
+        marginBottom: theme.spacing.lg,
     },
     amount: {
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.xs,
+        color: theme.colors.primary.main,
     },
     penaltyBox: {
-        padding: 12,
-        borderRadius: 8,
-        marginTop: 8,
+        padding: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.md,
+        marginTop: theme.spacing.xs,
+        backgroundColor: theme.colors.background.default,
     },
     penaltyLabel: {
-        fontSize: 12,
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
         marginBottom: 4,
+        color: theme.colors.text.secondary,
     },
     penaltyText: {
-        fontSize: 14,
+        fontSize: theme.typography.fontSize.sm,
         fontStyle: 'italic',
+        color: theme.colors.text.primary,
     },
     actions: {
         flexDirection: 'row',
@@ -205,4 +220,4 @@ const styles = StyleSheet.create({
     button: {
         flex: 0.48,
     },
-});
+}));

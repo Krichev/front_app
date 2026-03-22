@@ -169,7 +169,7 @@ export const AudioChallengeScoringPhase: React.FC<AudioChallengeScoringPhaseProp
 
         if (timestamps.length < 2) {
             Alert.alert(
-                t('audioGamePlay.notEnoughTaps'),
+                t('rhythmChallenge.notEnoughTaps'),
                 t('audioGamePlay.minTapsRequired'),
                 [{text: 'OK', onPress: () => setSubPhase('ready')}]
             );

@@ -70,6 +70,7 @@ const WWWGamePlayScreen: React.FC = () => {
   // Track phase/round transitions to trigger timer reset
   const prevPhaseRef = useRef<string>(state.phase);
   const prevRoundRef = useRef<number>(state.currentRound);
+  const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-start discussion timer when entering discussion phase
   useEffect(() => {
@@ -91,30 +92,43 @@ const WWWGamePlayScreen: React.FC = () => {
       timer.reset(effectiveRoundTime);
       timer.start();
     }
+    // NOTE: timer.isRunning intentionally EXCLUDED from deps.
+    // Including it caused the effect to re-fire on pause(), racing with the
+    // phase transition and restarting the discussion timer via requestAnimationFrame.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase, state.currentRound]);
+  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timer.reset, timer.start]);
 
-  // Safety fallback: guarantee discussion → answer transition even if timer callback is lost
+  // Safety fallback: if discussion timer's onComplete doesn't fire (e.g. race condition),
+  // guarantee we still transition to answer phase.
   useEffect(() => {
-    if (state.phase !== 'discussion' || !currentRound) return;
+    // Only active during discussion phase for non-audio questions
+    if (state.phase !== 'discussion' || !currentRound) {
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
+      }
+      return;
+    }
 
     const isAudioQuestion = currentRound.question.questionType === 'AUDIO';
-    if (isAudioQuestion) return; // Audio questions skip discussion
+    if (isAudioQuestion) return;
 
-    // Safety margin: 2 seconds after expected timer expiry
-    const safetyDelayMs = (effectiveRoundTime + 2) * 1000;
+    // Set fallback at effectiveRoundTime + 3 seconds
+    const safetyMs = (effectiveRoundTime + 3) * 1000;
+    console.log('🛡️ [Safety] Arming fallback timer:', safetyMs, 'ms for round', state.currentRound);
 
-    console.log('🛡️ [Safety] Setting fallback timer:', safetyDelayMs, 'ms');
-    const safetyTimeout = setTimeout(() => {
-      // Only fire if still stuck in discussion phase
-      if (state.phase === 'discussion') {
-        console.warn('🛡️ [Safety] Timer fallback triggered — forcing transition to answer phase');
-        timer.pause();
-        actions.timeUp();
+    safetyTimeoutRef.current = setTimeout(() => {
+      console.warn('🛡️ [Safety] Fallback triggered! Forcing discussion → answer transition');
+      timer.pause();
+      actions.timeUp();
+    }, safetyMs);
+
+    return () => {
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+        safetyTimeoutRef.current = null;
       }
-    }, safetyDelayMs);
-
-    return () => clearTimeout(safetyTimeout);
+    };
   }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timer.pause]);
 
   // Pause timer when leaving discussion phase
@@ -328,9 +342,12 @@ const WWWGamePlayScreen: React.FC = () => {
             notes={discussionNotes}
             onNotesChange={setDiscussionNotes}
             onSubmitEarly={() => {
-              console.log('🎮 [Discussion] User pressed Proceed to Answer');
+              console.log('🎮 [Discussion] User pressed Proceed to Answer, phase:', state.phase);
+              // Pause timer first, then transition.
+              // actions.timeUp() dispatches TIME_UP which sets phase='answer'.
               timer.pause();
               actions.timeUp();
+              console.log('🎮 [Discussion] Dispatched TIME_UP');
             }}
           />
         );

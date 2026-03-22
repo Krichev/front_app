@@ -262,7 +262,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             setIsAudioLoading(false);
             if (!DocumentPicker.isCancel(error)) {
                 console.error('Audio pick error:', error);
-                Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
+                Alert.alert(t('common.error'), t('questionEditor.errorMedia'));
             }
         } finally {
             setIsUploading(false);
@@ -279,7 +279,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
             if (stats.size === 0) {
                 setIsAudioLoading(false);
-                Alert.alert(t('userQuestions.errorTitle'), 'Recording failed: File is empty (0 bytes). Please check microphone permissions and try again.');
+                Alert.alert(t('common.error'), 'Recording failed: File is empty (0 bytes). Please check microphone permissions and try again.');
                 return;
             }
 
@@ -300,7 +300,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
         } catch (error) {
             setIsAudioLoading(false);
             console.error('Error processing recording:', error);
-            Alert.alert(t('userQuestions.errorTitle'), 'Failed to process recording.');
+            Alert.alert(t('common.error'), 'Failed to process recording.');
         }
     }, [updateField, t]);
 
@@ -372,7 +372,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
 
     const handleSubmit = useCallback(async () => {
         if (!validateForm()) {
-            Alert.alert(t('userQuestions.errorTitle'), t('alerts.validationError'));
+            Alert.alert(t('common.error'), t('alerts.validationError'));
             return;
         }
 
@@ -391,7 +391,7 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
             await onSubmit(submissionData);
         } catch (error) {
             console.error('Submit error:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
+            Alert.alert(t('common.error'), t('userQuestions.saveFailed'));
         }
     }, [formData, validateForm, onSubmit, t, currentLanguage]);
 
@@ -863,9 +863,9 @@ export const AudioQuestionForm: React.FC<AudioQuestionFormProps> = ({
                             style={form.picker}
                             enabled={!isSubmitting}
                         >
-                            <Picker.Item label={t('userQuestions.easy')} value="EASY" />
-                            <Picker.Item label={t('userQuestions.medium')} value="MEDIUM" />
-                            <Picker.Item label={t('userQuestions.hard')} value="HARD" />
+                            <Picker.Item label={t('common.difficulty.easy')} value="EASY" />
+                            <Picker.Item label={t('common.difficulty.medium')} value="MEDIUM" />
+                            <Picker.Item label={t('common.difficulty.hard')} value="HARD" />
                         </Picker>
                     </View>
                 </View>

@@ -89,12 +89,12 @@ const CreateUserQuestionScreen: React.FC = () => {
     const handleSubmit = async () => {
         // Validate inputs
         if (isLocalizedStringEmpty(question)) {
-            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.questionRequiredError'));
+            Alert.alert(t('common.error'), t('userQuestions.questionRequiredError'));
             return;
         }
 
         if (isLocalizedStringEmpty(answer)) {
-            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.answerRequiredError'));
+            Alert.alert(t('common.error'), t('userQuestions.answerRequiredError'));
             return;
         }
 
@@ -116,7 +116,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                     visibility,
                 });
 
-                Alert.alert(t('userQuestions.successTitle'), t('userQuestions.updateSuccess'));
+                Alert.alert(t('common.success'), t('userQuestions.updateSuccess'));
             } else {
                 // Create new question - Use createUserQuestion
                 await QuestionService.createUserQuestion({
@@ -132,14 +132,14 @@ const CreateUserQuestionScreen: React.FC = () => {
                     visibility,
                 });
 
-                Alert.alert(t('userQuestions.successTitle'), t('userQuestions.createSuccess'));
+                Alert.alert(t('common.success'), t('userQuestions.createSuccess'));
             }
 
             // Navigate back to the questions list
             navigation.navigate('UserQuestions');
         } catch (error) {
             console.error('Error saving question:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
+            Alert.alert(t('common.error'), t('userQuestions.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -226,9 +226,9 @@ const CreateUserQuestionScreen: React.FC = () => {
                                     onValueChange={(value) => setDifficulty(value as APIDifficulty)}
                                     style={styles.picker}
                                 >
-                                    <Picker.Item label={t('userQuestions.easy')} value="EASY" />
-                                    <Picker.Item label={t('userQuestions.medium')} value="MEDIUM" />
-                                    <Picker.Item label={t('userQuestions.hard')} value="HARD" />
+                                    <Picker.Item label={t('common.difficulty.easy')} value="EASY" />
+                                    <Picker.Item label={t('common.difficulty.medium')} value="MEDIUM" />
+                                    <Picker.Item label={t('common.difficulty.hard')} value="HARD" />
                                 </Picker>
                             </View>
                         </View>
@@ -245,7 +245,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                                     {Object.values(QuestionVisibility).map((vis) => (
                                         <Picker.Item
                                             key={vis}
-                                            label={`${getVisibilityIcon(vis)} ${t(`mediaQuestion.${vis.toLowerCase()}` as any) || getVisibilityLabel(vis)}`}
+                                            label={`${getVisibilityIcon(vis)} ${t(`common.visibility.${vis === QuestionVisibility.FRIENDS_FAMILY ? 'friendsOnly' : vis.toLowerCase()}` as any) || getVisibilityLabel(vis)}`}
                                             value={vis}
                                         />
                                     ))}
@@ -292,7 +292,7 @@ const CreateUserQuestionScreen: React.FC = () => {
                                 disabled={isSubmitting}
                             >
                                 <MaterialCommunityIcons name="close" size={20} color="#666" />
-                                <Text style={styles.cancelButtonText}>{t('userQuestions.cancel')}</Text>
+                                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity

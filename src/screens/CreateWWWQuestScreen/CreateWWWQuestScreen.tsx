@@ -5,7 +5,6 @@ import {
     Alert,
     SafeAreaView,
     ScrollView,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View
@@ -35,22 +34,27 @@ import { Modal } from '../../shared/ui/Modal/Modal';
 import { WagerSetupBottomSheet } from '../../features/Wager/ui/WagerSetupBottomSheet';
 import { CreateWagerRequest } from '../../entities/WagerState/model/types';
 import { useCreateWagerMutation } from '../../entities/WagerState/model/slice/wagerApi';
+import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../shared/ui/theme/createStyles';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CreateWWWQuestScreen = () => {
     const navigation = useNavigation<NavigationProp>();
     const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const { user } = useSelector((state: RootState) => state.auth);
     const questCreator = useQuestCreator();
     const questionsManager = useQuestionsManager();
     const [createWager] = useCreateWagerMutation();
 
     // Refetch user questions when screen comes into focus (Bug 4)
+    const { refetchUserQuestions } = questionsManager;
     useFocusEffect(
         useCallback(() => {
-            questionsManager.refetchUserQuestions();
-        }, [questionsManager])
+            refetchUserQuestions();
+        }, [refetchUserQuestions])
     );
 
     const [showUnifiedQuestionModal, setShowUnifiedQuestionModal] = useState(false);
@@ -201,7 +205,7 @@ const CreateWWWQuestScreen = () => {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <MaterialCommunityIcons name="arrow-left" size={24} color="#333" />
+                    <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{t('createQuest.title')}</Text>
                 <View style={{width: 24}} />
@@ -212,12 +216,9 @@ const CreateWWWQuestScreen = () => {
                 <BasicInfoForm
                     title={questCreator.title}
                     description={questCreator.description}
-                    reward={questCreator.reward}
                     onTitleChange={questCreator.setTitle}
                     onDescriptionChange={questCreator.setDescription}
-                    onRewardChange={questCreator.setReward}
                 />
-
                 {/* Quiz Config */}
                 <QuizConfigForm
                     config={questCreator.quizConfig}
@@ -229,14 +230,14 @@ const CreateWWWQuestScreen = () => {
                     onRemoveTeamMember={questCreator.removeTeamMember}
                 />
 
-                {/* Question Source Selector - ✅ Using local variable with default */}
+                {/* Question Source Selector */}
                 <QuestionSourceSelector
                     questionSource={questionSource}
                     onSourceChange={questionsManager.setQuestionSource}
                     onAddQuestion={() => setShowTypeSelector(true)}
                 />
 
-                {/* Question List - ✅ Using local variable with default */}
+                {/* Question List */}
                 <QuestionList
                     questionSource={questionSource}
                     appQuestions={questionsManager.appQuestions || []}
@@ -288,10 +289,10 @@ const CreateWWWQuestScreen = () => {
                         <MaterialCommunityIcons 
                             name={wagerData ? "hand-coin" : "hand-coin-outline"} 
                             size={24} 
-                            color={wagerData ? "#fff" : "#4CAF50"} 
+                            color={wagerData ? theme.colors.primary.contrastText : theme.colors.primary.main} 
                         />
                         <Text style={[styles.wagerButtonText, wagerData && styles.wagerButtonTextActive]}>
-                            {wagerData ? "Wager Set Up ✅" : "Add a Wager (Optional)"}
+                            {wagerData ? t('createQuest.wager.configuredButton') : t('createQuest.wager.addButton')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -311,12 +312,12 @@ const CreateWWWQuestScreen = () => {
                 >
                     {questCreator.isCreating ? (
                         <>
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={theme.colors.primary.contrastText} />
                             <Text style={styles.createButtonText}>{t('createQuest.creating')}</Text>
                         </>
                     ) : (
                         <>
-                            <MaterialCommunityIcons name="check-circle" size={24} color="#fff" />
+                            <MaterialCommunityIcons name="check-circle" size={24} color={theme.colors.primary.contrastText} />
                             <Text style={styles.createButtonText}>
                                 {t('createQuest.createButton', { count: totalSelectedQuestions })}
                             </Text>
@@ -364,10 +365,10 @@ const CreateWWWQuestScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.background.primary,
     },
     scrollView: {
         flex: 1,
@@ -376,69 +377,69 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e0e0e0',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.border.main,
     },
     headerTitle: {
-        fontSize: 20,
-        fontWeight: '700',
-        color: '#333',
+        fontSize: theme.typography.fontSize.xl,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     wagerSection: {
-        paddingHorizontal: 16,
-        marginTop: 16,
+        paddingHorizontal: theme.spacing.md,
+        marginTop: theme.spacing.md,
     },
     wagerButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#4CAF50',
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.lg,
+        borderWidth: theme.layout.borderWidth.thick,
+        borderColor: theme.colors.primary.main,
         borderStyle: 'dashed',
-        gap: 10,
+        gap: theme.spacing.sm,
     },
     wagerButtonActive: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.primary.main,
         borderStyle: 'solid',
     },
     wagerButtonText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#4CAF50',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
     wagerButtonTextActive: {
-        color: '#fff',
+        color: theme.colors.primary.contrastText,
     },
     footer: {
-        padding: 16,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#e0e0e0',
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.primary,
+        borderTopWidth: theme.layout.borderWidth.thin,
+        borderTopColor: theme.colors.border.main,
     },
     createButton: {
         flexDirection: 'row',
-        backgroundColor: '#4CAF50',
-        padding: 16,
-        borderRadius: 8,
+        backgroundColor: theme.colors.primary.main,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     createButtonDisabled: {
-        backgroundColor: '#ccc',
+        backgroundColor: theme.colors.text.disabled,
     },
     createButtonText: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '700',
+        color: theme.colors.primary.contrastText,
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     spacer: {
         height: 100,
     },
-});
+}));
 
 export default CreateWWWQuestScreen;

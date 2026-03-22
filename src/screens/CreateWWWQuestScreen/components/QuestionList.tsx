@@ -145,46 +145,50 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
     // Debug: Log questions data on mount and when props change
     useEffect(() => {
-        console.log('📋 [QuestionList] Props received:', {
-            questionSource,
-            appQuestionsCount: appQuestions?.length ?? 0,
-            userQuestionsCount: userQuestions?.length ?? 0,
-            selectedAppIds: Array.from(selectedAppQuestionIds),
-            selectedUserIds: Array.from(selectedUserQuestionIds),
-            expandedIndices: Array.from(expandedQuestions),
-        });
+        if (__DEV__) {
+            console.log('📋 [QuestionList] Props received:', {
+                questionSource,
+                appQuestionsCount: appQuestions?.length ?? 0,
+                userQuestionsCount: userQuestions?.length ?? 0,
+                selectedAppIds: Array.from(selectedAppQuestionIds),
+                selectedUserIds: Array.from(selectedUserQuestionIds),
+                expandedIndices: Array.from(expandedQuestions),
+            });
 
-        // Log questions with media
-        const questionsWithMedia = (questionSource === 'app' ? appQuestions : userQuestions)
-            ?.filter(q => q.questionMediaUrl || q.questionMediaType) ?? [];
+            // Log questions with media
+            const questionsWithMedia = (questionSource === 'app' ? appQuestions : userQuestions)
+                ?.filter(q => q.questionMediaUrl || q.questionMediaType) ?? [];
 
-        console.log('🎬 [QuestionList] Questions with media:', questionsWithMedia.map(q => ({
-            id: q.id,
-            mediaType: q.questionMediaType,
-            mediaUrl: q.questionMediaUrl?.substring(0, 80) + '...',
-            thumbnailUrl: q.questionThumbnailUrl?.substring(0, 80) + '...',
-            isValidUrl: isValidMediaUrl(q.questionMediaUrl),
-        })));
+            console.log('🎬 [QuestionList] Questions with media:', questionsWithMedia.map(q => ({
+                id: q.id,
+                mediaType: q.questionMediaType,
+                mediaUrl: q.questionMediaUrl?.substring(0, 80) + '...',
+                thumbnailUrl: q.questionThumbnailUrl?.substring(0, 80) + '...',
+                isValidUrl: isValidMediaUrl(q.questionMediaUrl),
+            })));
+        }
     }, [questionSource, appQuestions, userQuestions, selectedAppQuestionIds, selectedUserQuestionIds, expandedQuestions]);
 
     // Debug: Log when selection changes - show selected questions' media state
     useEffect(() => {
-        const currentQuestions = questionSource === 'app' ? appQuestions : userQuestions;
-        const selectedIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
+        if (__DEV__) {
+            const currentQuestions = questionSource === 'app' ? appQuestions : userQuestions;
+            const selectedIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
 
-        if (selectedIds.size > 0) {
-            const selectedQuestions = currentQuestions?.filter(q => selectedIds.has(q.id)) ?? [];
-            console.log('✅ [QuestionList] Selected questions media state:',
-                selectedQuestions.map(q => ({
-                    id: q.id,
-                    question: q.question?.substring(0, 40) + '...',
-                    hasMedia: !!q.questionMediaUrl,
-                    mediaType: q.questionMediaType ?? 'NONE',
-                    mediaUrl: q.questionMediaUrl ?? 'EMPTY',
-                    isPresignedUrl: q.questionMediaUrl?.includes('X-Amz-Signature') ?? false,
-                    isValidUrl: isValidMediaUrl(q.questionMediaUrl),
-                }))
-            );
+            if (selectedIds.size > 0) {
+                const selectedQuestions = currentQuestions?.filter(q => selectedIds.has(q.id)) ?? [];
+                console.log('✅ [QuestionList] Selected questions media state:',
+                    selectedQuestions.map(q => ({
+                        id: q.id,
+                        question: q.question?.substring(0, 40) + '...',
+                        hasMedia: !!q.questionMediaUrl,
+                        mediaType: q.questionMediaType ?? 'NONE',
+                        mediaUrl: q.questionMediaUrl ?? 'EMPTY',
+                        isPresignedUrl: q.questionMediaUrl?.includes('X-Amz-Signature') ?? false,
+                        isValidUrl: isValidMediaUrl(q.questionMediaUrl),
+                    }))
+                );
+            }
         }
     }, [questionSource, appQuestions, userQuestions, selectedAppQuestionIds, selectedUserQuestionIds]);
 
@@ -448,7 +452,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
         const thumbnailUrl = question.questionThumbnailUrl;
 
         // Enhanced debug logging for media URLs
-        if (hasMedia) {
+        if (hasMedia && __DEV__) {
             console.log(`🔍 [Question ${question.id}] Media debug:`, {
                 hasMedia,
                 mediaType,
@@ -550,19 +554,6 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <Text style={styles.questionLabel}>{t('createQuest.questionList.question')}</Text>
                             <Text style={styles.questionText}>{question.question}</Text>
                         </View>
-
-                        {/* Log media rendering decision */}
-                        {(() => {
-                            console.log(`🎥 [Question ${question.id}] Media render decision:`, {
-                                hasMedia,
-                                mediaUrl: mediaUrl?.substring(0, 50),
-                                mediaType,
-                                isValidUrl: isValidMediaUrl(mediaUrl),
-                                willRenderViewer: hasMedia && mediaUrl && mediaType && isValidMediaUrl(mediaUrl),
-                                willShowError: hasMedia && !isValidMediaUrl(mediaUrl),
-                            });
-                            return null;
-                        })()}
 
                         {/* ✅ Integrated Media Viewer Component with proxy URLs */}
                         {hasMedia && mediaType && question.id ? (
@@ -673,14 +664,16 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
                         {/* Debug: Summary log */}
                         {(() => {
-                            const withMedia = questions?.filter(q => q.questionMediaUrl) ?? [];
-                            const withValidMedia = withMedia.filter(q => isValidMediaUrl(q.questionMediaUrl));
-                            console.log('📊 [QuestionList] Render summary:', {
-                                totalQuestions: questions?.length ?? 0,
-                                questionsWithMedia: withMedia.length,
-                                questionsWithValidUrls: withValidMedia.length,
-                                invalidUrlQuestions: withMedia.length - withValidMedia.length,
-                            });
+                            if (__DEV__) {
+                                const withMedia = questions?.filter(q => q.questionMediaUrl) ?? [];
+                                const withValidMedia = withMedia.filter(q => isValidMediaUrl(q.questionMediaUrl));
+                                console.log('📊 [QuestionList] Render summary:', {
+                                    totalQuestions: questions?.length ?? 0,
+                                    questionsWithMedia: withMedia.length,
+                                    questionsWithValidUrls: withValidMedia.length,
+                                    invalidUrlQuestions: withMedia.length - withValidMedia.length,
+                                });
+                            }
                             return null;
                         })()}
                     </ScrollView>

@@ -1,20 +1,22 @@
-// src/entities/ChallengeState/ui/QuizChallengeCard.tsx
 import React from 'react';
-import {Text, TouchableOpacity, View} from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import {useTranslation} from 'react-i18next';
-import {FormatterService} from '../../../services/verification/ui/Services';
-import {ApiChallenge} from "../model/slice/challengeApi";
-import {isWWWQuiz, parseQuizConfig} from "../model/types";
-import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
-import {createStyles} from '../../../shared/ui/theme/createStyles';
+import { useTranslation } from 'react-i18next';
+import { FormatterService } from '../../../services/verification/ui/Services';
+import { ApiChallenge } from "../model/slice/challengeApi";
+import { isWWWQuiz, parseQuizConfig } from "../model/types";
+import { Wager, StakeType } from '../../WagerState/model/types';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
+import { TFunction } from 'i18next';
 
 interface QuizChallengeCardProps {
     challenge: ApiChallenge;
+    wager?: Wager | null;
     onPress: () => void;
 }
 
-const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPress }) => {
+const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, wager, onPress }) => {
     const { t } = useTranslation();
     const { theme } = useAppStyles();
     const styles = themeStyles;
@@ -40,6 +42,49 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
             return t('quizChallengeCard.type.www');
         }
         return t('quizChallengeCard.type.quiz');
+    };
+
+    const getStakeIconName = (stakeType: StakeType): string => {
+        switch (stakeType) {
+            case 'POINTS': return 'diamond-stone';
+            case 'SCREEN_TIME': return 'clock-outline';
+            case 'MONEY': return 'cash';
+            case 'SOCIAL_QUEST': return 'drama-masks';
+            default: return 'help-circle-outline';
+        }
+    };
+
+    const formatCurrency = (amount: number, currency: string) => {
+        if (currency === 'POINTS') {
+            return t('challengeCard.currency.pts', { amount: amount.toLocaleString() });
+        }
+
+        const symbols: Record<string, string> = {
+            USD: '$',
+            EUR: '€',
+            GBP: '£',
+            CAD: 'C$',
+            AUD: 'A$',
+        };
+
+        return `${symbols[currency] || currency}${amount.toFixed(2)}`;
+    };
+
+    const formatWagerAmount = (wager: Wager, t: TFunction): string => {
+        switch (wager.stakeType) {
+            case 'POINTS':
+                return t('challengeCard.wager.points', { amount: wager.stakeAmount });
+            case 'SCREEN_TIME':
+                return t('challengeCard.wager.screenTime', { amount: wager.screenTimeMinutes || wager.stakeAmount });
+            case 'MONEY':
+                return t('challengeCard.wager.money', { 
+                    amount: formatCurrency(wager.stakeAmount, wager.stakeCurrency || 'USD') 
+                });
+            case 'SOCIAL_QUEST':
+                return t('challengeCard.wager.socialQuest');
+            default:
+                return '';
+        }
     };
 
     const renderQuizDetails = () => {
@@ -70,19 +115,17 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
         );
     };
 
-    // Get the status style in a type-safe way
     const getStatusStyle = () => {
         const normalizedStatus = challenge.status.toLowerCase();
 
         switch (normalizedStatus) {
             case 'active':
+            case 'open':
                 return styles.status_active;
             case 'completed':
                 return styles.status_completed;
             case 'failed':
                 return styles.status_failed;
-            case 'open':
-                return styles.status_open;
             case 'in_progress':
                 return styles.status_in_progress;
             default:
@@ -114,7 +157,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
 
             <View style={styles.content}>
                 <View style={styles.titleRow}>
-                    <Text style={styles.title}>{challenge.title}</Text>
+                    <Text style={styles.title} numberOfLines={1}>{challenge.title}</Text>
                     {renderCreatorBadge()}
                 </View>
 
@@ -127,6 +170,19 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
 
                 {renderQuizDetails()}
 
+                {wager && (
+                    <View style={styles.wagerRow}>
+                        <MaterialCommunityIcons
+                            name={getStakeIconName(wager.stakeType)}
+                            size={14}
+                            color={theme.colors.primary.main}
+                        />
+                        <Text style={styles.wagerText}>
+                            {formatWagerAmount(wager, t)}
+                        </Text>
+                    </View>
+                )}
+
                 <View style={styles.statusContainer}>
                     <View style={[styles.statusBadge, getStatusStyle()]}>
                         <Text style={styles.statusText}>
@@ -135,7 +191,7 @@ const QuizChallengeCard: React.FC<QuizChallengeCardProps> = ({ challenge, onPres
                     </View>
 
                     {challenge.reward && (
-                        <Text style={styles.rewards}>
+                        <Text style={styles.rewards} numberOfLines={1}>
                             {t('quizChallengeCard.reward', { reward: challenge.reward })}
                         </Text>
                     )}
@@ -170,11 +226,18 @@ const themeStyles = createStyles(theme => ({
     content: {
         flex: 1,
     },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.xs,
+    },
     title: {
+        flex: 1,
         fontSize: theme.typography.fontSize.base,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
-        marginBottom: theme.spacing.xs,
+        marginRight: theme.spacing.sm,
     },
     typeContainer: {
         flexDirection: 'row',
@@ -193,12 +256,12 @@ const themeStyles = createStyles(theme => ({
     quizDetails: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        marginBottom: theme.spacing.sm,
+        marginBottom: theme.spacing.xs,
     },
     badge: {
         backgroundColor: theme.colors.background.secondary,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.xs,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 2,
         borderRadius: theme.layout.borderRadius.sm,
         marginRight: theme.spacing.sm,
         marginBottom: theme.spacing.xs,
@@ -207,10 +270,22 @@ const themeStyles = createStyles(theme => ({
         fontSize: theme.typography.fontSize.xs,
         color: theme.colors.text.secondary,
     },
+    wagerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        marginBottom: theme.spacing.sm,
+    },
+    wagerText: {
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
+    },
     statusContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginTop: theme.spacing.xs,
     },
     statusBadge: {
         paddingHorizontal: theme.spacing.md,
@@ -227,9 +302,6 @@ const themeStyles = createStyles(theme => ({
     status_failed: {
         backgroundColor: theme.colors.error.background,
     },
-    status_open: {
-        backgroundColor: theme.colors.success.background,
-    },
     status_in_progress: {
         backgroundColor: theme.colors.warning.background,
     },
@@ -241,25 +313,23 @@ const themeStyles = createStyles(theme => ({
     rewards: {
         fontSize: theme.typography.fontSize.xs,
         color: theme.colors.text.secondary,
-    },
-    titleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
+        flex: 1,
+        textAlign: 'right',
+        marginLeft: theme.spacing.sm,
     },
     creatorBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: theme.colors.warning.background,
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.xs,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 2,
         borderRadius: theme.layout.borderRadius.lg,
     },
     creatorBadgeText: {
-        fontSize: theme.typography.fontSize.xs,
+        fontSize: 10,
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.warning.main,
-        marginLeft: theme.spacing.xs,
+        marginLeft: 4,
     },
 }));
 

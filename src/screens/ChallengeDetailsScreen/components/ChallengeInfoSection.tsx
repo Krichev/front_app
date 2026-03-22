@@ -24,9 +24,9 @@ export const ChallengeInfoSection: React.FC<ChallengeInfoSectionProps> = ({
     const { t } = useTranslation();
 
     const visibilityLabels: Record<string, string> = {
-        PUBLIC: t('challengeDetails.visibility.public'),
-        PRIVATE: t('challengeDetails.visibility.private'),
-        GROUP_ONLY: t('challengeDetails.visibility.groupOnly'),
+        PUBLIC: t('common.visibility.public'),
+        PRIVATE: t('common.visibility.private'),
+        GROUP_ONLY: t('common.visibility.groupOnly'),
     };
 
     const verificationLabels: Record<string, string> = {

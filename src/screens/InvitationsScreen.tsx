@@ -1,184 +1,147 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Modal } from 'react-native';
-import { useTheme } from '../shared/ui/theme';
-import { 
-    useGetReceivedInvitationsQuery, 
-    useGetSentInvitationsQuery,
-    useGetInvitationQuery
-} from '../entities/InvitationState/model/slice/invitationApi';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
+import { RootState } from '../app/providers/StoreProvider/store';
+import { useGetSentInvitationsQuery, useGetReceivedInvitationsQuery } from '../entities/InvitationState/model/slice/invitationApi';
 import { InvitationCard } from '../features/Invitation/ui/InvitationCard';
-import { InvitationResponseSheet } from '../features/Invitation/ui/InvitationResponseSheet';
-import { QuestInvitationStatus } from '../entities/InvitationState/model/types';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { InvitationDetailsCard } from '../features/Invitation/ui/InvitationDetailsCard';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+import { useAppStyles } from '../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../shared/ui/theme/createStyles';
 
-export const InvitationsScreen: React.FC = () => {
-    const { theme } = useTheme();
-    const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
-    const [selectedInvitationId, setSelectedInvitationId] = useState<number | null>(null);
-    const [showDetails, setShowDetails] = useState(false);
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-    // Received invitations query
+const InvitationsScreen = () => {
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
+    const navigation = useNavigation<NavigationProp>();
+    const [activeTab, setActiveTab] = useState<'RECEIVED' | 'SENT'>('RECEIVED');
+
     const { 
         data: receivedInvitations, 
         isLoading: isLoadingReceived, 
         refetch: refetchReceived 
     } = useGetReceivedInvitationsQuery();
-
-    // Sent invitations query
+    
     const { 
         data: sentInvitations, 
         isLoading: isLoadingSent, 
         refetch: refetchSent 
     } = useGetSentInvitationsQuery();
 
-    // Selected invitation details query (only fetches if ID is set)
-    const { 
-        data: selectedInvitation,
-        isLoading: isLoadingDetails 
-    } = useGetInvitationQuery(selectedInvitationId!, { skip: !selectedInvitationId });
+    const invitations = activeTab === 'RECEIVED' ? receivedInvitations : sentInvitations;
+    const isLoading = activeTab === 'RECEIVED' ? isLoadingReceived : isLoadingSent;
 
-    const onRefresh = () => {
-        if (activeTab === 'received') {
-            refetchReceived();
-        } else {
-            refetchSent();
-        }
+    const handleRefresh = () => {
+        if (activeTab === 'RECEIVED') refetchReceived();
+        else refetchSent();
     };
-
-    const handlePressInvitation = (id: number) => {
-        setSelectedInvitationId(id);
-        setShowDetails(true);
-    };
-
-    const renderEmptyState = () => (
-        <View style={styles.emptyContainer}>
-            <Icon name="mail-open-outline" size={64} color={theme.colors.text.disabled} />
-            <Text style={[styles.emptyText, { color: theme.colors.text.secondary }]}>
-                No {activeTab} invitations found
-            </Text>
-        </View>
-    );
 
     return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background.default }]}>
-            <View style={styles.tabContainer}>
+        <View style={styles.container}>
+            <View style={styles.tabBar}>
                 <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'received' && { borderBottomColor: theme.colors.primary.main }]}
-                    onPress={() => setActiveTab('received')}
+                    style={[styles.tab, activeTab === 'RECEIVED' && styles.activeTab]}
+                    onPress={() => setActiveTab('RECEIVED')}
                 >
-                    <Text style={[
-                        styles.tabText, 
-                        { color: activeTab === 'received' ? theme.colors.primary.main : theme.colors.text.secondary }
-                    ]}>
-                        Received
+                    <Text style={[styles.tabText, activeTab === 'RECEIVED' && styles.activeTabText]}>
+                        {t('invitation.tabs.received')}
                     </Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                    style={[styles.tab, activeTab === 'sent' && { borderBottomColor: theme.colors.primary.main }]}
-                    onPress={() => setActiveTab('sent')}
+                    style={[styles.tab, activeTab === 'SENT' && styles.activeTab]}
+                    onPress={() => setActiveTab('SENT')}
                 >
-                    <Text style={[
-                        styles.tabText, 
-                        { color: activeTab === 'sent' ? theme.colors.primary.main : theme.colors.text.secondary }
-                    ]}>
-                        Sent
+                    <Text style={[styles.tabText, activeTab === 'SENT' && styles.activeTabText]}>
+                        {t('invitation.tabs.sent')}
                     </Text>
                 </TouchableOpacity>
             </View>
 
-            <FlatList
-                data={activeTab === 'received' ? receivedInvitations : sentInvitations}
-                renderItem={({ item }) => (
-                    <InvitationCard 
-                        invitation={item} 
-                        onPress={() => handlePressInvitation(item.id)}
-                        isSent={activeTab === 'sent'}
-                    />
-                )}
-                keyExtractor={(item) => item.id.toString()}
-                refreshControl={
-                    <RefreshControl refreshing={isLoadingReceived || isLoadingSent} onRefresh={onRefresh} />
-                }
-                ListEmptyComponent={renderEmptyState}
-                contentContainerStyle={styles.listContent}
-            />
-
-            {/* Modal for details / response sheet */}
-            <Modal
-                visible={showDetails}
-                animationType="slide"
-                presentationStyle="pageSheet"
-                onRequestClose={() => {
-                    setShowDetails(false);
-                    setSelectedInvitationId(null);
-                }}
-            >
-                <View style={{ flex: 1, backgroundColor: theme.colors.background.default }}>
-                    <View style={styles.modalHeader}>
-                        <Text style={styles.modalTitle}>Invitation Details</Text>
-                        <TouchableOpacity onPress={() => setShowDetails(false)}>
-                            <Icon name="close" size={24} color={theme.colors.text.primary} />
-                        </TouchableOpacity>
-                    </View>
-                    
-                    {selectedInvitationId && (
-                        <InvitationResponseSheet 
-                            invitationId={selectedInvitationId}
-                            onClose={() => setShowDetails(false)}
-                            isSentView={activeTab === 'sent'}
+            {isLoading ? (
+                <View style={styles.loader}>
+                    <ActivityIndicator size="large" color={theme.colors.primary.main} />
+                </View>
+            ) : (
+                <FlatList
+                    data={invitations}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={({ item }) => (
+                        <InvitationCard 
+                            invitation={item} 
+                            isSent={activeTab === 'SENT'}
+                            onPress={() => {
+                                // For now, if InvitationDetails is not in the param list, we just log it
+                                // In a real scenario, we should add it to AppNavigator
+                                console.log('Navigate to invitation', item.id);
+                            }}
                         />
                     )}
-                </View>
-            </Modal>
+                    onRefresh={handleRefresh}
+                    refreshing={isLoading}
+                    contentContainerStyle={styles.listContent}
+                    ListEmptyComponent={
+                        <View style={styles.emptyContainer}>
+                            <Text style={styles.emptyText}>
+                                {t('invitation.noInvitations')}
+                            </Text>
+                        </View>
+                    }
+                />
+            )}
         </View>
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
         flex: 1,
+        backgroundColor: theme.colors.background.default,
     },
-    tabContainer: {
+    tabBar: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        elevation: 2,
+        backgroundColor: theme.colors.background.paper,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.border.main,
     },
     tab: {
         flex: 1,
-        paddingVertical: 16,
+        paddingVertical: theme.spacing.md,
         alignItems: 'center',
-        borderBottomWidth: 2,
-        borderBottomColor: 'transparent',
+    },
+    activeTab: {
+        borderBottomWidth: theme.layout.borderWidth.thick,
+        borderBottomColor: theme.colors.primary.main,
     },
     tabText: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
+    },
+    activeTabText: {
+        color: theme.colors.primary.main,
+    },
+    loader: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     listContent: {
-        paddingVertical: 12,
-        flexGrow: 1,
+        paddingVertical: theme.spacing.sm,
     },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 100,
+        paddingTop: theme.spacing.xl * 2,
     },
     emptyText: {
-        marginTop: 16,
-        fontSize: 16,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.disabled,
     },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-    }
-});
+}));
+
+export default InvitationsScreen;

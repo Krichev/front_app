@@ -83,9 +83,9 @@ export const QuestionFormFields: React.FC<QuestionFormFieldsProps> = ({
                         onValueChange={(value) => setDifficulty(value)}
                         style={styles.picker}
                     >
-                        <Picker.Item label={t('userQuestions.easy')} value="EASY" />
-                        <Picker.Item label={t('userQuestions.medium')} value="MEDIUM" />
-                        <Picker.Item label={t('userQuestions.hard')} value="HARD" />
+                        <Picker.Item label={t('common.difficulty.easy')} value="EASY" />
+                        <Picker.Item label={t('common.difficulty.medium')} value="MEDIUM" />
+                        <Picker.Item label={t('common.difficulty.hard')} value="HARD" />
                     </Picker>
                 </View>
             </View>
@@ -130,7 +130,7 @@ export const QuestionFormFields: React.FC<QuestionFormFieldsProps> = ({
                                     styles.visibilityLabel,
                                     visibility === visibilityOption && styles.visibilityLabelSelected
                                 ]}>
-                                    {t(`mediaQuestion.${visibilityOption.toLowerCase()}` as any) || getVisibilityLabel(visibilityOption as QuestionVisibility)}
+                                    {t(`common.visibility.${visibilityOption === QuestionVisibility.FRIENDS_FAMILY ? 'friendsOnly' : visibilityOption.toLowerCase()}` as any) || getVisibilityLabel(visibilityOption as QuestionVisibility)}
                                 </Text>
                                 <Text style={styles.visibilityDescription}>
                                     {getVisibilityDescription(visibilityOption as QuestionVisibility)}

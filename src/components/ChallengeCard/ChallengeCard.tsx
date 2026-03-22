@@ -1,17 +1,20 @@
-// src/components/ChallengeCard/ChallengeCard.tsx
 import React from 'react';
-import {Text, TouchableOpacity, View} from 'react-native';
-import {useTranslation} from 'react-i18next';
-import {ApiChallenge, CurrencyType, PaymentType} from '../../entities/ChallengeState/model/types/challenge.types';
-import {useAppStyles} from '../../shared/ui/hooks/useAppStyles';
-import {createStyles} from '../../shared/ui/theme/createStyles';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { ApiChallenge, CurrencyType, PaymentType } from '../../entities/ChallengeState/model/types/challenge.types';
+import { Wager, StakeType } from '../../entities/WagerState/model/types';
+import { useAppStyles } from '../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../shared/ui/theme/createStyles';
+import { TFunction } from 'i18next';
 
 interface ChallengeCardProps {
     challenge: ApiChallenge;
+    wager?: Wager | null;
     onPress: () => void;
 }
 
-export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress }) => {
+export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, wager, onPress }) => {
     const { t } = useTranslation();
     const { theme } = useAppStyles();
     const styles = themeStyles;
@@ -32,11 +35,37 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
         return `${symbols[currency] || currency}${amount.toFixed(2)}`;
     };
 
+    const getStakeIconName = (stakeType: StakeType): string => {
+        switch (stakeType) {
+            case 'POINTS': return 'diamond-stone';
+            case 'SCREEN_TIME': return 'clock-outline';
+            case 'MONEY': return 'cash';
+            case 'SOCIAL_QUEST': return 'drama-masks';
+            default: return 'help-circle-outline';
+        }
+    };
+
+    const formatWagerAmount = (wager: Wager, t: TFunction): string => {
+        switch (wager.stakeType) {
+            case 'POINTS':
+                return t('challengeCard.wager.points', { amount: wager.stakeAmount });
+            case 'SCREEN_TIME':
+                return t('challengeCard.wager.screenTime', { amount: wager.screenTimeMinutes || wager.stakeAmount });
+            case 'MONEY':
+                return t('challengeCard.wager.money', { amount: formatCurrency(wager.stakeAmount, (wager.stakeCurrency as unknown as CurrencyType) || CurrencyType.USD) });
+            case 'SOCIAL_QUEST':
+                return t('challengeCard.wager.socialQuest');
+            default:
+                return '';
+        }
+    };
+
     const getVisibilityBadge = () => {
         if (challenge.visibility === 'PRIVATE') {
             return (
                 <View style={styles.privateBadge}>
-                    <Text style={styles.badgeText}>🔒 {t('challengeCard.visibility.private')}</Text>
+                    <MaterialCommunityIcons name="lock" size={12} color={theme.colors.text.inverse} />
+                    <Text style={styles.badgeText}>{t('challengeCard.visibility.private')}</Text>
                 </View>
             );
         }
@@ -99,9 +128,24 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
                 )}
             </View>
 
+            {wager && (
+                <View style={styles.wagerContainer}>
+                    <MaterialCommunityIcons
+                        name={getStakeIconName(wager.stakeType)}
+                        size={16}
+                        color={theme.colors.primary.main}
+                    />
+                    <Text style={styles.wagerLabel}>{t('challengeCard.wager.title')}:</Text>
+                    <Text style={styles.wagerAmount}>
+                        {formatWagerAmount(wager, t)}
+                    </Text>
+                </View>
+            )}
+
             {challenge.hasPrize && challenge.prizeAmount && (
                 <View style={styles.prizeContainer}>
-                    <Text style={styles.prizeLabel}>🏆 {t('challengeCard.prize.label')}:</Text>
+                    <MaterialCommunityIcons name="trophy" size={16} color={theme.colors.success.dark} />
+                    <Text style={styles.prizeLabel}>{t('challengeCard.prize.label')}:</Text>
                     <Text style={styles.prizeAmount}>
                         {formatCurrency(challenge.prizeAmount, challenge.prizeCurrency!)}
                     </Text>
@@ -110,7 +154,8 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({ challenge, onPress
 
             {challenge.prizePool && challenge.prizePool > 0 && (
                 <View style={styles.prizePoolContainer}>
-                    <Text style={styles.prizePoolLabel}>💰 {t('challengeCard.prize.pool')}:</Text>
+                    <MaterialCommunityIcons name="cash-multiple" size={16} color={theme.colors.warning.dark} />
+                    <Text style={styles.prizePoolLabel}>{t('challengeCard.prize.pool')}:</Text>
                     <Text style={styles.prizePoolAmount}>
                         {formatCurrency(challenge.prizePool, challenge.prizeCurrency || CurrencyType.USD)}
                     </Text>
@@ -171,6 +216,9 @@ const themeStyles = createStyles(theme => ({
         paddingVertical: theme.spacing.xs,
         borderRadius: theme.layout.borderRadius.sm,
         marginLeft: theme.spacing.sm,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
     },
     badgeText: {
         fontSize: theme.typography.fontSize.xs,
@@ -228,6 +276,25 @@ const themeStyles = createStyles(theme => ({
         fontWeight: theme.typography.fontWeight.semibold,
         color: theme.colors.text.primary,
     },
+    wagerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.primary.background,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.sm,
+        marginBottom: theme.spacing.sm,
+        gap: theme.spacing.sm,
+    },
+    wagerLabel: {
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
+    },
+    wagerAmount: {
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.primary.main,
+    },
     prizeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -235,12 +302,12 @@ const themeStyles = createStyles(theme => ({
         padding: theme.spacing.md,
         borderRadius: theme.layout.borderRadius.sm,
         marginBottom: theme.spacing.sm,
+        gap: theme.spacing.sm,
     },
     prizeLabel: {
         fontSize: theme.typography.fontSize.sm,
         fontWeight: theme.typography.fontWeight.semibold,
         color: theme.colors.success.dark,
-        marginRight: theme.spacing.md,
     },
     prizeAmount: {
         fontSize: theme.typography.fontSize.base,
@@ -254,12 +321,12 @@ const themeStyles = createStyles(theme => ({
         padding: theme.spacing.md,
         borderRadius: theme.layout.borderRadius.sm,
         marginBottom: theme.spacing.sm,
+        gap: theme.spacing.sm,
     },
     prizePoolLabel: {
         fontSize: theme.typography.fontSize.sm,
         fontWeight: theme.typography.fontWeight.semibold,
         color: theme.colors.warning.dark,
-        marginRight: theme.spacing.md,
     },
     prizePoolAmount: {
         fontSize: theme.typography.fontSize.base,

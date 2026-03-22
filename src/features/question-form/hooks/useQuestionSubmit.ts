@@ -64,7 +64,7 @@ export function useQuestionSubmit({
 
         if (!validation.isValid) {
             Alert.alert(
-                t('userQuestions.errorTitle'),
+                t('common.error'),
                 validation.errorKey ? t(validation.errorKey as any) : validation.errorText
             );
             return;
@@ -85,7 +85,7 @@ export function useQuestionSubmit({
                     visibility: params.visibility,
                 });
 
-                Alert.alert(t('userQuestions.successTitle'), t('userQuestions.updateSuccess'));
+                Alert.alert(t('common.success'), t('userQuestions.updateSuccess'));
             } else {
                 const questionData: any = mapFormStateToPayload({
                     ...params,
@@ -129,7 +129,7 @@ export function useQuestionSubmit({
                             type: params.audioConfig.referenceAudioFile.type,
                         },
                     }).unwrap();
-                    Alert.alert(t('userQuestions.successTitle'), t('audioQuestion.createSuccess'));
+                    Alert.alert(t('common.success'), t('audioQuestion.createSuccess'));
                 } else if (onQuestionSubmit) {
                     onQuestionSubmit({
                         ...questionData,
@@ -143,14 +143,14 @@ export function useQuestionSubmit({
                     }
 
                     await QuestionService.createUserQuestion(apiPayload);
-                    Alert.alert(t('userQuestions.successTitle'), t('userQuestions.createSuccess'));
+                    Alert.alert(t('common.success'), t('userQuestions.createSuccess'));
                 }
             }
 
             navigation.navigate('UserQuestions');
         } catch (error) {
             console.error('Error saving question:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.saveFailed'));
+            Alert.alert(t('common.error'), t('userQuestions.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }

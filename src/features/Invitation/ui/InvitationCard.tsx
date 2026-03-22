@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { InvitationSummaryDTO } from '../../../entities/InvitationState/model/types';
-import { useTheme } from '../../../shared/ui/theme';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { StakeType } from '../../../entities/WagerState/model/types';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
 
 interface InvitationCardProps {
     invitation: InvitationSummaryDTO;
@@ -11,7 +14,9 @@ interface InvitationCardProps {
 }
 
 export const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onPress, isSent }) => {
-    const { theme } = useTheme();
+    const { t } = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const [timeLeft, setTimeLeft] = useState('');
     const slideIn = useState(new Animated.Value(50))[0];
     const opacity = useState(new Animated.Value(0))[0];
@@ -36,7 +41,7 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onPr
             const diff = expires - now;
 
             if (diff <= 0) {
-                setTimeLeft('Expired');
+                setTimeLeft(t('invitation.card.expired'));
                 clearInterval(timer);
             } else {
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -52,15 +57,15 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onPr
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [invitation.expiresAt]);
+    }, [invitation.expiresAt, t]);
 
-    const getStakeIcon = () => {
-        switch (invitation.stakeType) {
-            case 'POINTS': return '💎';
-            case 'SCREEN_TIME': return '⏳';
-            case 'MONEY': return '💵';
-            case 'SOCIAL_QUEST': return '🎭';
-            default: return '🎲';
+    const getStakeIcon = (stakeType: StakeType): string => {
+        switch (stakeType) {
+            case 'POINTS': return 'diamond-stone';
+            case 'SCREEN_TIME': return 'clock-outline';
+            case 'MONEY': return 'cash';
+            case 'SOCIAL_QUEST': return 'drama-masks';
+            default: return 'help-circle-outline';
         }
     };
 
@@ -71,58 +76,74 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onPr
             case 'NEGOTIATING': return theme.colors.warning.main;
             case 'EXPIRED': return theme.colors.text.disabled;
             case 'CANCELLED': return theme.colors.text.disabled;
-            default: return theme.colors.info.main; // PENDING
+            default: return theme.colors.primary.main; // PENDING
         }
     };
 
     return (
-        <TouchableOpacity onPress={onPress}>
+        <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
             <Animated.View style={[
                 styles.container,
                 {
-                    backgroundColor: theme.colors.background.paper,
-                    borderColor: theme.colors.border.main,
                     transform: [{ translateY: slideIn }],
                     opacity: opacity,
                 }
             ]}>
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
-                        <Text style={styles.icon}>{getStakeIcon()}</Text>
+                        <MaterialCommunityIcons 
+                            name={getStakeIcon(invitation.stakeType as StakeType)} 
+                            size={20} 
+                            color={theme.colors.primary.main} 
+                        />
                     </View>
                     <View style={styles.headerText}>
-                        <Text style={[styles.title, { color: theme.colors.text.primary }]}>
+                        <Text style={styles.title} numberOfLines={1}>
                             {invitation.questTitle}
                         </Text>
-                        <Text style={[styles.subtitle, { color: theme.colors.text.secondary }]}>
-                            {isSent ? `To: ${invitation.otherPartyUsername}` : `From: ${invitation.otherPartyUsername}`}
+                        <Text style={styles.subtitle}>
+                            {isSent 
+                                ? t('invitation.card.to', { username: invitation.otherPartyUsername }) 
+                                : t('invitation.card.from', { username: invitation.otherPartyUsername })
+                            }
                         </Text>
                     </View>
                     <View style={[styles.badge, { backgroundColor: getStatusColor() }]}>
-                        <Text style={styles.badgeText}>{invitation.status}</Text>
+                        <Text style={styles.badgeText}>
+                            {t(`invitation.card.status.${invitation.status}`)}
+                        </Text>
                     </View>
                 </View>
 
                 <View style={styles.content}>
-                    <Text style={[styles.amount, { color: theme.colors.primary.main }]}>
-                        {invitation.stakeAmount} {invitation.stakeType === 'POINTS' ? 'Points' : invitation.stakeType === 'SCREEN_TIME' ? 'Minutes' : ''}
+                    <Text style={styles.amount}>
+                        {invitation.stakeType === 'SOCIAL_QUEST' 
+                            ? t('wager.setup.stakeTypes.SOCIAL_QUEST')
+                            : `${invitation.stakeAmount} ${
+                                invitation.stakeType === 'POINTS' 
+                                    ? t('wager.invitation.points') 
+                                    : invitation.stakeType === 'SCREEN_TIME' 
+                                        ? t('wager.invitation.minutes') 
+                                        : '$'
+                              }`
+                        }
                     </Text>
                     
-                    {invitation.status === 'PENDING' || invitation.status === 'NEGOTIATING' ? (
+                    {(invitation.status === 'PENDING' || invitation.status === 'NEGOTIATING') && (
                         <View style={styles.expiryContainer}>
-                            <Icon name="time-outline" size={14} color={theme.colors.text.secondary} />
-                            <Text style={[styles.expiryText, { color: theme.colors.text.secondary }]}>
+                            <MaterialCommunityIcons name="clock-outline" size={14} color={theme.colors.text.secondary} />
+                            <Text style={styles.expiryText}>
                                 {timeLeft}
                             </Text>
                         </View>
-                    ) : null}
+                    )}
                 </View>
 
                 {invitation.hasActiveNegotiation && (
-                    <View style={[styles.negotiationBadge, { backgroundColor: theme.colors.warning.light }]}>
-                        <Icon name="chatbubbles-outline" size={16} color={theme.colors.warning.dark} />
-                        <Text style={[styles.negotiationText, { color: theme.colors.warning.dark }]}>
-                            Negotiation in progress
+                    <View style={styles.negotiationBadge}>
+                        <MaterialCommunityIcons name="chat-outline" size={16} color={theme.colors.warning.main} />
+                        <Text style={styles.negotiationText}>
+                            {t('invitation.card.negotiationInProgress')}
                         </Text>
                     </View>
                 )}
@@ -131,15 +152,17 @@ export const InvitationCard: React.FC<InvitationCardProps> = ({ invitation, onPr
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        marginHorizontal: 16,
-        marginVertical: 8,
-        padding: 16,
-        borderRadius: 12,
-        borderWidth: 1,
+        marginHorizontal: theme.spacing.md,
+        marginVertical: theme.spacing.xs,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.main,
+        backgroundColor: theme.colors.background.paper,
         elevation: 2,
-        shadowColor: '#000',
+        shadowColor: theme.colors.text.primary,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -147,40 +170,39 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.sm,
     },
     iconContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#f0f0f0',
+        backgroundColor: theme.colors.background.default,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
-    },
-    icon: {
-        fontSize: 20,
+        marginRight: theme.spacing.sm,
     },
     headerText: {
         flex: 1,
     },
     title: {
-        fontSize: 16,
-        fontWeight: 'bold',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     subtitle: {
-        fontSize: 14,
+        fontSize: theme.typography.fontSize.sm,
         marginTop: 2,
+        color: theme.colors.text.secondary,
     },
     badge: {
-        paddingHorizontal: 8,
+        paddingHorizontal: theme.spacing.sm,
         paddingVertical: 4,
-        borderRadius: 12,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     badgeText: {
-        color: '#fff',
+        color: theme.colors.primary.contrastText,
         fontSize: 10,
-        fontWeight: 'bold',
+        fontWeight: theme.typography.fontWeight.bold,
     },
     content: {
         flexDirection: 'row',
@@ -188,8 +210,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     amount: {
-        fontSize: 16,
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.primary.main,
     },
     expiryContainer: {
         flexDirection: 'row',
@@ -197,18 +220,21 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     expiryText: {
-        fontSize: 12,
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.secondary,
     },
     negotiationBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 12,
-        padding: 8,
-        borderRadius: 8,
-        gap: 8,
+        marginTop: theme.spacing.sm,
+        padding: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.sm,
+        gap: theme.spacing.xs,
+        backgroundColor: theme.colors.warning.background,
     },
     negotiationText: {
-        fontSize: 12,
-        fontWeight: '500',
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.medium,
+        color: theme.colors.warning.main,
     },
-});
+}));

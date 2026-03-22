@@ -26,9 +26,9 @@ export const QuizConfigSection: React.FC<QuizConfigSectionProps> = ({
     };
 
     const difficultyLabels: Record<string, string> = {
-        EASY: t('challengeDetails.difficulty.easy'),
-        MEDIUM: t('challengeDetails.difficulty.medium'),
-        HARD: t('challengeDetails.difficulty.hard'),
+        EASY: t('common.difficulty.easy'),
+        MEDIUM: t('common.difficulty.medium'),
+        HARD: t('common.difficulty.hard'),
         MIXED: t('challengeDetails.difficulty.mixed'),
     };
 

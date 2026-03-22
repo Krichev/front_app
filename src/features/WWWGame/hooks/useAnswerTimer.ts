@@ -37,6 +37,7 @@ export function useAnswerTimer({
       if (!hasAutoSubmitted.current) {
         hasAutoSubmitted.current = true;
         setPhase('done');
+        console.log('⏰ [useAnswerTimer] Auto-submit triggered');
         onAutoSubmitRef.current();
       }
       return;

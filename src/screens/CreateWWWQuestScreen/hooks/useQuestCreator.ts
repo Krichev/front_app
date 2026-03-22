@@ -49,7 +49,6 @@ export const useQuestCreator = () => {
     // Basic Info
     const [title, setTitle] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
     const [description, setDescription] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
-    const [reward, setReward] = useState<LocalizedString>(EMPTY_LOCALIZED_STRING);
 
     // Quiz Configuration
     const [quizConfig, setQuizConfig] = useState<QuizConfig>({
@@ -176,7 +175,6 @@ export const useQuestCreator = () => {
         // State
         title,
         description,
-        reward,
         quizConfig,
         teamMemberInput,
         isCreating: isCreatingChallenge || isStartingSession,
@@ -184,7 +182,6 @@ export const useQuestCreator = () => {
         // Setters
         setTitle,
         setDescription,
-        setReward,
         setQuizConfig,
         setTeamMemberInput,
 

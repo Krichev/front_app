@@ -42,7 +42,7 @@ export function useMediaPicker(navigation: any) {
             }
         } catch (error) {
             console.error('Error picking media:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
+            Alert.alert(t('common.error'), t('questionEditor.errorMedia'));
         }
     }, [navigation, t]);
 
@@ -67,7 +67,7 @@ export function useMediaPicker(navigation: any) {
             setQuestionType('VIDEO');
         } catch (error) {
             console.error('Error picking video:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
+            Alert.alert(t('common.error'), t('questionEditor.errorMedia'));
         }
     }, [navigation, t]);
 
@@ -100,7 +100,7 @@ export function useMediaPicker(navigation: any) {
         } catch (error: any) {
             if (!DocumentPicker.isCancel(error)) {
                 console.error('Error picking audio:', error);
-                Alert.alert(t('userQuestions.errorTitle'), t('questionEditor.errorMedia'));
+                Alert.alert(t('common.error'), t('questionEditor.errorMedia'));
             }
         }
     }, [t]);
@@ -132,14 +132,14 @@ export function useMediaPicker(navigation: any) {
                 };
 
                 setUploadedMediaInfo(mediaInfo);
-                Alert.alert(t('userQuestions.successTitle'), 'Media uploaded successfully!');
+                Alert.alert(t('common.success'), 'Media uploaded successfully!');
                 return mediaInfo;
             } else {
-                Alert.alert(t('userQuestions.errorTitle'), response.error || 'Failed to upload media');
+                Alert.alert(t('common.error'), response.error || 'Failed to upload media');
             }
         } catch (error) {
             console.error('Upload error:', error);
-            Alert.alert(t('userQuestions.errorTitle'), 'Failed to upload media. Please try again.');
+            Alert.alert(t('common.error'), 'Failed to upload media. Please try again.');
         } finally {
             setIsUploading(false);
         }

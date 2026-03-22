@@ -45,7 +45,7 @@ const UserQuestionsScreen: React.FC = () => {
             setQuestions(userQuestions);
         } catch (error) {
             console.error('Error loading user questions:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.loadFailed'));
+            Alert.alert(t('common.error'), t('userQuestions.loadFailed'));
         } finally {
             setLoading(false);
         }
@@ -64,7 +64,7 @@ const UserQuestionsScreen: React.FC = () => {
             [
                 {text: t('common.cancel'), style: 'cancel'},
                 {
-                    text: t('userQuestions.delete'),
+                    text: t('common.delete'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
@@ -75,7 +75,7 @@ const UserQuestionsScreen: React.FC = () => {
                             loadUserQuestions();
                         } catch (error) {
                             console.error('Error deleting question:', error);
-                            Alert.alert(t('userQuestions.errorTitle'), t('userQuestions.deleteFailed'));
+                            Alert.alert(t('common.error'), t('userQuestions.deleteFailed'));
                         }
                     }
                 }
@@ -126,7 +126,7 @@ const UserQuestionsScreen: React.FC = () => {
             >
                 <View style={styles.questionHeader}>
                     <Text style={styles.difficultyBadge}>
-                        {t(`userQuestions.${item.difficulty.toLowerCase()}` as any)}
+                        {t(`common.difficulty.${item.difficulty.toLowerCase()}` as any)}
                     </Text>
                     <TouchableOpacity
                         onPress={() => handleEditQuestion(item)}

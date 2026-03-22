@@ -41,7 +41,7 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
 
     const handleSubmit = async () => {
         if (!title.trim()) {
-            Alert.alert(t('userQuestions.errorTitle'), t('alerts.validationError'));
+            Alert.alert(t('common.error'), t('alerts.validationError'));
             return;
         }
 
@@ -68,12 +68,12 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
 
         try {
             await createChallenge(challengeData).unwrap();
-            Alert.alert(t('userQuestions.successTitle'), t('alerts.createSuccess'), [
+            Alert.alert(t('common.success'), t('alerts.createSuccess'), [
                 { text: t('common.ok'), onPress: () => navigation.goBack() }
             ]);
         } catch (error) {
             console.error('Failed to create challenge:', error);
-            Alert.alert(t('userQuestions.errorTitle'), t('alerts.createError'));
+            Alert.alert(t('common.error'), t('alerts.createError'));
         }
     };
 
@@ -134,8 +134,8 @@ export const CreateChallengeForm: React.FC<CreateChallengeFormProps> = ({ naviga
                                 onValueChange={(value) => setVisibility(value as 'PUBLIC' | 'PRIVATE')}
                                 style={styles.picker}
                             >
-                                <Picker.Item label={`${t('mediaQuestion.public')} - Anyone can find and join`} value="PUBLIC" />
-                                <Picker.Item label={`${t('mediaQuestion.private')} - Only invited users`} value="PRIVATE" />
+                                <Picker.Item label={`${t('common.visibility.public')} - Anyone can find and join`} value="PUBLIC" />
+                                <Picker.Item label={`${t('common.visibility.private')} - Only invited users`} value="PRIVATE" />
                             </Picker>
                         </View>
                     </View>

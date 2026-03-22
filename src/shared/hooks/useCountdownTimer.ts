@@ -13,6 +13,7 @@ export function useCountdownTimer({ duration, onComplete, autoStart = false }: U
   const animation = useRef(new Animated.Value(1)).current;
   const onCompleteRef = useRef(onComplete);
   const hasCompletedRef = useRef(false);
+  // Track the effective duration after reset() so animation ratio is correct
   const activeDurationRef = useRef(duration);
 
   useEffect(() => {
@@ -20,15 +21,22 @@ export function useCountdownTimer({ duration, onComplete, autoStart = false }: U
   }, [onComplete]);
 
   useEffect(() => {
-    if (!isRunning || timeLeft <= 0) {
-      if (timeLeft <= 0 && isRunning && !hasCompletedRef.current) {
-        hasCompletedRef.current = true;
-        setIsRunning(false);
-        console.log('⏰ [Timer] Time expired, firing onComplete');
-        onCompleteRef.current();
-      }
+    // Guard: already completed this cycle
+    if (hasCompletedRef.current) return;
+
+    // Time expired — fire onComplete regardless of isRunning
+    // This fixes the race where an external pause() sets isRunning=false
+    // in the same frame that timeLeft reaches 0.
+    if (timeLeft <= 0) {
+      hasCompletedRef.current = true;
+      setIsRunning(false);
+      console.log('⏰ [useCountdownTimer] timeLeft reached 0, firing onComplete');
+      onCompleteRef.current();
       return;
     }
+
+    // Not running — don't tick
+    if (!isRunning) return;
 
     const interval = setInterval(() => {
       setTimeLeft(prev => {
@@ -40,7 +48,6 @@ export function useCountdownTimer({ duration, onComplete, autoStart = false }: U
       });
     }, 1000);
 
-    // Use activeDurationRef for correct animation ratio after reset
     Animated.timing(animation, {
       toValue: (timeLeft - 1) / activeDurationRef.current,
       duration: 1000,
@@ -51,18 +58,15 @@ export function useCountdownTimer({ duration, onComplete, autoStart = false }: U
   }, [timeLeft, isRunning, animation]);
 
   const start = useCallback(() => {
-    console.log('⏰ [Timer] start() called');
     setIsRunning(true);
   }, []);
 
   const pause = useCallback(() => {
-    console.log('⏰ [Timer] pause() called');
     setIsRunning(false);
   }, []);
 
   const reset = useCallback((newDuration?: number) => {
     const d = newDuration ?? duration;
-    console.log('⏰ [Timer] reset() called with duration:', d);
     setTimeLeft(d);
     activeDurationRef.current = d;
     animation.setValue(1);

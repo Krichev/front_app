@@ -1,5 +1,5 @@
 // src/screens/CreateWWWQuestScreen/hooks/useQuestionsManager.ts
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {Alert} from 'react-native';
 import {
     QuizQuestion,
@@ -86,20 +86,10 @@ export const useQuestionsManager = () => {
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
     // ============================================================================
-    // EFFECTS
-    // ============================================================================
-
-    useEffect(() => {
-        if (questionSource === 'app') {
-            loadAppQuestions();
-        }
-    }, [questionSource]);
-
-    // ============================================================================
     // QUESTION LOADING
     // ============================================================================
 
-    const loadAppQuestions = async () => {
+    const loadAppQuestions = useCallback(async () => {
         setIsLoadingAppQuestions(true);
         try {
             const questions = await QuestionService.advancedSearchQuestions({page: 0, size: 100, isUserCreated: false});
@@ -110,7 +100,17 @@ export const useQuestionsManager = () => {
         } finally {
             setIsLoadingAppQuestions(false);
         }
-    };
+    }, []);
+
+    // ============================================================================
+    // EFFECTS
+    // ============================================================================
+
+    useEffect(() => {
+        if (questionSource === 'app') {
+            loadAppQuestions();
+        }
+    }, [questionSource, loadAppQuestions]);
 
     // ============================================================================
     // SELECTION MANAGEMENT

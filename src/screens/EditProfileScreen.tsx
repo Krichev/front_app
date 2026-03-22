@@ -158,15 +158,15 @@ const EditProfileScreen: React.FC = () => {
     // Validation
     const validateForm = (): boolean => {
         if (formData.username.trim().length < 3) {
-            Alert.alert(t('userQuestions.errorTitle'), t('validation.minLength', { count: 3 }));
+            Alert.alert(t('common.error'), t('validation.minLength', { count: 3 }));
             return false;
         }
         if (formData.username.trim().length > 50) {
-            Alert.alert(t('userQuestions.errorTitle'), t('validation.maxLength', { count: 50 }));
+            Alert.alert(t('common.error'), t('validation.maxLength', { count: 50 }));
             return false;
         }
         if (getLocalizedValue(formData.bio, currentLanguage).length > 500) {
-            Alert.alert(t('userQuestions.errorTitle'), t('validation.maxLength', { count: 500 }));
+            Alert.alert(t('common.error'), t('validation.maxLength', { count: 500 }));
             return false;
         }
         return true;
@@ -183,7 +183,7 @@ const EditProfileScreen: React.FC = () => {
             const usernameChanged = originalUsername !== formData.username.trim();
 
             if (!userId) {
-                Alert.alert(t('userQuestions.errorTitle'), t('errors.unknownError'));
+                Alert.alert(t('common.error'), t('errors.unknownError'));
                 return;
             }
 
@@ -205,7 +205,7 @@ const EditProfileScreen: React.FC = () => {
             }
 
             Alert.alert(
-                t('userQuestions.successTitle'),
+                t('common.success'),
                 t('editProfile.updateSuccess'),
                 [
                     {
@@ -217,7 +217,7 @@ const EditProfileScreen: React.FC = () => {
         } catch (error: any) {
             console.error('Error updating profile:', error);
             Alert.alert(
-                t('userQuestions.errorTitle'),
+                t('common.error'),
                 error?.data?.message || t('editProfile.updateFailed')
             );
         }

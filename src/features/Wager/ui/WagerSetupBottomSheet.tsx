@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { StakeType, CreateWagerRequest } from '../../../entities/WagerState/model/types';
-import { useTheme } from '../../../shared/ui/theme';
 import { StakeSelector } from './StakeSelector';
 import { Input } from '../../../shared/ui/Input/Input';
 import { Button } from '../../../shared/ui/Button/Button';
-import { useCreateWagerMutation } from '../../../entities/WagerState/model/slice/wagerApi';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
 
 interface WagerSetupBottomSheetProps {
     initialData?: Partial<CreateWagerRequest>;
@@ -18,7 +18,8 @@ export const WagerSetupBottomSheet: React.FC<WagerSetupBottomSheetProps> = ({
     onSave,
 }) => {
     const { t } = useTranslation();
-    const { theme } = useTheme();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const [stakeType, setStakeType] = useState<StakeType>(initialData?.stakeType || 'POINTS');
     const [amount, setAmount] = useState(initialData?.stakeAmount?.toString() || '100');
     const [socialPenalty, setSocialPenalty] = useState(initialData?.socialPenaltyDescription || '');
@@ -28,34 +29,47 @@ export const WagerSetupBottomSheet: React.FC<WagerSetupBottomSheetProps> = ({
         const data: Partial<CreateWagerRequest> = {
             wagerType: 'HEAD_TO_HEAD',
             stakeType,
-            stakeAmount: parseFloat(amount),
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         };
 
-        if (stakeType === 'SOCIAL_QUEST') {
+        if (stakeType === 'POINTS' || stakeType === 'MONEY') {
+            data.stakeAmount = parseFloat(amount) || 0;
+        } else if (stakeType === 'SCREEN_TIME') {
+            data.stakeAmount = parseInt(screenTime) || 0;
+            data.screenTimeMinutes = parseInt(screenTime) || 0;
+        } else if (stakeType === 'SOCIAL_QUEST') {
+            data.stakeAmount = 0;
             data.socialPenaltyDescription = socialPenalty;
-        }
-
-        if (stakeType === 'SCREEN_TIME') {
-            data.screenTimeMinutes = parseInt(screenTime);
         }
 
         onSave(data);
     };
 
     return (
-        <ScrollView style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-            <Text style={[styles.title, { color: theme.colors.text.primary }]}>{t('wager.setup.title')}</Text>
+        <ScrollView style={styles.container}>
+            <Text style={styles.title}>{t('wager.setup.title')}</Text>
             
             <StakeSelector selectedType={stakeType} onSelect={setStakeType} />
 
-            <Input
-                label={t('wager.setup.stakeAmount')}
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
-                placeholder={t('wager.setup.stakeAmountPlaceholder')}
-            />
+            {stakeType === 'POINTS' && (
+                <Input
+                    label={t('wager.setup.pointsAmount')}
+                    value={amount}
+                    onChangeText={setAmount}
+                    keyboardType="numeric"
+                    placeholder={t('wager.setup.pointsAmountPlaceholder')}
+                />
+            )}
+
+            {stakeType === 'MONEY' && (
+                <Input
+                    label={t('wager.setup.moneyAmount')}
+                    value={amount}
+                    onChangeText={setAmount}
+                    keyboardType="decimal-pad"
+                    placeholder={t('wager.setup.moneyAmountPlaceholder')}
+                />
+            )}
 
             {stakeType === 'SCREEN_TIME' && (
                 <Input
@@ -90,20 +104,22 @@ export const WagerSetupBottomSheet: React.FC<WagerSetupBottomSheetProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        padding: 16,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.background.primary,
+        borderTopLeftRadius: theme.layout.borderRadius.lg,
+        borderTopRightRadius: theme.layout.borderRadius.lg,
     },
     title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 16,
+        fontSize: theme.typography.fontSize.xl,
+        fontWeight: theme.typography.fontWeight.bold,
+        marginBottom: theme.spacing.md,
         textAlign: 'center',
+        color: theme.colors.text.primary,
     },
     footer: {
-        marginTop: 24,
-        marginBottom: 40,
+        marginTop: theme.spacing.lg,
+        marginBottom: theme.spacing.xl * 2,
     },
-});
+}));

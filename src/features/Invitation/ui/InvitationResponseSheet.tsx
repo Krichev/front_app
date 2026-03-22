@@ -67,12 +67,20 @@ export const InvitationResponseSheet: React.FC<InvitationResponseSheetProps> = (
         }
     };
 
-    const handleCounterSubmit = async (request: CreateCounterOfferRequest) => {
+    const handleCounterSubmit = async (data: Partial<CreateCounterOfferRequest>) => {
         try {
+            // Ensure required fields are present
+            if (!data.stakeType) return;
+            
+            const request: CreateCounterOfferRequest = {
+                stakeType: data.stakeType,
+                stakeAmount: data.stakeAmount ?? 0,
+                ...data
+            };
+
             await createCounterOffer({ id: invitationId, body: request }).unwrap();
             Alert.alert('Success', 'Counter-offer sent!');
             setShowCounterModal(false);
-            // Optionally keep open to show updated state
         } catch (error) {
             Alert.alert('Error', 'Failed to send counter-offer');
         }
@@ -92,7 +100,7 @@ export const InvitationResponseSheet: React.FC<InvitationResponseSheetProps> = (
     };
 
     return (
-        <>
+        <View style={{ flex: 1 }}>
             <InvitationDetailsCard
                 invitation={invitation}
                 onAccept={handleAccept}
@@ -100,18 +108,19 @@ export const InvitationResponseSheet: React.FC<InvitationResponseSheetProps> = (
                 onNegotiate={() => setShowCounterModal(true)}
                 onCancel={handleCancel}
                 onRespondToCounter={handleRespondToCounter}
-                currentUserId={isSentView ? invitation.inviterId : invitation.inviteeId} // Use local logic or actual auth id if available in store
+                currentUserId={isSentView ? invitation.inviterId : invitation.inviteeId} 
                 isLoading={isResponding || isCancelling || isCountering || isRespondingToCounter}
             />
 
             <CounterOfferModal
                 visible={showCounterModal}
-                invitation={invitation}
+                initialStakeType={invitation.stakeType}
+                initialAmount={invitation.stakeAmount}
                 onClose={() => setShowCounterModal(false)}
                 onSubmit={handleCounterSubmit}
                 isLoading={isCountering}
             />
-        </>
+        </View>
     );
 };
 
