@@ -95,7 +95,7 @@ const themeStyles = createStyles(theme => ({
   },
   description: {
     fontSize: 14,
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.primary,
   },
   instructionsContainer: {
     backgroundColor: theme.colors.background.tertiary,

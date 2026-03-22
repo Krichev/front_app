@@ -478,7 +478,7 @@ const themeStyles = createStyles(theme => ({
         flex: 1,
     },
     answerSectionDisabled: {
-        opacity: 0.45,
+        // Removed opacity: 0.45 to keep the section prominent before first playback
     },
     rhythmArea: {
         flex: 1,

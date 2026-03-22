@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 12,
-    color: '#666',
+    color: '#333',
   },
   errorContainer: {
     flexDirection: 'row',
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 11,
-    color: '#666',
+    color: '#333',
     fontVariant: ['tabular-nums'],
   },
 });

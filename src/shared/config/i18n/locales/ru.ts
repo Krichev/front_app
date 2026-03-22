@@ -1431,6 +1431,13 @@ const ru = {
         startRecordingPhase: 'Начать фазу записи',
         backToListening: 'Назад к прослушиванию',
     },
+    audioPlayer: {
+        loading: 'Загрузка аудио...',
+        error: 'Не удалось загрузить аудио',
+        retry: 'Нажмите для повтора',
+        noAudio: 'Аудио недоступно',
+        durationPlaceholder: '--:--',
+    },
     wwwGame: {
         performance: {
             outstanding: 'Выдающийся результат! Ваша команда показала исключительные знания!',

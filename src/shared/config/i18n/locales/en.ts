@@ -1961,6 +1961,13 @@ const en = {
             needsAudio: 'Needs audio',
         },
     },
+    audioPlayer: {
+        loading: 'Loading audio...',
+        error: 'Failed to load audio',
+        retry: 'Tap to retry',
+        noAudio: 'Audio not available',
+        durationPlaceholder: '--:--',
+    },
     wwwGame: {
         // --- EXISTING (keep as-is) ---
         performance: {

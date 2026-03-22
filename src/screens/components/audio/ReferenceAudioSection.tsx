@@ -1,10 +1,10 @@
 import React from 'react';
 import {Text, View} from 'react-native';
 import {AudioPlayer} from '../AudioPlayer';
-import MediaUrlService from '../../../services/media/MediaUrlService';
 import NetworkConfigManager from '../../../config/NetworkConfig';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../../../shared/ui/theme';
+import {useTranslation} from "react-i18next";
 
 interface ReferenceAudioSectionProps {
   audioUrl?: string;
@@ -28,15 +28,17 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   audioUrl,
   segmentStart,
   segmentEnd,
-  title = 'Listen to Reference',
+  title = '',
   question,
   onPlaybackComplete,
   mini = false,
   autoPlay = false,
 }) => {
+  const { t } = useTranslation();
   const {theme} = useAppStyles();
   const styles = themeStyles;
   const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
+  title =  t('questionDisplay.questionDisplay.listenReference')
   
   const isValidPlayableUrl = (url: string | undefined): boolean => {
     if (!url) return false;
@@ -97,7 +99,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   return (
     <View style={[styles.container, mini && styles.miniContainer]}>
       {!mini && <Text style={styles.title}>{title}</Text>}
-      <AudioPlayer 
+      <AudioPlayer
         audioUrl={effectiveUrl}
         segmentStart={effectiveStart}
         segmentEnd={effectiveEnd}
@@ -111,7 +113,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
 const themeStyles = createStyles(theme => ({
   container: {
     marginBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.background.secondary,
+    backgroundColor: theme.colors.background.primary,
     borderRadius: theme.layout.borderRadius.lg,
     padding: theme.spacing.md,
     elevation: 2,
@@ -131,7 +133,7 @@ const themeStyles = createStyles(theme => ({
   title: {
     fontSize: 14,
     fontWeight: '700',
-    color: theme.colors.text.secondary,
+    color: theme.colors.text.primary,
     marginBottom: theme.spacing.sm,
     textTransform: 'uppercase',
     letterSpacing: 1,
