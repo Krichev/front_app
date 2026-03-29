@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import {Text, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useTranslation } from 'react-i18next';
-import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
-import { createStyles } from '../../../../shared/ui/theme';
-import { GenericScoringResponse, AudioChallengeType } from '../../../../types/audioChallenge.types';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
+import {createStyles} from '../../../../shared/ui/theme';
+import {AudioChallengeType, GenericScoringResponse} from '../../../../types/audioChallenge.types';
 
 interface AudioScoringInlineResultsProps {
     scoringResult: GenericScoringResponse;
@@ -19,7 +19,7 @@ export const AudioScoringInlineResults: React.FC<AudioScoringInlineResultsProps>
 }) => {
     const { t } = useTranslation();
     const { theme } = useAppStyles();
-    const styles = inlineScoringStyles(theme);
+    const styles = inlineScoringStyles;
 
     const getScoreColor = (score: number) => {
         if (score >= 90) return theme.colors.success.main;
@@ -117,7 +117,7 @@ interface MetricItemProps {
 
 const MetricItem: React.FC<MetricItemProps> = ({ label, value, icon, color }) => {
     const { theme } = useAppStyles();
-    const styles = inlineScoringStyles(theme);
+    const styles = inlineScoringStyles;
     
     return (
         <View style={styles.metricItem}>

@@ -1,13 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, TextInput, ScrollView, Animated } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
-import { phaseStyles } from './phases.styles';
-import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi';
-import { AudioChallengePhase } from './AudioChallengePhase';
-import { AudioAnswerPhase } from './AudioAnswerPhase';
-import { useAnswerTimer } from '../../hooks/useAnswerTimer';
-import { GenericScoringResponse } from '../../../../types/audioChallenge.types';
+import React, {useRef, useState} from 'react';
+import {Animated, ScrollView, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {useTranslation} from 'react-i18next';
+import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
+import {phaseStyles} from './phases.styles';
+import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
+import {AudioAnswerPhase} from './AudioAnswerPhase';
+import {useAnswerTimer} from '../../hooks/useAnswerTimer';
 
 interface AnswerPhaseProps {
   question: QuizQuestion;
@@ -21,7 +19,6 @@ interface AnswerPhaseProps {
   teamMembers?: string[];
   onAudioRecordingComplete?: (audioFile: { uri: string; name: string; type: string }) => void;
   recordedAudio?: { uri: string; name: string; type: string } | null;
-  onScoringComplete?: (result: GenericScoringResponse) => void;
 }
 
 export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
@@ -36,7 +33,6 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   teamMembers = [],
   onAudioRecordingComplete,
   recordedAudio,
-  onScoringComplete,
 }) => {
   const { t } = useTranslation();
   const { theme } = useAppStyles();
@@ -98,7 +94,6 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         recordedAudio={recordedAudio}
         player={player}
         onPlayerChange={handlePlayerSelect}
-        onScoringComplete={onScoringComplete}
       />
     );
   }

@@ -46,7 +46,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
-  const localStyles = themeStyles(theme);
+  const localStyles = themeStyles;
 
   // Determine initial internal phase
   const answerMode = question.audioChallengeType ? 'record' : propAnswerMode;
@@ -474,7 +474,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   );
 };
 
-const themeStyles = (theme: any) => createStyles(theme => ({
+const themeStyles = createStyles(theme => ({
   content: {
     flex: 1,
     padding: theme.spacing.lg,
@@ -672,4 +672,4 @@ const themeStyles = (theme: any) => createStyles(theme => ({
     ...theme.typography.caption,
     color: theme.colors.text.primary,
   }
-}))(theme);
+}));
