@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, TextInput, ScrollView, Animated } from 'react-native';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useTranslation } from 'react-i18next';
 import { useAppStyles } from '../../../../shared/ui/hooks/useAppStyles';
 import { phaseStyles } from './phases.styles';
@@ -8,6 +7,7 @@ import { QuizQuestion } from '../../../../entities/QuizState/model/slice/quizApi
 import { AudioChallengePhase } from './AudioChallengePhase';
 import { AudioAnswerPhase } from './AudioAnswerPhase';
 import { useAnswerTimer } from '../../hooks/useAnswerTimer';
+import { GenericScoringResponse } from '../../../../types/audioChallenge.types';
 
 interface AnswerPhaseProps {
   question: QuizQuestion;
@@ -19,9 +19,9 @@ interface AnswerPhaseProps {
   isSubmitting: boolean;
   gameSettings?: any;
   teamMembers?: string[];
-  isVoiceEnabled?: boolean;
   onAudioRecordingComplete?: (audioFile: { uri: string; name: string; type: string }) => void;
   recordedAudio?: { uri: string; name: string; type: string } | null;
+  onScoringComplete?: (result: GenericScoringResponse) => void;
 }
 
 export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
@@ -34,9 +34,9 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   isSubmitting,
   gameSettings,
   teamMembers = [],
-  isVoiceEnabled = false,
   onAudioRecordingComplete,
   recordedAudio,
+  onScoringComplete,
 }) => {
   const { t } = useTranslation();
   const { theme } = useAppStyles();
@@ -56,9 +56,11 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
   const isAnyAudioQuestion = question.questionType === 'AUDIO';
 
   // Initialize two-phase timer
+  // initialTypingTime: seconds before user must start typing (then auto-submits)
+  // completionTime: seconds to finish typing after first keystroke
   const timer = useAnswerTimer({
-    initialTypingTime: 5,
-    completionTime: 15,
+    initialTypingTime: 30,
+    completionTime: 30,
     onAutoSubmit: onSubmit,
   });
 
@@ -83,21 +85,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       }
   };
 
-  if (isAudioChallenge) {
-    const timeLimit = question.timeLimitSeconds || gameSettings?.roundTimeSeconds || 120;
-    return (
-      <AudioChallengePhase
-        question={question}
-        timeLimitSeconds={timeLimit}
-        onRecordingComplete={onAudioRecordingComplete!}
-        onSubmit={onSubmit}
-        isSubmitting={isSubmitting}
-        recordedAudio={recordedAudio}
-      />
-    );
-  }
-
-  if (isAnyAudioQuestion && question.questionMediaId) {
+  if (isAudioChallenge || (isAnyAudioQuestion && question.questionMediaId)) {
     return (
       <AudioAnswerPhase
         question={question}
@@ -110,6 +98,7 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
         recordedAudio={recordedAudio}
         player={player}
         onPlayerChange={handlePlayerSelect}
+        onScoringComplete={onScoringComplete}
       />
     );
   }
@@ -194,9 +183,9 @@ export const AnswerPhase: React.FC<AnswerPhaseProps> = ({
       </View>
 
       <TouchableOpacity
-        style={[styles.button, (!answer.trim() || isSubmitting || timer.hasAutoSubmitted) && styles.disabledButton]}
+        style={[styles.button, isSubmitting && styles.disabledButton]}
         onPress={onSubmit}
-        disabled={!answer.trim() || isSubmitting || timer.hasAutoSubmitted}
+        disabled={isSubmitting}
       >
         <Text style={styles.buttonText}>
           {isSubmitting ? t('wwwPhases.answer.submitting') : t('wwwPhases.answer.submitAnswer')}

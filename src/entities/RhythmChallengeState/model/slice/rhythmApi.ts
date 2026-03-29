@@ -10,7 +10,12 @@ import {
     EnhancedRhythmScoringResult,
     ScoreRhythmAudioRequest
 } from '../../../../types/rhythmChallenge.types';
-import { AudioFileInfo } from '../../../../types/audioChallenge.types';
+import { 
+    AudioFileInfo,
+    GenericScoringRequest,
+    GenericScoringResponse,
+    AudioChallengeType
+} from '../../../../types/audioChallenge.types';
 
 // Karaoke service base URL
 
@@ -120,6 +125,72 @@ export const rhythmApi = createApi({
                 { type: 'RhythmPattern', id: questionId },
             ],
         }),
+
+        /**
+         * Generic audio scoring — analyze user audio against reference
+         * Karaoke Backend POST /scoring/analyze
+         * Supports SOUND_MATCH, SINGING, RHYTHM_REPEAT, RHYTHM_CREATION
+         */
+        analyzeAudioScoring: builder.mutation<
+            GenericScoringResponse,
+            GenericScoringRequest
+        >({
+            query: (request) => ({
+                url: '/scoring/analyze',
+                method: 'POST',
+                body: request,
+            }),
+            invalidatesTags: ['RhythmScore'],
+        }),
+
+        /**
+         * Generic audio scoring with file upload — multipart variant
+         * For when we need to upload user audio directly to karaoke backend
+         * Falls back to this if we don't have a MinIO URL for user audio
+         */
+        analyzeAudioScoringWithFile: builder.mutation<
+            GenericScoringResponse,
+            {
+                userAudioFile: AudioFileInfo;
+                referenceAudioUrl: string;
+                challengeType: AudioChallengeType;
+                questionId?: number;
+                minimumScoreRequired?: number;
+            }
+        >({
+            query: ({ userAudioFile, referenceAudioUrl, challengeType, questionId, minimumScoreRequired }) => {
+                const formData = new FormData();
+                
+                let fileUri = userAudioFile.uri;
+                if (Platform.OS === 'android') {
+                    if (!fileUri.startsWith('file://') && !fileUri.startsWith('content://')) {
+                        fileUri = 'file://' + fileUri;
+                    }
+                }
+                
+                formData.append('userAudioFile', {
+                    uri: fileUri,
+                    name: userAudioFile.name,
+                    type: userAudioFile.type,
+                } as any);
+                
+                formData.append('referenceAudioUrl', referenceAudioUrl);
+                formData.append('challengeType', challengeType);
+                if (questionId != null) {
+                    formData.append('questionId', String(questionId));
+                }
+                if (minimumScoreRequired != null) {
+                    formData.append('minimumScoreRequired', String(minimumScoreRequired));
+                }
+                
+                return {
+                    url: '/scoring/analyze-with-file',
+                    method: 'POST',
+                    body: formData,
+                };
+            },
+            invalidatesTags: ['RhythmScore'],
+        }),
     }),
 });
 
@@ -129,6 +200,8 @@ export const {
     useScoreRhythmAudioMutation,
     useGetQuestionRhythmPatternQuery,
     useLazyGetQuestionRhythmPatternQuery,
+    useAnalyzeAudioScoringMutation,
+    useAnalyzeAudioScoringWithFileMutation,
 } = rhythmApi;
 
 export default rhythmApi;

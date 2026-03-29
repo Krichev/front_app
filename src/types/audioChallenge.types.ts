@@ -192,3 +192,48 @@ export interface AudioFileInfo {
     name: string;
     type: string;
 }
+
+// ============================================================================
+// GENERIC SCORING API TYPES (Karaoke Backend — POST /scoring/analyze)
+// ============================================================================
+
+/**
+ * Request body for POST /api/scoring/analyze on Karaoke Backend.
+ * Accepts either URLs (MinIO presigned) or server-side paths for audio files.
+ */
+export interface GenericScoringRequest {
+    userAudioUrl?: string | null;
+    userAudioPath?: string | null;
+    referenceAudioUrl?: string | null;
+    referenceAudioPath?: string | null;
+    challengeType: AudioChallengeType;
+    questionId?: number | null;
+    minimumScoreRequired?: number;
+}
+
+/**
+ * Response from POST /api/scoring/analyze
+ */
+export interface GenericScoringResponse {
+    pitchScore: number;
+    rhythmScore: number;
+    voiceScore: number;
+    overallScore: number;
+    detailedMetrics: string;   // JSON string with full breakdown
+    passed: boolean;
+    minimumScoreRequired: number;
+    feedback?: string;
+}
+
+/**
+ * Parsed detailed metrics from GenericScoringResponse.detailedMetrics
+ */
+export interface ScoringDetailedMetrics {
+    semitoneDeviation?: number;
+    mfccCosineSimilarity?: number;
+    onsetAlignmentScore?: number;
+    pitchAccuracy?: number;
+    timbreMatch?: number;
+    rhythmOnsetAlignment?: number;
+    [key: string]: number | undefined;  // Allow additional metrics
+}

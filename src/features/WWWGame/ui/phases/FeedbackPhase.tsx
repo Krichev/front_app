@@ -6,6 +6,8 @@ import {phaseStyles} from './phases.styles';
 import {QuizRound} from '../../../../entities/QuizState/model/slice/quizApi';
 import {AudioChallengeSubmission} from '../../../../entities/AudioChallengeState/model/slice/audioChallengeApi';
 import AudioChallengeScoreDisplay from "../../../../components/AudioChallengeScoreDisplay.tsx";
+import { GenericScoringResponse, AudioChallengeType } from '../../../../types/audioChallenge.types';
+import { AudioScoringInlineResults } from '../components/AudioScoringInlineResults';
 
 interface FeedbackPhaseProps {
   roundData: QuizRound;
@@ -14,6 +16,7 @@ interface FeedbackPhaseProps {
   onNextRound: () => void;
   onComplete?: () => void; // Optional if handled by onNextRound for last round logic
   audioSubmission?: AudioChallengeSubmission | null;
+  scoringResult?: GenericScoringResponse | null;
 }
 
 export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
@@ -23,6 +26,7 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
   onNextRound,
   onComplete,
   audioSubmission,
+  scoringResult,
 }) => {
   const { t } = useTranslation();
   const { theme } = useAppStyles();
@@ -65,6 +69,16 @@ export const FeedbackPhase: React.FC<FeedbackPhaseProps> = ({
         {isAudioQuestion && audioSubmission && (
           <View style={{ marginVertical: theme.spacing.lg }}>
             <AudioChallengeScoreDisplay submission={audioSubmission} />
+          </View>
+        )}
+
+        {isAudioQuestion && scoringResult && (
+          <View style={{ marginVertical: theme.spacing.lg }}>
+            <AudioScoringInlineResults 
+              scoringResult={scoringResult} 
+              reactionTimeMs={null} 
+              challengeType={roundData.question.audioChallengeType as AudioChallengeType} 
+            />
           </View>
         )}
 

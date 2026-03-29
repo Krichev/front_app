@@ -211,7 +211,10 @@ const CreateWWWQuestScreen = () => {
                 <View style={{width: 24}} />
             </View>
 
-            <ScrollView style={styles.scrollView}>
+            <ScrollView 
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollViewContent}
+            >
                 {/* Basic Info */}
                 <BasicInfoForm
                     title={questCreator.title}
@@ -372,6 +375,10 @@ const themeStyles = createStyles(theme => ({
     },
     scrollView: {
         flex: 1,
+    },
+    scrollViewContent: {
+        paddingHorizontal: theme.spacing.lg,
+        paddingBottom: theme.spacing.xl,
     },
     header: {
         flexDirection: 'row',

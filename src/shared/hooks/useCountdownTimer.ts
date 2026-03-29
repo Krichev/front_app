@@ -12,66 +12,59 @@ export function useCountdownTimer({ duration, onComplete, autoStart = false }: U
   const [isRunning, setIsRunning] = useState(autoStart);
   const animation = useRef(new Animated.Value(1)).current;
   const onCompleteRef = useRef(onComplete);
-  const hasCompletedRef = useRef(false);
-  // Track the effective duration after reset() so animation ratio is correct
-  const activeDurationRef = useRef(duration);
+  // Track the effective duration for animation calculations.
+  // Updated when reset(newDuration) is called, so animation denominator stays correct.
+  const effectiveDurationRef = useRef(duration);
 
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
+  // Keep effectiveDurationRef in sync if the prop changes and no explicit reset has occurred
   useEffect(() => {
-    // Guard: already completed this cycle
-    if (hasCompletedRef.current) return;
+    effectiveDurationRef.current = duration;
+  }, [duration]);
 
-    // Time expired — fire onComplete regardless of isRunning
-    // This fixes the race where an external pause() sets isRunning=false
-    // in the same frame that timeLeft reaches 0.
-    if (timeLeft <= 0) {
-      hasCompletedRef.current = true;
-      setIsRunning(false);
-      console.log('⏰ [useCountdownTimer] timeLeft reached 0, firing onComplete');
-      onCompleteRef.current();
+  useEffect(() => {
+    if (!isRunning || timeLeft <= 0) {
+      if (timeLeft <= 0 && isRunning) {
+        setIsRunning(false);
+        onCompleteRef.current();
+      }
       return;
     }
 
-    // Not running — don't tick
-    if (!isRunning) return;
-
     const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        const next = prev - 1;
-        if (next <= 0) {
-          clearInterval(interval);
-        }
-        return next;
-      });
+      setTimeLeft(prev => prev - 1);
     }, 1000);
 
-    Animated.timing(animation, {
-      toValue: (timeLeft - 1) / activeDurationRef.current,
-      duration: 1000,
-      useNativeDriver: false,
-    }).start();
+    // Use effectiveDurationRef so animation targets are correct after reset(newDuration)
+    const currentDuration = effectiveDurationRef.current;
+    if (currentDuration > 0) {
+      Animated.timing(animation, {
+        toValue: (timeLeft - 1) / currentDuration,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+    }
 
     return () => clearInterval(interval);
   }, [timeLeft, isRunning, animation]);
+  // NOTE: removed `duration` from deps — we use effectiveDurationRef instead,
+  // which prevents the effect from re-running when the prop changes.
 
-  const start = useCallback(() => {
-    setIsRunning(true);
-  }, []);
+  const start = useCallback(() => setIsRunning(true), []);
+  const pause = useCallback(() => setIsRunning(false), []);
 
-  const pause = useCallback(() => {
-    setIsRunning(false);
-  }, []);
-
+  // Stable reset: uses refs instead of closure over `duration`,
+  // so the callback identity never changes.
   const reset = useCallback((newDuration?: number) => {
-    const d = newDuration ?? duration;
+    const d = newDuration ?? effectiveDurationRef.current;
+    effectiveDurationRef.current = d;
     setTimeLeft(d);
-    activeDurationRef.current = d;
     animation.setValue(1);
-    hasCompletedRef.current = false; // Allow onComplete to fire again after reset
-  }, [duration, animation]);
+  }, [animation]);
+  // `animation` is from useRef — stable. So `reset` reference is stable forever.
 
   return { timeLeft, isRunning, animation, start, pause, reset };
 }

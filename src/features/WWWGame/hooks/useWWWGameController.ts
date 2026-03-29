@@ -16,6 +16,7 @@ interface AnswerPayload {
   teamAnswer: string;
   playerWhoAnswered: string;
   discussionNotes: string;
+  scoringResult?: any;
 }
 
 export function useWWWGameController(sessionId: string) {
@@ -88,6 +89,7 @@ export function useWWWGameController(sessionId: string) {
         playerWhoAnswered: payload?.playerWhoAnswered || 'Team',
         discussionNotes: payload?.discussionNotes || '',
         teamAnswer: `Audio submission: ${submissionId}`,
+        scoringResult: payload?.scoringResult,
       },
     }).unwrap();
     await refetchRounds();

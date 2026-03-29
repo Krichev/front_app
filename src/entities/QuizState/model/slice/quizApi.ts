@@ -291,12 +291,14 @@ export interface QuizRound {
     aiAccepted?: boolean;
     aiConfidence?: number;
     aiExplanation?: string;
+    scoringResult?: any; // GenericScoringResponse
 }
 
 export interface SubmitRoundAnswerRequest {
     teamAnswer: string;
     playerWhoAnswered: string;
     discussionNotes?: string;
+    scoringResult?: any; // GenericScoringResponse
 }
 
 export interface PauseQuizSessionRequest {

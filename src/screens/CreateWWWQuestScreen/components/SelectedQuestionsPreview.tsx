@@ -1,8 +1,10 @@
 // src/screens/CreateWWWQuestScreen/components/SelectedQuestionsPreview.tsx
 import React, {useState} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View, ViewStyle} from 'react-native';
+import {Text, TouchableOpacity, View, ViewStyle} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 
 interface SelectedQuestionsPreviewProps {
     questions: any[];
@@ -18,6 +20,8 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                                                                onToggleCollapse,
                                                                            }) => {
     const {t} = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
     const [previewPage, setPreviewPage] = useState(1);
     const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
 
@@ -79,7 +83,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                     <MaterialCommunityIcons
                         name="playlist-check"
                         size={24}
-                        color="#4CAF50"
+                        color={theme.colors.success.main}
                     />
                     <Text style={styles.sectionTitle}>
                         {t('createQuest.preview.title')} ({totalQuestions})
@@ -88,7 +92,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                 <MaterialCommunityIcons
                     name={isCollapsed ? 'chevron-down' : 'chevron-up'}
                     size={28}
-                    color="#333"
+                    color={theme.colors.text.primary}
                 />
             </TouchableOpacity>
 
@@ -130,7 +134,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                             <MaterialCommunityIcons
                                                 name={isExpanded ? 'chevron-up' : 'chevron-down'}
                                                 size={20}
-                                                color="#007AFF"
+                                                color={theme.colors.primary.main}
                                             />
                                         </TouchableOpacity>
                                     </View>
@@ -186,7 +190,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                 <MaterialCommunityIcons
                                     name="chevron-left"
                                     size={20}
-                                    color={previewPage === 1 ? '#ccc' : '#007AFF'}
+                                    color={previewPage === 1 ? theme.colors.text.disabled : theme.colors.primary.main}
                                 />
                             </TouchableOpacity>
 
@@ -205,7 +209,7 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
                                 <MaterialCommunityIcons
                                     name="chevron-right"
                                     size={20}
-                                    color={previewPage === totalPages ? '#ccc' : '#007AFF'}
+                                    color={previewPage === totalPages ? theme.colors.text.disabled : theme.colors.primary.main}
                                 />
                             </TouchableOpacity>
                         </View>
@@ -216,17 +220,13 @@ const SelectedQuestionsPreview: React.FC<SelectedQuestionsPreviewProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     section: {
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        backgroundColor: theme.colors.background.paper,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.lg,
+        marginBottom: theme.spacing.lg,
+        ...theme.shadows.small,
     },
     previewHeader: {
         flexDirection: 'row',
@@ -236,123 +236,123 @@ const styles = StyleSheet.create({
     previewHeaderLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#333',
+        fontSize: theme.typography.fontSize.lg,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
     },
     previewContent: {
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
     },
     previewCard: {
-        backgroundColor: '#f0f7ff',
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 12,
-        borderWidth: 2,
-        borderColor: '#007AFF',
+        backgroundColor: theme.colors.info.background,
+        borderRadius: theme.layout.borderRadius.lg,
+        padding: theme.spacing.md,
+        marginBottom: theme.spacing.md,
+        borderWidth: theme.layout.borderWidth.thick,
+        borderColor: theme.colors.primary.main,
     },
     previewCardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: theme.spacing.md,
     },
     previewCardHeaderLeft: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: theme.spacing.sm,
         flex: 1,
     },
     previewCardHeaderRight: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     questionNumber: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: '#007AFF',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.primary.main,
     },
     difficultyBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.lg,
     },
     difficultyEasy: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     difficultyMedium: {
-        backgroundColor: '#FF9800',
+        backgroundColor: theme.colors.warning.main,
     },
     difficultyHard: {
-        backgroundColor: '#F44336',
+        backgroundColor: theme.colors.error.main,
     },
     difficultyText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     sourceBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-        backgroundColor: '#9C27B0',
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.lg,
+        backgroundColor: theme.colors.accent.main,
     },
     sourceText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '600',
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     expandButton: {
-        padding: 4,
+        padding: theme.spacing.xs,
     },
     removeButton: {
-        padding: 4,
+        padding: theme.spacing.xs,
     },
     questionPreview: {
-        fontSize: 14,
-        color: '#555',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.secondary,
         lineHeight: 20,
     },
     expandedContent: {
-        gap: 12,
+        gap: theme.spacing.md,
     },
     detailRow: {
-        gap: 4,
+        gap: theme.spacing.xs,
     },
     detailLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#666',
+        fontSize: theme.typography.fontSize.xs,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     detailText: {
-        fontSize: 14,
-        color: '#333',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.primary,
         lineHeight: 20,
     },
     paginationContainer: {
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 16,
-        gap: 16,
+        marginTop: theme.spacing.lg,
+        gap: theme.spacing.lg,
     },
     paginationButton: {
-        padding: 8,
-        borderRadius: 8,
-        backgroundColor: '#f0f0f0',
+        padding: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.md,
+        backgroundColor: theme.colors.background.tertiary,
     },
     paginationButtonDisabled: {
-        backgroundColor: '#f5f5f5',
+        backgroundColor: theme.colors.background.secondary,
     },
     paginationText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
     },
-});
+}));
 
 export default SelectedQuestionsPreview;

@@ -40,6 +40,17 @@ interface YouTubePlayerProps {
 
 import { useDimensions } from '../shared/hooks/useDimensions';
 
+/**
+ * Formats seconds as mm:ss, relative to segment start.
+ * e.g. formatSegmentTime(75, 30) => "0:45"  (75 - 30 = 45 seconds into segment)
+ */
+const formatSegmentTime = (currentTime: number, segmentStart: number): string => {
+    const relative = Math.max(0, currentTime - segmentStart);
+    const minutes = Math.floor(relative / 60);
+    const seconds = Math.floor(relative % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
+
 const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                                          videoId,
                                                          startTime = 0,
@@ -107,14 +118,6 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
             });
         }
     }, [playing, isReady, hasError, videoStarted, showOverlay, controlsVisible, isFullscreen, duration]);
-
-    /** Formats seconds into m:ss display string */
-    const formatTime = (seconds: number): string => {
-        if (!seconds || seconds < 0) return '0:00';
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
 
     // Safe area aware fullscreen dimensions
     const safeWidth = screenWidth - insets.left - insets.right;
@@ -256,25 +259,25 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
     }, [saveCurrentState]);
 
     const handleSkipBack = useCallback(async () => {
+        const minTime = startTime || 0;
+        const targetTime = Math.max(minTime, currentTimeRef.current - 10);
         try {
-            const minTime = startTime || 0;
-            const newTime = Math.max(currentTimeRef.current - 10, minTime);
-            await playerRef.current?.seekTo(newTime, true);
-            currentTimeRef.current = newTime;
-            setCurrentTime(newTime);
+            await playerRef.current?.seekTo(targetTime, true);
+            setCurrentTime(targetTime);
+            currentTimeRef.current = targetTime;
             resetControlsTimeout();
-        } catch { /* seekTo can fail silently */ }
+        } catch { /* silent */ }
     }, [startTime, resetControlsTimeout]);
 
     const handleSkipForward = useCallback(async () => {
+        const maxTime = endTime || duration || Infinity;
+        const targetTime = Math.min(maxTime, currentTimeRef.current + 10);
         try {
-            const maxTime = endTime || duration || Infinity;
-            const newTime = Math.min(currentTimeRef.current + 10, maxTime);
-            await playerRef.current?.seekTo(newTime, true);
-            currentTimeRef.current = newTime;
-            setCurrentTime(newTime);
+            await playerRef.current?.seekTo(targetTime, true);
+            setCurrentTime(targetTime);
+            currentTimeRef.current = targetTime;
             resetControlsTimeout();
-        } catch { /* seekTo can fail silently */ }
+        } catch { /* silent */ }
     }, [endTime, duration, resetControlsTimeout]);
 
     const handleReplayFromStart = useCallback(async () => {
@@ -387,17 +390,27 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
 
     useEffect(() => onPlayingChange?.(playing), [playing, onPlayingChange]);
 
+    // Tighter polling for segment boundaries (250ms)
     useEffect(() => {
-        if (!playing || !endTime || !isReady) return;
+        if (!playing || !isReady) return;
         const interval = setInterval(async () => {
-            const ct = await playerRef.current?.getCurrentTime();
-            if (ct && ct >= endTime) {
-                setPlaying(false);
-                onSegmentEnd?.();
-            }
-        }, 600);
+            try {
+                const ct = await playerRef.current?.getCurrentTime();
+                if (ct === undefined) return;
+
+                // 1. End Time Enforcement
+                if (endTime && ct >= endTime) {
+                    setPlaying(false);
+                    onSegmentEnd?.();
+                }
+                // 2. Start Time Enforcement (Clamping)
+                if (startTime > 0 && ct < startTime - 0.5) { // Allow 0.5s buffer
+                    await playerRef.current?.seekTo(startTime, true);
+                }
+            } catch { /* silent */ }
+        }, 250);
         return () => clearInterval(interval);
-    }, [playing, endTime, isReady, onSegmentEnd]);
+    }, [playing, endTime, startTime, isReady, onSegmentEnd]);
 
     useEffect(() => {
         if (isReady && startTime > 0) playerRef.current?.seekTo(startTime, true);
@@ -491,7 +504,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     onPress={handleSkipBack}
                                     style={styles.controlButton}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                    accessibilityLabel={t('wwwPhases.youtube.skipBack')}
+                                    accessibilityLabel={t('wwwPhases.youtube.rewind10')}
                                 >
                                     <MaterialCommunityIcons
                                         name="rewind-10"
@@ -508,6 +521,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     }}
                                     style={styles.controlButton}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    accessibilityLabel={t('wwwPhases.youtube.playPause')}
                                 >
                                     <MaterialCommunityIcons
                                         name={playing ? "pause-circle" : "play-circle"}
@@ -521,7 +535,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     onPress={handleSkipForward}
                                     style={styles.controlButton}
                                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                    accessibilityLabel={t('wwwPhases.youtube.skipForward')}
+                                    accessibilityLabel={t('wwwPhases.youtube.forward10')}
                                 >
                                     <MaterialCommunityIcons
                                         name="fast-forward-10"
@@ -535,7 +549,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                         <View style={styles.bottomControls}>
                             <View style={styles.bottomControlsRow}>
                                 <Text style={styles.timeLabel}>
-                                    {formatTime(displayTime)}
+                                    {formatSegmentTime(displayTime, startTime)}
                                 </Text>
                                 <Slider
                                     style={styles.seekSlider}
@@ -547,10 +561,13 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
                                     }}
                                     onSlidingComplete={async (val) => {
+                                        const minTime = startTime || 0;
+                                        const maxTime = endTime || duration || Infinity;
+                                        const clamped = Math.min(Math.max(val, minTime), maxTime);
                                         try {
-                                            await playerRef.current?.seekTo(val, true);
-                                            setCurrentTime(val);
-                                            currentTimeRef.current = val;
+                                            await playerRef.current?.seekTo(clamped, true);
+                                            setCurrentTime(clamped);
+                                            currentTimeRef.current = clamped;
                                         } catch { /* silent */ }
                                         resetControlsTimeout();
                                     }}
@@ -559,7 +576,7 @@ const YouTubePlayer: React.FC<YouTubePlayerProps> = ({
                                     thumbTintColor="#FF0000"
                                 />
                                 <Text style={styles.timeLabel}>
-                                    {formatTime(displayDuration)}
+                                    {formatSegmentTime(displayDuration, startTime)}
                                 </Text>
                             </View>
                         </View>
@@ -766,7 +783,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 12,
         fontVariant: ['tabular-nums'],
-        minWidth: 36,
+        minWidth: 40,
         textAlign: 'center',
     },
 });

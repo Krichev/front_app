@@ -1,10 +1,12 @@
 // src/screens/CreateWWWQuestScreen/components/QuizConfigForm.tsx
 import {Picker} from '@react-native-picker/picker';
 import React from 'react';
-import {StyleSheet, Text, TextInput, TouchableOpacity, View} from 'react-native';
+import {Text, TextInput, TouchableOpacity, View} from 'react-native';
 import {useTranslation} from 'react-i18next';
 import {QuizConfig} from '../hooks/useQuestCreator';
 import { Difficulty, DIFFICULTY_LEVELS } from '../../../shared/types/difficulty';
+import { createStyles } from '../../../shared/ui/theme/createStyles';
+import { useAppStyles } from '../../../shared/ui/hooks/useAppStyles';
 
 interface QuizConfigFormProps {
     config: QuizConfig;
@@ -26,6 +28,8 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                                                            onRemoveTeamMember,
                                                        }) => {
     const {t} = useTranslation();
+    const { theme } = useAppStyles();
+    const styles = themeStyles;
 
     const updateConfig = (updates: Partial<QuizConfig>) => {
         if (!config) return;
@@ -119,7 +123,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                     value={config?.teamName || ''}
                     onChangeText={(text) => updateConfig({ teamName: text })}
                     placeholder={t('createQuest.quizConfig.teamNamePlaceholder')}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={theme.colors.text.disabled}
                 />
             </View>
 
@@ -147,7 +151,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                         value={teamMemberInput}
                         onChangeText={onTeamMemberInputChange}
                         placeholder={t('createQuest.quizConfig.addMemberPlaceholder')}
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.colors.text.disabled}
                     />
                     <TouchableOpacity
                         onPress={onAddTeamMember}
@@ -326,7 +330,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                         value={config?.maxParticipants?.toString() || ''}
                         onChangeText={(text) => updateConfig({ maxParticipants: text ? parseInt(text) : undefined })}
                         placeholder={t('createQuest.quizConfig.unlimited')}
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.colors.text.disabled}
                         keyboardType="numeric"
                     />
                 </View>
@@ -364,7 +368,7 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
                         value={config?.maxAttempts?.toString() || ''}
                         onChangeText={(text) => updateConfig({ maxAttempts: text ? parseInt(text) : undefined })}
                         placeholder="1"
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme.colors.text.disabled}
                         keyboardType="numeric"
                     />
                 </View>
@@ -413,139 +417,139 @@ const QuizConfigForm: React.FC<QuizConfigFormProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
+const themeStyles = createStyles(theme => ({
     container: {
-        padding: 16,
+        padding: theme.spacing.lg,
     },
     section: {
-        marginBottom: 24,
+        marginBottom: theme.spacing['2xl'],
     },
     label: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.sm,
     },
     helperText: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 4,
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.secondary,
+        marginTop: theme.spacing.xs,
     },
     input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 8,
-        padding: 12,
-        fontSize: 16,
-        backgroundColor: '#fff',
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.light,
+        borderRadius: theme.layout.borderRadius.md,
+        padding: theme.spacing.md,
+        fontSize: theme.typography.fontSize.base,
+        backgroundColor: theme.colors.background.paper,
     },
     infoBox: {
-        backgroundColor: '#f0f0f0',
-        padding: 12,
-        borderRadius: 8,
+        backgroundColor: theme.colors.background.tertiary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     infoText: {
-        fontSize: 16,
-        color: '#666',
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.secondary,
     },
     warningBox: {
-        backgroundColor: '#fff3cd',
-        borderColor: '#ffc107',
-        borderWidth: 1,
+        backgroundColor: theme.colors.warning.background,
+        borderColor: theme.colors.warning.main,
+        borderWidth: theme.layout.borderWidth.thin,
     },
     warningText: {
-        color: '#856404',
+        color: theme.colors.warning.dark,
     },
     memberRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#f8f8f8',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 8,
+        backgroundColor: theme.colors.background.secondary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        marginBottom: theme.spacing.sm,
     },
     memberText: {
-        fontSize: 16,
-        color: '#333',
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
         flex: 1,
     },
     removeButton: {
-        backgroundColor: '#ff4444',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 6,
+        backgroundColor: theme.colors.error.main,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.sm,
     },
     removeButtonText: {
-        color: '#fff',
-        fontSize: 14,
-        fontWeight: '600',
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     addMemberContainer: {
         flexDirection: 'row',
-        gap: 8,
+        gap: theme.spacing.sm,
     },
     memberInput: {
         flex: 1,
     },
     addButton: {
-        backgroundColor: '#4CAF50',
-        paddingHorizontal: 20,
-        borderRadius: 8,
+        backgroundColor: theme.colors.success.main,
+        paddingHorizontal: theme.spacing.xl,
+        borderRadius: theme.layout.borderRadius.md,
         justifyContent: 'center',
     },
     addButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+        color: theme.colors.neutral.white,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     difficultyContainer: {
         flexDirection: 'row',
-        gap: 12,
+        gap: theme.spacing.md,
     },
     difficultyButton: {
         flex: 1,
-        padding: 12,
-        borderRadius: 8,
-        borderWidth: 2,
-        borderColor: '#ddd',
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        borderWidth: theme.layout.borderWidth.thick,
+        borderColor: theme.colors.border.light,
         alignItems: 'center',
     },
     difficultyButtonActive: {
-        borderColor: '#2196F3',
-        backgroundColor: '#2196F3',
+        borderColor: theme.colors.primary.main,
+        backgroundColor: theme.colors.primary.main,
     },
     difficultyText: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#666',
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.secondary,
     },
     difficultyTextActive: {
-        color: '#fff',
+        color: theme.colors.neutral.white,
     },
     timeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 20,
+        gap: theme.spacing.xl,
     },
     timeButton: {
         width: 50,
         height: 50,
-        borderRadius: 25,
-        backgroundColor: '#2196F3',
+        borderRadius: theme.layout.borderRadius.full,
+        backgroundColor: theme.colors.primary.main,
         justifyContent: 'center',
         alignItems: 'center',
     },
     timeButtonText: {
-        fontSize: 24,
-        color: '#fff',
-        fontWeight: '600',
+        fontSize: theme.typography.fontSize['2xl'],
+        color: theme.colors.neutral.white,
+        fontWeight: theme.typography.fontWeight.semibold,
     },
     timeValue: {
-        fontSize: 24,
-        fontWeight: '600',
-        color: '#333',
+        fontSize: theme.typography.fontSize['2xl'],
+        fontWeight: theme.typography.fontWeight.semibold,
+        color: theme.colors.text.primary,
         minWidth: 80,
         textAlign: 'center',
     },
@@ -558,46 +562,46 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     inputRow: {
-        marginTop: 16,
+        marginTop: theme.spacing.lg,
     },
     toggle: {
         width: 56,
         height: 32,
-        borderRadius: 16,
-        backgroundColor: '#ddd',
+        borderRadius: theme.layout.borderRadius.xl,
+        backgroundColor: theme.colors.border.light,
         padding: 2,
     },
     toggleActive: {
-        backgroundColor: '#4CAF50',
+        backgroundColor: theme.colors.success.main,
     },
     toggleThumb: {
         width: 28,
         height: 28,
-        borderRadius: 14,
-        backgroundColor: '#fff',
+        borderRadius: theme.layout.borderRadius.lg,
+        backgroundColor: theme.colors.neutral.white,
     },
     toggleThumbActive: {
         marginLeft: 24,
     },
     summaryBox: {
-        backgroundColor: '#f0f7ff',
-        padding: 16,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#2196F3',
-        marginTop: 8,
+        backgroundColor: theme.colors.info.background,
+        padding: theme.spacing.lg,
+        borderRadius: theme.layout.borderRadius.md,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.primary.main,
+        marginTop: theme.spacing.sm,
     },
     summaryTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#2196F3',
-        marginBottom: 8,
+        fontSize: theme.typography.fontSize.base,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.primary.main,
+        marginBottom: theme.spacing.sm,
     },
     summaryText: {
-        fontSize: 14,
-        color: '#333',
-        marginBottom: 4,
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.text.primary,
+        marginBottom: theme.spacing.xs,
     },
-});
+}));
 
 export default QuizConfigForm;

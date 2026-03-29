@@ -1,6 +1,6 @@
 // src/screens/CreateWWWQuestScreen/components/QuestionList.tsx
-import React, {useEffect} from 'react';
-import {ActivityIndicator, Modal, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
+import React, {useEffect, useMemo, useState} from 'react';
+import {ActivityIndicator, FlatList, Modal, ScrollView, Text, TextInput, TouchableOpacity, View,} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useTranslation} from 'react-i18next';
 import {useAppStyles} from '../../../shared/ui/hooks/useAppStyles';
@@ -10,6 +10,7 @@ import { MediaType } from '../../../shared/types';
 import {QuizQuestion} from "../../../entities/QuizState/model/slice/quizApi";
 import QuestionMediaViewer from './QuestionMediaViewer';
 import AuthenticatedImage from '../../../components/AuthenticatedImage';
+import {Theme} from '../../../shared/ui/theme/types';
 
 interface QuestionListProps {
     questionSource: QuestionSource;
@@ -48,8 +49,6 @@ interface QuestionListProps {
 
 /**
  * Validate that media URL is a proper presigned URL (not an S3 key)
- * Presigned URLs should start with http:// or https://
- * S3 keys that weren't enriched will be relative paths like "quiz-questions/123/image.jpg"
  */
 const isValidMediaUrl = (url?: string): boolean => {
     if (!url || url.trim() === '') return false;
@@ -75,20 +74,20 @@ const getMediaIcon = (mediaType?: MediaType): string => {
 };
 
 /**
- * Helper function to get the appropriate color for media type
+ * Helper function to get the appropriate color for media type from theme
  */
-const getMediaColor = (mediaType?: MediaType): string => {
-    if (!mediaType) return '#666';
+const getMediaColor = (theme: Theme, mediaType?: MediaType): string => {
+    if (!mediaType) return theme.colors.text.secondary;
 
     switch (mediaType) {
         case MediaType.IMAGE:
-            return '#4CAF50';
+            return theme.colors.success.main;
         case MediaType.VIDEO:
-            return '#FF5722';
+            return theme.colors.warning.main;
         case MediaType.AUDIO:
-            return '#9C27B0';
+            return theme.colors.accent.main;
         default:
-            return '#666';
+            return theme.colors.text.secondary;
     }
 };
 
@@ -135,11 +134,13 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                                        isLoadingTopics,
                                                    }) => {
     const {t} = useTranslation();
-    const {screen, form, theme} = useAppStyles();
+    const {theme} = useAppStyles();
     const styles = themeStyles;
     const questions = questionSource === 'app' ? appQuestions : userQuestions;
     const selectedQuestionIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
     const isLoading = questionSource === 'app' ? isLoadingApp : isLoadingUser;
+
+    const [topicSearchQuery, setTopicSearchQuery] = useState('');
 
     const difficulties: Array<APIDifficulty | 'ALL'> = ['ALL', 'EASY', 'MEDIUM', 'HARD'];
 
@@ -150,47 +151,16 @@ const QuestionList: React.FC<QuestionListProps> = ({
                 questionSource,
                 appQuestionsCount: appQuestions?.length ?? 0,
                 userQuestionsCount: userQuestions?.length ?? 0,
-                selectedAppIds: Array.from(selectedAppQuestionIds),
-                selectedUserIds: Array.from(selectedUserQuestionIds),
-                expandedIndices: Array.from(expandedQuestions),
             });
-
-            // Log questions with media
-            const questionsWithMedia = (questionSource === 'app' ? appQuestions : userQuestions)
-                ?.filter(q => q.questionMediaUrl || q.questionMediaType) ?? [];
-
-            console.log('🎬 [QuestionList] Questions with media:', questionsWithMedia.map(q => ({
-                id: q.id,
-                mediaType: q.questionMediaType,
-                mediaUrl: q.questionMediaUrl?.substring(0, 80) + '...',
-                thumbnailUrl: q.questionThumbnailUrl?.substring(0, 80) + '...',
-                isValidUrl: isValidMediaUrl(q.questionMediaUrl),
-            })));
         }
-    }, [questionSource, appQuestions, userQuestions, selectedAppQuestionIds, selectedUserQuestionIds, expandedQuestions]);
+    }, [questionSource, appQuestions, userQuestions]);
 
-    // Debug: Log when selection changes - show selected questions' media state
-    useEffect(() => {
-        if (__DEV__) {
-            const currentQuestions = questionSource === 'app' ? appQuestions : userQuestions;
-            const selectedIds = questionSource === 'app' ? selectedAppQuestionIds : selectedUserQuestionIds;
-
-            if (selectedIds.size > 0) {
-                const selectedQuestions = currentQuestions?.filter(q => selectedIds.has(q.id)) ?? [];
-                console.log('✅ [QuestionList] Selected questions media state:',
-                    selectedQuestions.map(q => ({
-                        id: q.id,
-                        question: q.question?.substring(0, 40) + '...',
-                        hasMedia: !!q.questionMediaUrl,
-                        mediaType: q.questionMediaType ?? 'NONE',
-                        mediaUrl: q.questionMediaUrl ?? 'EMPTY',
-                        isPresignedUrl: q.questionMediaUrl?.includes('X-Amz-Signature') ?? false,
-                        isValidUrl: isValidMediaUrl(q.questionMediaUrl),
-                    }))
-                );
-            }
-        }
-    }, [questionSource, appQuestions, userQuestions, selectedAppQuestionIds, selectedUserQuestionIds]);
+    const filteredTopics = useMemo(() => {
+        if (!topicSearchQuery) return availableTopics;
+        return availableTopics.filter(topic =>
+            topic.toLowerCase().includes(topicSearchQuery.toLowerCase())
+        );
+    }, [availableTopics, topicSearchQuery]);
 
     const renderTopicPicker = () => (
         <Modal
@@ -208,27 +178,35 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     <View style={styles.topicPickerHeader}>
                         <Text style={styles.topicPickerTitle}>{t('createQuest.questionList.filterByTopic')}</Text>
                         <TouchableOpacity onPress={() => onShowTopicPicker(false)}>
-                            <MaterialCommunityIcons name="close" size={24} color="#333"/>
+                            <MaterialCommunityIcons name="close" size={24} color={theme.colors.text.primary}/>
                         </TouchableOpacity>
                     </View>
 
-                    {isLoadingTopics ? (
-                        <ActivityIndicator style={{padding: 20}} size="large" color="#007AFF"/>
-                    ) : (
-                        <ScrollView style={styles.topicList}>
-                            <TouchableOpacity
-                                style={styles.topicItem}
-                                onPress={() => {
-                                    onSearchTopicChange('');
-                                    onShowTopicPicker(false);
-                                }}
-                            >
-                                <Text style={styles.topicItemText}>{t('createQuest.questionList.allTopics')}</Text>
+                    <View style={styles.topicPickerSearchContainer}>
+                        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.text.secondary} />
+                        <TextInput
+                            style={styles.topicPickerSearchInput}
+                            placeholder={t('createQuest.questionList.searchTopicsPlaceholder')}
+                            value={topicSearchQuery}
+                            onChangeText={setTopicSearchQuery}
+                            placeholderTextColor={theme.colors.text.disabled}
+                        />
+                        {topicSearchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setTopicSearchQuery('')}>
+                                <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.text.secondary} />
                             </TouchableOpacity>
+                        )}
+                    </View>
 
-                            {availableTopics.map((topic) => (
+                    {isLoadingTopics ? (
+                        <ActivityIndicator style={{padding: 20}} size="large" color={theme.colors.primary.main}/>
+                    ) : (
+                        <FlatList
+                            style={styles.topicList}
+                            data={['', ...filteredTopics]}
+                            keyExtractor={(item) => item || 'all'}
+                            renderItem={({ item: topic }) => (
                                 <TouchableOpacity
-                                    key={topic}
                                     style={[
                                         styles.topicItem,
                                         searchTopic === topic && styles.topicItemSelected,
@@ -236,6 +214,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     onPress={() => {
                                         onSearchTopicChange(topic);
                                         onShowTopicPicker(false);
+                                        setTopicSearchQuery('');
                                     }}
                                 >
                                     <Text
@@ -244,12 +223,25 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                             searchTopic === topic && styles.topicItemTextSelected,
                                         ]}
                                     >
-                                        {topic}
+                                        {topic || t('createQuest.questionList.allTopics')}
                                     </Text>
+                                    {searchTopic === topic && (
+                                        <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary.main} />
+                                    )}
                                 </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                            )}
+                            ListEmptyComponent={
+                                <View style={styles.emptyTopicsContainer}>
+                                    <Text style={styles.emptyTopicsText}>{t('createQuest.questionList.noTopicsFound')}</Text>
+                                </View>
+                            }
+                        />
                     )}
+                    <View style={styles.topicPickerFooter}>
+                        <Text style={styles.topicCountText}>
+                            {t('createQuest.questionList.topicCount', { count: filteredTopics.length })}
+                        </Text>
+                    </View>
                 </View>
             </TouchableOpacity>
         </Modal>
@@ -268,7 +260,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     <MaterialCommunityIcons
                         name="chevron-left"
                         size={24}
-                        color={currentPage === 0 ? '#ccc' : '#007AFF'}
+                        color={currentPage === 0 ? theme.colors.text.disabled : theme.colors.primary.main}
                     />
                 </TouchableOpacity>
 
@@ -287,7 +279,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     <MaterialCommunityIcons
                         name="chevron-right"
                         size={24}
-                        color={currentPage >= totalPages - 1 ? '#ccc' : '#007AFF'}
+                        color={currentPage >= totalPages - 1 ? theme.colors.text.disabled : theme.colors.primary.main}
                     />
                 </TouchableOpacity>
             </View>
@@ -299,17 +291,17 @@ const QuestionList: React.FC<QuestionListProps> = ({
             {questionSource === 'app' && (
                 <>
                     <View style={styles.searchInputContainer}>
-                        <MaterialCommunityIcons name="magnify" size={24} color="#666"/>
+                        <MaterialCommunityIcons name="magnify" size={24} color={theme.colors.text.secondary}/>
                         <TextInput
                             style={styles.searchInput}
                             placeholder={t('createQuest.questionList.searchPlaceholder')}
                             value={searchKeyword}
                             onChangeText={onSearchKeywordChange}
-                            placeholderTextColor="#999"
+                            placeholderTextColor={theme.colors.text.disabled}
                         />
                         {searchKeyword?.length > 0 && (
                             <TouchableOpacity onPress={onClearSearch}>
-                                <MaterialCommunityIcons name="close-circle" size={20} color="#666"/>
+                                <MaterialCommunityIcons name="close-circle" size={20} color={theme.colors.text.secondary}/>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -319,7 +311,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             style={styles.filterButton}
                             onPress={() => onShowTopicPicker(true)}
                         >
-                            <MaterialCommunityIcons name="tag" size={20} color="#007AFF"/>
+                            <MaterialCommunityIcons name="tag" size={20} color={theme.colors.primary.main}/>
                             <Text style={styles.filterButtonText}>
                                 {searchTopic || t('createQuest.questionList.allTopics')}
                             </Text>
@@ -353,7 +345,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     </View>
 
                     <TouchableOpacity style={styles.searchButton} onPress={onSearch}>
-                        <MaterialCommunityIcons name="magnify" size={20} color="#fff"/>
+                        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.neutral.white}/>
                         <Text style={styles.searchButtonText}>{t('createQuest.questionList.search')}</Text>
                     </TouchableOpacity>
                 </>
@@ -361,28 +353,11 @@ const QuestionList: React.FC<QuestionListProps> = ({
         </View>
     );
 
-    /**
-     * Render collapsed media thumbnail for question header with loading/error states
-     * Uses AuthenticatedImage with proxy URLs - no more direct MinIO URLs!
-     */
-    const MediaThumbnail: React.FC<{question: QuizQuestion}> = ({question}) => {
+    const renderMediaThumbnail = (question: QuizQuestion) => {
+        if (!question.questionMediaUrl || !question.id) return null;
+        
         const mediaType = question.questionMediaType;
 
-        // Must have question.id for proxy URL
-        if (!question.id) {
-            console.warn('MediaThumbnail: Question has no ID');
-            return (
-                <View style={styles.mediaThumbnailPlaceholder}>
-                    <MaterialCommunityIcons
-                        name="alert-circle"
-                        size={24}
-                        color="#FF9800"
-                    />
-                </View>
-            );
-        }
-
-        // Show image thumbnail for images and videos
         if (mediaType === MediaType.IMAGE || mediaType === MediaType.VIDEO) {
             return (
                 <View style={styles.mediaThumbnailContainer}>
@@ -393,89 +368,36 @@ const QuestionList: React.FC<QuestionListProps> = ({
                         containerStyle={styles.mediaThumbnailWrapper}
                         fallbackIcon={getMediaIcon(mediaType)}
                         fallbackIconSize={20}
-                        fallbackIconColor={getMediaColor(mediaType)}
+                        fallbackIconColor={getMediaColor(theme, mediaType)}
                     />
-                    {/* Media type indicator overlay */}
                     <View style={styles.mediaTypeOverlay}>
                         <MaterialCommunityIcons
                             name={getMediaIcon(mediaType)}
                             size={12}
-                            color="#fff"
+                            color={theme.colors.neutral.white}
                         />
                     </View>
                 </View>
             );
         }
 
-        // Audio - show icon placeholder
-        if (mediaType === MediaType.AUDIO) {
-            return (
-                <View style={styles.mediaThumbnailPlaceholder}>
-                    <MaterialCommunityIcons
-                        name="music"
-                        size={24}
-                        color="#9C27B0"
-                    />
-                </View>
-            );
-        }
-
-        // Unknown type - show generic icon
         return (
             <View style={styles.mediaThumbnailPlaceholder}>
                 <MaterialCommunityIcons
                     name={getMediaIcon(mediaType)}
                     size={24}
-                    color={getMediaColor(mediaType)}
+                    color={getMediaColor(theme, mediaType)}
                 />
             </View>
         );
-    };
-
-    /**
-     * Render collapsed media thumbnail for question header
-     */
-    const renderMediaThumbnail = (question: QuizQuestion) => {
-        if (!question.questionMediaUrl) return null;
-        return <MediaThumbnail question={question} />;
     };
 
     const renderQuestionItem = (question: QuizQuestion, index: number) => {
         const isSelected = selectedQuestionIds?.has(question.id);
         const isAnswerVisible = visibleAnswers?.has(question.id);
         const isExpanded = expandedQuestions?.has(index);
-
-        // Access media properties directly from QuizQuestion
         const hasMedia = !!question.questionMediaUrl;
         const mediaType = question.questionMediaType;
-        const mediaUrl = question.questionMediaUrl;
-        const thumbnailUrl = question.questionThumbnailUrl;
-
-        // Enhanced debug logging for media URLs
-        if (hasMedia && __DEV__) {
-            console.log(`🔍 [Question ${question.id}] Media debug:`, {
-                hasMedia,
-                mediaType,
-                mediaUrlLength: mediaUrl?.length ?? 0,
-                mediaUrlStart: mediaUrl?.substring(0, 100),
-                thumbnailUrlStart: thumbnailUrl?.substring(0, 100),
-                isValidMediaUrl: isValidMediaUrl(mediaUrl),
-                isValidThumbnailUrl: isValidMediaUrl(thumbnailUrl),
-                urlStartsWithHttp: mediaUrl?.startsWith('http'),
-                containsS3Signature: mediaUrl?.includes('X-Amz-'),
-                isSelected,
-                isExpanded,
-            });
-
-            // Specific warning if URL looks like an S3 key instead of presigned URL
-            if (mediaUrl && !mediaUrl.startsWith('http')) {
-                console.error(`❌ [Question ${question.id}] CRITICAL: mediaUrl is S3 key, not presigned URL!`, {
-                    rawUrl: mediaUrl,
-                    expectedFormat: 'https://minio.../bucket/key?X-Amz-Signature=...',
-                    possibleCause: 'Backend QuizQuestionDTOEnricher not enriching URLs with presigned signatures',
-                });
-            }
-        }
 
         return (
             <View key={question.id} style={styles.questionCard}>
@@ -490,11 +412,10 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             onPress={() => onToggleSelection(question.id, questionSource)}
                         >
                             {isSelected && (
-                                <MaterialCommunityIcons name="check" size={18} color="#fff"/>
+                                <MaterialCommunityIcons name="check" size={18} color={theme.colors.neutral.white}/>
                             )}
                         </TouchableOpacity>
 
-                        {/* Media Thumbnail - shown when collapsed and media exists */}
                         {!isExpanded && renderMediaThumbnail(question)}
 
                         <View style={styles.questionInfo}>
@@ -521,7 +442,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
                             {question.topic && (
                                 <View style={styles.topicBadge}>
-                                    <MaterialCommunityIcons name="tag" size={14} color="#FFFFFF"/>
+                                    <MaterialCommunityIcons name="tag" size={14} color={theme.colors.primary.main}/>
                                     <Text style={styles.topicText}>{question.topic}</Text>
                                 </View>
                             )}
@@ -531,9 +452,9 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     <MaterialCommunityIcons
                                         name={getMediaIcon(mediaType)}
                                         size={14}
-                                        color={getMediaColor(mediaType)}
+                                        color={getMediaColor(theme, mediaType)}
                                     />
-                                    <Text style={[styles.mediaText, {color: getMediaColor(mediaType)}]}>
+                                    <Text style={[styles.mediaText, {color: getMediaColor(theme, mediaType)}]}>
                                         {mediaType || 'Media'}
                                     </Text>
                                 </View>
@@ -541,11 +462,16 @@ const QuestionList: React.FC<QuestionListProps> = ({
                         </View>
                     </View>
 
-                    <MaterialCommunityIcons
-                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={24}
-                        color="#666"
-                    />
+                    <View style={styles.questionHeaderRight}>
+                        {!isExpanded && (
+                            <Text style={styles.swipeHint}>{t('createQuest.questionList.swipeForMore')}</Text>
+                        )}
+                        <MaterialCommunityIcons
+                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                            size={24}
+                            color={theme.colors.text.secondary}
+                        />
+                    </View>
                 </TouchableOpacity>
 
                 {isExpanded && (
@@ -555,7 +481,13 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             <Text style={styles.questionText}>{question.question}</Text>
                         </View>
 
-                        {/* ✅ Integrated Media Viewer Component with proxy URLs */}
+                        {question.topic && (
+                            <View style={styles.topicInfoContainer}>
+                                <Text style={styles.topicLabel}>{t('createQuest.questionList.topic')}:</Text>
+                                <Text style={styles.topicValueText}>{question.topic}</Text>
+                            </View>
+                        )}
+
                         {hasMedia && mediaType && question.id ? (
                             <View style={styles.mediaSection}>
                                 <QuestionMediaViewer
@@ -567,7 +499,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                             </View>
                         ) : hasMedia && !question.id ? (
                             <View style={styles.mediaErrorSection}>
-                                <MaterialCommunityIcons name="alert-circle" size={32} color="#F44336" />
+                                <MaterialCommunityIcons name="alert-circle" size={32} color={theme.colors.error.main} />
                                 <Text style={styles.mediaErrorText}>
                                     Cannot load media: Question ID missing.
                                 </Text>
@@ -584,7 +516,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                     <MaterialCommunityIcons
                                         name={isAnswerVisible ? 'eye-off' : 'eye'}
                                         size={20}
-                                        color="#007AFF"
+                                        color={theme.colors.primary.main}
                                     />
                                     <Text style={styles.toggleAnswerText}>
                                         {isAnswerVisible ? t('createQuest.questionList.hideAnswer') : t('createQuest.questionList.showAnswer')}
@@ -608,7 +540,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                 style={styles.deleteButton}
                                 onPress={() => onDeleteUserQuestion(question.id)}
                             >
-                                <MaterialCommunityIcons name="delete" size={20} color="#fff"/>
+                                <MaterialCommunityIcons name="delete" size={20} color={theme.colors.neutral.white}/>
                                 <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
                             </TouchableOpacity>
                         )}
@@ -624,14 +556,14 @@ const QuestionList: React.FC<QuestionListProps> = ({
 
             {error && (
                 <View style={styles.errorContainer}>
-                    <MaterialCommunityIcons name="alert-circle" size={24} color="#F44336"/>
+                    <MaterialCommunityIcons name="alert-circle" size={24} color={theme.colors.error.main}/>
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
             )}
 
             {isLoading ? (
                 <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#007AFF"/>
+                    <ActivityIndicator size="large" color={theme.colors.primary.main}/>
                     <Text style={styles.loadingText}>{t('createQuest.questionList.loading')}</Text>
                 </View>
             ) : (
@@ -645,7 +577,7 @@ const QuestionList: React.FC<QuestionListProps> = ({
                                 <MaterialCommunityIcons
                                     name={expandedQuestions.size === questions.length ? 'chevron-up-circle' : 'chevron-down-circle'}
                                     size={20}
-                                    color="#007AFF"
+                                    color={theme.colors.primary.main}
                                 />
                                 <Text style={styles.bulkActionText}>
                                     {expandedQuestions.size === questions.length
@@ -661,21 +593,6 @@ const QuestionList: React.FC<QuestionListProps> = ({
                     </Text>
                     <ScrollView style={styles.questionsList} showsVerticalScrollIndicator={false}>
                         {questions.map((question, index) => renderQuestionItem(question, index))}
-
-                        {/* Debug: Summary log */}
-                        {(() => {
-                            if (__DEV__) {
-                                const withMedia = questions?.filter(q => q.questionMediaUrl) ?? [];
-                                const withValidMedia = withMedia.filter(q => isValidMediaUrl(q.questionMediaUrl));
-                                console.log('📊 [QuestionList] Render summary:', {
-                                    totalQuestions: questions?.length ?? 0,
-                                    questionsWithMedia: withMedia.length,
-                                    questionsWithValidUrls: withValidMedia.length,
-                                    invalidUrlQuestions: withMedia.length - withValidMedia.length,
-                                });
-                            }
-                            return null;
-                        })()}
                     </ScrollView>
                     {renderPagination()}
                 </>
@@ -687,13 +604,10 @@ const QuestionList: React.FC<QuestionListProps> = ({
 };
 
 const themeStyles = createStyles(theme => ({
-    // Container styles
     container: {
         flex: 1,
         backgroundColor: theme.colors.background.primary,
     },
-    
-    // Search styles
     searchContainer: {
         marginBottom: theme.spacing.md,
     },
@@ -703,7 +617,7 @@ const themeStyles = createStyles(theme => ({
         backgroundColor: theme.colors.background.secondary,
         borderRadius: theme.layout.borderRadius.md,
         paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.md,
+        paddingVertical: theme.spacing.sm,
         marginBottom: theme.spacing.sm,
     },
     searchInput: {
@@ -711,6 +625,7 @@ const themeStyles = createStyles(theme => ({
         marginLeft: theme.spacing.sm,
         fontSize: theme.typography.fontSize.base,
         color: theme.colors.text.primary,
+        paddingVertical: theme.spacing.sm,
     },
     searchButton: {
         flexDirection: 'row',
@@ -726,8 +641,6 @@ const themeStyles = createStyles(theme => ({
         fontSize: theme.typography.fontSize.base,
         fontWeight: theme.typography.fontWeight.bold,
     },
-    
-    // Filter styles
     filterRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -742,6 +655,7 @@ const themeStyles = createStyles(theme => ({
         paddingVertical: theme.spacing.sm,
         borderRadius: theme.layout.borderRadius.md,
         gap: theme.spacing.xs,
+        flexShrink: 1,
     },
     filterButtonText: {
         fontSize: theme.typography.fontSize.sm,
@@ -769,25 +683,23 @@ const themeStyles = createStyles(theme => ({
     difficultyChipTextSelected: {
         color: theme.colors.neutral.white,
     },
-    
-    // Topic picker modal styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: theme.colors.overlay.medium,
         justifyContent: 'flex-end',
     },
     topicPickerContainer: {
         backgroundColor: theme.colors.background.primary,
         borderTopLeftRadius: theme.layout.borderRadius.lg,
         borderTopRightRadius: theme.layout.borderRadius.lg,
-        maxHeight: '70%',
+        maxHeight: '80%',
     },
     topicPickerHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: theme.spacing.lg,
-        borderBottomWidth: 1,
+        borderBottomWidth: theme.layout.borderWidth.thin,
         borderBottomColor: theme.colors.border.light,
     },
     topicPickerTitle: {
@@ -795,16 +707,34 @@ const themeStyles = createStyles(theme => ({
         fontWeight: theme.typography.fontWeight.bold,
         color: theme.colors.text.primary,
     },
+    topicPickerSearchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.background.secondary,
+        margin: theme.spacing.md,
+        paddingHorizontal: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        height: 44,
+    },
+    topicPickerSearchInput: {
+        flex: 1,
+        marginLeft: theme.spacing.sm,
+        fontSize: theme.typography.fontSize.base,
+        color: theme.colors.text.primary,
+    },
     topicList: {
         maxHeight: 400,
     },
     topicItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         padding: theme.spacing.md,
-        borderBottomWidth: 1,
-        borderBottomColor: theme.colors.background.tertiary,
+        borderBottomWidth: theme.layout.borderWidth.thin,
+        borderBottomColor: theme.colors.border.light,
     },
     topicItemSelected: {
-        backgroundColor: theme.colors.primary.light,
+        backgroundColor: theme.colors.primary.light + '20',
     },
     topicItemText: {
         fontSize: theme.typography.fontSize.base,
@@ -814,28 +744,42 @@ const themeStyles = createStyles(theme => ({
         color: theme.colors.primary.main,
         fontWeight: theme.typography.fontWeight.semibold,
     },
-    
-    // Pagination styles
+    emptyTopicsContainer: {
+        padding: theme.spacing.xl,
+        alignItems: 'center',
+    },
+    emptyTopicsText: {
+        color: theme.colors.text.disabled,
+        fontSize: theme.typography.fontSize.base,
+    },
+    topicPickerFooter: {
+        padding: theme.spacing.md,
+        alignItems: 'center',
+        borderTopWidth: theme.layout.borderWidth.thin,
+        borderTopColor: theme.colors.border.light,
+    },
+    topicCountText: {
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.disabled,
+    },
     paginationContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: theme.spacing.lg,
+        paddingVertical: theme.spacing.md,
         gap: theme.spacing.md,
     },
     paginationButton: {
         padding: theme.spacing.sm,
     },
     paginationButtonDisabled: {
-        opacity: 0.5,
+        opacity: 0.3,
     },
     paginationText: {
         fontSize: theme.typography.fontSize.sm,
         color: theme.colors.text.primary,
         fontWeight: theme.typography.fontWeight.semibold,
     },
-    
-    // Bulk actions
     bulkActionsContainer: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
@@ -852,8 +796,6 @@ const themeStyles = createStyles(theme => ({
         color: theme.colors.primary.main,
         fontWeight: theme.typography.fontWeight.semibold,
     },
-    
-    // Results
     resultsText: {
         fontSize: theme.typography.fontSize.sm,
         color: theme.colors.text.secondary,
@@ -862,17 +804,12 @@ const themeStyles = createStyles(theme => ({
     questionsList: {
         flex: 1,
     },
-    
-    // Question item styles
     questionCard: {
         backgroundColor: theme.colors.background.primary,
         borderRadius: theme.layout.borderRadius.lg,
         marginBottom: theme.spacing.md,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        borderWidth: theme.layout.borderWidth.thin,
+        borderColor: theme.colors.border.light,
         overflow: 'hidden',
     },
     questionHeader: {
@@ -880,20 +817,23 @@ const themeStyles = createStyles(theme => ({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: theme.spacing.md,
-        minHeight: 72,
     },
     questionHeaderLeft: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: theme.spacing.md,
-        overflow: 'hidden',
+        gap: theme.spacing.sm,
+    },
+    questionHeaderRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.xs,
     },
     checkbox: {
         width: 24,
         height: 24,
-        borderRadius: 6,
-        borderWidth: 2,
+        borderRadius: theme.layout.borderRadius.sm,
+        borderWidth: theme.layout.borderWidth.thick,
         borderColor: theme.colors.primary.main,
         alignItems: 'center',
         justifyContent: 'center',
@@ -901,8 +841,6 @@ const themeStyles = createStyles(theme => ({
     checkboxSelected: {
         backgroundColor: theme.colors.primary.main,
     },
-    
-    // Media Thumbnail
     mediaThumbnailContainer: {
         width: 48,
         height: 48,
@@ -914,20 +852,16 @@ const themeStyles = createStyles(theme => ({
     mediaThumbnailWrapper: {
         width: 48,
         height: 48,
-        borderRadius: theme.layout.borderRadius.sm,
-        overflow: 'hidden',
     },
     mediaThumbnail: {
         width: 48,
         height: 48,
-        borderRadius: theme.layout.borderRadius.sm,
-        backgroundColor: theme.colors.background.secondary,
     },
     mediaThumbnailPlaceholder: {
         width: 48,
         height: 48,
         borderRadius: theme.layout.borderRadius.sm,
-        backgroundColor: theme.colors.background.tertiary,
+        backgroundColor: theme.colors.background.secondary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -935,32 +869,23 @@ const themeStyles = createStyles(theme => ({
         position: 'absolute',
         bottom: 2,
         right: 2,
-        backgroundColor: 'rgba(0,0,0,0.6)',
+        backgroundColor: theme.colors.overlay.dark,
         borderRadius: 10,
         padding: 2,
     },
-    
     questionInfo: {
         flex: 1,
-        flexShrink: 1,
-        minWidth: 0,
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: theme.spacing.sm,
+        gap: theme.spacing.xs,
     },
     questionPreviewText: {
         fontSize: theme.typography.fontSize.sm,
         color: theme.colors.text.primary,
-        lineHeight: 20,
-        flexShrink: 1,
     },
-    
-    // Badges
     difficultyBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: theme.layout.borderRadius.lg,
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: 2,
+        borderRadius: theme.layout.borderRadius.full,
+        alignSelf: 'flex-start',
     },
     difficultyEASY: {
         backgroundColor: theme.colors.success.main,
@@ -979,75 +904,92 @@ const themeStyles = createStyles(theme => ({
     topicBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.primary.light,
+        backgroundColor: theme.colors.primary.main + '15',
         paddingHorizontal: theme.spacing.sm,
-        paddingVertical: 4,
-        borderRadius: theme.layout.borderRadius.lg,
+        paddingVertical: 2,
+        borderRadius: theme.layout.borderRadius.full,
+        alignSelf: 'flex-start',
         gap: 4,
     },
     topicText: {
         fontSize: theme.typography.fontSize.xs,
-        color: theme.colors.neutral.white,
+        color: theme.colors.primary.main,
         fontWeight: theme.typography.fontWeight.semibold,
     },
     mediaBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.background.secondary,
-        paddingHorizontal: theme.spacing.sm,
-        paddingVertical: 4,
-        borderRadius: theme.layout.borderRadius.lg,
         gap: 4,
     },
     mediaText: {
         fontSize: theme.typography.fontSize.xs,
-        fontWeight: theme.typography.fontWeight.semibold,
+        fontWeight: theme.typography.fontWeight.medium,
     },
-    
-    // Question content (expanded)
+    swipeHint: {
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.text.disabled,
+        fontStyle: 'italic',
+    },
     questionContent: {
         padding: theme.spacing.md,
-        borderTopWidth: 1,
+        borderTopWidth: theme.layout.borderWidth.thin,
         borderTopColor: theme.colors.border.light,
+        backgroundColor: theme.colors.background.secondary + '30',
     },
     questionTextContainer: {
         marginBottom: theme.spacing.md,
     },
     questionLabel: {
-        fontSize: theme.typography.fontSize.sm,
+        fontSize: theme.typography.fontSize.xs,
         fontWeight: theme.typography.fontWeight.bold,
-        color: theme.colors.text.primary,
+        color: theme.colors.text.secondary,
+        textTransform: 'uppercase',
         marginBottom: 4,
     },
     questionText: {
         fontSize: theme.typography.fontSize.base,
         color: theme.colors.text.primary,
-        lineHeight: 24,
+        lineHeight: 22,
     },
-    
-    // Media section
-    mediaSection: {
-        marginBottom: theme.spacing.md,
-    },
-    mediaErrorSection: {
+    topicInfoContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.colors.error.light,
-        padding: theme.spacing.md,
-        borderRadius: theme.layout.borderRadius.md,
+        gap: theme.spacing.xs,
         marginBottom: theme.spacing.md,
+    },
+    topicLabel: {
+        fontSize: theme.typography.fontSize.sm,
+        fontWeight: theme.typography.fontWeight.bold,
+        color: theme.colors.text.primary,
+    },
+    topicValueText: {
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.primary.main,
+        fontWeight: theme.typography.fontWeight.semibold,
+    },
+    mediaSection: {
+        marginBottom: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
+        overflow: 'hidden',
+    },
+    mediaErrorSection: {
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.error.light,
+        borderRadius: theme.layout.borderRadius.md,
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: theme.spacing.sm,
+        marginBottom: theme.spacing.md,
     },
     mediaErrorText: {
-        flex: 1,
-        fontSize: theme.typography.fontSize.sm,
         color: theme.colors.error.main,
-        lineHeight: 20,
+        fontSize: theme.typography.fontSize.sm,
     },
-    
-    // Answer styles
     answerContainer: {
         marginBottom: theme.spacing.md,
+        backgroundColor: theme.colors.background.primary,
+        padding: theme.spacing.md,
+        borderRadius: theme.layout.borderRadius.md,
     },
     answerHeader: {
         flexDirection: 'row',
@@ -1056,9 +998,10 @@ const themeStyles = createStyles(theme => ({
         marginBottom: theme.spacing.sm,
     },
     answerLabel: {
-        fontSize: theme.typography.fontSize.sm,
+        fontSize: theme.typography.fontSize.xs,
         fontWeight: theme.typography.fontWeight.bold,
-        color: theme.colors.text.primary,
+        color: theme.colors.text.secondary,
+        textTransform: 'uppercase',
     },
     toggleAnswerButton: {
         flexDirection: 'row',
@@ -1066,27 +1009,23 @@ const themeStyles = createStyles(theme => ({
         gap: 4,
     },
     toggleAnswerText: {
-        fontSize: theme.typography.fontSize.sm,
+        fontSize: theme.typography.fontSize.xs,
         color: theme.colors.primary.main,
-        fontWeight: theme.typography.fontWeight.semibold,
+        fontWeight: theme.typography.fontWeight.bold,
     },
     answerText: {
         fontSize: theme.typography.fontSize.base,
-        color: theme.colors.text.primary,
-        lineHeight: 24,
-        backgroundColor: theme.colors.background.secondary,
-        padding: theme.spacing.sm,
-        borderRadius: theme.layout.borderRadius.md,
+        color: theme.colors.success.main,
+        fontWeight: theme.typography.fontWeight.bold,
     },
-    
-    // Additional info
     additionalInfoContainer: {
         marginBottom: theme.spacing.md,
     },
     additionalInfoLabel: {
-        fontSize: theme.typography.fontSize.sm,
+        fontSize: theme.typography.fontSize.xs,
         fontWeight: theme.typography.fontWeight.bold,
-        color: theme.colors.text.primary,
+        color: theme.colors.text.secondary,
+        textTransform: 'uppercase',
         marginBottom: 4,
     },
     additionalInfoText: {
@@ -1094,49 +1033,44 @@ const themeStyles = createStyles(theme => ({
         color: theme.colors.text.secondary,
         lineHeight: 20,
     },
-    
-    // Delete button
     deleteButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: theme.colors.error.main,
-        paddingVertical: 10,
+        padding: theme.spacing.md,
         borderRadius: theme.layout.borderRadius.md,
         gap: theme.spacing.sm,
+        marginTop: theme.spacing.sm,
     },
     deleteButtonText: {
         color: theme.colors.neutral.white,
-        fontSize: theme.typography.fontSize.sm,
+        fontSize: theme.typography.fontSize.base,
         fontWeight: theme.typography.fontWeight.bold,
     },
-    
-    // Error container
     errorContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        gap: theme.spacing.sm,
         backgroundColor: theme.colors.error.light,
         padding: theme.spacing.md,
         borderRadius: theme.layout.borderRadius.md,
         marginBottom: theme.spacing.md,
-        gap: theme.spacing.sm,
     },
     errorText: {
-        flex: 1,
-        fontSize: theme.typography.fontSize.sm,
         color: theme.colors.error.main,
-    },
-    
-    // Loading container
-    loadingContainer: {
+        fontSize: theme.typography.fontSize.sm,
         flex: 1,
+    },
+    loadingContainer: {
+        padding: theme.spacing.xl,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: theme.spacing.sm,
+        gap: theme.spacing.md,
     },
     loadingText: {
-        fontSize: theme.typography.fontSize.base,
         color: theme.colors.text.secondary,
+        fontSize: theme.typography.fontSize.base,
     },
 }));
 

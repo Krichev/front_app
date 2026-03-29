@@ -6,7 +6,7 @@ export type AnswerTimerPhase = 'typing' | 'completing' | 'done';
 interface UseAnswerTimerOptions {
   initialTypingTime: number;
   completionTime: number;
-  onAutoSubmit: () => void;
+  onAutoSubmit: () => void | Promise<void>;
 }
 
 export function useAnswerTimer({
@@ -16,9 +16,9 @@ export function useAnswerTimer({
 }: UseAnswerTimerOptions) {
   const [phase, setPhase] = useState<AnswerTimerPhase>('typing');
   const [timeLeft, setTimeLeft] = useState(initialTypingTime);
+  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
   const animation = useRef(new Animated.Value(1)).current;
   const onAutoSubmitRef = useRef(onAutoSubmit);
-  const hasAutoSubmitted = useRef(false);
 
   // Update ref to avoid stale closures
   useEffect(() => {
@@ -34,11 +34,24 @@ export function useAnswerTimer({
     }
 
     if (timeLeft <= 0) {
-      if (!hasAutoSubmitted.current) {
-        hasAutoSubmitted.current = true;
+      if (!hasAutoSubmitted) {
+        setHasAutoSubmitted(true);
         setPhase('done');
-        console.log('⏰ [useAnswerTimer] Auto-submit triggered');
-        onAutoSubmitRef.current();
+        // Call auto-submit, handling both sync and async callbacks.
+        // If the callback throws/rejects, reset hasAutoSubmitted so the
+        // user can still manually submit.
+        try {
+          const result = onAutoSubmitRef.current();
+          if (result && typeof result.catch === 'function') {
+            result.catch(() => {
+              console.warn('[AnswerTimer] Auto-submit failed, re-enabling manual submit');
+              setHasAutoSubmitted(false);
+            });
+          }
+        } catch (e) {
+          console.warn('[AnswerTimer] Auto-submit threw, re-enabling manual submit');
+          setHasAutoSubmitted(false);
+        }
       }
       return;
     }
@@ -53,14 +66,16 @@ export function useAnswerTimer({
       });
     }, 1000);
 
-    Animated.timing(animation, {
-      toValue: (timeLeft - 1) / currentDuration,
-      duration: 1000,
-      useNativeDriver: false,
-    }).start();
+    if (currentDuration > 0) {
+      Animated.timing(animation, {
+        toValue: (timeLeft - 1) / currentDuration,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+    }
 
     return () => clearInterval(interval);
-  }, [timeLeft, phase, currentDuration, animation]);
+  }, [timeLeft, phase, currentDuration, animation, hasAutoSubmitted]);
 
   const startCompletionPhase = useCallback(() => {
     if (phase === 'typing') {
@@ -74,22 +89,15 @@ export function useAnswerTimer({
     setPhase('typing');
     setTimeLeft(initialTypingTime);
     animation.setValue(1);
-    hasAutoSubmitted.current = false;
+    setHasAutoSubmitted(false);
   }, [initialTypingTime, animation]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      hasAutoSubmitted.current = false;
-    };
-  }, []);
 
   return {
     timeLeft,
     phase,
     animation,
     startCompletionPhase,
-    hasAutoSubmitted: hasAutoSubmitted.current,
+    hasAutoSubmitted,
     reset,
   };
 }

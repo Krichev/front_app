@@ -19,7 +19,6 @@ import {
   ReadingPhase,
   WaitingPhase,
 } from '../features/WWWGame/ui/phases';
-import {AudioChallengeScoringPhase} from './WWWGamePlayScreen/components/AudioChallengeScoringPhase';
 import {ExitGameModal} from '../features/WWWGame/ui/components/ExitGameModal';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
@@ -59,10 +58,17 @@ const WWWGamePlayScreen: React.FC = () => {
   const currentQuestion = currentRound?.question;
 
   const [discussionNotes, setDiscussionNotes] = useState('');
+  const [scoringResult, setScoringResult] = useState<any>(null);
 
   const effectiveRoundTime = controller.session?.roundTimeSeconds || 60;
 
-  const timer = useCountdownTimer({
+  const {
+    timeLeft: timerTimeLeft,
+    animation: timerAnimation,
+    start: timerStart,
+    pause: timerPause,
+    reset: timerReset,
+  } = useCountdownTimer({
     duration: effectiveRoundTime,
     onComplete: () => dispatch(actions.timeUp()),
   });
@@ -72,9 +78,31 @@ const WWWGamePlayScreen: React.FC = () => {
   const prevRoundRef = useRef<number>(state.currentRound);
   const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Refs to prevent double-starting the timers for the same discussion entry.
+  // Cleared when leaving discussion phase or changing rounds.
+  const discussionTimerStartedRef = useRef(false);
+  const safetyTimerArmedRef = useRef(false);
+
+  // Reset guards when round changes
+  useEffect(() => {
+    discussionTimerStartedRef.current = false;
+    safetyTimerArmedRef.current = false;
+  }, [state.currentRound]);
+
   // Auto-start discussion timer when entering discussion phase
   useEffect(() => {
-    if (state.phase !== 'discussion' || !currentRound) {
+    const isEnteringDiscussion = state.phase === 'discussion' &&
+      (prevPhaseRef.current !== 'discussion' || prevRoundRef.current !== state.currentRound);
+
+    prevPhaseRef.current = state.phase;
+    prevRoundRef.current = state.currentRound;
+
+    if (!isEnteringDiscussion || !currentRound) {
+      return;
+    }
+
+    // Guard: only start the timer once per discussion phase entry
+    if (discussionTimerStartedRef.current) {
       return;
     }
 
@@ -84,19 +112,14 @@ const WWWGamePlayScreen: React.FC = () => {
 
     if (isAudioChallenge || isAnyAudioQuestion) {
       // Skip discussion phase for audio challenges, go straight to answer/record
-      // AudioChallengePhase manages its own timer
       dispatch(actions.timeUp());
     } else {
-      // Start timer
       console.log('🎮 [Discussion] Starting timer with duration:', effectiveRoundTime);
-      timer.reset(effectiveRoundTime);
-      timer.start();
+      discussionTimerStartedRef.current = true;
+      timerReset(effectiveRoundTime);
+      timerStart();
     }
-    // NOTE: timer.isRunning intentionally EXCLUDED from deps.
-    // Including it caused the effect to re-fire on pause(), racing with the
-    // phase transition and restarting the discussion timer via requestAnimationFrame.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timer.reset, timer.start]);
+  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timerReset, timerStart, dispatch]);
 
   // Safety fallback: if discussion timer's onComplete doesn't fire (e.g. race condition),
   // guarantee we still transition to answer phase.
@@ -113,14 +136,20 @@ const WWWGamePlayScreen: React.FC = () => {
     const isAudioQuestion = currentRound.question.questionType === 'AUDIO';
     if (isAudioQuestion) return;
 
+    // Guard: only arm the safety timer once per discussion phase entry
+    if (safetyTimerArmedRef.current) {
+      return;
+    }
+    safetyTimerArmedRef.current = true;
+
     // Set fallback at effectiveRoundTime + 3 seconds
     const safetyMs = (effectiveRoundTime + 3) * 1000;
     console.log('🛡️ [Safety] Arming fallback timer:', safetyMs, 'ms for round', state.currentRound);
 
     safetyTimeoutRef.current = setTimeout(() => {
       console.warn('🛡️ [Safety] Fallback triggered! Forcing discussion → answer transition');
-      timer.pause();
-      actions.timeUp();
+      timerPause();
+      dispatch(actions.timeUp());
     }, safetyMs);
 
     return () => {
@@ -129,14 +158,16 @@ const WWWGamePlayScreen: React.FC = () => {
         safetyTimeoutRef.current = null;
       }
     };
-  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timer.pause]);
+  }, [state.phase, state.currentRound, currentRound, effectiveRoundTime, actions, timerPause, dispatch]);
 
-  // Pause timer when leaving discussion phase
+  // Reset the discussion timer guard and pause when leaving discussion phase
   useEffect(() => {
     if (state.phase !== 'discussion') {
-      timer.pause();
+      discussionTimerStartedRef.current = false;
+      safetyTimerArmedRef.current = false;
+      timerPause();
     }
-  }, [state.phase, timer.pause]);
+  }, [state.phase, timerPause]);
 
   // Video preloading — primes cache for the next round's media
   useVideoPreloader(state.currentRound, controller.rounds);
@@ -169,7 +200,6 @@ const WWWGamePlayScreen: React.FC = () => {
           hasId: !!q.questionMediaId,
         });
       }
-      const effectiveRoundTime = controller.session?.roundTimeSeconds || 60;
       
       const isAudioChallenge = q.questionType === 'AUDIO' && !!q.audioChallengeType;
       const isAnyAudioQuestion = q.questionType === 'AUDIO';
@@ -195,7 +225,7 @@ const WWWGamePlayScreen: React.FC = () => {
         dispatch(actions.startReading(readingTime));
       }
     }
-  }, [state.phase, currentQuestion, state.gameStartTime, controller.isLoading, controller.session, dispatch, actions, calculateReadingTime]);
+  }, [state.phase, currentQuestion, state.gameStartTime, controller.isLoading, controller.session, dispatch, actions, calculateReadingTime, effectiveRoundTime, state.currentRound]);
 
   // Handle phase transitions for preloader delay
   useEffect(() => {
@@ -205,10 +235,10 @@ const WWWGamePlayScreen: React.FC = () => {
       
       if (status === 'loading') {
         if (__DEV__) console.log(`🎬 [WWWGamePlayScreen] Delaying media_playback phase for question ${currentQuestion.id} to finish preload`);
-        const timer = setTimeout(() => {
+        const delayTimer = setTimeout(() => {
           // No action needed, component will just render and pick up where preload left off
         }, 300);
-        return () => clearTimeout(timer);
+        return () => clearTimeout(delayTimer);
       }
     }
   }, [state.phase, currentQuestion, preloadStatuses]);
@@ -261,6 +291,38 @@ const WWWGamePlayScreen: React.FC = () => {
       navigateToResults();
     }
   }, [navigateToResults]);
+
+  const handleSubmitAnswer = useCallback(async () => {
+    if (!currentRound) { return; }
+
+    try {
+      const answerToSubmit = state.teamAnswer.trim() || '';
+      await controller.submitAnswer(currentRound.id, {
+        teamAnswer: answerToSubmit,
+        playerWhoAnswered: state.selectedPlayer || 'Team',
+        discussionNotes: state.discussionNotes,
+      });
+      dispatch(actions.answerSubmitted());
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit answer');
+    }
+  }, [currentRound, controller, state.teamAnswer, state.selectedPlayer, state.discussionNotes, actions, dispatch]);
+
+  const handleAudioRecordingComplete = useCallback(async (audioFile: { uri: string; name: string; type: string }) => {
+    if (!currentRound || !currentQuestion) { return; }
+
+    try {
+      await controller.submitAudioAnswer(currentRound.id, currentQuestion.id, audioFile, {
+        playerWhoAnswered: state.selectedPlayer || 'Team',
+        discussionNotes: state.discussionNotes,
+        scoringResult: scoringResult,
+      });
+      setScoringResult(null);
+      dispatch(actions.answerSubmitted());
+    } catch (error) {
+      Alert.alert('Error', 'Failed to submit audio answer');
+    }
+  }, [currentRound, currentQuestion, controller, state.selectedPlayer, state.discussionNotes, scoringResult, actions, dispatch]);
 
   // ============================================================================
   // BACK HANDLER
@@ -337,43 +399,34 @@ const WWWGamePlayScreen: React.FC = () => {
         return (
           <DiscussionPhase
             question={currentRound.question}
-            timeLeft={timer.timeLeft}
-            animation={timer.animation}
+            timeLeft={timerTimeLeft}
+            animation={timerAnimation}
             notes={discussionNotes}
             onNotesChange={setDiscussionNotes}
             onSubmitEarly={() => {
               console.log('🎮 [Discussion] User pressed Proceed to Answer, phase:', state.phase);
               // Pause timer first, then transition.
               // actions.timeUp() dispatches TIME_UP which sets phase='answer'.
-              timer.pause();
-              actions.timeUp();
+              timerPause();
+              dispatch(actions.timeUp());
               console.log('🎮 [Discussion] Dispatched TIME_UP');
             }}
           />
         );
 
       case 'answer':
-        if (currentQuestion?.questionType === 'AUDIO' && currentQuestion.audioChallengeType) {
-          return (
-            <AudioChallengeScoringPhase
-              question={currentQuestion!}
-              isSubmitting={controller.isSubmittingAnswer}
-              onSubmissionComplete={(submission) => {
-                controller.submitAudioAnswer(currentRound!.id, currentQuestion!.id, submission.id);
-              }}
-              onCancel={() => setShowExitModal(true)}
-            />
-          );
-        }
         return (
           <AnswerPhase
             question={currentQuestion!}
             teamMembers={controller.session?.teamMembers || []}
             isSubmitting={controller.isSubmittingAnswer}
-            onSubmit={() => {
-              // Internal implementation handles selection
-              // We just wait for mutation completion in controller
-            }}
+            onSubmit={handleSubmitAnswer}
+            onAudioRecordingComplete={handleAudioRecordingComplete}
+            onScoringComplete={setScoringResult}
+            answer={state.teamAnswer}
+            onAnswerChange={(text) => dispatch(actions.setAnswer(text))}
+            player={state.selectedPlayer}
+            onPlayerChange={(p) => dispatch(actions.setPlayer(p))}
           />
         );
 
@@ -384,6 +437,7 @@ const WWWGamePlayScreen: React.FC = () => {
             roundData={currentRound!}
             isCorrect={currentRound?.isCorrect || false}
             isLastRound={isLastRound}
+            scoringResult={currentRound?.scoringResult}
             onNextRound={() => {
               dispatch(actions.nextRound(controller.session?.roundTimeSeconds || 60));
             }}
@@ -421,7 +475,7 @@ const WWWGamePlayScreen: React.FC = () => {
         visible={showExitModal}
         onResume={() => setShowExitModal(false)}
         onPauseAndExit={() => {
-          controller.pauseSession(state.currentRound, timer.timeLeft);
+          controller.pauseSession(state.currentRound, timerTimeLeft);
           navigation.goBack();
         }}
         onAbandon={() => {
