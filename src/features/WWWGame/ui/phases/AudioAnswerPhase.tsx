@@ -97,6 +97,14 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
 
   const duration = question.timeLimitSeconds || gameSettings?.roundTimeSeconds || 60;
 
+  if (__DEV__) {
+    console.log('🎤 [AudioAnswerPhase] Timer duration:', {
+      questionTimeLimitSeconds: question.timeLimitSeconds,
+      gameSettingsRoundTime: gameSettings?.roundTimeSeconds,
+      effectiveDuration: duration,
+    });
+  }
+
   const timer = useAudioChallengeTimer({
     duration,
     onAutoSubmit: onSubmit,

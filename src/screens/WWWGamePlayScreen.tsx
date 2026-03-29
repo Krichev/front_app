@@ -1,6 +1,6 @@
 // src/screens/WWWGamePlayScreen.tsx - Orchestration Layer
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Alert, BackHandler, SafeAreaView, View, Text, TouchableOpacity} from 'react-native';
+import {ActivityIndicator, Alert, BackHandler, SafeAreaView, Text, TouchableOpacity, View} from 'react-native';
 import {RouteProp, useNavigation, useRoute} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -350,15 +350,23 @@ const WWWGamePlayScreen: React.FC = () => {
 
     switch (state.phase) {
       case 'waiting':
-        return (
-          <WaitingPhase
-            roundTime={controller.session?.roundTimeSeconds || 60}
-            onStart={handleStartGame}
-            isLoading={controller.isBeginningSession}
-            mediaPreloadProgress={preloadProgress}
-            hasMediaQuestions={hasMediaQuestions}
-          />
-        );
+        if (state.gameStartTime) {
+          return (
+            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+              <ActivityIndicator size="large" color={theme.colors.primary.main} />
+            </View>
+          );
+        } else {
+          return (
+            <WaitingPhase
+              roundTime={controller.session?.roundTimeSeconds || 60}
+              onStart={handleStartGame}
+              isLoading={controller.isBeginningSession}
+              mediaPreloadProgress={preloadProgress}
+              hasMediaQuestions={hasMediaQuestions}
+            />
+          );
+        }
 
       case 'reading':
         return (
@@ -422,7 +430,6 @@ const WWWGamePlayScreen: React.FC = () => {
             isSubmitting={controller.isSubmittingAnswer}
             onSubmit={handleSubmitAnswer}
             onAudioRecordingComplete={handleAudioRecordingComplete}
-            onScoringComplete={setScoringResult}
             answer={state.teamAnswer}
             onAnswerChange={(text) => dispatch(actions.setAnswer(text))}
             player={state.selectedPlayer}

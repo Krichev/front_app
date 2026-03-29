@@ -38,7 +38,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   const {theme} = useAppStyles();
   const styles = themeStyles;
   const API_BASE_URL = NetworkConfigManager.getInstance().getBaseUrl();
-  title =  t('questionDisplay.questionDisplay.listenReference')
+  
   
   const isValidPlayableUrl = (url: string | undefined): boolean => {
     if (!url) return false;

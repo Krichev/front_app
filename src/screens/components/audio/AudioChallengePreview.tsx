@@ -4,6 +4,7 @@ import {AudioChallengeHeader} from './AudioChallengeHeader';
 import {ReferenceAudioSection} from './ReferenceAudioSection';
 import {AudioChallengeType} from '../../../types/audioChallenge.types';
 import {createStyles} from '../../../shared/ui/theme';
+import {useTranslation} from 'react-i18next';
 
 interface AudioChallengePreviewProps {
   question: {
@@ -26,6 +27,7 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
   onPlaybackComplete,
 }) => {
   const styles = themeStyles;
+  const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
@@ -46,7 +48,7 @@ export const AudioChallengePreview: React.FC<AudioChallengePreviewProps> = ({
         }}
         segmentStart={question.audioSegmentStart ?? undefined}
         segmentEnd={question.audioSegmentEnd ?? undefined}
-        title="Reference Audio"
+        title={t('questionDisplay.karaoke.listenReference')}
         onPlaybackComplete={onPlaybackComplete}
       />
     </View>
