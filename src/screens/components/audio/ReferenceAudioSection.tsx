@@ -28,7 +28,7 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   audioUrl,
   segmentStart,
   segmentEnd,
-  title = '',
+  title,
   question,
   onPlaybackComplete,
   mini = false,
@@ -96,9 +96,11 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
 
   if (!effectiveUrl) return null;
 
+  const displayTitle = title || t('questionDisplay.karaoke.listenReference');
+
   return (
     <View style={[styles.container, mini && styles.miniContainer]}>
-      {!mini && <Text style={styles.title}>{title}</Text>}
+      {!mini && <Text style={styles.title}>{displayTitle}</Text>}
       <AudioPlayer
         audioUrl={effectiveUrl}
         segmentStart={effectiveStart}
