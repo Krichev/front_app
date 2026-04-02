@@ -84,12 +84,14 @@ export const ReferenceAudioSection: React.FC<ReferenceAudioSectionProps> = ({
   const effectiveUrl = getEffectiveUrl();
 
   // diagnostic logging
-  console.log('🎵 [ReferenceAudioSection] Resolved audio URL:', { 
-    audioUrl, 
-    questionId: question?.id,
-    questionMediaId: question?.questionMediaId,
-    effectiveUrl 
-  });
+  if (__DEV__) {
+    console.log('🎵 [ReferenceAudioSection] Resolved audio URL:', { 
+      audioUrl, 
+      questionId: question?.id,
+      questionMediaId: question?.questionMediaId,
+      effectiveUrl 
+    });
+  }
 
   const effectiveStart = (segmentStart ?? question?.audioSegmentStart) ?? 0;
   const effectiveEnd = (segmentEnd ?? question?.audioSegmentEnd) ?? undefined;

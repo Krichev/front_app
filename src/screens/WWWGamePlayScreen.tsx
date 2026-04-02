@@ -356,6 +356,13 @@ const WWWGamePlayScreen: React.FC = () => {
               <ActivityIndicator size="large" color={theme.colors.primary.main} />
             </View>
           );
+        }
+        if (state.gameStartTime) {
+            return (
+              <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary.main} />
+              </View>
+            );
         } else {
           return (
             <WaitingPhase

@@ -7,7 +7,8 @@ import {useAppStyles} from '../../../../shared/ui/hooks/useAppStyles';
 import {phaseStyles} from './phases.styles';
 import {QuizQuestion} from '../../../../entities/QuizState/model/slice/quizApi';
 import {useAudioChallengeTimer} from '../../hooks/useAudioChallengeTimer';
-import {AudioResponseRecorder, ReferenceAudioSection} from '../../../../screens/components/audio';
+import {AudioResponseRecorder} from '../../../../screens/components/audio/AudioResponseRecorder';
+import {ReferenceAudioSection} from '../../../../screens/components/audio/ReferenceAudioSection';
 import {createStyles} from '../../../../shared/ui/theme';
 import { AudioChallengeType } from '../../../../types/audioChallenge.types';
 import NetworkConfigManager from '../../../../config/NetworkConfig';
@@ -22,7 +23,7 @@ interface AudioAnswerPhaseProps {
   isSubmitting: boolean;
   gameSettings?: any;                // contains roundTimeSeconds, players, etc.
   answerMode?: 'text' | 'record';   // defaults to 'text' unless question has audioChallengeType
-  onAudioRecordingComplete?: (audioFile: { uri: string; name: string; type: string }) => void;
+  onAudioRecordingComplete?: (audioFile: { uri: string; name: string; type: string } | null) => void;
   recordedAudio?: { uri: string; name: string; type: string } | null;
   player?: string;                   // selected player name (for team mode)
   onPlayerChange?: (player: string) => void;
@@ -46,7 +47,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   const { t } = useTranslation();
   const { theme } = useAppStyles();
   const styles = phaseStyles(theme);
-  const localStyles = themeStyles;
+  const localStyles = localThemeStyles;
 
   const [isReady, setIsReady] = useState(false);
 
@@ -123,7 +124,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
         timer.start();
     });
     return () => task.cancel();
-  }, []);
+  }, [timer]);
 
   // Update internal phase if answerMode changes
   useEffect(() => {
@@ -132,7 +133,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
     } else if (answerMode === 'text' && internalPhase !== 'text') {
       setInternalPhase('text');
     }
-  }, [answerMode]);
+  }, [answerMode, internalPhase]);
 
   // Sync internal phase with scoring phase
   useEffect(() => {
@@ -201,7 +202,9 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   }, []);
 
   const handleRecordingDone = useCallback(async (audioFile: any) => {
-    onAudioRecordingComplete?.(audioFile);
+    if (onAudioRecordingComplete) {
+        onAudioRecordingComplete(audioFile);
+    }
     stopBackingTrack();
     
     if (audioFile) {
@@ -274,7 +277,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
                         >
                             <Text style={[
                             localStyles.playerChipText,
-                            player === p && { color: theme.colors.text.inverse, fontWeight: 'bold' }
+                            player === p && { color: theme.colors.text.inverse, fontWeight: theme.typography.fontWeight.bold }
                             ]}>
                             {p}
                             </Text>
@@ -306,7 +309,6 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
                             key={replayKey}
                             question={question as any} 
                             onPlaybackComplete={handleAudioEnd}
-                            title={t('wwwPhases.audioAnswer.listenToQuestion')}
                         />
                         
                         <View style={localStyles.listenInstructionContainer}>
@@ -455,7 +457,7 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
                 <TouchableOpacity
                     style={localStyles.reRecordButton}
                     onPress={() => {
-                    onAudioRecordingComplete?.(null as any);
+                    if (onAudioRecordingComplete) onAudioRecordingComplete(null);
                     setIsRecordingStarted(false);
                     resetScoring();
                     setInternalPhase('listening');
@@ -494,10 +496,10 @@ export const AudioAnswerPhase: React.FC<AudioAnswerPhaseProps> = ({
   );
 };
 
-const themeStyles = createStyles(theme => ({
+const localThemeStyles = createStyles(theme => ({
   content: {
     flex: 1,
-    paddingHorizontal: theme.spacing.xl, // Increased horizontal padding
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.lg,
   },
   loadingContainer: {
@@ -614,7 +616,7 @@ const themeStyles = createStyles(theme => ({
   errorContainer: {
     padding: theme.spacing.lg,
     alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary, // Changed from hardcoded rgba
+    backgroundColor: theme.colors.background.secondary,
     borderRadius: theme.layout.borderRadius.lg,
     marginVertical: theme.spacing.md,
     width: '100%',

@@ -1,7 +1,8 @@
 import React, {useEffect, useRef} from 'react';
-import {Animated, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {Animated, Text, TouchableOpacity, View} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useAudioRecorder} from '../../../hooks/useAudioRecorder';
+import { createStyles, useAppStyles } from '../../../shared/ui/theme';
 
 interface AudioResponseRecorderProps {
   onRecordingComplete: (audioFile: { uri: string; name: string; type: string }) => void;
@@ -16,6 +17,8 @@ export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
   maxDuration = 120, // Default 2 min
   disabled = false,
 }) => {
+  const { theme } = useAppStyles();
+  const styles = useStyles();
   const {
     startRecording,
     stopRecording,
@@ -96,7 +99,7 @@ export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
         <Text style={styles.title}>Your Recording</Text>
         <View style={styles.previewContainer}>
           <View style={styles.playbackInfo}>
-            <MaterialCommunityIcons name="file-music" size={32} color="#4CAF50" />
+            <MaterialCommunityIcons name="file-music" size={32} color={theme.colors.success.main} />
             <View style={styles.infoText}>
               <Text style={styles.recordedLabel}>Recorded Response</Text>
               <Text style={styles.durationText}>{formatDuration(duration)}</Text>
@@ -111,7 +114,7 @@ export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
               <MaterialCommunityIcons 
                 name={isPlaying ? "stop" : "play"} 
                 size={28} 
-                color="#007AFF" 
+                color={theme.colors.primary.main} 
               />
             </TouchableOpacity>
             
@@ -119,7 +122,7 @@ export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
               style={[styles.controlButton, styles.deleteButton]} 
               onPress={handleReset}
             >
-              <MaterialCommunityIcons name="delete" size={24} color="#FF3B30" />
+              <MaterialCommunityIcons name="delete" size={24} color={theme.colors.error.main} />
             </TouchableOpacity>
           </View>
         </View>
@@ -172,49 +175,49 @@ export const AudioResponseRecorder: React.FC<AudioResponseRecorderProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const useStyles = createStyles(theme => ({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.layout.borderRadius.lg,
+    padding: theme.spacing.md,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: theme.colors.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    marginBottom: 16,
+    fontSize: theme.typography.fontSize.caption,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.md,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   // Recorder Styles
   recorderContainer: {
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: theme.spacing.sm,
   },
   timerContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 20,
+    marginBottom: theme.spacing.lg,
   },
   timerText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: theme.typography.fontSize.h3,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.text.primary,
     fontVariant: ['tabular-nums'],
   },
   maxDurationText: {
-    fontSize: 16,
-    color: '#999',
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.text.disabled,
     marginLeft: 4,
   },
   recordButtonWrapper: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   recordButton: {
     width: 80,
@@ -223,81 +226,81 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: theme.colors.text.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   idle: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.colors.error.main,
   },
   recording: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: theme.colors.error.dark,
   },
   disabled: {
-    backgroundColor: '#BDBDBD',
+    backgroundColor: theme.colors.text.disabled,
   },
   statusText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: theme.typography.fontSize.body,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.fontWeight.medium,
   },
   // Preview Styles
   previewContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: theme.layout.borderRadius.md,
+    padding: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border.light,
   },
   playbackInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: theme.spacing.md,
     flex: 1,
   },
   infoText: {
     justifyContent: 'center',
   },
   recordedLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: theme.typography.fontSize.body,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.text.primary,
   },
   durationText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.fontSize.caption,
+    color: theme.colors.text.secondary,
   },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   controlButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border.light,
   },
   deleteButton: {
-    borderColor: '#FFEBEE',
-    backgroundColor: '#FFEBEE',
+    borderColor: theme.colors.error.light,
+    backgroundColor: theme.colors.error.background,
   },
   rerecordButton: {
-    marginTop: 12,
+    marginTop: theme.spacing.sm,
     alignSelf: 'center',
-    padding: 8,
+    padding: theme.spacing.sm,
   },
   rerecordText: {
-    color: '#2196F3',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.primary.main,
+    fontSize: theme.typography.fontSize.body,
+    fontWeight: theme.typography.fontWeight.semibold,
   },
-});
+}));
