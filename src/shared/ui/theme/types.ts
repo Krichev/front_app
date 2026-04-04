@@ -126,6 +126,8 @@ export interface FontWeight {
 }
 
 export interface FontSize {
+    body: any;
+    caption: any;
     xs: number;
     sm: number;
     base: number;
