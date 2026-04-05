@@ -42,6 +42,14 @@ import PuzzleResultsScreen from '../screens/PuzzleResultsScreen';
 import QuestDiscoveryScreen from '../screens/QuestDiscoveryScreen';
 import QuestDetailScreen from '../screens/QuestDetailScreen';
 import QuestActiveScreen from '../screens/QuestActiveScreen';
+import EditProfileDetailsScreen from '../screens/EditProfileDetailsScreen';
+import SoloQuestFeedScreen from '../screens/SoloQuestFeedScreen';
+import CreateSoloQuestScreen from '../screens/CreateSoloQuestScreen/CreateSoloQuestScreen';
+import SoloQuestDetailScreen from '../screens/SoloQuestDetailScreen/SoloQuestDetailScreen';
+import QuestApplicationsScreen from '../screens/QuestApplicationsScreen/QuestApplicationsScreen';
+import MyApplicationsScreen from '../screens/MyApplicationsScreen/MyApplicationsScreen';
+import SoloQuestCheckInScreen from '../screens/SoloQuestCheckInScreen/SoloQuestCheckInScreen';
+import ReputationDetailScreen from '../screens/ReputationDetailScreen/ReputationDetailScreen';
 
 import {useSelector} from 'react-redux';
 import {RootState} from '../app/providers/StoreProvider/store';
@@ -161,6 +169,13 @@ export type RootStackParamList = {
     QuestDiscovery: undefined;
     QuestDetail: { questId: number };
     QuestActive: { questId: number; participationId?: number };
+    EditProfileDetails: { userId: string };
+    SoloQuestFeed: undefined;
+    CreateSoloQuest: undefined;
+    SoloQuestDetail: { questId: number };
+    QuestApplications: { questId: number };
+    MyApplications: undefined;
+    SoloQuestCheckIn: { questId: number };
 };
 
 export type MainTabParamList = {
@@ -414,6 +429,13 @@ const AppNavigator: React.FC<{ linking?: LinkingOptions<RootStackParamList> }> =
                         <Stack.Screen name="QuestDiscovery" component={QuestDiscoveryScreen} />
                         <Stack.Screen name="QuestDetail" component={QuestDetailScreen} />
                         <Stack.Screen name="QuestActive" component={QuestActiveScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="EditProfileDetails" component={EditProfileDetailsScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="SoloQuestFeed" component={SoloQuestFeedScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="CreateSoloQuest" component={CreateSoloQuestScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="SoloQuestDetail" component={SoloQuestDetailScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="QuestApplications" component={QuestApplicationsScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="MyApplications" component={MyApplicationsScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="SoloQuestCheckIn" component={SoloQuestCheckInScreen} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>

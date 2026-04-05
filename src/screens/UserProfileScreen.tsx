@@ -1,4 +1,4 @@
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useCallback} from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -30,6 +30,8 @@ import {ApiChallenge} from '../entities/ChallengeState/model/types';
 import {useAppStyles} from '../shared/ui/hooks/useAppStyles';
 import {createStyles} from '../shared/ui/theme';
 import { ScreenTimeBudgetWidget } from '../features/ScreenTime/ui/ScreenTimeBudgetWidget';
+import { useGetUserProfileDetailsQuery } from '../entities/SoloQuestState/model/slice/soloQuestApi';
+import { UserProfileDetails } from '../entities/SoloQuestState/model/types';
 
 type UserProfileRouteProp = RouteProp<RootStackParamList, 'UserProfile'>;
 type UserProfileNavigationProp = NativeStackNavigationProp<RootStackParamList, 'UserProfile'>;
@@ -54,11 +56,25 @@ const UserProfileScreen: React.FC = () => {
     const [showCancelled, setShowCancelled] = useState(false);
 
     // Handle editing profile
-    const handleEditProfile = () => {
+    const handleEditProfile = useCallback(() => {
         if (userId) {
             navigation.navigate('EditProfile', { userId });
         }
-    };
+    }, [userId, navigation]);
+
+    const handleEditExtendedProfile = useCallback(() => {
+        if (userId) {
+            navigation.navigate('EditProfileDetails', { userId });
+        }
+    }, [userId, navigation]);
+
+    // Extended profile data
+    const {
+        data: profileDetails,
+        isLoading: profileDetailsLoading,
+    } = useGetUserProfileDetailsQuery(Number(userId!), {
+        skip: !userId,
+    });
 
     const {
         data: user,
@@ -292,6 +308,137 @@ const UserProfileScreen: React.FC = () => {
         );
     };
 
+    // Render extended profile section
+    const renderExtendedProfileSection = () => {
+        const hasDetails = profileDetails && (
+            profileDetails.dateOfBirth ||
+            profileDetails.city ||
+            profileDetails.aboutMe ||
+            (profileDetails.interests && profileDetails.interests.length > 0) ||
+            profileDetails.relationshipStatus
+        );
+
+        if (profileDetailsLoading) {
+            return (
+                <View style={[styles.statsSection, { marginTop: 0 }]}>
+                    <ActivityIndicator size="small" color={theme.colors.success.main} />
+                </View>
+            );
+        }
+
+        // Current user with no extended profile — show CTA
+        if (isCurrentUser && !hasDetails) {
+            return (
+                <View style={[styles.statsSection, { marginTop: 0 }]}>
+                    <View style={styles.ctaCard}>
+                        <MaterialCommunityIcons name="account-edit-outline" size={32} color={theme.colors.success.main} />
+                        <Text style={[styles.ctaTitle, { color: theme.colors.text.primary }]}>
+                            {t('extendedProfile.ctaTitle')}
+                        </Text>
+                        <Text style={[styles.ctaDescription, { color: theme.colors.text.secondary }]}>
+                            {t('extendedProfile.ctaDescription')}
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.ctaButton, { backgroundColor: theme.colors.success.main }]}
+                            onPress={handleEditExtendedProfile}
+                        >
+                            <Text style={[styles.ctaButtonText, { color: theme.colors.text.inverse }]}>
+                                {t('extendedProfile.ctaButton')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            );
+        }
+
+        if (!hasDetails) {
+            return null;
+        }
+
+        const age = profileDetails!.dateOfBirth
+            ? (() => {
+                  const dob = new Date(profileDetails!.dateOfBirth!);
+                  const today = new Date();
+                  let a = today.getFullYear() - dob.getFullYear();
+                  if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) {
+                      a -= 1;
+                  }
+                  return a;
+              })()
+            : null;
+
+        return (
+            <View style={[styles.statsSection, { marginTop: 0 }]}>
+                <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>{t('extendedProfile.sectionTitle')}</Text>
+                    {isCurrentUser && (
+                        <TouchableOpacity onPress={handleEditExtendedProfile}>
+                            <MaterialCommunityIcons name="pencil-outline" size={20} color={theme.colors.success.main} />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <View style={styles.extendedInfoRow}>
+                    {age !== null && (
+                        <View style={[styles.infoBadge, { backgroundColor: theme.colors.background.secondary }]}>
+                            <MaterialCommunityIcons name="cake-variant-outline" size={14} color={theme.colors.text.secondary} />
+                            <Text style={[styles.infoBadgeText, { color: theme.colors.text.secondary }]}>
+                                {t('extendedProfile.age', { age })}
+                            </Text>
+                        </View>
+                    )}
+                    {profileDetails!.relationshipStatus && (
+                        <View style={[styles.infoBadge, { backgroundColor: theme.colors.success.background }]}>
+                            <MaterialCommunityIcons name="heart-outline" size={14} color={theme.colors.success.main} />
+                            <Text style={[styles.infoBadgeText, { color: theme.colors.success.main }]}>
+                                {t(`editProfileDetails.relationshipStatus.${profileDetails!.relationshipStatus}`)}
+                            </Text>
+                        </View>
+                    )}
+                    {profileDetails!.city && (
+                        <View style={[styles.infoBadge, { backgroundColor: theme.colors.background.secondary }]}>
+                            <MaterialCommunityIcons name="map-marker-outline" size={14} color={theme.colors.text.secondary} />
+                            <Text style={[styles.infoBadgeText, { color: theme.colors.text.secondary }]}>
+                                {profileDetails!.city}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                {!!profileDetails!.aboutMe && (
+                    <View style={styles.aboutMeSection}>
+                        <Text style={[styles.aboutMeLabel, { color: theme.colors.text.secondary }]}>
+                            {t('extendedProfile.aboutMe')}
+                        </Text>
+                        <Text style={[styles.aboutMeText, { color: theme.colors.text.primary }]}>
+                            {profileDetails!.aboutMe}
+                        </Text>
+                    </View>
+                )}
+
+                {profileDetails!.interests && profileDetails!.interests.length > 0 && (
+                    <View style={styles.interestsSection}>
+                        <Text style={[styles.aboutMeLabel, { color: theme.colors.text.secondary }]}>
+                            {t('extendedProfile.interests')}
+                        </Text>
+                        <View style={styles.interestChips}>
+                            {profileDetails!.interests.map((interest) => (
+                                <View
+                                    key={interest.id}
+                                    style={[styles.interestChip, { backgroundColor: theme.colors.success.background }]}
+                                >
+                                    <Text style={[styles.interestChipText, { color: theme.colors.success.main }]}>
+                                        {interest.tag}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
+            </View>
+        );
+    };
+
     return (
         <SafeAreaView style={screen.container}>
             <ScrollView
@@ -410,6 +557,9 @@ const UserProfileScreen: React.FC = () => {
                         </TouchableOpacity>
                     )}
                 </View>
+
+                {/* Extended Profile Section */}
+                {renderExtendedProfileSection()}
 
                 {/* Challenges Section */}
                 <View style={styles.challengesSection}>
@@ -845,6 +995,85 @@ const themeStyles = createStyles(theme => ({
     statusBadgeText: {
         color: theme.colors.text.inverse,
         ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.bold,
+    },
+    // Extended profile styles
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.md,
+    },
+    extendedInfoRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: theme.spacing.xs,
+        marginBottom: theme.spacing.sm,
+    },
+    infoBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.xl,
+        gap: theme.spacing.xs,
+    },
+    infoBadgeText: {
+        ...theme.typography.caption,
+    },
+    aboutMeSection: {
+        marginTop: theme.spacing.sm,
+    },
+    aboutMeLabel: {
+        ...theme.typography.body.small,
+        fontWeight: theme.typography.fontWeight.medium,
+        marginBottom: theme.spacing.xs,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    aboutMeText: {
+        ...theme.typography.body.medium,
+        lineHeight: 22,
+    },
+    interestsSection: {
+        marginTop: theme.spacing.sm,
+    },
+    interestChips: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: theme.spacing.xs,
+        marginTop: theme.spacing.xs,
+    },
+    interestChip: {
+        paddingHorizontal: theme.spacing.sm,
+        paddingVertical: theme.spacing.xs,
+        borderRadius: theme.layout.borderRadius.xl,
+    },
+    interestChipText: {
+        ...theme.typography.caption,
+        fontWeight: theme.typography.fontWeight.medium,
+    },
+    ctaCard: {
+        alignItems: 'center',
+        paddingVertical: theme.spacing.md,
+        gap: theme.spacing.sm,
+    },
+    ctaTitle: {
+        ...theme.typography.heading.h6,
+        fontWeight: theme.typography.fontWeight.bold,
+    },
+    ctaDescription: {
+        ...theme.typography.body.medium,
+        textAlign: 'center',
+    },
+    ctaButton: {
+        paddingHorizontal: theme.spacing.xl,
+        paddingVertical: theme.spacing.sm,
+        borderRadius: theme.layout.borderRadius.xl,
+        marginTop: theme.spacing.xs,
+    },
+    ctaButtonText: {
+        ...theme.typography.body.medium,
         fontWeight: theme.typography.fontWeight.bold,
     },
 }));

@@ -170,6 +170,14 @@ const HomeScreen: React.FC = () => {
 
                                 <TouchableOpacity
                                     style={styles.quickActionCard}
+                                    onPress={() => navigation.navigate('SoloQuestFeed')}
+                                >
+                                    <MaterialCommunityIcons name="account-search" size={32} color={theme.colors.success.main}/>
+                                    <Text style={styles.quickActionText}>{t('home.findCompanions')}</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.quickActionCard}
                                     onPress={() => navigation.navigate('Profile')}
                                 >
                                     <MaterialCommunityIcons name="account" size={32} color={theme.colors.accent.main}/>
